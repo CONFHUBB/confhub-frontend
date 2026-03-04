@@ -133,7 +133,7 @@ export default function ConferencesPage() {
                                             </Link>
                                         </div>
                                         <div className="pt-4">
-                                            <Link href={`/conference/${conference.id}/track`}>
+                                            <Link href={`/track?conferenceId=${conference.id}`}>
                                                 <Button className="w-full" variant="outline">
                                                     View Tracks
                                                 </Button>

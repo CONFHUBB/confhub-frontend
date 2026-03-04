@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { getTrack, getTopicsByTrack } from '@/app/api/track.api'
 import type { TrackResponse } from '@/types/track'
 import type { TopicResponse } from '@/types/topic'
@@ -18,12 +18,11 @@ import { CreatePaperRequest } from '@/types/paper'
 import { createPaper, assignAuthorToPaper } from '@/app/api/paper.api'
 import { getUserByEmail } from '@/app/api/user.api'
 
-// Utility to decode JWT and get user email
 const getCurrentUserEmail = (): string | null => {
     if (typeof window === 'undefined') return null
     const token = localStorage.getItem('accessToken')
     if (!token) return null
-    
+
     try {
         const payload = JSON.parse(atob(token.split('.')[1]))
         return payload.sub || null
@@ -35,9 +34,10 @@ const getCurrentUserEmail = (): string | null => {
 
 export default function SubmitPaperPage() {
     const params = useParams()
+    const searchParams = useSearchParams()
     const router = useRouter()
-    const conferenceId = Number(params.confId)
     const trackId = Number(params.trackId)
+    const conferenceId = Number(searchParams.get('conferenceId'))
 
     const [track, setTrack] = useState<TrackResponse | null>(null)
     const [topics, setTopics] = useState<TopicResponse[]>([])
@@ -91,7 +91,7 @@ export default function SubmitPaperPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        
+
         if (!formData.topicId) {
             toast.error('Please select a topic')
             return
@@ -100,8 +100,7 @@ export default function SubmitPaperPage() {
         try {
             setSubmitting(true)
             const createdPaper = await createPaper(formData)
-            
-            // Automatically assign the creator as an author
+
             if (createdPaper.id) {
                 const userEmail = getCurrentUserEmail()
                 if (userEmail) {
@@ -112,13 +111,12 @@ export default function SubmitPaperPage() {
                         }
                     } catch (authorErr) {
                         console.error('Error assigning author:', authorErr)
-                        // Don't fail the submission if author assignment fails
                     }
                 }
             }
-            
+
             toast.success('Paper submitted successfully!')
-            router.push(`/conference/${conferenceId}/track`)
+            router.push(`/track?conferenceId=${conferenceId}`)
         } catch (err: any) {
             toast.error(err.response?.data?.message || 'Failed to submit paper. Please try again.')
             console.error('Error submitting paper:', err)
@@ -158,7 +156,7 @@ export default function SubmitPaperPage() {
 
     return (
         <div className="container mx-auto py-8 px-4 max-w-3xl">
-            <Link href={`/conference/${conferenceId}/track`}>
+            <Link href={`/track?conferenceId=${conferenceId}`}>
                 <Button variant="ghost" className="mb-4">
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Tracks
@@ -176,8 +174,8 @@ export default function SubmitPaperPage() {
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="space-y-2">
                             <Label htmlFor="topic">Topic *</Label>
-                            <Select 
-                                value={formData.topicId.toString()} 
+                            <Select
+                                value={formData.topicId.toString()}
                                 onValueChange={(value) => handleChange('topicId', Number(value))}
                             >
                                 <SelectTrigger id="topic">
@@ -279,8 +277,8 @@ export default function SubmitPaperPage() {
                             >
                                 Cancel
                             </Button>
-                            <Button 
-                                type="submit" 
+                            <Button
+                                type="submit"
                                 disabled={submitting}
                                 className="flex-1"
                             >

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { getTracksByConference } from '@/app/api/track.api'
 import { getConference } from '@/app/api/conference.api'
 import type { TrackResponse } from '@/types/track'
@@ -12,9 +12,9 @@ import { Calendar, Loader2, FileText, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
 export default function TracksPage() {
-    const params = useParams()
+    const searchParams = useSearchParams()
     const router = useRouter()
-    const conferenceId = Number(params.confId)
+    const conferenceId = Number(searchParams.get('conferenceId'))
 
     const [tracks, setTracks] = useState<TrackResponse[]>([])
     const [conference, setConference] = useState<ConferenceResponse | null>(null)
@@ -94,10 +94,10 @@ export default function TracksPage() {
     return (
         <div className="container mx-auto py-8 px-4">
             <div className="mb-8">
-                <Link href="/conference">
+                <Link href={`/conference/${conferenceId}`}>
                     <Button variant="ghost" className="mb-4">
                         <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back to Conferences
+                        Back to Conference
                     </Button>
                 </Link>
                 <div>
@@ -118,7 +118,7 @@ export default function TracksPage() {
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {tracks.map((track) => {
                         const submissionOpen = isSubmissionOpen(track)
-                        
+
                         return (
                             <Card key={track.id} className="hover:shadow-lg transition-shadow">
                                 <CardHeader>
@@ -147,7 +147,7 @@ export default function TracksPage() {
                                                 </span>
                                             </div>
                                         </div>
-                                        
+
                                         <div>
                                             <h4 className="text-sm font-semibold mb-2">Review Period</h4>
                                             <div className="flex items-center gap-2 text-sm">
@@ -165,9 +165,9 @@ export default function TracksPage() {
                                         </div>
 
                                         <div className="pt-4">
-                                            <Link href={`/conference/${conferenceId}/track/${track.id}/submit`}>
-                                                <Button 
-                                                    className="w-full" 
+                                            <Link href={`/track/${track.id}/submit?conferenceId=${conferenceId}`}>
+                                                <Button
+                                                    className="w-full"
                                                     disabled={!submissionOpen}
                                                 >
                                                     <FileText className="h-4 w-4 mr-2" />

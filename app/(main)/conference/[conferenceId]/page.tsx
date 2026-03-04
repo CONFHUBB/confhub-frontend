@@ -12,7 +12,7 @@ import Link from 'next/link'
 export default function ConferenceDetailsPage() {
     const params = useParams()
     const router = useRouter()
-    const conferenceId = Number(params.confId)
+    const conferenceId = Number(params.conferenceId)
 
     const [conference, setConference] = useState<ConferenceResponse | null>(null)
     const [loading, setLoading] = useState(true)
@@ -171,7 +171,7 @@ export default function ConferenceDetailsPage() {
                         )}
 
                         <div className="pt-4 flex gap-4">
-                            <Link href={`/conference/${conferenceId}/track`} className="flex-1">
+                            <Link href={`/track?conferenceId=${conferenceId}`} className="flex-1">
                                 <Button className="w-full" size="lg">
                                     View Tracks
                                 </Button>
