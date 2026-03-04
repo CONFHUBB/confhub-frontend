@@ -41,6 +41,8 @@ export interface RoleAssignmentData {
     id: number
     userId: string
     role: string
+    isExternal: boolean
+    externalEmail: string
 }
 
 export interface TemplateData {

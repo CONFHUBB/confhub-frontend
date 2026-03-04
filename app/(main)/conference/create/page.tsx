@@ -13,6 +13,7 @@ import { createTopic } from "@/app/api/topic.api"
 import { assignRole } from "@/app/api/user.api"
 import { createTemplate } from "@/app/api/template.api"
 import { createReviewType } from "@/app/api/review-type.api"
+import { sendEmail } from "@/app/api/email.api"
 import toast from "react-hot-toast"
 import type {
     ConferenceData,
@@ -42,7 +43,6 @@ export default function CreateConferencePage() {
     const router = useRouter()
     const [step, setStep] = useState<Step>("conference")
 
-    // --- All collected data ---
     const [conferenceData, setConferenceData] = useState<ConferenceData | null>(null)
     const [tracksWithTopics, setTracksWithTopics] = useState<TrackWithTopics[]>([])
     const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(-1)
@@ -57,8 +57,6 @@ export default function CreateConferencePage() {
     const goBack = () => {
         const currentIndex = STEPS.indexOf(step)
         if (currentIndex > 0) {
-            // Special case: if going back from topic, go to track (same track)
-            // If going back from track and there are previous tracks with topics, go to the last topic step
             setStep(STEPS[currentIndex - 1])
         }
     }
@@ -71,7 +69,6 @@ export default function CreateConferencePage() {
     }
 
     const handleTrackSubmit = (data: TrackData) => {
-        // Save default dates from the first track, or update with latest
         const dates: DefaultTrackDates = {
             submissionStart: data.submissionStart,
             submissionEnd: data.submissionEnd,
@@ -87,14 +84,12 @@ export default function CreateConferencePage() {
         setDefaultTrackDates(dates)
 
         if (currentTrackIndex >= 0 && currentTrackIndex < tracksWithTopics.length) {
-            // Editing existing track
             setTracksWithTopics((prev) => {
                 const updated = [...prev]
                 updated[currentTrackIndex] = { ...updated[currentTrackIndex], track: data }
                 return updated
             })
         } else {
-            // New track
             const newIndex = tracksWithTopics.length
             setTracksWithTopics((prev) => [...prev, { track: data, topics: [] }])
             setCurrentTrackIndex(newIndex)
@@ -104,7 +99,6 @@ export default function CreateConferencePage() {
     }
 
     const handleTopicSubmit = (topics: TopicData[]) => {
-        // Save topics for the current track
         setTracksWithTopics((prev) => {
             const updated = [...prev]
             if (currentTrackIndex >= 0 && currentTrackIndex < updated.length) {
@@ -153,7 +147,6 @@ export default function CreateConferencePage() {
             const conferenceId = conferenceResult.id
             toast.success("Conference created!")
 
-            // 2. Create tracks and topics
             for (const { track, topics } of tracksWithTopics) {
                 const trackResult = await createTrack({
                     name: track.name,
@@ -173,7 +166,6 @@ export default function CreateConferencePage() {
                 })
                 toast.success(`Track "${track.name}" created!`)
 
-                // Create topics for this track
                 if (topics.length > 0) {
                     await Promise.all(
                         topics.map((t) =>
@@ -187,11 +179,10 @@ export default function CreateConferencePage() {
                     toast.success(`${topics.length} topic(s) added to "${track.name}"`)
                 }
 
-                // 3. Assign roles for each track
-                const trackRoles = roleAssignments.filter((a) => a.userId && a.role)
-                if (trackRoles.length > 0) {
+                const internalRoles = roleAssignments.filter((a) => !a.isExternal && a.userId && a.role)
+                if (internalRoles.length > 0) {
                     await Promise.all(
-                        trackRoles.map((a) =>
+                        internalRoles.map((a) =>
                             assignRole({
                                 userId: Number(a.userId),
                                 conferenceId,
@@ -202,11 +193,51 @@ export default function CreateConferencePage() {
                     )
                 }
             }
-            if (roleAssignments.filter((a) => a.userId && a.role).length > 0) {
+            if (roleAssignments.filter((a) => !a.isExternal && a.userId && a.role).length > 0) {
                 toast.success("Roles assigned!")
             }
 
-            // 4. Create templates
+            const emailAssignments = roleAssignments.filter((a) => a.externalEmail && a.role)
+            if (emailAssignments.length > 0) {
+                const invitationTemplate = templates.find(
+                    (t) => t.templateType.toUpperCase() === "INVITATION"
+                )
+
+                const replaceVariables = (text: string, vars: Record<string, string>) => {
+                    let result = text
+                    for (const [key, value] of Object.entries(vars)) {
+                        result = result.replaceAll(`{{${key}}}`, value)
+                    }
+                    return result
+                }
+
+                await Promise.all(
+                    emailAssignments.map((a) => {
+                        const roleName = a.role.replace(/_/g, " ").toLowerCase()
+                        const vars: Record<string, string> = {
+                            conferenceName: conferenceData!.name,
+                            conferenceAcronym: conferenceData!.acronym,
+                            location: conferenceData!.location,
+                            startDate: new Date(conferenceData!.startDate).toLocaleDateString(),
+                            endDate: new Date(conferenceData!.endDate).toLocaleDateString(),
+                            websiteUrl: conferenceData!.websiteUrl || "",
+                            roleName,
+                            recipientEmail: a.externalEmail,
+                        }
+
+                        const subject = invitationTemplate
+                            ? replaceVariables(invitationTemplate.subject, vars)
+                            : `Invitation: You have been invited as ${roleName} for ${conferenceData!.name}`
+                        const text = invitationTemplate
+                            ? replaceVariables(invitationTemplate.body, vars)
+                            : `You have been invited to ${conferenceData!.name} as ${roleName}.`
+
+                        return sendEmail({ to: a.externalEmail, subject, text })
+                    })
+                )
+                toast.success(`${emailAssignments.length} invitation email(s) sent!`)
+            }
+
             if (templates.length > 0) {
                 const validTemplates = templates.filter((t) => t.templateType && t.subject && t.body)
                 if (validTemplates.length > 0) {
@@ -225,7 +256,6 @@ export default function CreateConferencePage() {
                 }
             }
 
-            // 5. Create review type
             if (data.reviewOption) {
                 await createReviewType({
                     conferenceId,
@@ -247,7 +277,6 @@ export default function CreateConferencePage() {
 
     const currentStepIndex = STEPS.indexOf(step)
 
-    // Get current track data for editing
     const getCurrentTrackData = (): TrackData | undefined => {
         if (currentTrackIndex >= 0 && currentTrackIndex < tracksWithTopics.length) {
             return tracksWithTopics[currentTrackIndex].track
@@ -255,7 +284,6 @@ export default function CreateConferencePage() {
         return undefined
     }
 
-    // Get current topics for editing
     const getCurrentTopics = (): TopicData[] => {
         if (currentTrackIndex >= 0 && currentTrackIndex < tracksWithTopics.length) {
             return tracksWithTopics[currentTrackIndex].topics

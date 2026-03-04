@@ -15,13 +15,25 @@ import {
     FieldLegend,
     FieldSet,
 } from "@/components/ui/field"
-import { ArrowLeft, FileText, Mail, Plus, Trash2, Type } from "lucide-react"
+import { ArrowLeft, Copy, FileText, Info, Mail, Plus, Trash2, Type } from "lucide-react"
+import toast from "react-hot-toast"
 
 interface ConferenceTemplateProps {
     initialTemplates: TemplateData[]
     onSubmit: (templates: TemplateData[]) => void
     onBack: () => void
 }
+
+const TEMPLATE_VARIABLES = [
+    { variable: "{{conferenceName}}", description: "Conference name" },
+    { variable: "{{conferenceAcronym}}", description: "Conference acronym" },
+    { variable: "{{location}}", description: "Conference location" },
+    { variable: "{{startDate}}", description: "Conference start date" },
+    { variable: "{{endDate}}", description: "Conference end date" },
+    { variable: "{{websiteUrl}}", description: "Conference website URL" },
+    { variable: "{{roleName}}", description: "Assigned role name" },
+    { variable: "{{recipientEmail}}", description: "Recipient email address" },
+]
 
 let nextId = 1
 
@@ -32,6 +44,11 @@ export function ConferenceTemplate({ initialTemplates, onSubmit, onBack }: Confe
         if (initialTemplates.length > 0) return initialTemplates
         return [{ id: nextId++, templateType: "", subject: "", body: "", isDefault: false }]
     })
+
+    const copyVariable = (variable: string) => {
+        navigator.clipboard.writeText(variable)
+        toast.success(`Copied ${variable}`)
+    }
 
     const addTemplate = () => {
         setTemplates((prev) => [
@@ -92,10 +109,39 @@ export function ConferenceTemplate({ initialTemplates, onSubmit, onBack }: Confe
 
     return (
         <form onSubmit={handleSubmit}>
+            {/* Template Variables Reference */}
+            <div className="mb-8 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30">
+                <div className="mb-3 flex items-center gap-2 text-sm font-medium text-blue-800 dark:text-blue-300">
+                    <Info className="size-4" />
+                    Available Template Variables
+                </div>
+                <p className="mb-3 text-xs text-blue-700 dark:text-blue-400">
+                    Use these variables in the Subject and Body fields. They will be replaced with actual values when sending emails.
+                </p>
+                <div className="grid gap-1.5 sm:grid-cols-2">
+                    {TEMPLATE_VARIABLES.map((v) => (
+                        <button
+                            key={v.variable}
+                            type="button"
+                            onClick={() => copyVariable(v.variable)}
+                            className="group flex items-center justify-between rounded-md border border-blue-200 bg-white px-3 py-1.5 text-xs transition-colors hover:bg-blue-100 dark:border-blue-700 dark:bg-blue-900/40 dark:hover:bg-blue-800/60"
+                        >
+                            <span>
+                                <code className="mr-2 font-mono font-semibold text-blue-700 dark:text-blue-300">
+                                    {v.variable}
+                                </code>
+                                <span className="text-muted-foreground">{v.description}</span>
+                            </span>
+                            <Copy className="size-3 text-blue-400 opacity-0 transition-opacity group-hover:opacity-100" />
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             <FieldSet>
                 <FieldLegend>Conference Templates</FieldLegend>
                 <FieldDescription>
-                    Configure email templates for your conference notifications.
+                    Configure email templates for your conference notifications. Use the variables above in Subject and Body fields.
                 </FieldDescription>
 
                 <div className="mt-6 space-y-6">
@@ -136,7 +182,7 @@ export function ConferenceTemplate({ initialTemplates, onSubmit, onBack }: Confe
                                         Template Type
                                     </FieldLabel>
                                     <Input
-                                        placeholder="e.g. ACCEPTANCE, REJECTION, REMINDER"
+                                        placeholder="e.g. INVITATION, ACCEPTANCE, REJECTION, REMINDER"
                                         value={template.templateType}
                                         onChange={(e) =>
                                             updateTemplate(
@@ -150,7 +196,7 @@ export function ConferenceTemplate({ initialTemplates, onSubmit, onBack }: Confe
                                         }
                                     />
                                     <FieldDescription>
-                                        The type/category of this template.
+                                        The type/category of this template. Use &quot;INVITATION&quot; for role invitation emails.
                                     </FieldDescription>
                                     {errors[`templateType_${template.id}`] && (
                                         <FieldError>
@@ -171,7 +217,7 @@ export function ConferenceTemplate({ initialTemplates, onSubmit, onBack }: Confe
                                         Subject
                                     </FieldLabel>
                                     <Input
-                                        placeholder="e.g. Your Paper Has Been Accepted"
+                                        placeholder="e.g. Invitation: You are invited as {{roleName}} for {{conferenceName}}"
                                         value={template.subject}
                                         onChange={(e) =>
                                             updateTemplate(
@@ -185,7 +231,7 @@ export function ConferenceTemplate({ initialTemplates, onSubmit, onBack }: Confe
                                         }
                                     />
                                     <FieldDescription>
-                                        The email subject line.
+                                        The email subject line. You can use template variables.
                                     </FieldDescription>
                                     {errors[`subject_${template.id}`] && (
                                         <FieldError>
@@ -206,8 +252,8 @@ export function ConferenceTemplate({ initialTemplates, onSubmit, onBack }: Confe
                                         Body
                                     </FieldLabel>
                                     <Textarea
-                                        placeholder="Write the email body content..."
-                                        rows={4}
+                                        placeholder={"Dear Colleague,\n\nYou have been invited to {{conferenceName}} as {{roleName}}.\n\nConference Details:\n- Location: {{location}}\n- Start Date: {{startDate}}\n- End Date: {{endDate}}\n\nBest regards,\nConference Management System"}
+                                        rows={6}
                                         value={template.body}
                                         onChange={(e) =>
                                             updateTemplate(
@@ -221,7 +267,7 @@ export function ConferenceTemplate({ initialTemplates, onSubmit, onBack }: Confe
                                         }
                                     />
                                     <FieldDescription>
-                                        The email body content.
+                                        The email body content. You can use template variables.
                                     </FieldDescription>
                                     {errors[`body_${template.id}`] && (
                                         <FieldError>

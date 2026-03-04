@@ -5,7 +5,9 @@ import { getUsers } from "@/app/api/user.api"
 import type { User } from "@/types/user"
 import type { RoleAssignmentData } from "@/types/conference-form"
 import toast from "react-hot-toast"
+import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
 import {
     Select,
     SelectContent,
@@ -22,7 +24,7 @@ import {
     FieldLegend,
     FieldSet,
 } from "@/components/ui/field"
-import { ArrowLeft, Plus, Shield, Trash2, UserIcon } from "lucide-react"
+import { ArrowLeft, Mail, Plus, Shield, Trash2, UserIcon } from "lucide-react"
 
 interface AssignRoleProps {
     initialAssignments: RoleAssignmentData[]
@@ -46,7 +48,7 @@ export function AssignRole({ initialAssignments, onSubmit, onBack }: AssignRoleP
 
     const [assignments, setAssignments] = useState<RoleAssignmentData[]>(() => {
         if (initialAssignments.length > 0) return initialAssignments
-        return [{ id: nextId++, userId: "", role: "" }]
+        return [{ id: nextId++, userId: "", role: "", isExternal: false, externalEmail: "" }]
     })
 
     useEffect(() => {
@@ -65,7 +67,7 @@ export function AssignRole({ initialAssignments, onSubmit, onBack }: AssignRoleP
     }, [])
 
     const addAssignment = () => {
-        setAssignments((prev) => [...prev, { id: nextId++, userId: "", role: "" }])
+        setAssignments((prev) => [...prev, { id: nextId++, userId: "", role: "", isExternal: false, externalEmail: "" }])
     }
 
     const removeAssignment = (id: number) => {
@@ -73,21 +75,40 @@ export function AssignRole({ initialAssignments, onSubmit, onBack }: AssignRoleP
         setAssignments((prev) => prev.filter((a) => a.id !== id))
         setErrors((prev) => {
             const next = { ...prev }
-            delete next[`userId_${id}`]
-            delete next[`role_${id}`]
+            Object.keys(next)
+                .filter((k) => k.endsWith(`_${id}`))
+                .forEach((k) => delete next[k])
             return next
         })
     }
 
     const updateAssignment = (
         id: number,
-        field: "userId" | "role",
-        value: string
+        field: "userId" | "role" | "isExternal" | "externalEmail",
+        value: string | boolean
     ) => {
         setAssignments((prev) =>
-            prev.map((a) => (a.id === id ? { ...a, [field]: value } : a))
+            prev.map((a) => {
+                if (a.id !== id) return a
+                const updated = { ...a, [field]: value }
+                if (field === "isExternal") {
+                    if (value === true) {
+                        updated.userId = ""
+                    } else {
+                        updated.externalEmail = ""
+                    }
+                }
+                // When selecting an internal user, store their email for invitation
+                if (field === "userId" && typeof value === "string") {
+                    const selectedUser = users.find((u) => String(u.id) === value)
+                    if (selectedUser) {
+                        updated.externalEmail = selectedUser.email
+                    }
+                }
+                return updated
+            })
         )
-        const errorKey = `${field}_${id}`
+        const errorKey = `${String(field)}_${id}`
         if (errors[errorKey]) {
             setErrors((prev) => {
                 const next = { ...prev }
@@ -100,7 +121,15 @@ export function AssignRole({ initialAssignments, onSubmit, onBack }: AssignRoleP
     const validate = () => {
         const newErrors: Record<string, string> = {}
         assignments.forEach((a) => {
-            if (!a.userId) newErrors[`userId_${a.id}`] = "Please select a user."
+            if (a.isExternal) {
+                if (!a.externalEmail.trim()) {
+                    newErrors[`externalEmail_${a.id}`] = "Email is required."
+                } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.externalEmail)) {
+                    newErrors[`externalEmail_${a.id}`] = "Please enter a valid email."
+                }
+            } else {
+                if (!a.userId) newErrors[`userId_${a.id}`] = "Please select a user."
+            }
             if (!a.role) newErrors[`role_${a.id}`] = "Please select a role."
         })
         setErrors(newErrors)
@@ -118,7 +147,7 @@ export function AssignRole({ initialAssignments, onSubmit, onBack }: AssignRoleP
             <FieldSet>
                 <FieldLegend>Assign Roles</FieldLegend>
                 <FieldDescription>
-                    Select users and assign them roles for this conference track.
+                    Select users and assign them roles for this conference. Toggle &quot;External User&quot; to invite someone outside the system via email.
                 </FieldDescription>
 
                 <div className="mt-6 space-y-6">
@@ -147,54 +176,114 @@ export function AssignRole({ initialAssignments, onSubmit, onBack }: AssignRoleP
                             </div>
 
                             <FieldGroup>
-                                {/* User */}
-                                <Field
-                                    data-invalid={
-                                        !!errors[`userId_${assignment.id}`] ||
-                                        undefined
-                                    }
-                                >
-                                    <FieldLabel>
-                                        <UserIcon className="size-4" />
-                                        User
-                                    </FieldLabel>
-                                    <Select
-                                        value={assignment.userId}
-                                        onValueChange={(value) =>
-                                            updateAssignment(
-                                                assignment.id,
-                                                "userId",
-                                                value
-                                            )
-                                        }
-                                        disabled={isLoadingUsers}
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue
-                                                placeholder={
-                                                    isLoadingUsers
-                                                        ? "Loading users..."
-                                                        : "Select a user"
-                                                }
-                                            />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {users.map((user) => (
-                                                <SelectItem
-                                                    key={user.id}
-                                                    value={String(user.id)}
-                                                >
-                                                    {user.fullName} ({user.email})
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {errors[`userId_${assignment.id}`] && (
-                                        <FieldError>
-                                            {errors[`userId_${assignment.id}`]}
-                                        </FieldError>
-                                    )}
+                                {/* External User Toggle */}
+                                <Field>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <FieldLabel className="mb-0">
+                                                <Mail className="size-4" />
+                                                External User
+                                            </FieldLabel>
+                                            <FieldDescription>
+                                                Invite a user outside the system via email.
+                                            </FieldDescription>
+                                        </div>
+                                        <Switch
+                                            checked={assignment.isExternal}
+                                            onCheckedChange={(checked) =>
+                                                updateAssignment(
+                                                    assignment.id,
+                                                    "isExternal",
+                                                    checked
+                                                )
+                                            }
+                                        />
+                                    </div>
                                 </Field>
+
+                                {/* User Select (internal) or Email Input (external) */}
+                                {assignment.isExternal ? (
+                                    <Field
+                                        data-invalid={
+                                            !!errors[`externalEmail_${assignment.id}`] ||
+                                            undefined
+                                        }
+                                    >
+                                        <FieldLabel>
+                                            <Mail className="size-4" />
+                                            Email Address
+                                        </FieldLabel>
+                                        <Input
+                                            type="email"
+                                            placeholder="e.g. reviewer@university.edu"
+                                            value={assignment.externalEmail}
+                                            onChange={(e) =>
+                                                updateAssignment(
+                                                    assignment.id,
+                                                    "externalEmail",
+                                                    e.target.value
+                                                )
+                                            }
+                                            aria-invalid={!!errors[`externalEmail_${assignment.id}`]}
+                                        />
+                                        <FieldDescription>
+                                            An invitation email will be sent to this address.
+                                        </FieldDescription>
+                                        {errors[`externalEmail_${assignment.id}`] && (
+                                            <FieldError>
+                                                {errors[`externalEmail_${assignment.id}`]}
+                                            </FieldError>
+                                        )}
+                                    </Field>
+                                ) : (
+                                    <Field
+                                        data-invalid={
+                                            !!errors[`userId_${assignment.id}`] ||
+                                            undefined
+                                        }
+                                    >
+                                        <FieldLabel>
+                                            <UserIcon className="size-4" />
+                                            User
+                                        </FieldLabel>
+                                        <Select
+                                            value={assignment.userId}
+                                            onValueChange={(value) =>
+                                                updateAssignment(
+                                                    assignment.id,
+                                                    "userId",
+                                                    value
+                                                )
+                                            }
+                                            disabled={isLoadingUsers}
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue
+                                                    placeholder={
+                                                        isLoadingUsers
+                                                            ? "Loading users..."
+                                                            : "Select a user"
+                                                    }
+                                                />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {users.map((user) => (
+                                                    <SelectItem
+                                                        key={user.id}
+                                                        value={String(user.id)}
+                                                    >
+                                                        {user.fullName} ({user.email})
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {errors[`userId_${assignment.id}`] && (
+                                            <FieldError>
+                                                {errors[`userId_${assignment.id}`]}
+                                            </FieldError>
+                                        )}
+                                    </Field>
+                                )}
 
                                 {/* Role */}
                                 <Field
