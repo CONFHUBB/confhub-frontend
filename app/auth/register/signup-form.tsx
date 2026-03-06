@@ -50,7 +50,7 @@ export function SignupForm({
         roles,
       })
       toast.success(res.message || "Account created successfully!")
-      router.push("/")
+      router.push("/auth/login")
     } catch (err: any) {
       toast.error(
         err.response?.data?.message || "Something went wrong. Please try again."

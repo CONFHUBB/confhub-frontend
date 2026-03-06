@@ -14,14 +14,14 @@ export default function Home() {
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
-      <section className="relative flex min-h-[520px] items-center justify-center overflow-hidden rounded-2xl">
+      <section className="relative flex min-h-[450px] items-center justify-center overflow-hidden rounded-2xl">
         {/* Grainient Background */}
         <div className="absolute inset-0">
           <Grainient
             color1="#a0b0fe"
             color2="#5458fe"
             color3="#9ba6ee"
-            timeSpeed={0.25}
+            timeSpeed={1.25}
             colorBalance={0}
             warpStrength={1}
             warpFrequency={5}
@@ -53,7 +53,7 @@ export default function Home() {
             </span>
           </h1>
 
-          <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-white/80 sm:text-lg">
+          <p className="mx-auto mt-6 max-w-2xl leading-relaxed text-white/80 sm:text-xl">
             Streamline your conference workflow from paper submissions to registration
             and reporting. Designed for efficiency and collaboration.
           </p>
@@ -62,10 +62,10 @@ export default function Home() {
             <Button
               asChild
               size="lg"
-              className="rounded-full bg-white px-8 text-violet-700 shadow-lg hover:bg-white/90"
+              className="rounded-full bg-white px-8 text-violet-600 font-semibold shadow-lg hover:bg-white/90"
             >
               <Link href="/conference/create">
-                <PlusCircle className="mr-2 size-5" />
+                <PlusCircle className=" size-5" />
                 Create New Conference
               </Link>
             </Button>
@@ -73,10 +73,10 @@ export default function Home() {
               asChild
               size="lg"
               variant="outline"
-              className="rounded-full border-white/40 bg-white/10 px-8 text-white backdrop-blur-sm hover:bg-white/20 hover:text-white"
+              className="rounded-full border-white/40 font-semibold bg-white/10 px-8 text-white backdrop-blur-sm hover:bg-white/20 hover:text-white"
             >
               <Link href="/conference">
-                <Search className="mr-2 size-5" />
+                <Search className=" size-5" />
                 Browse Conferences
               </Link>
             </Button>

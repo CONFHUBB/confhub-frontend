@@ -19,7 +19,7 @@ export default function ConferencesPage() {
                 setLoading(true)
                 const data = await getConferences()
                 setConferences(data)
-            } catch (err) {
+            } catch (err: any) {
                 setError('Failed to load conferences. Please try again later.')
                 console.error('Error fetching conferences:', err)
             } finally {

@@ -138,7 +138,6 @@ export default function CreateConferencePage() {
         setIsSubmitting(true)
 
         try {
-            // 1. Create conference
             const conferenceResult = await createConference({
                 ...conferenceData!,
                 startDate: new Date(conferenceData!.startDate).toISOString(),
@@ -292,7 +291,7 @@ export default function CreateConferencePage() {
     }
 
     return (
-        <div className="mx-auto w-full max-w-2xl py-6">
+        <div className="mx-auto w-full py-6 px-20">
             <div className="mb-8">
                 {step === "conference" && (
                     <>
@@ -360,72 +359,75 @@ export default function CreateConferencePage() {
                     </>
                 )}
 
-                {/* Step indicator */}
-                <div className="mt-4 flex items-center gap-2">
-                    {STEPS.map((s, i) => (
+                <div className="mt-6">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-primary">
+                            Progress: {STEP_LABELS[step]}
+                        </span>
+                        <span className="text-sm font-medium text-muted-foreground">
+                            {Math.round(((currentStepIndex + 1) / STEPS.length) * 100)}%
+                        </span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                         <div
-                            key={s}
-                            className={`h-2 flex-1 rounded-full transition-colors ${i <= currentStepIndex ? "bg-primary" : "bg-muted"
-                                }`}
+                            className="h-full rounded-full bg-primary transition-all duration-500 ease-in-out"
+                            style={{ width: `${((currentStepIndex + 1) / STEPS.length) * 100}%` }}
                         />
-                    ))}
-                </div>
-                <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-                    {STEPS.map((s) => (
-                        <span key={s}>{STEP_LABELS[s]}</span>
-                    ))}
+                    </div>
                 </div>
             </div>
 
-            {step === "conference" && (
-                <ConferenceForm
-                    initialData={conferenceData}
-                    onSubmit={handleConferenceSubmit}
-                />
-            )}
+            <div className="rounded-xl border bg-card p-8 shadow-sm">
+                {step === "conference" && (
+                    <ConferenceForm
+                        initialData={conferenceData}
+                        onSubmit={handleConferenceSubmit}
+                    />
+                )}
 
-            {step === "track" && (
-                <AddTrack
-                    initialData={getCurrentTrackData()}
-                    defaultDates={defaultTrackDates}
-                    onSubmit={handleTrackSubmit}
-                    onBack={goBack}
-                />
-            )}
+                {step === "track" && (
+                    <AddTrack
+                        initialData={getCurrentTrackData()}
+                        defaultDates={defaultTrackDates}
+                        onSubmit={handleTrackSubmit}
+                        onBack={goBack}
+                    />
+                )}
 
-            {step === "topic" && (
-                <AddTopic
-                    initialTopics={getCurrentTopics()}
-                    onSubmit={handleTopicSubmit}
-                    onAddAnotherTrack={handleAddAnotherTrack}
-                    onBack={goBack}
-                />
-            )}
+                {step === "topic" && (
+                    <AddTopic
+                        initialTopics={getCurrentTopics()}
+                        onSubmit={handleTopicSubmit}
+                        onAddAnotherTrack={handleAddAnotherTrack}
+                        onBack={goBack}
+                    />
+                )}
 
-            {step === "assign-role" && (
-                <AssignRole
-                    initialAssignments={roleAssignments}
-                    onSubmit={handleRoleAssignmentsSubmit}
-                    onBack={goBack}
-                />
-            )}
+                {step === "assign-role" && (
+                    <AssignRole
+                        initialAssignments={roleAssignments}
+                        onSubmit={handleRoleAssignmentsSubmit}
+                        onBack={goBack}
+                    />
+                )}
 
-            {step === "template" && (
-                <ConferenceTemplate
-                    initialTemplates={templates}
-                    onSubmit={handleTemplatesSubmit}
-                    onBack={goBack}
-                />
-            )}
+                {step === "template" && (
+                    <ConferenceTemplate
+                        initialTemplates={templates}
+                        onSubmit={handleTemplatesSubmit}
+                        onBack={goBack}
+                    />
+                )}
 
-            {step === "review-type" && (
-                <ReviewType
-                    initialData={reviewTypeData}
-                    onSubmit={handleFinalSubmit}
-                    onBack={goBack}
-                    isSubmitting={isSubmitting}
-                />
-            )}
+                {step === "review-type" && (
+                    <ReviewType
+                        initialData={reviewTypeData}
+                        onSubmit={handleFinalSubmit}
+                        onBack={goBack}
+                        isSubmitting={isSubmitting}
+                    />
+                )}
+            </div>
         </div>
     )
 }

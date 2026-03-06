@@ -14,7 +14,6 @@ import {
     FieldLegend,
     FieldSet,
 } from "@/components/ui/field"
-import { CalendarIcon, Globe, MapPin, Tag, FileText, Type } from "lucide-react"
 
 interface ConferenceFormProps {
     initialData: ConferenceData | null
@@ -86,116 +85,94 @@ export function ConferenceForm({ initialData, onSubmit }: ConferenceFormProps) {
     return (
         <form onSubmit={handleSubmit}>
             <FieldSet>
-                <FieldLegend>Conference Details</FieldLegend>
-                <FieldDescription>
+                <FieldLegend className="text-lg">Conference Details</FieldLegend>
+                <FieldDescription className="text-base">
                     Provide the basic information about your conference.
                 </FieldDescription>
 
                 <FieldGroup>
-                    {/* Name */}
+                    {/* Conference Full Name – full width */}
                     <Field data-invalid={!!errors.name || undefined}>
-                        <FieldLabel htmlFor="name">
-                            <Type className="size-4" />
-                            Conference Name
+                        <FieldLabel htmlFor="name" className="text-base font-semibold">
+                            Conference Full Name
                         </FieldLabel>
                         <Input
                             id="name"
-                            placeholder="e.g. International Conference on Software Engineering"
+                            className="h-12 text-base"
+                            placeholder="e.g. International Conference on Artificial Intelligence 2024"
                             value={formData.name}
                             onChange={handleChange}
                             aria-invalid={!!errors.name}
                         />
-                        <FieldDescription>
-                            The full official name of your conference.
-                        </FieldDescription>
                         {errors.name && <FieldError>{errors.name}</FieldError>}
                     </Field>
 
-                    {/* Acronym */}
-                    <Field data-invalid={!!errors.acronym || undefined}>
-                        <FieldLabel htmlFor="acronym">
-                            <Tag className="size-4" />
-                            Acronym
-                        </FieldLabel>
-                        <Input
-                            id="acronym"
-                            placeholder="e.g. ICSE"
-                            value={formData.acronym}
-                            onChange={handleChange}
-                            aria-invalid={!!errors.acronym}
-                        />
-                        <FieldDescription>
-                            A short abbreviation for the conference.
-                        </FieldDescription>
-                        {errors.acronym && (
-                            <FieldError>{errors.acronym}</FieldError>
-                        )}
-                    </Field>
+                    {/* Acronym + Location – 2 columns */}
+                    <div className="grid gap-6 sm:grid-cols-2">
+                        <Field data-invalid={!!errors.acronym || undefined}>
+                            <FieldLabel htmlFor="acronym" className="text-base font-semibold">
+                                Acronym
+                            </FieldLabel>
+                            <Input
+                                id="acronym"
+                                className="h-12 text-base"
+                                placeholder="e.g. ICAI-24"
+                                value={formData.acronym}
+                                onChange={handleChange}
+                                aria-invalid={!!errors.acronym}
+                            />
+                            {errors.acronym && (
+                                <FieldError>{errors.acronym}</FieldError>
+                            )}
+                        </Field>
 
-                    {/* Description */}
+                        <Field data-invalid={!!errors.location || undefined}>
+                            <FieldLabel htmlFor="location" className="text-base font-semibold">
+                                Location
+                            </FieldLabel>
+                            <Input
+                                id="location"
+                                className="h-12 text-base"
+                                placeholder="City, Country or Remote"
+                                value={formData.location}
+                                onChange={handleChange}
+                                aria-invalid={!!errors.location}
+                            />
+                            {errors.location && (
+                                <FieldError>{errors.location}</FieldError>
+                            )}
+                        </Field>
+                    </div>
+
+                    {/* Description – full width */}
                     <Field data-invalid={!!errors.description || undefined}>
-                        <FieldLabel htmlFor="description">
-                            <FileText className="size-4" />
+                        <FieldLabel htmlFor="description" className="text-base font-semibold">
                             Description
                         </FieldLabel>
                         <Textarea
                             id="description"
-                            placeholder="Describe the conference topics, goals, and audience..."
-                            rows={4}
+                            className="min-h-[120px] text-base"
+                            placeholder="Briefly describe the goals and scope of the conference..."
+                            rows={5}
                             value={formData.description}
                             onChange={handleChange}
                             aria-invalid={!!errors.description}
                         />
-                        <FieldDescription>
-                            A brief overview of what the conference is about.
-                        </FieldDescription>
                         {errors.description && (
                             <FieldError>{errors.description}</FieldError>
                         )}
                     </Field>
 
-                    {/* Location */}
-                    <Field data-invalid={!!errors.location || undefined}>
-                        <FieldLabel htmlFor="location">
-                            <MapPin className="size-4" />
-                            Location
-                        </FieldLabel>
-                        <Input
-                            id="location"
-                            placeholder="e.g. Ho Chi Minh City, Vietnam"
-                            value={formData.location}
-                            onChange={handleChange}
-                            aria-invalid={!!errors.location}
-                        />
-                        <FieldDescription>
-                            The city and country where the conference will be held.
-                        </FieldDescription>
-                        {errors.location && (
-                            <FieldError>{errors.location}</FieldError>
-                        )}
-                    </Field>
-                </FieldGroup>
-            </FieldSet>
-
-            <div className="my-8 border-t" />
-
-            <FieldSet>
-                <FieldLegend>Schedule</FieldLegend>
-                <FieldDescription>
-                    Set the conference dates.
-                </FieldDescription>
-
-                <FieldGroup>
-                    {/* Start Date */}
+                    {/* Start Date + End Date – 2 columns */}
                     <div className="grid gap-6 sm:grid-cols-2">
                         <Field data-invalid={!!errors.startDate || undefined}>
-                            <FieldLabel htmlFor="startDate">
-                                <CalendarIcon className="size-4" />
+                            <FieldLabel htmlFor="startDate" className="text-base font-semibold">
                                 Start Date
                             </FieldLabel>
                             <Input
                                 id="startDate"
                                 type="datetime-local"
+                                className="h-12 text-base"
                                 value={formData.startDate}
                                 onChange={handleChange}
                                 aria-invalid={!!errors.startDate}
@@ -205,15 +182,14 @@ export function ConferenceForm({ initialData, onSubmit }: ConferenceFormProps) {
                             )}
                         </Field>
 
-                        {/* End Date */}
                         <Field data-invalid={!!errors.endDate || undefined}>
-                            <FieldLabel htmlFor="endDate">
-                                <CalendarIcon className="size-4" />
+                            <FieldLabel htmlFor="endDate" className="text-base font-semibold">
                                 End Date
                             </FieldLabel>
                             <Input
                                 id="endDate"
                                 type="datetime-local"
+                                className="h-12 text-base"
                                 value={formData.endDate}
                                 onChange={handleChange}
                                 aria-invalid={!!errors.endDate}
@@ -224,23 +200,20 @@ export function ConferenceForm({ initialData, onSubmit }: ConferenceFormProps) {
                         </Field>
                     </div>
 
-                    {/* Website URL */}
+                    {/* Website URL – full width */}
                     <Field data-invalid={!!errors.websiteUrl || undefined}>
-                        <FieldLabel htmlFor="websiteUrl">
-                            <Globe className="size-4" />
+                        <FieldLabel htmlFor="websiteUrl" className="text-base font-semibold">
                             Website URL
                         </FieldLabel>
                         <Input
                             id="websiteUrl"
                             type="url"
-                            placeholder="https://example.com"
+                            className="h-12 text-base"
+                            placeholder="https://your-conference-site.com"
                             value={formData.websiteUrl}
                             onChange={handleChange}
                             aria-invalid={!!errors.websiteUrl}
                         />
-                        <FieldDescription>
-                            Optional. The official website for the conference.
-                        </FieldDescription>
                         {errors.websiteUrl && (
                             <FieldError>{errors.websiteUrl}</FieldError>
                         )}
@@ -248,8 +221,8 @@ export function ConferenceForm({ initialData, onSubmit }: ConferenceFormProps) {
                 </FieldGroup>
             </FieldSet>
 
-            <div className="mt-8 flex items-center justify-end gap-4">
-                <Button type="submit">
+            <div className="mt-10 flex items-center justify-end gap-4">
+                <Button type="submit" size="lg" className="text-base px-8">
                     Next: Add Tracks →
                 </Button>
             </div>

@@ -32,6 +32,7 @@ export function LoginForm({
     try {
       const res = await login({ email, password })
       localStorage.setItem("accessToken", res.token)
+      document.cookie = `accessToken=${res.token}; path=/; max-age=${60 * 60 * 24}` // 24 hours
       toast.success(res.message || "Login successful!")
       router.push("/")
     } catch (err: any) {
