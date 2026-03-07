@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/field"
 import { ArrowLeft, Copy, FileText, Info, Mail, Plus, Trash2, Type } from "lucide-react"
 import toast from "react-hot-toast"
+import { Editor } from "@/components/blocks/editor-x/editor"
 
 interface ConferenceTemplateProps {
     initialTemplates: TemplateData[]
@@ -105,6 +106,15 @@ export function ConferenceTemplate({ initialTemplates, onSubmit, onBack }: Confe
         e.preventDefault()
         if (!validate()) return
         onSubmit(templates)
+    }
+
+    const getParsedBody = (bodyStr: string) => {
+        try {
+            if (!bodyStr) return undefined
+            return JSON.parse(bodyStr)
+        } catch (e) {
+            return undefined // Fallback if plain string or malformed
+        }
     }
 
     return (
@@ -251,23 +261,18 @@ export function ConferenceTemplate({ initialTemplates, onSubmit, onBack }: Confe
                                         <FileText className="size-4" />
                                         Body
                                     </FieldLabel>
-                                    <Textarea
-                                        placeholder={"Dear Colleague,\n\nYou have been invited to {{conferenceName}} as {{roleName}}.\n\nConference Details:\n- Location: {{location}}\n- Start Date: {{startDate}}\n- End Date: {{endDate}}\n\nBest regards,\nConference Management System"}
-                                        rows={6}
-                                        value={template.body}
-                                        onChange={(e) =>
-                                            updateTemplate(
-                                                template.id,
-                                                "body",
-                                                e.target.value
-                                            )
-                                        }
-                                        aria-invalid={
-                                            !!errors[`body_${template.id}`]
-                                        }
-                                    />
+
+                                    <div className={`mt-1 rounded-md border ${errors[`body_${template.id}`] ? "border-destructive focus-within:ring-destructive" : ""}`}>
+                                        <Editor
+                                            editorSerializedState={getParsedBody(template.body)}
+                                            onSerializedChange={(state) => {
+                                                updateTemplate(template.id, "body", JSON.stringify(state))
+                                            }}
+                                        />
+                                    </div>
+
                                     <FieldDescription>
-                                        The email body content. You can use template variables.
+                                        The email body content. You can use template variables within the editor text.
                                     </FieldDescription>
                                     {errors[`body_${template.id}`] && (
                                         <FieldError>
@@ -289,7 +294,7 @@ export function ConferenceTemplate({ initialTemplates, onSubmit, onBack }: Confe
                                         </div>
                                         <Switch
                                             checked={template.isDefault}
-                                            onCheckedChange={(checked) =>
+                                            onCheckedChange={(checked: boolean) =>
                                                 updateTemplate(
                                                     template.id,
                                                     "isDefault",
