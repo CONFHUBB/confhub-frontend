@@ -8,13 +8,7 @@ import toast from "react-hot-toast"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
+import { Select } from "antd"
 import {
     Field,
     FieldDescription,
@@ -247,36 +241,15 @@ export function AssignRole({ initialAssignments, onSubmit, onBack }: AssignRoleP
                                             User
                                         </FieldLabel>
                                         <Select
-                                            value={assignment.userId}
-                                            onValueChange={(value) =>
-                                                updateAssignment(
-                                                    assignment.id,
-                                                    "userId",
-                                                    value
-                                                )
-                                            }
+                                            showSearch
+                                            optionFilterProp="label"
+                                            className="w-full h-10"
+                                            placeholder={isLoadingUsers ? "Loading users..." : "Select a user"}
+                                            value={assignment.userId || undefined}
+                                            onChange={(value: string) => updateAssignment(assignment.id, "userId", value)}
                                             disabled={isLoadingUsers}
-                                        >
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue
-                                                    placeholder={
-                                                        isLoadingUsers
-                                                            ? "Loading users..."
-                                                            : "Select a user"
-                                                    }
-                                                />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {users.map((user) => (
-                                                    <SelectItem
-                                                        key={user.id}
-                                                        value={String(user.id)}
-                                                    >
-                                                        {user.fullName} ({user.email})
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                            options={users.map(u => ({ label: `${u.fullName} (${u.email})`, value: String(u.id) }))}
+                                        />
                                         {errors[`userId_${assignment.id}`] && (
                                             <FieldError>
                                                 {errors[`userId_${assignment.id}`]}
@@ -297,29 +270,14 @@ export function AssignRole({ initialAssignments, onSubmit, onBack }: AssignRoleP
                                         Role
                                     </FieldLabel>
                                     <Select
-                                        value={assignment.role}
-                                        onValueChange={(value) =>
-                                            updateAssignment(
-                                                assignment.id,
-                                                "role",
-                                                value
-                                            )
-                                        }
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Select a role" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {ROLES.map((role) => (
-                                                <SelectItem
-                                                    key={role.value}
-                                                    value={role.value}
-                                                >
-                                                    {role.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                        showSearch
+                                        optionFilterProp="label"
+                                        className="w-full h-10"
+                                        placeholder="Select a role"
+                                        value={assignment.role || undefined}
+                                        onChange={(value: string) => updateAssignment(assignment.id, "role", value)}
+                                        options={ROLES}
+                                    />
                                     {errors[`role_${assignment.id}`] && (
                                         <FieldError>
                                             {errors[`role_${assignment.id}`]}

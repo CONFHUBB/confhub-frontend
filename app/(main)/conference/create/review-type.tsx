@@ -4,13 +4,7 @@ import { useState } from "react"
 import type { ReviewTypeData } from "@/types/conference-form"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
+import { Select } from "antd"
 import {
     Field,
     FieldDescription,
@@ -72,8 +66,12 @@ export function ReviewType({ initialData, onSubmit, onBack, isSubmitting }: Revi
                             Review Type
                         </FieldLabel>
                         <Select
-                            value={reviewOption}
-                            onValueChange={(value) => {
+                            showSearch
+                            optionFilterProp="label"
+                            className="w-full h-10"
+                            placeholder="Select a review type"
+                            value={reviewOption || undefined}
+                            onChange={(value: string) => {
                                 setReviewOption(value)
                                 if (errors.reviewOption) {
                                     setErrors((prev) => {
@@ -84,21 +82,8 @@ export function ReviewType({ initialData, onSubmit, onBack, isSubmitting }: Revi
                                 }
                             }}
                             disabled={isSubmitting}
-                        >
-                            <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select a review type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {REVIEW_OPTIONS.map((option) => (
-                                    <SelectItem
-                                        key={option.value}
-                                        value={option.value}
-                                    >
-                                        {option.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                            options={REVIEW_OPTIONS.map(o => ({ label: o.label, value: o.value }))}
+                        />
                         {selectedOption && (
                             <FieldDescription>
                                 {selectedOption.description}
