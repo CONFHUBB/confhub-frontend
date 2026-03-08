@@ -1,28 +1,28 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { getTrack, getTopicsByTrack } from '@/app/api/track.api'
 import type { TrackResponse } from '@/types/track'
 import type { TopicResponse } from '@/types/topic'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import type { User } from '@/types/user'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, ArrowLeft } from 'lucide-react'
+import { Loader2, ArrowLeft, Check, FileText, Users, Upload, Search, Trash2, Send, FileUp } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { CreatePaperRequest } from '@/types/paper'
-import { createPaper, assignAuthorToPaper } from '@/app/api/paper.api'
+import { createPaper, assignAuthorToPaper, getAuthorsByPaper } from '@/app/api/paper.api'
+import { getConferenceSubmissionForm } from '@/app/api/submission-form.api'
 import { getUserByEmail } from '@/app/api/user.api'
+import { FormRenderer } from '@/components/submission-form/form-renderer'
 
 const getCurrentUserEmail = (): string | null => {
     if (typeof window === 'undefined') return null
     const token = localStorage.getItem('accessToken')
     if (!token) return null
-
     try {
         const payload = JSON.parse(atob(token.split('.')[1]))
         return payload.sub || null
@@ -32,6 +32,319 @@ const getCurrentUserEmail = (): string | null => {
     }
 }
 
+// ─── Stepper Component ──────────────────────────────────────────────────
+function Stepper({ currentStep }: { currentStep: number }) {
+    const steps = [
+        { label: 'Register Paper', icon: FileText },
+        { label: 'Add Authors', icon: Users },
+        { label: 'Upload Manuscript', icon: Upload },
+    ]
+
+    return (
+        <div className="flex items-center justify-between mb-8">
+            {steps.map((step, index) => {
+                const stepNumber = index + 1
+                const isActive = stepNumber === currentStep
+                const isCompleted = stepNumber < currentStep
+                const Icon = step.icon
+
+                return (
+                    <div key={step.label} className="flex items-center flex-1 last:flex-initial">
+                        <div className="flex flex-col items-center gap-2">
+                            <div
+                                className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300
+                                    ${isCompleted
+                                        ? 'bg-primary border-primary text-primary-foreground'
+                                        : isActive
+                                            ? 'bg-primary/10 border-primary text-primary'
+                                            : 'bg-muted border-muted-foreground/30 text-muted-foreground'
+                                    }`}
+                            >
+                                {isCompleted ? (
+                                    <Check className="h-5 w-5" />
+                                ) : (
+                                    <Icon className="h-5 w-5" />
+                                )}
+                            </div>
+                            <span className={`text-xs font-medium whitespace-nowrap ${isActive ? 'text-primary' : isCompleted ? 'text-primary' : 'text-muted-foreground'}`}>
+                                {step.label}
+                            </span>
+                        </div>
+
+                        {index < steps.length - 1 && (
+                            <div className={`flex-1 h-0.5 mx-3 mt-[-1.5rem] transition-colors duration-300 ${isCompleted ? 'bg-primary' : 'bg-muted-foreground/20'}`} />
+                        )}
+                    </div>
+                )
+            })}
+        </div>
+    )
+}
+
+// ─── Step 2: Add Authors ────────────────────────────────────────────────
+function StepAddAuthors({
+    paperId,
+    paperTitle,
+    onNext,
+}: {
+    paperId: number
+    paperTitle: string
+    onNext: () => void
+}) {
+    const [authors, setAuthors] = useState<User[]>([])
+    const [loadingAuthors, setLoadingAuthors] = useState(true)
+    const [searchEmail, setSearchEmail] = useState('')
+    const [addingAuthor, setAddingAuthor] = useState(false)
+
+    const fetchAuthors = useCallback(async () => {
+        try {
+            setLoadingAuthors(true)
+            const data = await getAuthorsByPaper(paperId)
+            setAuthors(data)
+        } catch (err) {
+            console.error('Error fetching authors:', err)
+        } finally {
+            setLoadingAuthors(false)
+        }
+    }, [paperId])
+
+    useEffect(() => {
+        fetchAuthors()
+    }, [fetchAuthors])
+
+    const handleAddAuthor = async () => {
+        if (!searchEmail.trim()) {
+            toast.error('Please enter an email address')
+            return
+        }
+        try {
+            setAddingAuthor(true)
+            const user = await getUserByEmail(searchEmail.trim())
+            if (!user || !user.id) {
+                toast.error('User not found with that email')
+                return
+            }
+            // Check if already added
+            if (authors.some((a) => a.id === user.id)) {
+                toast.error('This author is already added')
+                return
+            }
+            await assignAuthorToPaper(paperId, user.id)
+            toast.success('Author added successfully!')
+            setSearchEmail('')
+            fetchAuthors()
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to add author')
+            console.error('Error adding author:', err)
+        } finally {
+            setAddingAuthor(false)
+        }
+    }
+
+    return (
+        <div className="space-y-6">
+            {/* Success banner */}
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+                <Check className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+                <p className="text-sm text-green-700 dark:text-green-300">
+                    Paper <strong>"{paperTitle}"</strong> has been registered successfully.
+                </p>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+                All authors must be added to the paper record. You can add co-authors by their email address below.
+            </p>
+
+            {/* Authors Table */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-lg">Authors</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {loadingAuthors ? (
+                        <div className="flex items-center justify-center py-8">
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        </div>
+                    ) : (
+                        <div className="border rounded-lg overflow-hidden">
+                            <table className="w-full text-sm">
+                                <thead className="bg-muted/50">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">#</th>
+                                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">Author Name</th>
+                                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">Email</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {authors.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">
+                                                No authors added yet.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        authors.map((author, idx) => (
+                                            <tr key={author.id} className="hover:bg-muted/30 transition-colors">
+                                                <td className="px-4 py-3">{idx + 1}</td>
+                                                <td className="px-4 py-3 font-medium">{author.fullName}</td>
+                                                <td className="px-4 py-3 text-muted-foreground">{author.email}</td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {/* Add Author */}
+                    <div className="mt-4 flex gap-3">
+                        <div className="flex-1 relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                className="pl-10"
+                                placeholder="Enter author email address..."
+                                value={searchEmail}
+                                onChange={(e) => setSearchEmail(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddAuthor()}
+                            />
+                        </div>
+                        <Button onClick={handleAddAuthor} disabled={addingAuthor} className="gap-2 shrink-0">
+                            {addingAuthor ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+                            Add Author
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Navigation */}
+            <div className="flex justify-end pt-2">
+                <Button size="lg" onClick={onNext} className="gap-2">
+                    Continue to Upload Manuscript
+                    <ArrowLeft className="h-4 w-4 rotate-180" />
+                </Button>
+            </div>
+        </div>
+    )
+}
+
+// ─── Step 3: Upload Manuscript ──────────────────────────────────────────
+function StepUploadManuscript({
+    paperId,
+    paperTitle,
+    conferenceId,
+}: {
+    paperId: number
+    paperTitle: string
+    conferenceId: number
+}) {
+    const router = useRouter()
+    const [selectedFile, setSelectedFile] = useState<File | null>(null)
+    const [uploading, setUploading] = useState(false)
+
+    const handleUpload = async () => {
+        if (!selectedFile) {
+            toast.error('Please select a PDF file')
+            return
+        }
+        try {
+            setUploading(true)
+            // TODO: Replace with actual file upload API e.g. POST /api/v1/paper/{paperId}/manuscript
+            await new Promise((resolve) => setTimeout(resolve, 1500))
+            toast.success('Manuscript uploaded successfully!')
+            router.push(`/track?conferenceId=${conferenceId}`)
+        } catch (err) {
+            toast.error('Failed to upload manuscript')
+            console.error('Error uploading:', err)
+        } finally {
+            setUploading(false)
+        }
+    }
+
+    return (
+        <div className="space-y-6">
+            {/* Info banner */}
+            <div className="p-4 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 text-sm text-blue-800 dark:text-blue-300 space-y-2">
+                <p>
+                    To convert other file formats, such as Microsoft Word, to PDF, you can use online services.
+                    Examples include Adobe, PDFonline or FreePDFConvert.
+                </p>
+            </div>
+
+            <div className="space-y-2">
+                <p className="text-sm">
+                    You can now upload your <strong>Manuscript</strong> for <em>{paperTitle}</em>.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                    You can upload PDF files, formatted as US letter size (8.5 by 11 inches), US letter size landscape (11 by 8.5 inches), A4 size (210 x 297 mm) or A4 size landscape (297 x 210 mm).
+                </p>
+                <p className="text-sm text-muted-foreground">
+                    Files larger than 1 GB need to be uploaded via Google Drive or Dropbox links.
+                </p>
+            </div>
+
+            {/* Upload Card */}
+            <Card>
+                <CardContent className="pt-6 space-y-4">
+                    <Label>File Name</Label>
+                    <div className="flex gap-3 items-center">
+                        <div className="flex-1">
+                            <label
+                                htmlFor="file-upload"
+                                className="flex items-center gap-3 p-3 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-all"
+                            >
+                                <FileUp className="h-5 w-5 text-muted-foreground" />
+                                <span className="text-sm text-muted-foreground">
+                                    {selectedFile ? selectedFile.name : 'Choose file or drag and drop here'}
+                                </span>
+                            </label>
+                            <input
+                                id="file-upload"
+                                type="file"
+                                accept=".pdf"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0]
+                                    if (file) {
+                                        if (file.type !== 'application/pdf') {
+                                            toast.error('Please select a PDF file')
+                                            return
+                                        }
+                                        setSelectedFile(file)
+                                    }
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    {selectedFile && (
+                        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                            <div className="flex items-center gap-2 text-sm">
+                                <FileText className="h-4 w-4 text-primary" />
+                                <span className="font-medium">{selectedFile.name}</span>
+                                <span className="text-muted-foreground">({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => setSelectedFile(null)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                        </div>
+                    )}
+
+                    <div className="flex gap-3 pt-2">
+                        <Button onClick={handleUpload} disabled={uploading || !selectedFile} className="gap-2">
+                            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                            {uploading ? 'Uploading...' : 'Upload PDF'}
+                        </Button>
+                        <Button variant="outline" onClick={() => router.push(`/track?conferenceId=${conferenceId}`)}>
+                            Skip for now
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    )
+}
+
+// ─── Main Page ──────────────────────────────────────────────────────────
 export default function SubmitPaperPage() {
     const params = useParams()
     const searchParams = useSearchParams()
@@ -39,25 +352,23 @@ export default function SubmitPaperPage() {
     const trackId = Number(params.trackId)
     const conferenceId = Number(searchParams.get('conferenceId'))
 
+    // Step management from URL
+    const stepParam = Number(searchParams.get('step') || '1')
+    const paperIdParam = Number(searchParams.get('paperId') || '0')
+    const paperTitleParam = searchParams.get('paperTitle') || ''
+
+    const [currentStep, setCurrentStep] = useState(stepParam)
+    const [createdPaperId, setCreatedPaperId] = useState(paperIdParam)
+    const [createdPaperTitle, setCreatedPaperTitle] = useState(paperTitleParam)
+
     const [track, setTrack] = useState<TrackResponse | null>(null)
     const [topics, setTopics] = useState<TopicResponse[]>([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
-
-    const [formData, setFormData] = useState<CreatePaperRequest>({
-        conferenceTrackId: trackId,
-        topicId: 0,
-        title: '',
-        abstractField: '',
-        keyword1: '',
-        keyword2: '',
-        keyword3: '',
-        keyword4: '',
-        submissionTime: new Date().toISOString(),
-        isPassedPlagiarism: false,
-        status: 'SUBMITTED'
-    })
+    const [definitionJson, setDefinitionJson] = useState<string>("")
+    const [submissionFormId, setSubmissionFormId] = useState<number | null>(null)
+    const [selectedTopicId, setSelectedTopicId] = useState<string>("")
 
     useEffect(() => {
         const fetchData = async () => {
@@ -69,12 +380,20 @@ export default function SubmitPaperPage() {
                 ])
                 setTrack(trackData)
                 setTopics(topicsData)
+
+                if (conferenceId) {
+                    const formConfig = await getConferenceSubmissionForm(conferenceId)
+                    if (formConfig) {
+                        setDefinitionJson(formConfig.definitionJson)
+                        if (formConfig.id) {
+                            setSubmissionFormId(formConfig.id)
+                        }
+                    }
+                }
             } catch (err: any) {
                 if (err.response?.status === 401 || err.response?.status === 403) {
                     setError('You must be logged in to submit a paper.')
-                    setTimeout(() => {
-                        router.push('/auth/login')
-                    }, 2000)
+                    setTimeout(() => { router.push('/auth/login') }, 2000)
                 } else {
                     setError('Failed to load submission form. Please try again later.')
                 }
@@ -89,18 +408,44 @@ export default function SubmitPaperPage() {
         }
     }, [trackId, router])
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
+    const navigateToStep = (step: number, paperId?: number, paperTitle?: string) => {
+        const pid = paperId || createdPaperId
+        const ptitle = paperTitle || createdPaperTitle
+        setCurrentStep(step)
+        setCreatedPaperId(pid)
+        setCreatedPaperTitle(ptitle)
 
-        if (!formData.topicId) {
+        const url = `/track/${trackId}/submit?conferenceId=${conferenceId}&step=${step}&paperId=${pid}&paperTitle=${encodeURIComponent(ptitle)}`
+        router.replace(url)
+    }
+
+    const handleFormSubmit = async (fixedData: any, extraAnswersJson: string) => {
+        if (!selectedTopicId) {
             toast.error('Please select a topic')
             return
         }
 
         try {
             setSubmitting(true)
-            const createdPaper = await createPaper(formData)
+            const payload: any = {
+                conferenceTrackId: trackId,
+                topicId: Number(selectedTopicId),
+                submissionFormId: submissionFormId || 0,
+                title: fixedData.title,
+                abstractField: fixedData.abstractField,
+                keyword1: fixedData.keyword1 || "",
+                keyword2: fixedData.keyword2 || "",
+                keyword3: fixedData.keyword3 || "",
+                keyword4: fixedData.keyword4 || "",
+                extraAnswersJson,
+                submissionTime: new Date().toISOString(),
+                isPassedPlagiarism: false,
+                status: 'SUBMITTED'
+            }
 
+            const createdPaper = await createPaper(payload)
+
+            // Auto-assign current user as author
             if (createdPaper.id) {
                 const userEmail = getCurrentUserEmail()
                 if (userEmail) {
@@ -115,23 +460,19 @@ export default function SubmitPaperPage() {
                 }
             }
 
-            toast.success('Paper submitted successfully!')
-            router.push(`/track?conferenceId=${conferenceId}`)
+            toast.success('Paper registered successfully!')
+            navigateToStep(2, createdPaper.id, fixedData.title)
         } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to submit paper. Please try again.')
+            toast.error(err.response?.data?.message || 'Failed to register paper. Please try again.')
             console.error('Error submitting paper:', err)
         } finally {
             setSubmitting(false)
         }
     }
 
-    const handleChange = (field: keyof CreatePaperRequest, value: string | number) => {
-        setFormData(prev => ({ ...prev, [field]: value }))
-    }
-
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
+            <div className="flex items-center justify-center min-h-[400px]">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         )
@@ -139,23 +480,20 @@ export default function SubmitPaperPage() {
 
     if (error) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
                 <p className="text-destructive text-lg">{error}</p>
                 {error.includes('logged in') ? (
-                    <Link href="/auth/login">
-                        <Button>Go to Login</Button>
-                    </Link>
+                    <Link href="/auth/login"><Button>Go to Login</Button></Link>
                 ) : (
-                    <Button onClick={() => window.location.reload()}>
-                        Retry
-                    </Button>
+                    <Button onClick={() => window.location.reload()}>Retry</Button>
                 )}
             </div>
         )
     }
 
     return (
-        <div className="container mx-auto py-8 px-4 max-w-3xl">
+        <div className="container mx-auto py-8 px-4 max-w-4xl">
+            {/* Back button */}
             <Link href={`/track?conferenceId=${conferenceId}`}>
                 <Button variant="ghost" className="mb-4">
                     <ArrowLeft className="h-4 w-4 mr-2" />
@@ -163,138 +501,89 @@ export default function SubmitPaperPage() {
                 </Button>
             </Link>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-2xl">Submit Paper</CardTitle>
-                    <CardDescription>
-                        {track?.name} - {track?.description}
-                    </CardDescription>
+            {/* Page header */}
+            <Card className="mb-6">
+                <CardHeader className="pb-4">
+                    <CardTitle className="text-xl">
+                        Register a paper for {track?.name}
+                    </CardTitle>
+                    {track?.description && (
+                        <p className="text-sm text-muted-foreground mt-1">{track.description}</p>
+                    )}
                 </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="topic">Topic *</Label>
-                            <Select
-                                value={formData.topicId.toString()}
-                                onValueChange={(value) => handleChange('topicId', Number(value))}
-                            >
-                                <SelectTrigger id="topic">
-                                    <SelectValue placeholder="Select a topic" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {topics.map((topic) => (
-                                        <SelectItem key={topic.id} value={topic.id.toString()}>
-                                            {topic.title}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="title">Paper Title *</Label>
-                            <Input
-                                id="title"
-                                placeholder="Enter your paper title"
-                                value={formData.title}
-                                onChange={(e) => handleChange('title', e.target.value)}
-                                required
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="abstract">Abstract *</Label>
-                            <Textarea
-                                id="abstract"
-                                placeholder="Enter your paper abstract"
-                                value={formData.abstractField}
-                                onChange={(e) => handleChange('abstractField', e.target.value)}
-                                rows={6}
-                                required
-                            />
-                        </div>
-
-                        <div className="space-y-4">
-                            <Label>Keywords *</Label>
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-2">
-                                    <Label htmlFor="keyword1" className="text-sm text-muted-foreground">
-                                        Keyword 1
-                                    </Label>
-                                    <Input
-                                        id="keyword1"
-                                        placeholder="Keyword 1"
-                                        value={formData.keyword1}
-                                        onChange={(e) => handleChange('keyword1', e.target.value)}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="keyword2" className="text-sm text-muted-foreground">
-                                        Keyword 2
-                                    </Label>
-                                    <Input
-                                        id="keyword2"
-                                        placeholder="Keyword 2"
-                                        value={formData.keyword2}
-                                        onChange={(e) => handleChange('keyword2', e.target.value)}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="keyword3" className="text-sm text-muted-foreground">
-                                        Keyword 3
-                                    </Label>
-                                    <Input
-                                        id="keyword3"
-                                        placeholder="Keyword 3"
-                                        value={formData.keyword3}
-                                        onChange={(e) => handleChange('keyword3', e.target.value)}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="keyword4" className="text-sm text-muted-foreground">
-                                        Keyword 4
-                                    </Label>
-                                    <Input
-                                        id="keyword4"
-                                        placeholder="Keyword 4"
-                                        value={formData.keyword4}
-                                        onChange={(e) => handleChange('keyword4', e.target.value)}
-                                        required
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-4 pt-4">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => router.back()}
-                                disabled={submitting}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                type="submit"
-                                disabled={submitting}
-                                className="flex-1"
-                            >
-                                {submitting ? (
-                                    <>
-                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                        Submitting...
-                                    </>
-                                ) : (
-                                    'Submit Paper'
-                                )}
-                            </Button>
-                        </div>
-                    </form>
+                <CardContent className="pt-0">
+                    <Stepper currentStep={currentStep} />
                 </CardContent>
             </Card>
+
+            {/* Step Content */}
+            {currentStep === 1 && (
+                <Card>
+                    <CardContent className="pt-6">
+                        {/* Topic selector */}
+                        <div className="mb-8 space-y-3">
+                            <Label htmlFor="topic" className="text-base">Select Track Topic <span className="text-destructive">*</span></Label>
+                            <p className="text-sm text-muted-foreground">Choose the topic that best fits your submission.</p>
+
+                            {topics && topics.length > 0 ? (
+                                <Select
+                                    value={selectedTopicId || undefined}
+                                    onValueChange={(value) => setSelectedTopicId(value)}
+                                >
+                                    <SelectTrigger id="topic" className="bg-background">
+                                        <SelectValue placeholder="Select a topic" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {topics.map((topic) => (
+                                            <SelectItem key={topic.id} value={topic.id.toString()}>
+                                                {topic.title}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-md border border-destructive/20 font-medium">
+                                    No topics are available for this track. Please ask the organizer to create topics first.
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Divider */}
+                        {selectedTopicId && <div className="border-t mb-6" />}
+
+                        {/* Form */}
+                        {selectedTopicId ? (
+                            <FormRenderer
+                                definitionJson={definitionJson}
+                                onSubmit={handleFormSubmit}
+                                isSubmitting={submitting}
+                            />
+                        ) : (
+                            topics && topics.length > 0 && (
+                                <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
+                                    Please select a topic above to start filling out your submission.
+                                </div>
+                            )
+                        )}
+                    </CardContent>
+                </Card>
+            )}
+
+            {currentStep === 2 && createdPaperId > 0 && (
+                <StepAddAuthors
+                    paperId={createdPaperId}
+                    paperTitle={createdPaperTitle}
+                    onNext={() => navigateToStep(3)}
+                />
+            )}
+
+            {currentStep === 3 && createdPaperId > 0 && (
+                <StepUploadManuscript
+                    paperId={createdPaperId}
+                    paperTitle={createdPaperTitle}
+                    conferenceId={conferenceId}
+                />
+            )}
         </div>
     )
 }

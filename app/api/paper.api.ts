@@ -2,7 +2,9 @@ import http from '@/lib/http'
 import { CreatePaperRequest, PaperResponse } from '@/types/paper'
 import { User } from '@/types/user'
 
-export const createPaper = async (body: CreatePaperRequest): Promise<PaperResponse> => {
+import { PaperSubmissionRequest } from '@/types/submission-form'
+
+export const createPaper = async (body: CreatePaperRequest | PaperSubmissionRequest): Promise<PaperResponse> => {
     const response = await http.post<PaperResponse>('/paper', body)
     return response.data
 }
