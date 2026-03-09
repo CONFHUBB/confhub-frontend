@@ -1,6 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import {
   BadgeCheck,
   Bell,
@@ -95,9 +96,11 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <BadgeCheck />
-                Account
+              <DropdownMenuItem asChild>
+                <Link href="/my-profile">
+                  <BadgeCheck />
+                  My Profile
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <CreditCard />
