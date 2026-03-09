@@ -4,6 +4,7 @@ import Link from "next/link"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { PlusCircle, Search } from "lucide-react"
+import { AnimatedGradientText } from "@/components/ui/animated-gradient-text"
 
 const Grainient = dynamic(
   () => import("@/components/ui/Grainient/Grainient"),
@@ -14,7 +15,7 @@ export default function Home() {
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
-      <section className="relative flex min-h-[450px] items-center justify-center overflow-hidden rounded-2xl">
+      <section className="relative flex min-h-[400px] items-center justify-center overflow-hidden rounded-2xl">
         {/* Grainient Background */}
         <div className="absolute inset-0">
           <Grainient
@@ -62,18 +63,20 @@ export default function Home() {
             <Button
               asChild
               size="lg"
-              className="rounded-full bg-white px-8 text-violet-600 font-semibold shadow-lg hover:bg-white/90"
+              className="rounded-full bg-white px-8 font-semibold shadow-lg hover:bg-white/90"
             >
               <Link href="/conference/create">
-                <PlusCircle className=" size-5" />
-                Create New Conference
+                <PlusCircle className="size-5 text-violet-600" />
+                <AnimatedGradientText className="font-semibold text-base">
+                  Create New Conference
+                </AnimatedGradientText>
               </Link>
             </Button>
             <Button
               asChild
               size="lg"
               variant="outline"
-              className="rounded-full border-white/40 font-semibold bg-white/10 px-8 text-white backdrop-blur-sm hover:bg-white/20 hover:text-white"
+              className="rounded-full border-white/40 font-semibold bg-white/10 text-base px-8 text-white backdrop-blur-sm hover:bg-white/20 hover:text-white"
             >
               <Link href="/conference">
                 <Search className=" size-5" />
