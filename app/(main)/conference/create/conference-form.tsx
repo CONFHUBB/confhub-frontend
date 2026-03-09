@@ -85,11 +85,6 @@ export function ConferenceForm({ initialData, onSubmit }: ConferenceFormProps) {
     return (
         <form onSubmit={handleSubmit}>
             <FieldSet>
-                <FieldLegend className="text-lg">Conference Details</FieldLegend>
-                <FieldDescription className="text-base">
-                    Provide the basic information about your conference.
-                </FieldDescription>
-
                 <FieldGroup>
                     {/* Conference Full Name – full width */}
                     <Field data-invalid={!!errors.name || undefined}>

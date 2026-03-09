@@ -291,142 +291,163 @@ export default function CreateConferencePage() {
     }
 
     return (
-        <div className="mx-auto w-full py-6 px-20">
-            <div className="mb-8">
-                {step === "conference" && (
-                    <>
-                        <h1 className="text-3xl font-bold tracking-tight">
-                            Create Conference
-                        </h1>
-                        <p className="text-muted-foreground mt-2">
-                            Step 1: Fill in the details below to create a new conference.
-                        </p>
-                    </>
-                )}
-                {step === "track" && (
-                    <>
-                        <h1 className="text-3xl font-bold tracking-tight">
-                            Add Track
-                        </h1>
-                        <p className="text-muted-foreground mt-2">
-                            Step 2: Add a track to your conference.
-                            {tracksWithTopics.length > 0 && (
-                                <span className="ml-1 font-medium">
-                                    ({tracksWithTopics.length} track{tracksWithTopics.length > 1 ? "s" : ""} added so far)
-                                </span>
-                            )}
-                        </p>
-                    </>
-                )}
-                {step === "topic" && (
-                    <>
-                        <h1 className="text-3xl font-bold tracking-tight">
-                            Add Topics
-                        </h1>
-                        <p className="text-muted-foreground mt-2">
-                            Step 3: Add topics for the current track.
-                        </p>
-                    </>
-                )}
-                {step === "assign-role" && (
-                    <>
-                        <h1 className="text-3xl font-bold tracking-tight">
-                            Assign Roles
-                        </h1>
-                        <p className="text-muted-foreground mt-2">
-                            Step 4: Assign roles to users for this conference.
-                        </p>
-                    </>
-                )}
-                {step === "template" && (
-                    <>
-                        <h1 className="text-3xl font-bold tracking-tight">
-                            Configure Templates
-                        </h1>
-                        <p className="text-muted-foreground mt-2">
-                            Step 5: Set up email templates for your conference.
-                        </p>
-                    </>
-                )}
-                {step === "review-type" && (
-                    <>
-                        <h1 className="text-3xl font-bold tracking-tight">
-                            Review Type
-                        </h1>
-                        <p className="text-muted-foreground mt-2">
-                            Step 6: Configure the review type for your conference.
-                        </p>
-                    </>
-                )}
+        <div className="mx-auto flex w-full max-w-8xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+            <div className="flex w-full flex-col gap-8 rounded-xl border bg-card p-6 shadow-sm sm:p-8 md:flex-row md:gap-0 bg-gray-50">
+                <div className="shrink-0 md:w-64 md:border-r md:border-border md:pr-8">
 
-                <div className="mt-6">
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-semibold text-primary">
-                            Progress: {STEP_LABELS[step]}
-                        </span>
-                        <span className="text-sm font-medium text-muted-foreground">
-                            {Math.round(((currentStepIndex + 1) / STEPS.length) * 100)}%
-                        </span>
-                    </div>
-                    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                        <div
-                            className="h-full rounded-full bg-primary transition-all duration-500 ease-in-out"
-                            style={{ width: `${((currentStepIndex + 1) / STEPS.length) * 100}%` }}
-                        />
+                    <div className="space-y-1">
+                        <div className="mb-2 px-3 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            Steps
+                        </div>
+                        {STEPS.map((s, i) => {
+                            const isCurrent = step === s
+                            const isPast = i < currentStepIndex
+
+                            return (
+                                <button
+                                    key={s}
+                                    disabled={!isPast && !isCurrent}
+                                    onClick={() => {
+                                        if (isPast) setStep(s)
+                                    }}
+                                    className={`flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm font-medium transition-colors ${isCurrent
+                                        ? "bg-primary/10 text-primary"
+                                        : isPast
+                                            ? "hover:bg-muted text-foreground cursor-pointer"
+                                            : "text-muted-foreground opacity-70 cursor-not-allowed"
+                                        }`}
+                                >
+                                    <div
+                                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs ${isCurrent
+                                            ? "border-primary bg-primary text-primary-foreground"
+                                            : isPast
+                                                ? "border-primary/50 text-primary bg-primary/10"
+                                                : "border-muted-foreground/30 bg-transparent"
+                                            }`}
+                                    >
+                                        {isPast ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        ) : (
+                                            i + 1
+                                        )}
+                                    </div>
+                                    {STEP_LABELS[s]}
+                                </button>
+                            )
+                        })}
                     </div>
                 </div>
-            </div>
 
-            <div className="rounded-xl border bg-card p-8 shadow-sm">
-                {step === "conference" && (
-                    <ConferenceForm
-                        initialData={conferenceData}
-                        onSubmit={handleConferenceSubmit}
-                    />
-                )}
+                {/* Right Content Form */}
+                <div className="flex-1 min-w-0 md:pl-8">
+                    <div className="mb-6">
+                        {step === "conference" && (
+                            <>
+                                <h2 className="text-2xl font-bold tracking-tight">Conference Details</h2>
+                                <p className="mt-1 text-muted-foreground">
+                                    Fill in the details below to create a new conference.
+                                </p>
+                            </>
+                        )}
+                        {step === "track" && (
+                            <>
+                                <h2 className="text-2xl font-bold tracking-tight">Add Track</h2>
+                                <p className="mt-1 text-muted-foreground">
+                                    Add a track to your conference.
+                                    {tracksWithTopics.length > 0 && (
+                                        <span className="ml-1 font-medium">
+                                            ({tracksWithTopics.length} track{tracksWithTopics.length > 1 ? "s" : ""} added so far)
+                                        </span>
+                                    )}
+                                </p>
+                            </>
+                        )}
+                        {step === "topic" && (
+                            <>
+                                <h2 className="text-2xl font-bold tracking-tight">Add Topics</h2>
+                                <p className="mt-1 text-muted-foreground">
+                                    Add topics for the current track.
+                                </p>
+                            </>
+                        )}
+                        {step === "assign-role" && (
+                            <>
+                                <h2 className="text-2xl font-bold tracking-tight">Assign Roles</h2>
+                                <p className="mt-1 text-muted-foreground">
+                                    Assign roles to users for this conference.
+                                </p>
+                            </>
+                        )}
+                        {step === "template" && (
+                            <>
+                                <h2 className="text-2xl font-bold tracking-tight">Configure Templates</h2>
+                                <p className="mt-1 text-muted-foreground">
+                                    Set up email templates for your conference.
+                                </p>
+                            </>
+                        )}
+                        {step === "review-type" && (
+                            <>
+                                <h2 className="text-2xl font-bold tracking-tight">Review Type</h2>
+                                <p className="mt-1 text-muted-foreground">
+                                    Configure the review type for your conference.
+                                </p>
+                            </>
+                        )}
+                    </div>
 
-                {step === "track" && (
-                    <AddTrack
-                        initialData={getCurrentTrackData()}
-                        defaultDates={defaultTrackDates}
-                        onSubmit={handleTrackSubmit}
-                        onBack={goBack}
-                    />
-                )}
+                    <div className="pt-2">
+                        {step === "conference" && (
+                            <ConferenceForm
+                                initialData={conferenceData}
+                                onSubmit={handleConferenceSubmit}
+                            />
+                        )}
 
-                {step === "topic" && (
-                    <AddTopic
-                        initialTopics={getCurrentTopics()}
-                        onSubmit={handleTopicSubmit}
-                        onAddAnotherTrack={handleAddAnotherTrack}
-                        onBack={goBack}
-                    />
-                )}
+                        {step === "track" && (
+                            <AddTrack
+                                initialData={getCurrentTrackData()}
+                                defaultDates={defaultTrackDates}
+                                onSubmit={handleTrackSubmit}
+                                onBack={goBack}
+                            />
+                        )}
 
-                {step === "assign-role" && (
-                    <AssignRole
-                        initialAssignments={roleAssignments}
-                        onSubmit={handleRoleAssignmentsSubmit}
-                        onBack={goBack}
-                    />
-                )}
+                        {step === "topic" && (
+                            <AddTopic
+                                initialTopics={getCurrentTopics()}
+                                onSubmit={handleTopicSubmit}
+                                onAddAnotherTrack={handleAddAnotherTrack}
+                                onBack={goBack}
+                            />
+                        )}
 
-                {step === "template" && (
-                    <ConferenceTemplate
-                        initialTemplates={templates}
-                        onSubmit={handleTemplatesSubmit}
-                        onBack={goBack}
-                    />
-                )}
+                        {step === "assign-role" && (
+                            <AssignRole
+                                initialAssignments={roleAssignments}
+                                onSubmit={handleRoleAssignmentsSubmit}
+                                onBack={goBack}
+                            />
+                        )}
 
-                {step === "review-type" && (
-                    <ReviewType
-                        initialData={reviewTypeData}
-                        onSubmit={handleFinalSubmit}
-                        onBack={goBack}
-                        isSubmitting={isSubmitting}
-                    />
-                )}
+                        {step === "template" && (
+                            <ConferenceTemplate
+                                initialTemplates={templates}
+                                onSubmit={handleTemplatesSubmit}
+                                onBack={goBack}
+                            />
+                        )}
+
+                        {step === "review-type" && (
+                            <ReviewType
+                                initialData={reviewTypeData}
+                                onSubmit={handleFinalSubmit}
+                                onBack={goBack}
+                                isSubmitting={isSubmitting}
+                            />
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     )

@@ -20,3 +20,10 @@ export const getConferences = async (): Promise<ConferenceListResponse[]> => {
     const response = await http.get<{ content: ConferenceListResponse[] }>('/conferences')
     return response.data.content
 }
+
+export const getChairedConferences = async (userId: number, page = 0, size = 20): Promise<{ content: ConferenceListResponse[], totalElements: number }> => {
+    const response = await http.get<{ content: ConferenceListResponse[], totalElements: number }>(
+        `/conference-user-tracks/users/${userId}/organized-conferences?page=${page}&size=${size}`
+    )
+    return response.data
+}

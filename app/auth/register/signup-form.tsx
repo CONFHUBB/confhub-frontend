@@ -21,7 +21,8 @@ export function SignupForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const [fullName, setFullName] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -42,7 +43,8 @@ export function SignupForm({
     setIsLoading(true)
     try {
       const res = await signup({
-        fullName,
+        firstName,
+        lastName,
         email,
         password,
         phoneNumber,
@@ -73,16 +75,29 @@ export function SignupForm({
                 </p>
               </div>
 
-              <Field>
-                <FieldLabel htmlFor="fullName">Full Name</FieldLabel>
-                <Input
-                  id="fullName"
-                  type="text"
-                  placeholder="John Doe"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                />
+              <Field className="grid grid-cols-2 gap-4">
+                <Field>
+                  <FieldLabel htmlFor="firstName">First Name</FieldLabel>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder="John"
+                    required
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="lastName">Last Name</FieldLabel>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    placeholder="Doe"
+                    required
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                  />
+                </Field>
               </Field>
               <Field>
                 <FieldLabel htmlFor="email">Email</FieldLabel>

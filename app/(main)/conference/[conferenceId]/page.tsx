@@ -6,7 +6,7 @@ import { getConference } from '@/app/api/conference.api'
 import type { ConferenceResponse } from '@/types/conference'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Calendar, MapPin, ExternalLink, Loader2, ArrowLeft } from 'lucide-react'
+import { Calendar, MapPin, ExternalLink, Loader2, ArrowLeft, Settings } from 'lucide-react'
 import Link from 'next/link'
 
 export default function ConferenceDetailsPage() {
@@ -174,6 +174,12 @@ export default function ConferenceDetailsPage() {
                             <Link href={`/track?conferenceId=${conferenceId}`} className="flex-1">
                                 <Button className="w-full" size="lg">
                                     View Tracks
+                                </Button>
+                            </Link>
+                            <Link href={`/conference/${conferenceId}/update`}>
+                                <Button variant="outline" size="lg" className="gap-2">
+                                    <Settings className="h-4 w-4" />
+                                    Manage
                                 </Button>
                             </Link>
                         </div>

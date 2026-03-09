@@ -5,7 +5,6 @@ import {
   BookOpen,
   Bot,
   Command,
-  Frame,
   LifeBuoy,
   Map,
   PieChart,
@@ -13,7 +12,8 @@ import {
   Settings2,
   SquareTerminal,
   CirclePlus,
-  FileText
+  FileText,
+  ChevronRight
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -28,7 +28,18 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  SidebarGroup,
+  SidebarGroupLabel,
 } from "@/components/ui/sidebar"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import { SidebarMenuAction } from "@/components/ui/sidebar"
 
 const data = {
   user: {
@@ -142,11 +153,6 @@ const data = {
       icon: CirclePlus,
     },
     {
-      name: "Conferences",
-      url: "/conference",
-      icon: PieChart,
-    },
-    {
       name: "My Papers",
       url: "/paper",
       icon: FileText,
@@ -191,7 +197,54 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+
+        {/* Projects section with Conferences dropdown */}
+        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+          <SidebarGroupLabel>Projects</SidebarGroupLabel>
+          <SidebarMenu>
+            {/* Conferences – collapsible with sub-items */}
+            <Collapsible asChild defaultOpen>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Conferences">
+                  <a href="/conference">
+                    <PieChart />
+                    <span>Conferences</span>
+                  </a>
+                </SidebarMenuButton>
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuAction className="data-[state=open]:rotate-90">
+                    <ChevronRight />
+                    <span className="sr-only">Toggle</span>
+                  </SidebarMenuAction>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton asChild>
+                        <a href="/conference/my-conference">
+                          <span>My Conferences</span>
+                        </a>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </SidebarMenuSub>
+                </CollapsibleContent>
+              </SidebarMenuItem>
+            </Collapsible>
+
+            {/* Other project items */}
+            {data.projects.map((item) => (
+              <SidebarMenuItem key={item.name}>
+                <SidebarMenuButton asChild>
+                  <a href={item.url}>
+                    <item.icon />
+                    <span>{item.name}</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
