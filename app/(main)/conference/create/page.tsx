@@ -17,8 +17,11 @@ export default function CreateConferencePage() {
         try {
             const conferenceResult = await createConference({
                 ...data,
-                startDate: new Date(data.startDate).toISOString(),
-                endDate: new Date(data.endDate).toISOString(),
+                startDate: data.startDate ? new Date(data.startDate).toISOString() : "",
+                endDate: data.endDate ? new Date(data.endDate).toISOString() : "",
+                paperDeadline: data.paperDeadline ? new Date(data.paperDeadline).toISOString() : "",
+                cameraReadyDeadline: data.cameraReadyDeadline ? new Date(data.cameraReadyDeadline).toISOString() : "",
+                societySponsor: data.societySponsor.join(", "),
             })
             const conferenceId = conferenceResult.id
             toast.success("Conference created! Proceeding to configuration...")
