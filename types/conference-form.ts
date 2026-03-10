@@ -8,6 +8,16 @@ export interface ConferenceData {
     startDate: string
     endDate: string
     websiteUrl: string
+    area: string
+    societySponsor: string[]
+    conferenceIdNumber: string
+    country: string
+    province: string
+    bannerImageUrl: string
+    contactInformation: string
+    paperDeadline: string
+    cameraReadyDeadline: string
+    chairEmails: string
 }
 
 export interface TrackData {
