@@ -23,3 +23,15 @@ export const getAuthorsByPaper = async (paperId: number): Promise<User[]> => {
     const response = await http.get<{ content: User[] }>(`/paper-author/paper/${paperId}`)
     return response.data.content
 }
+
+export const uploadPaperFile = async (conferenceId: number, paperId: number, file: File): Promise<any> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await http.post(`/paper-file/upload`, formData, {
+        params: { conferenceId, paperId },
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    })
+    return response.data
+}

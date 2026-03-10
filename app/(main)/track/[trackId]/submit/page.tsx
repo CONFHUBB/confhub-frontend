@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, ArrowLeft, Check, FileText, Users, Upload, Search, Trash2, Send, FileUp } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { createPaper, assignAuthorToPaper, getAuthorsByPaper } from '@/app/api/paper.api'
+import { createPaper, assignAuthorToPaper, getAuthorsByPaper, uploadPaperFile } from '@/app/api/paper.api'
 import { getConferenceSubmissionForm } from '@/app/api/submission-form.api'
 import { getUserByEmail } from '@/app/api/user.api'
 import { FormRenderer } from '@/app/(main)/conference/[conferenceId]/submission-form/form-renderer'
@@ -32,7 +32,6 @@ const getCurrentUserEmail = (): string | null => {
     }
 }
 
-// ─── Stepper Component ──────────────────────────────────────────────────
 function Stepper({ currentStep }: { currentStep: number }) {
     const steps = [
         { label: 'Register Paper', icon: FileText },
@@ -248,12 +247,11 @@ function StepUploadManuscript({
         }
         try {
             setUploading(true)
-            // TODO: Replace with actual file upload API e.g. POST /api/v1/paper/{paperId}/manuscript
-            await new Promise((resolve) => setTimeout(resolve, 1500))
+            await uploadPaperFile(conferenceId, paperId, selectedFile)
             toast.success('Manuscript uploaded successfully!')
             router.push(`/track?conferenceId=${conferenceId}`)
-        } catch (err) {
-            toast.error('Failed to upload manuscript')
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to upload manuscript')
             console.error('Error uploading:', err)
         } finally {
             setUploading(false)
