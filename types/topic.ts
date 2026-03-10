@@ -10,3 +10,7 @@ export interface TopicResponse {
     title: string
     description: string
 }
+
+export interface UpdateTopicRequest extends CreateTopicRequest {
+    id: number
+}

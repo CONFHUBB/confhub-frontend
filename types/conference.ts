@@ -75,3 +75,11 @@ export interface TrackResponse {
     reviewEnd: string
     maxSubmissions: number
 }
+
+export interface UpdateConferenceRequest extends CreateConferenceRequest {
+    id: number
+}
+
+export interface UpdateTrackRequest extends CreateTrackRequest {
+    id: number
+}

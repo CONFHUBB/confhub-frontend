@@ -23,6 +23,9 @@ import { createTopic } from '@/app/api/topic.api'
 import { assignRole } from '@/app/api/user.api'
 import { createTemplate } from '@/app/api/template.api'
 import { createReviewType } from '@/app/api/review-type.api'
+import { updateConference } from '@/app/api/conference.api'
+import { ConferenceForm } from '../../create/conference-form'
+import type { ConferenceData } from '@/types/conference-form'
 
 import type { DynamicField, FormDefinition } from '@/types/submission-form'
 import type {
@@ -33,9 +36,23 @@ import type {
     ReviewTypeData,
 } from "@/types/conference-form"
 
-type SettingsTab = 'submission-form' | 'template' | 'members' | 'general'
+type SettingsTab = 'general' | 'tracks-topics' | 'submission-form' | 'template' | 'members'
 
 const TABS: { key: SettingsTab; label: string; icon: React.ReactNode; description: string; implemented: boolean }[] = [
+    {
+        key: 'general',
+        label: 'General Settings',
+        icon: <FileText className="h-5 w-5" />,
+        description: 'Update conference info, dates, and location',
+        implemented: false,
+    },
+    {
+        key: 'tracks-topics',
+        label: 'Tracks & Topics',
+        icon: <LayoutTemplate className="h-5 w-5" />,
+        description: 'Configure tracks, topics, and review options',
+        implemented: true,
+    },
     {
         key: 'submission-form',
         label: 'Submission Form',
@@ -57,13 +74,6 @@ const TABS: { key: SettingsTab; label: string; icon: React.ReactNode; descriptio
         description: 'Manage organizers, reviewers, and roles',
         implemented: false,
     },
-    {
-        key: 'general',
-        label: 'General Settings',
-        icon: <FileText className="h-5 w-5" />,
-        description: 'Update conference info, dates, and location',
-        implemented: false,
-    },
 ]
 
 export default function ConferenceUpdatePage() {
@@ -74,7 +84,8 @@ export default function ConferenceUpdatePage() {
     const [conference, setConference] = useState<ConferenceResponse | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [activeTab, setActiveTab] = useState<SettingsTab>('submission-form')
+    const [activeTab, setActiveTab] = useState<SettingsTab>('general')
+    const [isUpdatingGeneral, setIsUpdatingGeneral] = useState(false)
 
     // Form Builder state
     const [savedFields, setSavedFields] = useState<DynamicField[]>([])
@@ -226,6 +237,28 @@ export default function ConferenceUpdatePage() {
         }
     }
 
+    const handleUpdateConference = async (data: ConferenceData) => {
+        setIsUpdatingGeneral(true)
+        try {
+            const updated = await updateConference(conferenceId, {
+                ...data,
+                id: conferenceId,
+                startDate: data.startDate ? new Date(data.startDate).toISOString() : "",
+                endDate: data.endDate ? new Date(data.endDate).toISOString() : "",
+                paperDeadline: data.paperDeadline ? new Date(data.paperDeadline).toISOString() : "",
+                cameraReadyDeadline: data.cameraReadyDeadline ? new Date(data.cameraReadyDeadline).toISOString() : "",
+                societySponsor: data.societySponsor.join(", "),
+            })
+            setConference(updated)
+            toast.success("Conference details updated successfully!")
+        } catch (err) {
+            console.error("Failed to update conference:", err)
+            toast.error("Failed to update conference details. Please try again.")
+        } finally {
+            setIsUpdatingGeneral(false)
+        }
+    }
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -279,6 +312,39 @@ export default function ConferenceUpdatePage() {
                     />
                 )
             case 'general':
+                if (!conference) return null
+                const safeDefaults = {
+                    name: conference.name || "",
+                    acronym: conference.acronym || "",
+                    description: conference.description || "",
+                    location: conference.location || "",
+                    // Input type="date" expects "YYYY-MM-DD"
+                    startDate: conference.startDate ? conference.startDate.split("T")[0] : "",
+                    endDate: conference.endDate ? conference.endDate.split("T")[0] : "",
+                    websiteUrl: conference.websiteUrl || "",
+                    area: (conference as any).area || "",
+                    // @ts-ignore
+                    societySponsor: (conference as any).societySponsor 
+                        ? (conference as any).societySponsor.split(",").map((s: string) => s.trim()) 
+                        : [],
+                    conferenceIdNumber: (conference as any).conferenceIdNumber || "",
+                    country: (conference as any).country || "",
+                    province: (conference as any).province || "",
+                    bannerImageUrl: (conference as any).bannerImageUrl || "",
+                    contactInformation: (conference as any).contactInformation || "",
+                    // Input type="datetime-local" expects "YYYY-MM-DDThh:mm"
+                    paperDeadline: (conference as any).paperDeadline ? (conference as any).paperDeadline.substring(0, 16) : "",
+                    cameraReadyDeadline: (conference as any).cameraReadyDeadline ? (conference as any).cameraReadyDeadline.split("T")[0] : "",
+                    chairEmails: (conference as any).chairEmails || "",
+                }
+                return (
+                    <ConferenceForm 
+                        initialData={safeDefaults} 
+                        onSubmit={handleUpdateConference} 
+                        isSubmitting={isUpdatingGeneral}
+                    />
+                )
+            case 'tracks-topics':
                 return (
                     <div className="space-y-8">
                         <AddTrack defaultDates={null} onSubmit={handleSaveTrack} />
