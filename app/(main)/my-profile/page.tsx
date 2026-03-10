@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { getUserByEmail, getUserProfile, createOrUpdateUserProfile } from "@/app/api/user.api"
 import type { UserProfile, UserProfileRequest } from "@/types/user"
-import { ProfileForm } from "./components/profile-form"
+import { ProfileForm } from "./profile-form"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 

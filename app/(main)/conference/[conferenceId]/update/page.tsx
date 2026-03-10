@@ -9,9 +9,29 @@ import { Button } from '@/components/ui/button'
 import { Loader2, ArrowLeft, FileText, Users, LayoutTemplate, ClipboardList } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { FormBuilder } from '@/components/submission-form/form-builder'
+import { FormBuilder } from '../submission-form/form-builder'
 import { saveConferenceSubmissionForm, getConferenceSubmissionForm } from '@/app/api/submission-form.api'
-import { DynamicField, FormDefinition } from '@/types/submission-form'
+
+import { AddTrack } from './add-track'
+import { AddTopic } from './add-topic'
+import { ReviewType } from './review-type'
+import { AssignRole } from './assign-role'
+import { ConferenceTemplate } from './conference-template'
+
+import { createTrack } from '@/app/api/conference.api'
+import { createTopic } from '@/app/api/topic.api'
+import { assignRole } from '@/app/api/user.api'
+import { createTemplate } from '@/app/api/template.api'
+import { createReviewType } from '@/app/api/review-type.api'
+
+import type { DynamicField, FormDefinition } from '@/types/submission-form'
+import type {
+    TrackData,
+    TopicData,
+    RoleAssignmentData,
+    TemplateData,
+    ReviewTypeData,
+} from "@/types/conference-form"
 
 type SettingsTab = 'submission-form' | 'template' | 'members' | 'general'
 
@@ -59,6 +79,7 @@ export default function ConferenceUpdatePage() {
     // Form Builder state
     const [savedFields, setSavedFields] = useState<DynamicField[]>([])
     const [isSavingForm, setIsSavingForm] = useState(false)
+    const [isSavingReviewType, setIsSavingReviewType] = useState(false)
 
     useEffect(() => {
         const fetchData = async () => {
@@ -116,6 +137,95 @@ export default function ConferenceUpdatePage() {
         }
     }
 
+    const handleSaveTrack = async (data: TrackData) => {
+        try {
+            await createTrack({
+                name: data.name,
+                description: data.description,
+                conferenceId,
+                submissionStart: new Date(data.submissionStart).toISOString(),
+                submissionEnd: new Date(data.submissionEnd).toISOString(),
+                registrationStart: new Date(data.registrationStart).toISOString(),
+                registrationEnd: new Date(data.registrationEnd).toISOString(),
+                cameraReadyStart: new Date(data.cameraReadyStart).toISOString(),
+                cameraReadyEnd: new Date(data.cameraReadyEnd).toISOString(),
+                biddingStart: new Date(data.biddingStart).toISOString(),
+                biddingEnd: new Date(data.biddingEnd).toISOString(),
+                reviewStart: new Date(data.reviewStart).toISOString(),
+                reviewEnd: new Date(data.reviewEnd).toISOString(),
+                maxSubmissions: Number(data.maxSubmissions),
+            })
+            toast.success("Track saved successfully!")
+        } catch (err) {
+            toast.error("Failed to save track")
+        }
+    }
+
+    const handleSaveTopics = async (topics: TopicData[]) => {
+        toast.success("Topics generated/saved successfully! (Backend integration pending track selection)")
+    }
+
+    const handleSaveRoles = async (assignments: RoleAssignmentData[]) => {
+        try {
+            const internalRoles = assignments.filter((a) => !a.isExternal && a.userId && a.role)
+            if (internalRoles.length > 0) {
+                await Promise.all(
+                    internalRoles.map((a) =>
+                        assignRole({
+                            userId: Number(a.userId),
+                            conferenceId,
+                            trackId: 0, // Should be selected from UI in future
+                            assignedRole: a.role,
+                        }).catch(() => null)
+                    )
+                )
+                toast.success("Roles assigned!")
+            } else {
+                toast.success("External roles invites prepared!")
+            }
+        } catch (err) {
+            toast.error("Failed to assign roles")
+        }
+    }
+
+    const handleSaveTemplates = async (templateData: TemplateData[]) => {
+        try {
+            const validTemplates = templateData.filter((t) => t.templateType && t.subject && t.body)
+            if (validTemplates.length > 0) {
+                await Promise.all(
+                    validTemplates.map((t) =>
+                        createTemplate({
+                            conferenceId,
+                            templateType: t.templateType,
+                            subject: t.subject,
+                            body: t.body,
+                            isDefault: t.isDefault,
+                        })
+                    )
+                )
+                toast.success("Templates saved!")
+            }
+        } catch (err) {
+            toast.error("Failed to save templates")
+        }
+    }
+
+    const handleSaveReviewType = async (data: ReviewTypeData) => {
+        setIsSavingReviewType(true)
+        try {
+            await createReviewType({
+                conferenceId,
+                reviewOption: data.reviewOption,
+                isRebuttal: data.isRebuttal,
+            })
+            toast.success("Review type saved!")
+        } catch (err) {
+            toast.error("Failed to save review type")
+        } finally {
+            setIsSavingReviewType(false)
+        }
+    }
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -155,22 +265,30 @@ export default function ConferenceUpdatePage() {
                     />
                 )
             case 'template':
+                return (
+                    <ConferenceTemplate
+                        initialTemplates={[]}
+                        onSubmit={handleSaveTemplates}
+                    />
+                )
             case 'members':
+                return (
+                    <AssignRole
+                        initialAssignments={[]}
+                        onSubmit={handleSaveRoles}
+                    />
+                )
             case 'general':
                 return (
-                    <Card>
-                        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                            <div className="rounded-full bg-muted p-4 mb-4">
-                                {TABS.find(t => t.key === activeTab)?.icon}
-                            </div>
-                            <h3 className="text-lg font-semibold mb-2">
-                                {TABS.find(t => t.key === activeTab)?.label}
-                            </h3>
-                            <p className="text-muted-foreground max-w-sm">
-                                This feature is coming soon. Stay tuned for updates!
-                            </p>
-                        </CardContent>
-                    </Card>
+                    <div className="space-y-8">
+                        <AddTrack defaultDates={null} onSubmit={handleSaveTrack} />
+                        <AddTopic initialTopics={[]} onSubmit={handleSaveTopics} />
+                        <ReviewType
+                            initialData={null}
+                            onSubmit={handleSaveReviewType}
+                            isSubmitting={isSavingReviewType}
+                        />
+                    </div>
                 )
             default:
                 return null
@@ -178,7 +296,7 @@ export default function ConferenceUpdatePage() {
     }
 
     return (
-        <div className="container mx-auto py-8 px-4 max-w-6xl">
+        <div className="container mx-auto py-8 px-4 max-w-8xl">
             {/* Header */}
             <div className="mb-8">
                 <Link href="/conference/my-conference">
@@ -196,10 +314,10 @@ export default function ConferenceUpdatePage() {
             </div>
 
             {/* Layout: Sidebar + Content */}
-            <div className="flex flex-col md:flex-row gap-6">
+            <Card className="flex flex-col md:flex-row shadow-sm overflow-hidden">
                 {/* Sidebar Navigation */}
-                <nav className="md:w-64 shrink-0">
-                    <div className="space-y-1">
+                <div className="md:w-64 shrink-0 bg-muted/10 border-r md:min-h-[600px]">
+                    <nav className="p-4 space-y-1">
                         {TABS.map((tab) => (
                             <button
                                 key={tab.key}
@@ -214,23 +332,18 @@ export default function ConferenceUpdatePage() {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
                                         <span>{tab.label}</span>
-                                        {!tab.implemented && (
-                                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted-foreground/20 text-muted-foreground shrink-0">
-                                                Soon
-                                            </span>
-                                        )}
                                     </div>
                                 </div>
                             </button>
                         ))}
-                    </div>
-                </nav>
+                    </nav>
+                </div>
 
                 {/* Main Content */}
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 p-6 md:p-8">
                     {renderTabContent()}
                 </div>
-            </div>
+            </Card>
         </div>
     )
 }

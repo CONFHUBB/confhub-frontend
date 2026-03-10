@@ -17,7 +17,7 @@ import toast from 'react-hot-toast'
 import { createPaper, assignAuthorToPaper, getAuthorsByPaper } from '@/app/api/paper.api'
 import { getConferenceSubmissionForm } from '@/app/api/submission-form.api'
 import { getUserByEmail } from '@/app/api/user.api'
-import { FormRenderer } from '@/components/submission-form/form-renderer'
+import { FormRenderer } from '@/app/(main)/conference/[conferenceId]/submission-form/form-renderer'
 
 const getCurrentUserEmail = (): string | null => {
     if (typeof window === 'undefined') return null

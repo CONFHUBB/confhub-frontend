@@ -20,10 +20,9 @@ interface AddTrackProps {
     initialData?: TrackData
     defaultDates: DefaultTrackDates | null
     onSubmit: (data: TrackData) => void
-    onBack: () => void
 }
 
-export function AddTrack({ initialData, defaultDates, onSubmit, onBack }: AddTrackProps) {
+export function AddTrack({ initialData, defaultDates, onSubmit }: AddTrackProps) {
     const [errors, setErrors] = useState<Record<string, string>>({})
 
     const [formData, setFormData] = useState<TrackData>(
@@ -364,13 +363,9 @@ export function AddTrack({ initialData, defaultDates, onSubmit, onBack }: AddTra
                 </FieldGroup>
             </FieldSet>
 
-            <div className="mt-10 flex items-center justify-between gap-4">
-                <Button type="button" variant="outline" size="lg" className="text-base" onClick={onBack}>
-                    <ArrowLeft className="mr-2 size-4" />
-                    Back
-                </Button>
+            <div className="mt-10 flex items-center justify-end gap-4">
                 <Button type="submit" size="lg" className="text-base px-8">
-                    Next: Add Topics →
+                    Save Track
                 </Button>
             </div>
         </form>

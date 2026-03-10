@@ -19,13 +19,11 @@ import { ArrowLeft, FileText, Plus, Trash2, Type } from "lucide-react"
 interface AddTopicProps {
     initialTopics: TopicData[]
     onSubmit: (topics: TopicData[]) => void
-    onAddAnotherTrack: (topics: TopicData[]) => void
-    onBack: () => void
 }
 
 let nextId = 1
 
-export function AddTopic({ initialTopics, onSubmit, onAddAnotherTrack, onBack }: AddTopicProps) {
+export function AddTopic({ initialTopics, onSubmit }: AddTopicProps) {
     const [errors, setErrors] = useState<Record<string, string>>({})
 
     const [topics, setTopics] = useState<TopicData[]>(() => {
@@ -73,19 +71,15 @@ export function AddTopic({ initialTopics, onSubmit, onAddAnotherTrack, onBack }:
         return Object.keys(newErrors).length === 0
     }
 
-    const handleSubmit = (e: React.FormEvent, addAnother: boolean) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         if (!validate()) return
 
-        if (addAnother) {
-            onAddAnotherTrack(topics)
-        } else {
-            onSubmit(topics)
-        }
+        onSubmit(topics)
     }
 
     return (
-        <form onSubmit={(e) => handleSubmit(e, false)}>
+        <form onSubmit={handleSubmit}>
             <FieldSet>
                 <FieldLegend>Track Topics</FieldLegend>
                 <FieldDescription>
@@ -183,23 +177,10 @@ export function AddTopic({ initialTopics, onSubmit, onAddAnotherTrack, onBack }:
                 </Button>
             </FieldSet>
 
-            <div className="mt-8 flex items-center justify-between gap-4">
-                <Button type="button" variant="outline" onClick={onBack}>
-                    <ArrowLeft className="mr-2 size-4" />
-                    Back
+            <div className="mt-8 flex items-center justify-end gap-4">
+                <Button type="submit">
+                    Save Topics
                 </Button>
-                <div className="flex gap-4">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={(e) => handleSubmit(e, true)}
-                    >
-                        Save & Add Another Track
-                    </Button>
-                    <Button type="submit">
-                        Next: Assign Roles →
-                    </Button>
-                </div>
             </div>
         </form>
     )

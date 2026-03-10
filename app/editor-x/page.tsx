@@ -41,7 +41,7 @@ export default function EditorPage() {
   return (
     <Editor
       editorSerializedState={editorState}
-      onSerializedChange={(value) => setEditorState(value)}
+      onSerializedChange={(value: SerializedEditorState) => setEditorState(value)}
     />
   )
 }

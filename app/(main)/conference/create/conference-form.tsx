@@ -18,9 +18,10 @@ import {
 interface ConferenceFormProps {
     initialData: ConferenceData | null
     onSubmit: (data: ConferenceData) => void
+    isSubmitting?: boolean
 }
 
-export function ConferenceForm({ initialData, onSubmit }: ConferenceFormProps) {
+export function ConferenceForm({ initialData, onSubmit, isSubmitting }: ConferenceFormProps) {
     const [errors, setErrors] = useState<Record<string, string>>({})
 
     const [formData, setFormData] = useState<ConferenceData>(
@@ -217,8 +218,8 @@ export function ConferenceForm({ initialData, onSubmit }: ConferenceFormProps) {
             </FieldSet>
 
             <div className="mt-10 flex items-center justify-end gap-4">
-                <Button type="submit" size="lg" className="text-base px-8">
-                    Next: Add Tracks →
+                <Button type="submit" size="lg" className="text-base px-8" disabled={isSubmitting}>
+                    {isSubmitting ? "Creating..." : "Create Conference"}
                 </Button>
             </div>
         </form>

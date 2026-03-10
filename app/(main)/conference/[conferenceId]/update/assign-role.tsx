@@ -23,7 +23,6 @@ import { ArrowLeft, Mail, Plus, Shield, Trash2, UserIcon } from "lucide-react"
 interface AssignRoleProps {
     initialAssignments: RoleAssignmentData[]
     onSubmit: (assignments: RoleAssignmentData[]) => void
-    onBack: () => void
 }
 
 const ROLES = [
@@ -35,7 +34,7 @@ const ROLES = [
 
 let nextId = 1
 
-export function AssignRole({ initialAssignments, onSubmit, onBack }: AssignRoleProps) {
+export function AssignRole({ initialAssignments, onSubmit }: AssignRoleProps) {
     const [isLoadingUsers, setIsLoadingUsers] = useState(true)
     const [users, setUsers] = useState<User[]>([])
     const [errors, setErrors] = useState<Record<string, string>>({})
@@ -301,13 +300,9 @@ export function AssignRole({ initialAssignments, onSubmit, onBack }: AssignRoleP
                 </Button>
             </FieldSet>
 
-            <div className="mt-8 flex items-center justify-between gap-4">
-                <Button type="button" variant="outline" onClick={onBack}>
-                    <ArrowLeft className="mr-2 size-4" />
-                    Back
-                </Button>
+            <div className="mt-8 flex items-center justify-end gap-4">
                 <Button type="submit" disabled={isLoadingUsers}>
-                    Next: Templates →
+                    Save Roles
                 </Button>
             </div>
         </form>

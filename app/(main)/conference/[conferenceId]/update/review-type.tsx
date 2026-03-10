@@ -19,7 +19,6 @@ import { ArrowLeft, Eye, Loader2, MessageSquare } from "lucide-react"
 interface ReviewTypeProps {
     initialData: ReviewTypeData | null
     onSubmit: (data: ReviewTypeData) => Promise<void>
-    onBack: () => void
     isSubmitting: boolean
 }
 
@@ -29,7 +28,7 @@ const REVIEW_OPTIONS = [
     { value: "OPEN_REVIEW", label: "Open Review", description: "Both authors and reviewers know each other's identity." },
 ]
 
-export function ReviewType({ initialData, onSubmit, onBack, isSubmitting }: ReviewTypeProps) {
+export function ReviewType({ initialData, onSubmit, isSubmitting }: ReviewTypeProps) {
     const [errors, setErrors] = useState<Record<string, string>>({})
 
     const [reviewOption, setReviewOption] = useState(initialData?.reviewOption ?? "")
@@ -118,19 +117,15 @@ export function ReviewType({ initialData, onSubmit, onBack, isSubmitting }: Revi
                 </FieldGroup>
             </FieldSet>
 
-            <div className="mt-8 flex items-center justify-between gap-4">
-                <Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
-                    <ArrowLeft className="mr-2 size-4" />
-                    Back
-                </Button>
+            <div className="mt-8 flex items-center justify-end gap-4">
                 <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? (
                         <>
                             <Loader2 className="mr-2 size-4 animate-spin" />
-                            Creating Conference...
+                            Saving...
                         </>
                     ) : (
-                        "Finish Setup"
+                        "Save Review Type"
                     )}
                 </Button>
             </div>

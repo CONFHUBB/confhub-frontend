@@ -21,7 +21,6 @@ import { Textarea } from "@/components/ui/textarea"
 interface ConferenceTemplateProps {
     initialTemplates: TemplateData[]
     onSubmit: (templates: TemplateData[]) => void
-    onBack: () => void
 }
 
 const TEMPLATE_VARIABLES = [
@@ -37,7 +36,7 @@ const TEMPLATE_VARIABLES = [
 
 let nextId = 1
 
-export function ConferenceTemplate({ initialTemplates, onSubmit, onBack }: ConferenceTemplateProps) {
+export function ConferenceTemplate({ initialTemplates, onSubmit }: ConferenceTemplateProps) {
     const [errors, setErrors] = useState<Record<string, string>>({})
 
     const [templates, setTemplates] = useState<TemplateData[]>(() => {
@@ -342,13 +341,9 @@ export function ConferenceTemplate({ initialTemplates, onSubmit, onBack }: Confe
                     </Button>
                 </FieldSet>
 
-                <div className="mt-8 flex items-center justify-between gap-4">
-                    <Button type="button" variant="outline" onClick={onBack}>
-                        <ArrowLeft className="mr-2 size-4" />
-                        Back
-                    </Button>
+                <div className="mt-8 flex items-center justify-end gap-4">
                     <Button type="submit">
-                        Next: Review Type →
+                        Save Templates
                     </Button>
                 </div>
             </form>
