@@ -42,8 +42,6 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting }: Conferen
             province: "",
             bannerImageUrl: "",
             contactInformation: "",
-            paperDeadline: "",
-            cameraReadyDeadline: "",
             chairEmails: "",
         }
     )
@@ -73,10 +71,16 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting }: Conferen
         }
     }
 
+    // Max length constraints matching DB varchar columns
+    const SHORT_MAX = 255
+    const LONG_MAX = 1000
+
     const validate = () => {
         const newErrors: Record<string, string> = {}
         if (!formData.name.trim()) newErrors.name = "Conference name is required."
+        if (formData.name.length > SHORT_MAX) newErrors.name = `Name must be ${SHORT_MAX} characters or less.`
         if (!formData.acronym.trim()) newErrors.acronym = "Short name is required."
+        if (formData.acronym.length > 20) newErrors.acronym = "Short name must be 20 characters or less."
         if (!formData.startDate) newErrors.startDate = "Start date is required."
         if (!formData.endDate) newErrors.endDate = "End date is required."
         if (
@@ -93,6 +97,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting }: Conferen
         ) {
             newErrors.websiteUrl = "Please enter a valid URL (e.g. https://example.com)."
         }
+        if (formData.websiteUrl.length > SHORT_MAX) newErrors.websiteUrl = `URL must be ${SHORT_MAX} characters or less.`
 
         if (
             formData.bannerImageUrl &&
@@ -100,14 +105,18 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting }: Conferen
         ) {
             newErrors.bannerImageUrl = "Please enter a valid image URL."
         }
+        if (formData.bannerImageUrl.length > SHORT_MAX) newErrors.bannerImageUrl = `Banner URL must be ${SHORT_MAX} characters or less.`
 
-        if (
-            formData.paperDeadline &&
-            formData.startDate &&
-            new Date(formData.paperDeadline) > new Date(formData.startDate)
-        ) {
-            newErrors.paperDeadline = "Paper deadline should be before the start date."
-        }
+        if (formData.location.length > SHORT_MAX) newErrors.location = `Location must be ${SHORT_MAX} characters or less.`
+        if (formData.province.length > SHORT_MAX) newErrors.province = `Province must be ${SHORT_MAX} characters or less.`
+        if (formData.conferenceIdNumber.length > SHORT_MAX) newErrors.conferenceIdNumber = `ID number must be ${SHORT_MAX} characters or less.`
+        if (formData.contactInformation.length > SHORT_MAX) newErrors.contactInformation = `Contact info must be ${SHORT_MAX} characters or less.`
+        if (formData.description.length > LONG_MAX) newErrors.description = `Description must be ${LONG_MAX} characters or less.`
+        if (formData.chairEmails.length > LONG_MAX) newErrors.chairEmails = `Chair emails must be ${LONG_MAX} characters or less.`
+
+        // societySponsor is joined with ", " before sending – check combined length
+        const sponsorJoined = formData.societySponsor.join(", ")
+        if (sponsorJoined.length > SHORT_MAX) newErrors.societySponsor = `Combined sponsors must be ${SHORT_MAX} characters or less. Remove some selections.`
 
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
@@ -140,6 +149,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting }: Conferen
                                         id="name"
                                         className="h-12 text-base"
                                         placeholder="e.g. First International Workshop on Rodent-Based Computing 2026"
+                                        maxLength={SHORT_MAX}
                                         value={formData.name}
                                         onChange={handleChange}
                                     />
@@ -155,6 +165,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting }: Conferen
                                         id="acronym"
                                         className="h-12 text-base"
                                         placeholder="e.g. ICC 26 (20 characters or less, including year)"
+                                        maxLength={20}
                                         value={formData.acronym}
                                         onChange={handleChange}
                                     />
@@ -208,6 +219,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting }: Conferen
                                         id="conferenceIdNumber"
                                         className="h-12 text-base"
                                         placeholder="e.g. IEEE Conference Record # from IEEE EuA"
+                                        maxLength={SHORT_MAX}
                                         value={formData.conferenceIdNumber}
                                         onChange={handleChange}
                                     />
@@ -223,6 +235,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting }: Conferen
                                         className="min-h-[120px] text-base"
                                         placeholder="Briefly describe the goals and scope of the conference..."
                                         rows={5}
+                                        maxLength={LONG_MAX}
                                         value={formData.description}
                                         onChange={handleChange}
                                     />
@@ -253,6 +266,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting }: Conferen
                                         id="location"
                                         className="h-12 text-base"
                                         placeholder='e.g. Sydney, without country and state name. Use "virtual" for remote/virtual conferences.'
+                                        maxLength={SHORT_MAX}
                                         value={formData.location}
                                         onChange={handleChange}
                                     />
@@ -270,6 +284,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting }: Conferen
                                         id="province"
                                         className="h-12 text-base"
                                         placeholder="Province or state"
+                                        maxLength={SHORT_MAX}
                                         value={formData.province}
                                         onChange={handleChange}
                                     />
@@ -306,6 +321,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting }: Conferen
                                         type="url"
                                         className="h-12 text-base"
                                         placeholder="https://your-conference-site.com"
+                                        maxLength={SHORT_MAX}
                                         value={formData.websiteUrl}
                                         onChange={handleChange}
                                     />
@@ -324,6 +340,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting }: Conferen
                                         type="url"
                                         className="h-12 text-base"
                                         placeholder="https://example.com/banner.png"
+                                        maxLength={SHORT_MAX}
                                         value={formData.bannerImageUrl}
                                         onChange={handleChange}
                                     />
@@ -350,6 +367,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting }: Conferen
                                         id="contactInformation"
                                         className="h-12 text-base"
                                         placeholder="e.g. chair, written as +1 900 555 1212"
+                                        maxLength={SHORT_MAX}
                                         value={formData.contactInformation}
                                         onChange={handleChange}
                                     />
@@ -358,44 +376,13 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting }: Conferen
                         </FieldSet>
                     </section>
 
-                    {/* ── Section: Dates and deadlines ── */}
+                    {/* ── Section: Dates ── */}
                     <section>
                         <div className="mb-5 border-b pb-2">
-                            <h3 className="text-lg font-semibold text-primary">Dates and deadlines</h3>
+                            <h3 className="text-lg font-semibold text-primary">Dates</h3>
                         </div>
                         <FieldSet>
                             <FieldGroup>
-                                {/* Paper Deadline */}
-                                <Field data-invalid={!!errors.paperDeadline || undefined}>
-                                    <FieldLabel htmlFor="paperDeadline" className="text-base font-semibold">
-                                        Paper deadline
-                                    </FieldLabel>
-                                    <Input
-                                        id="paperDeadline"
-                                        type="datetime-local"
-                                        className="h-12 text-base"
-                                        value={formData.paperDeadline}
-                                        onChange={handleChange}
-                                    />
-                                    {errors.paperDeadline && (
-                                        <FieldError>{errors.paperDeadline}</FieldError>
-                                    )}
-                                </Field>
-
-                                {/* Camera-ready Deadline */}
-                                <Field>
-                                    <FieldLabel htmlFor="cameraReadyDeadline" className="text-base font-semibold">
-                                        Deadline for final (camera-ready) manuscripts
-                                    </FieldLabel>
-                                    <Input
-                                        id="cameraReadyDeadline"
-                                        type="date"
-                                        className="h-12 text-base"
-                                        value={formData.cameraReadyDeadline}
-                                        onChange={handleChange}
-                                    />
-                                </Field>
-
                                 {/* Start + End Date in 2 cols */}
                                 <div className="grid gap-6 sm:grid-cols-2">
                                     <Field data-invalid={!!errors.startDate || undefined}>
@@ -450,6 +437,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting }: Conferen
                                         className="min-h-[120px] text-base"
                                         placeholder={"chair1@example.com\nchair2@example.com"}
                                         rows={5}
+                                        maxLength={LONG_MAX}
                                         value={formData.chairEmails}
                                         onChange={handleChange}
                                     />

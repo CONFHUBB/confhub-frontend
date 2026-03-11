@@ -10,3 +10,7 @@ export const updateTopic = async (body: UpdateTopicRequest): Promise<TopicRespon
     const response = await http.put<TopicResponse>(`/conference-track-topics/${body.id}`, body)
     return response.data
 }
+
+export const deleteTopic = async (id: number): Promise<void> => {
+    await http.delete(`/conference-track-topics/${id}`)
+}
