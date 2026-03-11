@@ -1,728 +1,296 @@
-export default function PaperStatusPage() {
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { getPaperById, updatePaper, updatePaperFile, getPaperFiles } from '@/app/api/paper.api'
+import type { PaperResponse, PaperFileResponse } from '@/types/paper'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Loader2, ArrowLeft, Upload, FileUp, FileText, Trash2, Save, ExternalLink } from 'lucide-react'
+import toast from 'react-hot-toast'
+
+export default function EditPaperPage() {
+    const params = useParams()
+    const router = useRouter()
+    const paperId = Number(params.paperId)
+
+    const [paper, setPaper] = useState<PaperResponse | null>(null)
+    const [currentFile, setCurrentFile] = useState<PaperFileResponse | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [saving, setSaving] = useState(false)
+    const [uploading, setUploading] = useState(false)
+    const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
+    const [formData, setFormData] = useState({
+        title: '',
+        abstractField: '',
+        keyword1: '',
+        keyword2: '',
+        keyword3: '',
+        keyword4: '',
+    })
+
+    useEffect(() => {
+        const fetchPaper = async () => {
+            try {
+                setLoading(true)
+                const data = await getPaperById(paperId)
+                setPaper(data)
+                setFormData({
+                    title: data.title || '',
+                    abstractField: data.abstractField || '',
+                    keyword1: data.keyword1 || '',
+                    keyword2: data.keyword2 || '',
+                    keyword3: data.keyword3 || '',
+                    keyword4: data.keyword4 || '',
+                })
+
+                // Load existing paper file
+                try {
+                    const files = await getPaperFiles()
+                    const matchingFile = files.find(f => f.paper.id === paperId && f.isActive)
+                    if (matchingFile) {
+                        setCurrentFile(matchingFile)
+                    }
+                } catch (err) {
+                    console.error('Could not fetch paper files', err)
+                }
+
+            } catch (error) {
+                toast.error('Failed to load paper details')
+                console.error(error)
+            } finally {
+                setLoading(false)
+            }
+        }
+        if (paperId) {
+            fetchPaper()
+        }
+    }, [paperId])
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target
+        setFormData(prev => ({ ...prev, [name]: value }))
+    }
+
+    const handleSavePaper = async () => {
+        try {
+            setSaving(true)
+            await updatePaper(paperId, {
+                ...paper,
+                ...formData,
+                topicId: paper?.topic?.id,
+                conferenceTrackId: paper?.track?.id
+            })
+            toast.success('Paper details updated successfully!')
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to update paper')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const handleUploadFile = async () => {
+        if (!selectedFile) {
+            toast.error('Please select a file to upload')
+            return
+        }
+        try {
+            setUploading(true)
+            await updatePaperFile(paperId, selectedFile)
+            toast.success('Manuscript file uploaded successfully!')
+            setSelectedFile(null)
+
+            // Refresh the current file
+            try {
+                const files = await getPaperFiles()
+                const matchingFile = files.find(f => f.paper.id === paperId && f.isActive)
+                if (matchingFile) {
+                    setCurrentFile(matchingFile)
+                }
+            } catch (err) {
+                console.error(err)
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to upload manuscript')
+        } finally {
+            setUploading(false)
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        )
+    }
+
+    if (!paper) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+                <p className="text-muted-foreground text-lg">Paper not found</p>
+                <Button onClick={() => router.push('/paper')} variant="outline">
+                    <ArrowLeft className="h-4 w-4 mr-2" /> Back to My Submissions
+                </Button>
+            </div>
+        )
+    }
+
     return (
-        <div className="self-stretch p-6 inline-flex flex-col justify-start items-start gap-20">
-    <div className="self-stretch flex flex-col justify-start items-center">
-        <div className="self-stretch px-4 bg-blue-50 border-b border-gray-300 flex flex-col justify-start items-start gap-10">
-            <div className="self-stretch py-6 inline-flex justify-start items-center gap-6">
-                <div className="flex-1 justify-center text-gray-900 text-4xl font-bold font-['Plus_Jakarta_Sans'] leading-[54px]">Bài viết mới</div>
+        <div className="container mx-auto py-8 px-4 max-w-4xl space-y-6">
+            <Button variant="ghost" onClick={() => router.push('/paper')} className="-ml-2 mb-2">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to My Submissions
+            </Button>
+
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Edit Paper</h1>
+                <p className="text-muted-foreground mt-1">
+                    Update your paper information and upload a new manuscript
+                </p>
             </div>
-        </div>
-    </div>
-    <div className="self-stretch inline-flex justify-center items-center gap-6">
-        <div data-size="6xl" className="flex justify-start items-start gap-2.5">
-            <div className="w-12 h-12 relative overflow-hidden">
-                <div className="w-10 h-10 left-[3px] top-[3.09px] absolute bg-gray-500" />
-            </div>
-        </div>
-        <div className="flex-1 justify-center text-neutral-700 text-4xl font-bold font-['Plus_Jakarta_Sans'] leading-[54px]">Tình trạng bài viết của bạn</div>
-    </div>
-    <div className="self-stretch bg-blue-50 rounded-lg shadow-[0px_1px_30px_0px_rgba(0,0,0,0.03)] outline outline-1 outline-offset-[-1px] outline-indigo-500 inline-flex justify-start items-center overflow-hidden">
-        <div data-property="done" data-type="number" className="flex-1 px-6 py-4 border-b-4 border-indigo-500 flex justify-start items-center gap-6">
-            <div data-property="progressing" className="w-8 h-8 inline-flex flex-col justify-center items-center">
-                <div className="self-stretch flex-1 bg-indigo-500 rounded-[30px] outline outline-4 outline-indigo-300 flex flex-col justify-center items-center">
-                    <div className="text-center justify-start text-white text-xl font-bold font-['Roboto'] leading-7">1</div>
-                </div>
-            </div>
-            <div className="justify-start text-indigo-500 text-xl font-bold font-['Plus_Jakarta_Sans'] leading-8">KHỞI TẠO BÀI VIẾT</div>
-        </div>
-        <div data-property="done" data-type="arrow" className="h-16 py-4 border-b-4 border-indigo-500 flex justify-start items-center gap-2">
-            <div className="flex justify-center items-center">
-                <div className="w-6 h-6 relative overflow-hidden">
-                    <div className="w-2.5 h-3.5 left-[7.16px] top-[4.50px] absolute bg-indigo-500" />
-                </div>
-                <div className="w-6 h-6 relative overflow-hidden">
-                    <div className="w-2.5 h-3.5 left-[7.16px] top-[4.50px] absolute bg-indigo-500" />
-                </div>
-                <div className="w-6 h-6 relative overflow-hidden">
-                    <div className="w-2.5 h-3.5 left-[7.16px] top-[4.50px] absolute bg-indigo-500" />
-                </div>
-            </div>
-        </div>
-        <div data-property="done" data-type="number" className="flex-1 px-6 py-4 bg-indigo-500 border-b-4 border-indigo-500 flex justify-start items-center gap-6">
-            <div data-property="progressing" className="w-8 h-8 inline-flex flex-col justify-center items-center">
-                <div className="self-stretch flex-1 bg-indigo-50 rounded-[30px] outline outline-4 outline-indigo-300 flex flex-col justify-center items-center">
-                    <div className="text-center justify-start text-indigo-500 text-xl font-bold font-['Roboto'] leading-7">2</div>
-                </div>
-            </div>
-            <div className="justify-start text-white text-xl font-bold font-['Plus_Jakarta_Sans'] leading-8">CHỜ XÉT DUYỆT</div>
-        </div>
-        <div data-property="done" data-type="arrow" className="h-16 py-4 border-b-4 border-gray-300 flex justify-start items-center gap-2">
-            <div className="flex justify-center items-center">
-                <div className="w-6 h-6 relative overflow-hidden">
-                    <div className="w-2.5 h-3.5 left-[7.16px] top-[4.50px] absolute bg-gray-300" />
-                </div>
-                <div className="w-6 h-6 relative overflow-hidden">
-                    <div className="w-2.5 h-3.5 left-[7.16px] top-[4.50px] absolute bg-gray-300" />
-                </div>
-                <div className="w-6 h-6 relative overflow-hidden">
-                    <div className="w-2.5 h-3.5 left-[7.16px] top-[4.50px] absolute bg-gray-300" />
-                </div>
-            </div>
-        </div>
-        <div data-property="progressing" data-type="number" className="flex-1 px-6 py-4 border-b-4 border-gray-300 flex justify-start items-center gap-6">
-            <div data-property="progressing" className="w-8 h-8 inline-flex flex-col justify-center items-center">
-                <div className="self-stretch flex-1 bg-gray-300 rounded-[30px] outline outline-4 outline-gray-200 flex flex-col justify-center items-center">
-                    <div className="text-center justify-start text-gray-50 text-xl font-bold font-['Roboto'] leading-7">3</div>
-                </div>
-            </div>
-            <div className="justify-start text-gray-900 text-xl font-bold font-['Plus_Jakarta_Sans'] leading-8">PHẢN HỒI </div>
-        </div>
-    </div>
-    <div className="self-stretch flex flex-col justify-start items-start gap-6">
-        <div className="self-stretch flex flex-col justify-start items-start gap-6">
-            <div className="self-stretch px-3 pt-3 flex flex-col justify-start items-start gap-2">
-                <div className="self-stretch inline-flex justify-start items-center gap-6">
-                    <div className="flex-1 flex justify-start items-center gap-6">
-                        <div className="justify-center text-gray-900 text-xl font-bold font-['Plus_Jakarta_Sans'] leading-8">Trạng thái:</div>
-                    </div>
-                </div>
-                <div className="self-stretch h-0 outline outline-1 outline-offset-[-0.50px] outline-gray-300" />
-            </div>
-            <div data-property-1="Withdrawn" className="w-[1175px] bg-white rounded-lg shadow-[0px_1px_30px_0px_rgba(0,0,0,0.03)] outline outline-1 outline-offset-[-1px] outline-indigo-500 flex flex-col justify-start items-start overflow-hidden">
-                <div className="self-stretch px-4 py-3 flex flex-col justify-end items-end gap-4">
-                    <div className="self-stretch flex flex-col justify-start items-start gap-2">
-                        <div className="justify-start text-indigo-500 text-4xl font-bold font-['Plus_Jakarta_Sans'] leading-[54px]">Rút bài, cập nhật bài viết</div>
-                        <div className="inline-flex justify-start items-start gap-2">
-                            <div className="justify-start text-gray-900 text-base font-normal font-['Plus_Jakarta_Sans'] leading-6">Mã số bài báo</div>
-                            <div className="justify-start text-gray-900 text-base font-bold font-['Plus_Jakarta_Sans'] leading-6">DF15263412</div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+                {/* Paper Details Form */}
+                <Card className="md:col-span-2">
+                    <CardHeader>
+                        <CardTitle>Paper Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="title">Title</Label>
+                            <Input
+                                id="title"
+                                name="title"
+                                value={formData.title}
+                                onChange={handleInputChange}
+                                placeholder="Paper Title"
+                            />
                         </div>
-                        <div className="self-stretch inline-flex justify-center items-center gap-2">
-                            <div className="justify-start text-gray-900 text-base font-normal font-['Plus_Jakarta_Sans'] leading-6">Tình trạng cập nhật :</div>
-                            <div className="flex-1 justify-start text-gray-900 text-base font-bold font-['Plus_Jakarta_Sans'] leading-6">Đã tạo trạng thái bài đã đăng ký</div>
-                            <div className="px-3 py-1 rounded outline outline-1 outline-offset-[-1px] outline-gray-300 flex justify-start items-center gap-3">
-                                <div className="justify-start text-gray-900 text-xs font-bold font-['Plus_Jakarta_Sans'] leading-4">0 trên 5 lần theo dõi thông qua</div>
+                        <div className="space-y-2">
+                            <Label htmlFor="abstractField">Abstract</Label>
+                            <Textarea
+                                id="abstractField"
+                                name="abstractField"
+                                value={formData.abstractField}
+                                onChange={handleInputChange}
+                                placeholder="Paper Abstract"
+                                rows={5}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="keyword1">Keyword 1</Label>
+                                <Input id="keyword1" name="keyword1" value={formData.keyword1} onChange={handleInputChange} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="keyword2">Keyword 2</Label>
+                                <Input id="keyword2" name="keyword2" value={formData.keyword2} onChange={handleInputChange} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="keyword3">Keyword 3</Label>
+                                <Input id="keyword3" name="keyword3" value={formData.keyword3} onChange={handleInputChange} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="keyword4">Keyword 4</Label>
+                                <Input id="keyword4" name="keyword4" value={formData.keyword4} onChange={handleInputChange} />
                             </div>
                         </div>
-                    </div>
-                    <div className="self-stretch h-12 flex flex-col justify-start items-start gap-2.5">
-                        <div data-theme="Light" data-value="10" className="self-stretch h-3.5 bg-gray-50 rounded-[999px] outline outline-1 outline-offset-[-1px] outline-gray-300 flex flex-col justify-start items-start gap-2.5">
-                            <div className="self-stretch inline-flex justify-start items-start">
-                                <div className="flex-1 h-3.5 bg-black/0 rounded-tl-3xl rounded-bl-3xl" />
-                                <div className="flex-1 h-3.5 bg-black/0 rounded-tl-3xl rounded-bl-3xl" />
-                                <div className="flex-1 h-3.5 bg-black/0 rounded-tl-3xl rounded-bl-3xl" />
-                                <div className="flex-1 h-3.5 bg-black/0 rounded-tl-3xl rounded-bl-3xl" />
-                                <div className="flex-1 h-3.5 bg-black/0 rounded-3xl" />
-                            </div>
+                        <div className="pt-4 flex justify-end">
+                            <Button onClick={handleSavePaper} disabled={saving} className="gap-2">
+                                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                Save Changes
+                            </Button>
                         </div>
-                        <div className="self-stretch inline-flex justify-start items-start gap-6">
-                            <div className="flex-1 flex justify-start items-center gap-2">
-                                <div data-size="2xl" className="flex justify-start items-start gap-2.5">
-                                    <div className="w-5 h-5 relative overflow-hidden">
-                                        <div className="w-5 h-5 left-[0.34px] top-[0.34px] absolute bg-gray-900" />
+                    </CardContent>
+                </Card>
+
+                {/* File Upload Section */}
+                <Card className="md:col-span-2">
+                    <CardHeader>
+                        <CardTitle>Manuscript File</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        {currentFile && (
+                            <div className="space-y-2">
+                                <Label>Current Manuscript</Label>
+                                <div className="p-4 rounded-lg border bg-muted/20 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <FileText className="h-5 w-5 text-indigo-500" />
+                                        <span className="font-medium text-sm">Uploaded Manuscript Document</span>
                                     </div>
+                                    <Button variant="outline" size="sm" asChild>
+                                        <a href={currentFile.url} target="_blank" rel="noopener noreferrer">
+                                            <ExternalLink className="h-4 w-4 mr-2" /> View File
+                                        </a>
+                                    </Button>
                                 </div>
-                                <div className="justify-start text-gray-900 text-base font-normal font-['Plus_Jakarta_Sans'] leading-6">Đã đăng tải bài viết</div>
                             </div>
-                            <div className="flex-1 flex justify-start items-center gap-2">
-                                <div data-size="2xl" className="flex justify-start items-start gap-2.5">
-                                    <div className="w-5 h-5 relative overflow-hidden">
-                                        <div className="w-5 h-5 left-[0.34px] top-[0.34px] absolute bg-gray-900" />
-                                    </div>
-                                </div>
-                                <div className="justify-start text-gray-900 text-base font-normal font-['Plus_Jakarta_Sans'] leading-6">Thông qua lần 1</div>
+                        )}
+
+                        <div className="space-y-4">
+                            <Label>Upload New Manuscript</Label>
+                            <div className="p-4 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 text-sm text-blue-800 dark:text-blue-300">
+                                <p>Upload a new PDF to replace the current manuscript for this paper.</p>
                             </div>
-                            <div className="flex-1 flex justify-start items-center gap-2">
-                                <div data-size="2xl" className="flex justify-start items-start gap-2.5">
-                                    <div className="w-5 h-5 relative overflow-hidden">
-                                        <div className="w-5 h-5 left-[0.34px] top-[0.34px] absolute bg-gray-900" />
-                                    </div>
-                                </div>
-                                <div className="justify-start text-gray-900 text-base font-normal font-['Plus_Jakarta_Sans'] leading-6">Thông qua lần 2</div>
-                            </div>
-                            <div className="flex-1 flex justify-start items-center gap-2">
-                                <div data-size="2xl" className="flex justify-start items-start gap-2.5">
-                                    <div className="w-5 h-5 relative overflow-hidden">
-                                        <div className="w-5 h-5 left-[0.34px] top-[0.34px] absolute bg-gray-900" />
-                                    </div>
-                                </div>
-                                <div className="justify-start text-gray-900 text-base font-normal font-['Plus_Jakarta_Sans'] leading-6">Thông qua lần 3</div>
+                            
+                            <div className="flex gap-3 items-center">
+                            <div className="flex-1">
+                                <label
+                                    htmlFor="file-upload"
+                                    className="flex items-center gap-3 p-3 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-all"
+                                >
+                                    <FileUp className="h-5 w-5 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        {selectedFile ? selectedFile.name : 'Choose a new PDF file...'}
+                                    </span>
+                                </label>
+                                <input
+                                    id="file-upload"
+                                    type="file"
+                                    accept=".pdf"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0]
+                                        if (file) {
+                                            if (file.type !== 'application/pdf') {
+                                                toast.error('Please select a PDF file')
+                                                return
+                                            }
+                                            setSelectedFile(file)
+                                        }
+                                    }}
+                                />
                             </div>
                         </div>
-                    </div>
-                    <div className="self-stretch inline-flex justify-start items-end gap-2">
-                        <div className="flex-1 inline-flex flex-col justify-start items-start gap-2">
-                            <div className="inline-flex justify-start items-start gap-1">
-                                <div className="justify-start text-gray-500 text-sm font-bold font-['Roboto'] leading-5">10:00 - 25/10/2025</div>
+
+                        {selectedFile && (
+                            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                <div className="flex items-center gap-2 text-sm">
+                                    <FileText className="h-4 w-4 text-primary" />
+                                    <span className="font-medium">{selectedFile.name}</span>
+                                    <span className="text-muted-foreground">({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                                </div>
+                                <Button variant="ghost" size="sm" onClick={() => setSelectedFile(null)}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
                             </div>
+                        )}
+
+                        <div className="pt-2 flex justify-end">
+                            <Button onClick={handleUploadFile} disabled={uploading || !selectedFile} className="gap-2">
+                                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                                Upload Manuscript
+                            </Button>
                         </div>
-                    </div>
-                </div>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
-        </div>
-        <div className="self-stretch flex flex-col justify-start items-start gap-6">
-            <div className="self-stretch px-3 pt-3 bg-blue-50 flex flex-col justify-start items-start gap-2">
-                <div className="self-stretch inline-flex justify-start items-center gap-6">
-                    <div className="flex-1 flex justify-start items-center gap-6">
-                        <div className="justify-center text-gray-900 text-xl font-bold font-['Plus_Jakarta_Sans'] leading-8">Lịch sử phản hồi:</div>
-                    </div>
-                    <div data-size="4xl" className="flex justify-start items-start gap-2.5">
-                        <div className="w-8 h-8 relative overflow-hidden">
-                            <div className="w-4 h-2.5 left-[8px] top-[11.34px] absolute bg-gray-500" />
-                        </div>
-                    </div>
-                </div>
-                <div className="self-stretch h-0 outline outline-1 outline-offset-[-0.50px] outline-gray-300" />
-            </div>
-            <div className="self-stretch bg-white rounded-[10px] shadow-[0px_1px_2px_0px_rgba(16,24,40,0.05)] outline outline-1 outline-offset-[-1px] outline-gray-300 flex flex-col justify-start items-start overflow-hidden">
-                <div className="self-stretch border-t border-white inline-flex justify-start items-start overflow-hidden">
-                    <div className="w-20 inline-flex flex-col justify-start items-start">
-                        <div className="self-stretch h-11 px-6 py-4 bg-blue-50 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex justify-start items-center gap-1">
-                                <div className="justify-start text-gray-900 text-base font-medium font-['Roboto'] leading-6">STT</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">1</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">2</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">3</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">4</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">5</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">6</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">7</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="w-52 inline-flex flex-col justify-start items-start">
-                        <div className="self-stretch h-11 px-6 py-4 bg-blue-50 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex justify-start items-center gap-1">
-                                <div className="justify-start text-gray-900 text-base font-medium font-['Roboto'] leading-6">
-                Thời gian</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">01/11/2025 – 02:20 PM</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">30/04/2025 – 11:45 AM</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">02/09/2025 – 07:15 AM</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">19/08/2025 – 01:30 PM</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">20/09/2025 – 04:40 PM</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">25/12/2025 – 10:00 AM</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">25/12/2025 – 10:00 AM</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="w-44 inline-flex flex-col justify-start items-start">
-                        <div className="self-stretch h-11 px-6 py-4 bg-blue-50 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex justify-start items-center gap-1">
-                                <div className="justify-start text-gray-900 text-base font-medium font-['Roboto'] leading-6">Người thực hiện</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Hệ thống</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Người phản hồi A</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Huỳnh Thị Thanh Trúc</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Người phản hồi B</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Tạ Minh Khang</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Đỗ Thị Diễm My</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Hệ thống</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="inline-flex flex-col justify-start items-start">
-                        <div className="self-stretch h-11 px-6 py-4 bg-blue-50 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="justify-start text-gray-900 text-base font-medium font-['Roboto'] leading-6">Hành động</div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-2">
-                            <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Phân công người phản hồi</div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-2">
-                            <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Xác nhận nhận phản biện</div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-2">
-                            <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Xác nhận nhận phản biện</div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-2">
-                            <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Từ chối phản biện</div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-2">
-                            <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Yêu cầu chỉnh sửa</div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-2">
-                            <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Phê duyệt bài viết</div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-2">
-                            <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Khóa chỉnh sửa</div>
-                        </div>
-                    </div>
-                    <div className="w-60 inline-flex flex-col justify-start items-start">
-                        <div className="self-stretch h-11 px-6 py-4 bg-blue-50 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex justify-start items-center gap-1">
-                                <div className="justify-start text-gray-900 text-base font-medium font-['Roboto'] leading-6">Lý do chỉnh sửa</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Nhắc nhở</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Nhắc nhở</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Nhắc nhở</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Nhắc nhở</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="self-stretch justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Bổ sung kết quả thực nghiệm theo yêu cầu phản biện</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Nhắc nhở</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="self-stretch justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">Hết hạn nộp bài - bản thảo bị khóa</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="flex-1 inline-flex flex-col justify-start items-start">
-                        <div className="self-stretch h-11 px-6 py-4 bg-blue-50 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex justify-start items-center gap-1">
-                                <div className="justify-start text-gray-900 text-base font-medium font-['Roboto'] leading-6">Phiên bản</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">v1.1</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">v1.1</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">v1.1</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">v1.1</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="self-stretch justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">v1.2</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">v2.0</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="self-stretch justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">v2.1</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="inline-flex flex-col justify-start items-start">
-                        <div className="self-stretch h-11 px-6 py-4 bg-blue-50 border-b border-gray-300" />
-                        <div className="h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-3">
-                            <div data-size="3xl" className="flex justify-start items-start gap-2.5">
-                                <div className="w-6 h-6 relative overflow-hidden">
-                                    <div className="w-6 h-4 left-[1.32px] top-[5.23px] absolute bg-gray-900" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-3">
-                            <div data-size="3xl" className="flex justify-start items-start gap-2.5">
-                                <div className="w-6 h-6 relative overflow-hidden">
-                                    <div className="w-6 h-4 left-[1.32px] top-[5.23px] absolute bg-gray-900" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-3">
-                            <div data-size="3xl" className="flex justify-start items-start gap-2.5">
-                                <div className="w-6 h-6 relative overflow-hidden">
-                                    <div className="w-6 h-4 left-[1.32px] top-[5.23px] absolute bg-gray-900" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-3">
-                            <div data-size="3xl" className="flex justify-start items-start gap-2.5">
-                                <div className="w-6 h-6 relative overflow-hidden">
-                                    <div className="w-6 h-4 left-[1.32px] top-[5.23px] absolute bg-gray-900" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-3">
-                            <div data-size="3xl" className="flex justify-start items-start gap-2.5">
-                                <div className="w-6 h-6 relative overflow-hidden">
-                                    <div className="w-6 h-4 left-[1.32px] top-[5.23px] absolute bg-gray-900" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-3">
-                            <div data-size="3xl" className="flex justify-start items-start gap-2.5">
-                                <div className="w-6 h-6 relative overflow-hidden">
-                                    <div className="w-6 h-4 left-[1.32px] top-[5.23px] absolute bg-gray-900" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-3">
-                            <div data-size="3xl" className="flex justify-start items-start gap-2.5">
-                                <div className="w-6 h-6 relative overflow-hidden">
-                                    <div className="w-6 h-4 left-[1.32px] top-[5.23px] absolute bg-gray-900" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div className="self-stretch flex flex-col justify-start items-start gap-6">
-            <div className="self-stretch px-3 pt-3 bg-blue-50 flex flex-col justify-start items-start gap-2">
-                <div className="self-stretch inline-flex justify-start items-center gap-6">
-                    <div className="flex-1 flex justify-start items-center gap-6">
-                        <div className="justify-center text-gray-900 text-xl font-bold font-['Plus_Jakarta_Sans'] leading-8">Lịch sử bản nháp:</div>
-                    </div>
-                    <div data-size="4xl" className="flex justify-start items-start gap-2.5">
-                        <div className="w-8 h-8 relative overflow-hidden">
-                            <div className="w-4 h-2.5 left-[8px] top-[11.34px] absolute bg-gray-500" />
-                        </div>
-                    </div>
-                </div>
-                <div className="self-stretch h-0 outline outline-1 outline-offset-[-0.50px] outline-gray-300" />
-            </div>
-            <div className="self-stretch bg-white rounded-[10px] shadow-[0px_1px_2px_0px_rgba(16,24,40,0.05)] outline outline-1 outline-offset-[-1px] outline-gray-300 flex flex-col justify-start items-start overflow-hidden">
-                <div className="self-stretch border-t border-white inline-flex justify-start items-start overflow-hidden">
-                    <div className="w-20 inline-flex flex-col justify-start items-start">
-                        <div className="self-stretch h-11 px-6 py-4 bg-blue-50 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex justify-start items-center gap-1">
-                                <div className="justify-start text-gray-900 text-base font-medium font-['Roboto'] leading-6">STT</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">1</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">2</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">3</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">4</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">5</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">6</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">7</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="inline-flex flex-col justify-start items-start">
-                        <div className="self-stretch h-11 px-6 py-4 bg-blue-50 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex justify-start items-center gap-1">
-                                <div className="justify-start text-gray-900 text-base font-medium font-['Roboto'] leading-6">Phiên bản</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">v1.1</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">v1.1</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">v1.1</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">v1.1</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="self-stretch justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">v1.2</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">v2.0</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="self-stretch justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">v2.1</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="flex-1 inline-flex flex-col justify-start items-start">
-                        <div className="self-stretch h-11 px-6 py-4 bg-blue-50 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex justify-start items-center gap-1">
-                                <div className="justify-start text-gray-900 text-base font-medium font-['Roboto'] leading-6">Thời gian lưu</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">01/11/2025 – 02:20 PM</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">30/04/2025 – 11:45 AM</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">02/09/2025 – 07:15 AM</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">19/08/2025 – 01:30 PM</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">20/09/2025 – 04:40 PM</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">25/12/2025 – 10:00 AM</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="w-40 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">25/12/2025 – 10:00 AM</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="flex-1 inline-flex flex-col justify-start items-start">
-                        <div className="self-stretch h-11 px-6 py-4 bg-blue-50 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="justify-start text-gray-900 text-base font-medium font-['Roboto'] leading-6">Dung lượng</div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-2">
-                            <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">2.4 MB</div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-2">
-                            <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">2.4 MB</div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-2">
-                            <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">2.4 MB</div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-2">
-                            <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">2.4 MB</div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-2">
-                            <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">2.4 MB</div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-2">
-                            <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">2.4 MB</div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-2">
-                            <div className="justify-start text-gray-900 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">2.4 MB</div>
-                        </div>
-                    </div>
-                    <div className="flex-1 inline-flex flex-col justify-start items-start">
-                        <div className="self-stretch h-11 px-6 py-4 bg-blue-50 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex justify-start items-center gap-1">
-                                <div className="justify-start text-gray-900 text-base font-medium font-['Roboto'] leading-6">Thao tác</div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start"><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">[Tải xuống]</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">  [</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">Khôi phục</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">]  [</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">Xoá</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">]</span></div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start"><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">[Tải xuống]</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">  [</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">Khôi phục</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">]  [</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">Xoá</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">]</span></div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start"><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">[Tải xuống]</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">  [</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">Khôi phục</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">]  [</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">Xoá</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">]</span></div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start"><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">[Tải xuống]</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">  [</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">Khôi phục</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">]  [</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">Xoá</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">]</span></div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start"><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">[Tải xuống]</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">  [</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">Khôi phục</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">]  [</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">Xoá</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">]</span></div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start"><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">[Tải xuống]</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">  [</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">Khôi phục</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">]  [</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">Xoá</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">]</span></div>
-                            </div>
-                        </div>
-                        <div className="self-stretch h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-4">
-                            <div className="flex-1 inline-flex flex-col justify-center items-start">
-                                <div className="justify-start"><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">[Tải xuống]</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">  [</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">Khôi phục</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">]  [</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] underline leading-5 line-clamp-2">Xoá</span><span className="text-indigo-500 text-sm font-normal font-['Roboto'] leading-5 line-clamp-2">]</span></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="inline-flex flex-col justify-start items-start">
-                        <div className="self-stretch h-11 px-6 py-4 bg-blue-50 border-b border-gray-300" />
-                        <div className="h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-3">
-                            <div data-size="3xl" className="flex justify-start items-start gap-2.5">
-                                <div className="w-6 h-6 relative overflow-hidden">
-                                    <div className="w-6 h-4 left-[1.32px] top-[5.23px] absolute bg-gray-900" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-3">
-                            <div data-size="3xl" className="flex justify-start items-start gap-2.5">
-                                <div className="w-6 h-6 relative overflow-hidden">
-                                    <div className="w-6 h-4 left-[1.32px] top-[5.23px] absolute bg-gray-900" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-3">
-                            <div data-size="3xl" className="flex justify-start items-start gap-2.5">
-                                <div className="w-6 h-6 relative overflow-hidden">
-                                    <div className="w-6 h-4 left-[1.32px] top-[5.23px] absolute bg-gray-900" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-3">
-                            <div data-size="3xl" className="flex justify-start items-start gap-2.5">
-                                <div className="w-6 h-6 relative overflow-hidden">
-                                    <div className="w-6 h-4 left-[1.32px] top-[5.23px] absolute bg-gray-900" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-3">
-                            <div data-size="3xl" className="flex justify-start items-start gap-2.5">
-                                <div className="w-6 h-6 relative overflow-hidden">
-                                    <div className="w-6 h-4 left-[1.32px] top-[5.23px] absolute bg-gray-900" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-3">
-                            <div data-size="3xl" className="flex justify-start items-start gap-2.5">
-                                <div className="w-6 h-6 relative overflow-hidden">
-                                    <div className="w-6 h-4 left-[1.32px] top-[5.23px] absolute bg-gray-900" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="h-16 px-6 py-3 border-b border-gray-300 inline-flex justify-start items-center gap-3">
-                            <div data-size="3xl" className="flex justify-start items-start gap-2.5">
-                                <div className="w-6 h-6 relative overflow-hidden">
-                                    <div className="w-6 h-4 left-[1.32px] top-[5.23px] absolute bg-gray-900" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
         </div>
     )
 }

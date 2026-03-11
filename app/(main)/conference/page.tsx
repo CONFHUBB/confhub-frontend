@@ -1,34 +1,56 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getConferences } from '@/app/api/conference.api'
+import { getConferences, approveConference } from '@/app/api/conference.api'
+import { useUserRole } from '@/hooks/useUserRole'
 import type { ConferenceListResponse } from '@/types/conference'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Calendar, MapPin, ExternalLink, Loader2, Eye } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Calendar, MapPin, Loader2, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
+import toast from 'react-hot-toast'
 
 export default function ConferencesPage() {
     const [conferences, setConferences] = useState<ConferenceListResponse[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [approvingId, setApprovingId] = useState<number | null>(null)
+    const { roles } = useUserRole()
+
+    const isStaff = roles.some(r => r === 'ROLE_STAFF' || r === 'ROLE_ADMIN')
 
     useEffect(() => {
-        const fetchConferences = async () => {
-            try {
-                setLoading(true)
-                const data = await getConferences()
-                setConferences(data)
-            } catch (err: any) {
-                setError('Failed to load conferences. Please try again later.')
-                console.error('Error fetching conferences:', err)
-            } finally {
-                setLoading(false)
-            }
-        }
-
         fetchConferences()
     }, [])
+
+    const fetchConferences = async () => {
+        try {
+            setLoading(true)
+            const data = await getConferences()
+            setConferences(data)
+        } catch (err: any) {
+            setError('Failed to load conferences. Please try again later.')
+            console.error('Error fetching conferences:', err)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleApprove = async (id: number) => {
+        try {
+            setApprovingId(id)
+            await approveConference(id)
+            toast.success('Conference approved successfully!')
+            // Refresh the list
+            await fetchConferences()
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to approve conference')
+            console.error('Error approving conference:', err)
+        } finally {
+            setApprovingId(null)
+        }
+    }
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {
@@ -39,12 +61,17 @@ export default function ConferencesPage() {
     }
 
     const getStatusColor = (status: string) => {
-        switch (status.toLowerCase()) {
-            case 'active':
+        switch (status.toUpperCase()) {
+            case 'ACTIVE':
+            case 'APPROVED':
                 return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-            case 'upcoming':
+            case 'UPCOMING':
                 return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-            case 'completed':
+            case 'PENDING':
+                return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+            case 'REJECTED':
+                return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+            case 'COMPLETED':
                 return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
             default:
                 return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
@@ -76,9 +103,17 @@ export default function ConferencesPage() {
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Conferences</h1>
                     <p className="text-muted-foreground mt-2">
-                        Browse and manage all conferences
+                        {isStaff
+                            ? 'Manage and approve conferences'
+                            : 'Browse and manage all conferences'}
                     </p>
                 </div>
+                {isStaff && (
+                    <Badge variant="outline" className="text-sm gap-1.5 py-1.5 px-3 border-indigo-300 text-indigo-600">
+                        <CheckCircle className="h-3.5 w-3.5" />
+                        Staff Mode
+                    </Badge>
+                )}
             </div>
 
             {conferences.length === 0 ? (
@@ -102,7 +137,7 @@ export default function ConferencesPage() {
                                             <span className="text-sm font-mono text-muted-foreground">
                                                 {conference.acronym}
                                             </span>
-                                            <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(conference.status)}`}>
+                                            <span className={`text-xs px-2 py-1 rounded-full font-semibold ${getStatusColor(conference.status)}`}>
                                                 {conference.status}
                                             </span>
                                         </div>
@@ -124,22 +159,39 @@ export default function ConferencesPage() {
                                             {formatDate(conference.startDate)} - {formatDate(conference.endDate)}
                                         </span>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="pt-4">
-                                            <Link href={`/conference/${conference.id}`}>
-                                                <Button className="w-full" variant="outline">
-                                                    View Details
-                                                </Button>
-                                            </Link>
-                                        </div>
-                                        <div className="pt-4">
-                                            <Link href={`/track?conferenceId=${conference.id}`}>
-                                                <Button className="w-full" variant="outline">
-                                                    View Tracks
-                                                </Button>
-                                            </Link>
-                                        </div>
+                                    <div className="grid grid-cols-2 gap-4 pt-4">
+                                        <Link href={`/conference/${conference.id}`}>
+                                            <Button className="w-full" variant="outline">
+                                                View Details
+                                            </Button>
+                                        </Link>
+                                        <Link href={`/track?conferenceId=${conference.id}`}>
+                                            <Button className="w-full" variant="outline">
+                                                View Tracks
+                                            </Button>
+                                        </Link>
                                     </div>
+
+                                    {/* STAFF: Approve button for PENDING conferences */}
+                                    {isStaff && conference.status.toUpperCase() === 'PENDING' && (
+                                        <Button
+                                            className="w-full mt-2 gap-2 bg-green-600 hover:bg-green-700 text-white"
+                                            onClick={() => handleApprove(conference.id)}
+                                            disabled={approvingId === conference.id}
+                                        >
+                                            {approvingId === conference.id ? (
+                                                <>
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    Approving...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CheckCircle className="h-4 w-4" />
+                                                    Approve Conference
+                                                </>
+                                            )}
+                                        </Button>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
