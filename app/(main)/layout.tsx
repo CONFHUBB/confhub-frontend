@@ -11,6 +11,7 @@ import {
     SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
+import { HeroSection } from "@/components/hero-section"
 import { Loader2 } from "lucide-react"
 
 export default function MainLayout({
@@ -20,6 +21,7 @@ export default function MainLayout({
 }) {
     const pathname = usePathname()
     const isDashboard = pathname.startsWith("/dashboard")
+    const isHomePage = pathname === "/"
     const { isAdminOrStaff, isLoading } = useUserRole()
 
     if (isLoading) {
@@ -52,9 +54,10 @@ export default function MainLayout({
 
     // Other roles → navbar layout
     return (
-        <div className="min-h-screen">
+        <div className="min-h-screen bg-gray-50">
             <AppNavbar />
-            <main className="pt-20">
+            {isHomePage && <HeroSection />}
+            <main>
                 {children}
             </main>
         </div>

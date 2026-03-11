@@ -3,10 +3,15 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { getConference } from '@/app/api/conference.api'
-import type { ConferenceResponse } from '@/types/conference'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { getTracksByConference } from '@/app/api/track.api'
+import type { ConferenceResponse, TrackResponse } from '@/types/conference'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Calendar, MapPin, ExternalLink, Loader2, ArrowLeft, Settings } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import {
+    Calendar, MapPin, ExternalLink, Loader2, ArrowLeft, Settings,
+    Globe, Phone, FileText, Clock, Send
+} from 'lucide-react'
 import Link from 'next/link'
 
 export default function ConferenceDetailsPage() {
@@ -15,6 +20,7 @@ export default function ConferenceDetailsPage() {
     const conferenceId = Number(params.conferenceId)
 
     const [conference, setConference] = useState<ConferenceResponse | null>(null)
+    const [tracks, setTracks] = useState<TrackResponse[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
@@ -22,8 +28,12 @@ export default function ConferenceDetailsPage() {
         const fetchData = async () => {
             try {
                 setLoading(true)
-                const conferenceData = await getConference(conferenceId)
+                const [conferenceData, tracksData] = await Promise.all([
+                    getConference(conferenceId),
+                    getTracksByConference(conferenceId)
+                ])
                 setConference(conferenceData)
+                setTracks(tracksData)
             } catch (err: any) {
                 if (err.response?.status === 401 || err.response?.status === 403) {
                     setError('You must be logged in to view this conference.')
@@ -45,6 +55,7 @@ export default function ConferenceDetailsPage() {
     }, [conferenceId, router])
 
     const formatDate = (dateString: string) => {
+        if (!dateString) return '—'
         return new Date(dateString).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
@@ -52,17 +63,37 @@ export default function ConferenceDetailsPage() {
         })
     }
 
+    const formatDateShort = (dateString: string) => {
+        if (!dateString) return '—'
+        return new Date(dateString).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        })
+    }
+
     const getStatusColor = (status: string) => {
-        switch (status.toLowerCase()) {
-            case 'active':
-                return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-            case 'upcoming':
-                return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-            case 'completed':
-                return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+        switch (status?.toUpperCase()) {
+            case 'ACTIVE':
+            case 'APPROVED':
+                return 'bg-green-100 text-green-800 border-green-200'
+            case 'UPCOMING':
+                return 'bg-blue-100 text-blue-800 border-blue-200'
+            case 'PENDING':
+                return 'bg-amber-100 text-amber-800 border-amber-200'
+            case 'REJECTED':
+                return 'bg-red-100 text-red-800 border-red-200'
+            case 'COMPLETED':
+                return 'bg-gray-100 text-gray-800 border-gray-200'
             default:
-                return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+                return 'bg-gray-100 text-gray-800 border-gray-200'
         }
+    }
+
+    const isSubmissionOpen = (track: TrackResponse) => {
+        if (!track.submissionStart || !track.submissionEnd) return false
+        const now = new Date()
+        return new Date(track.submissionStart) <= now && now <= new Date(track.submissionEnd)
     }
 
     if (loading) {
@@ -102,90 +133,219 @@ export default function ConferenceDetailsPage() {
     }
 
     return (
-        <div className="container mx-auto py-8 px-4 max-w-4xl">
+        <div className="container mx-auto py-8 px-4 max-w-7xl">
+            {/* Back button */}
             <Link href="/conference">
-                <Button variant="ghost" className="mb-6">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
+                <Button variant="ghost" className="mb-6 gap-2">
+                    <ArrowLeft className="h-4 w-4" />
                     Back to Conferences
                 </Button>
             </Link>
 
-            <div className="space-y-6">
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                                <CardTitle className="text-3xl mb-3">
-                                    {conference.name}
-                                </CardTitle>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-lg font-mono text-muted-foreground">
-                                        {conference.acronym}
-                                    </span>
-                                    <span className={`text-sm px-3 py-1 rounded-full ${getStatusColor(conference.status)}`}>
-                                        {conference.status}
-                                    </span>
-                                </div>
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 mb-10">
+                <div className="lg:col-span-3 space-y-6">
+                    <div>
+                        <div className="flex items-center gap-3 mb-3">
+                            <span className="text-sm font-mono text-muted-foreground bg-muted px-2.5 py-1 rounded">
+                                {conference.acronym}
+                            </span>
+                            <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${getStatusColor(conference.status)}`}>
+                                {conference.status}
+                            </span>
+                        </div>
+                        <h1 className="text-3xl font-bold tracking-tight mb-4">
+                            {conference.name}
+                        </h1>
+                        <p className="text-muted-foreground text-base leading-relaxed">
+                            {conference.description}
+                        </p>
+                    </div>
+
+                    {/* Key details grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                            <MapPin className="h-5 w-5 text-indigo-500 mt-0.5 shrink-0" />
+                            <div>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Location</p>
+                                <p className="text-sm font-medium">{conference.location}{conference.province ? `, ${conference.province}` : ''}{conference.country ? `, ${conference.country}` : ''}</p>
                             </div>
                         </div>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div>
-                            <h3 className="text-sm font-semibold text-muted-foreground mb-2">Description</h3>
-                            <p className="text-base">{conference.description}</p>
-                        </div>
-
-                        <div className="grid md:grid-cols-2 gap-6">
+                        <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                            <Calendar className="h-5 w-5 text-indigo-500 mt-0.5 shrink-0" />
                             <div>
-                                <h3 className="text-sm font-semibold text-muted-foreground mb-2">Location</h3>
-                                <div className="flex items-center gap-2">
-                                    <MapPin className="h-5 w-5 text-muted-foreground" />
-                                    <span className="text-base">{conference.location}</span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <h3 className="text-sm font-semibold text-muted-foreground mb-2">Conference Dates</h3>
-                                <div className="flex items-center gap-2">
-                                    <Calendar className="h-5 w-5 text-muted-foreground" />
-                                    <span className="text-base">
-                                        {formatDate(conference.startDate)} - {formatDate(conference.endDate)}
-                                    </span>
-                                </div>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Conference Dates</p>
+                                <p className="text-sm font-medium">{formatDateShort(conference.startDate)} – {formatDateShort(conference.endDate)}</p>
                             </div>
                         </div>
-
-                        {conference.websiteUrl && (
-                            <div>
-                                <h3 className="text-sm font-semibold text-muted-foreground mb-2">Website</h3>
-                                <a
-                                    href={conference.websiteUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-2 text-primary hover:underline"
-                                >
-                                    <ExternalLink className="h-5 w-5" />
-                                    <span>{conference.websiteUrl}</span>
-                                </a>
+                        {conference.paperDeadline && (
+                            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                                <Clock className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
+                                <div>
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Paper Deadline</p>
+                                    <p className="text-sm font-medium">{formatDate(conference.paperDeadline)}</p>
+                                </div>
                             </div>
                         )}
+                        {conference.cameraReadyDeadline && (
+                            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                                <FileText className="h-5 w-5 text-orange-500 mt-0.5 shrink-0" />
+                                <div>
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Camera-ready Deadline</p>
+                                    <p className="text-sm font-medium">{formatDate(conference.cameraReadyDeadline)}</p>
+                                </div>
+                            </div>
+                        )}
+                        {conference.contactInformation && (
+                            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                                <Phone className="h-5 w-5 text-green-500 mt-0.5 shrink-0" />
+                                <div>
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contact</p>
+                                    <p className="text-sm font-medium">{conference.contactInformation}</p>
+                                </div>
+                            </div>
+                        )}
+                        {conference.websiteUrl && (
+                            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                                <Globe className="h-5 w-5 text-blue-500 mt-0.5 shrink-0" />
+                                <div>
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Website</p>
+                                    <a
+                                        href={conference.websiteUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
+                                    >
+                                        {conference.websiteUrl}
+                                        <ExternalLink className="h-3 w-3" />
+                                    </a>
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
-                        <div className="pt-4 flex gap-4">
-                            <Link href={`/track?conferenceId=${conferenceId}`} className="flex-1">
-                                <Button className="w-full" size="lg">
-                                    View Tracks
-                                </Button>
-                            </Link>
-                            <Link href={`/conference/${conferenceId}/update`}>
-                                <Button variant="outline" size="lg" className="gap-2">
-                                    <Settings className="h-4 w-4" />
-                                    Manage
-                                </Button>
-                            </Link>
-                        </div>
-                    </CardContent>
-                </Card>
+                    <div className="flex gap-3 pt-2">
+                        <Link href={`/conference/${conferenceId}/update`}>
+                            <Button variant="outline" className="gap-2">
+                                <Settings className="h-4 w-4" />
+                                Manage Conference
+                            </Button>
+                        </Link>
+                    </div>
+                </div>
+
+                <div className="lg:col-span-2">
+                    <div className="sticky top-24 rounded-xl overflow-hidden border shadow-sm">
+                        {conference.bannerImageUrl ? (
+                            <img
+                                src={conference.bannerImageUrl}
+                                alt={conference.name}
+                                className="w-full aspect-[4/3] object-cover"
+                            />
+                        ) : (
+                            <div className="w-full aspect-[4/3] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                                <span className="text-white/60 text-5xl font-bold tracking-wider">
+                                    {conference.acronym}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
+
+            <section>
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 className="text-2xl font-bold tracking-tight">Conference Tracks</h2>
+                        <p className="text-muted-foreground mt-1">
+                            {tracks.length === 0
+                                ? 'No tracks available yet.'
+                                : `${tracks.length} track${tracks.length > 1 ? 's' : ''} available for submission`}
+                        </p>
+                    </div>
+                </div>
+
+                {tracks.length === 0 ? (
+                    <Card className="border-dashed">
+                        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                            <FileText className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                            <p className="text-muted-foreground text-lg font-medium">No tracks yet</p>
+                            <p className="text-sm text-muted-foreground mt-1">Tracks will appear here once the organizer adds them.</p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                        {tracks.map((track) => {
+                            const submissionOpen = isSubmissionOpen(track)
+                            return (
+                                <Card key={track.id} className="hover:shadow-lg transition-shadow">
+                                    <CardHeader className="pb-3">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <CardTitle className="text-lg leading-tight">
+                                                {track.name}
+                                            </CardTitle>
+                                            <Badge
+                                                variant="outline"
+                                                className={submissionOpen
+                                                    ? 'border-green-300 text-green-700 bg-green-50 shrink-0'
+                                                    : 'border-gray-300 text-gray-500 bg-gray-50 shrink-0'}
+                                            >
+                                                {submissionOpen ? 'Open' : 'Closed'}
+                                            </Badge>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        {track.description && (
+                                            <p className="text-sm text-muted-foreground line-clamp-3">
+                                                {track.description}
+                                            </p>
+                                        )}
+
+                                        <div className="space-y-2 text-xs text-muted-foreground">
+                                            <div className="flex items-center justify-between">
+                                                <span className="flex items-center gap-1.5">
+                                                    <Send className="h-3 w-3" />
+                                                    Submission
+                                                </span>
+                                                <span className="font-medium text-foreground">
+                                                    {formatDateShort(track.submissionStart)} – {formatDateShort(track.submissionEnd)}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="flex items-center gap-1.5">
+                                                    <FileText className="h-3 w-3" />
+                                                    Camera-ready
+                                                </span>
+                                                <span className="font-medium text-foreground">
+                                                    {formatDateShort(track.cameraReadyStart)} – {formatDateShort(track.cameraReadyEnd)}
+                                                </span>
+                                            </div>
+                                            {track.maxSubmissions > 0 && (
+                                                <div className="flex items-center justify-between">
+                                                    <span>Max submissions</span>
+                                                    <span className="font-medium text-foreground">{track.maxSubmissions}</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="pt-2">
+                                            <Link href={`/track/${track.id}/submit`}>
+                                                <Button
+                                                    className="w-full gap-2"
+                                                    variant={submissionOpen ? 'default' : 'outline'}
+                                                    disabled={!submissionOpen}
+                                                >
+                                                    <Send className="h-4 w-4" />
+                                                    {submissionOpen ? 'Submit Paper' : 'Submission Closed'}
+                                                </Button>
+                                            </Link>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )
+                        })}
+                    </div>
+                )}
+            </section>
         </div>
     )
 }

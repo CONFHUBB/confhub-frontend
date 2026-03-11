@@ -26,6 +26,13 @@ export interface ConferenceResponse {
     endDate: string
     status: string
     websiteUrl: string
+    bannerImageUrl: string
+    area: string
+    country: string
+    province: string
+    contactInformation: string
+    paperDeadline: string
+    cameraReadyDeadline: string
 }
 
 export interface ConferenceListResponse {
@@ -37,6 +44,7 @@ export interface ConferenceListResponse {
     startDate: string
     endDate: string
     status: string
+    bannerImageUrl: string
 }
 
 export interface CreateTrackRequest {
