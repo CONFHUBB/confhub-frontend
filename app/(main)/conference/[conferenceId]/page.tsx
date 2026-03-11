@@ -252,7 +252,6 @@ export default function ConferenceDetailsPage() {
                 </div>
             </div>
 
-            {/* ── Conference Tracks ── */}
             <section>
                 <div className="flex items-center justify-between mb-6">
                     <div>

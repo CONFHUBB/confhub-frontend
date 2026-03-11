@@ -54,14 +54,10 @@ export default function MainLayout({
 
     // Other roles → navbar layout
     return (
-        <div className="min-h-screen">
+        <div className="min-h-screen bg-gray-50">
             <AppNavbar />
-            {isHomePage && (
-                <div className="pt-20">
-                    <HeroSection />
-                </div>
-            )}
-            <main className={isHomePage ? "" : "pt-20"}>
+            {isHomePage && <HeroSection />}
+            <main>
                 {children}
             </main>
         </div>
