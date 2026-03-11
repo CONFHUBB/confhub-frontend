@@ -3,9 +3,20 @@ import { CreatePaperRequest, PaperResponse } from '@/types/paper'
 import { User } from '@/types/user'
 
 import { PaperSubmissionRequest } from '@/types/submission-form'
+import { PaperFileResponse } from '@/types/paper'
 
 export const createPaper = async (body: CreatePaperRequest | PaperSubmissionRequest): Promise<PaperResponse> => {
     const response = await http.post<PaperResponse>('/paper', body)
+    return response.data
+}
+
+export const getPaperById = async (paperId: number): Promise<PaperResponse> => {
+    const response = await http.get<PaperResponse>(`/paper/${paperId}`)
+    return response.data
+}
+
+export const updatePaper = async (paperId: number, body: any): Promise<PaperResponse> => {
+    const response = await http.put<PaperResponse>(`/paper/${paperId}`, body)
     return response.data
 }
 
@@ -29,6 +40,22 @@ export const uploadPaperFile = async (conferenceId: number, paperId: number, fil
     formData.append('file', file)
     const response = await http.post(`/paper-file/upload`, formData, {
         params: { conferenceId, paperId },
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    })
+    return response.data
+}
+
+export const getPaperFiles = async (): Promise<PaperFileResponse[]> => {
+    const response = await http.get<{ content: PaperFileResponse[] }>('/paper-file')
+    return response.data.content || []
+}
+
+export const updatePaperFile = async (paperId: number, file: File): Promise<any> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await http.post(`/paper-file/${paperId}`, formData, {
         headers: {
             'Content-Type': 'multipart/form-data'
         }

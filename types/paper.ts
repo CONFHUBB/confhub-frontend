@@ -103,3 +103,12 @@ export interface CreatePaperRequest {
     isPassedPlagiarism: boolean,
     status: string
 }
+
+export interface PaperFileResponse {
+    id: number
+    url: string
+    isActive: boolean
+    paper: {
+        id: number
+    }
+}
