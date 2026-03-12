@@ -16,6 +16,9 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { createPaper, assignAuthorToPaper, getAuthorsByPaper, uploadPaperFile } from '@/app/api/paper.api'
 import { getConferenceSubmissionForm } from '@/app/api/submission-form.api'
+import { getConferenceActivities } from '@/app/api/conference.api'
+import type { ConferenceActivityDTO } from '@/types/conference'
+import { isActivityOpen } from '@/lib/activity'
 import { getUserByEmail } from '@/app/api/user.api'
 import { FormRenderer } from '@/app/(main)/conference/[conferenceId]/submission-form/form-renderer'
 
@@ -367,6 +370,7 @@ export default function SubmitPaperPage() {
     const [definitionJson, setDefinitionJson] = useState<string>("")
     const [submissionFormId, setSubmissionFormId] = useState<number | null>(null)
     const [selectedTopicId, setSelectedTopicId] = useState<string>("")
+    const [activities, setActivities] = useState<ConferenceActivityDTO[]>([])
 
     useEffect(() => {
         const fetchData = async () => {
@@ -380,13 +384,19 @@ export default function SubmitPaperPage() {
                 setTopics(topicsData)
 
                 if (conferenceId) {
-                    const formConfig = await getConferenceSubmissionForm(conferenceId)
+                    const [formConfig, activitiesData] = await Promise.all([
+                        getConferenceSubmissionForm(conferenceId),
+                        getConferenceActivities(conferenceId).catch(() => [] as ConferenceActivityDTO[])
+                    ])
+
                     if (formConfig) {
                         setDefinitionJson(formConfig.definitionJson)
                         if (formConfig.id) {
                             setSubmissionFormId(formConfig.id)
                         }
                     }
+
+                    setActivities(activitiesData)
                 }
             } catch (err: any) {
                 if (err.response?.status === 401 || err.response?.status === 403) {
@@ -417,7 +427,15 @@ export default function SubmitPaperPage() {
         router.replace(url)
     }
 
+    const paperSubmissionActivity = activities.find(a => a.activityType === 'PAPER_SUBMISSION')
+    const isPaperSubmissionOpen = isActivityOpen(paperSubmissionActivity)
+
     const handleFormSubmit = async (fixedData: any, extraAnswersJson: string) => {
+        if (!isPaperSubmissionOpen) {
+            toast.error('Paper submission is currently closed for this conference.')
+            return
+        }
+
         if (!selectedTopicId) {
             toast.error('Please select a topic')
             return
