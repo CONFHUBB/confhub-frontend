@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { assignAuthorToPaper, getAuthorsByPaper, getPaperById, getPaperFiles, updatePaper, updatePaperFile } from '@/app/api/paper.api'
 import { getUsers } from '@/app/api/user.api'
+import { getSubjectAreasByTrack } from '@/app/api/track.api'
 import type { PaperResponse, PaperFileResponse } from '@/types/paper'
+import type { SubjectAreaResponse } from '@/types/subject-area'
 import type { User } from '@/types/user'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -20,7 +22,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2, ArrowLeft, Upload, FileUp, FileText, Trash2, Save, ExternalLink, UserPlus, Users } from 'lucide-react'
+import { Loader2, ArrowLeft, Upload, FileUp, FileText, Trash2, Save, ExternalLink, UserPlus, Users, Layers } from 'lucide-react'
+import { Select as AntdSelect } from 'antd'
 import toast from 'react-hot-toast'
 
 export default function EditPaperPage() {
@@ -40,6 +43,10 @@ export default function EditPaperPage() {
     const [openAddAuthorDialog, setOpenAddAuthorDialog] = useState(false)
     const [openViewAuthorsDialog, setOpenViewAuthorsDialog] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
+    const [subjectAreas, setSubjectAreas] = useState<SubjectAreaResponse[]>([])
+    const [primarySubjectAreaId, setPrimarySubjectAreaId] = useState<string>('')
+    const [secondarySubjectAreaIds, setSecondarySubjectAreaIds] = useState<number[]>([])
 
     const [formData, setFormData] = useState({
         title: '',
@@ -84,6 +91,24 @@ export default function EditPaperPage() {
                     keyword3: data.keyword3 || '',
                     keyword4: data.keyword4 || '',
                 })
+                
+                if (data.primarySubjectAreaId) {
+                    setPrimarySubjectAreaId(data.primarySubjectAreaId.toString())
+                }
+                if (data.secondarySubjectAreaIds) {
+                    setSecondarySubjectAreaIds(data.secondarySubjectAreaIds)
+                }
+
+                // Fetch subject areas for this track
+                const trackIdToFetch = data.trackId || data.track?.id
+                if (trackIdToFetch) {
+                    try {
+                        const areas = await getSubjectAreasByTrack(trackIdToFetch)
+                        setSubjectAreas(areas || [])
+                    } catch (err) {
+                        console.error('Failed to load subject areas', err)
+                    }
+                }
 
                 // Load existing paper file
                 try {
@@ -121,8 +146,9 @@ export default function EditPaperPage() {
             await updatePaper(paperId, {
                 ...paper,
                 ...formData,
-                topicId: paper?.topic?.id,
-                conferenceTrackId: paper?.track?.id
+                primarySubjectAreaId: Number(primarySubjectAreaId),
+                secondarySubjectAreaIds: secondarySubjectAreaIds,
+                conferenceTrackId: paper?.trackId || paper?.track?.id
             })
             toast.success('Paper details updated successfully!')
         } catch (error: any) {
@@ -259,6 +285,46 @@ export default function EditPaperPage() {
                                 <Input id="keyword4" name="keyword4" value={formData.keyword4} onChange={handleInputChange} />
                             </div>
                         </div>
+
+                        {subjectAreas.length > 0 && (
+                            <div className="grid gap-4 md:grid-cols-2 pt-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="primarySubjectArea">Primary Subject Area</Label>
+                                    <Select
+                                        value={primarySubjectAreaId}
+                                        onValueChange={setPrimarySubjectAreaId}
+                                    >
+                                        <SelectTrigger id="primarySubjectArea">
+                                            <SelectValue placeholder="Select primary area" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {subjectAreas.map((sa) => (
+                                                <SelectItem key={sa.id} value={sa.id.toString()}>
+                                                    <div className="flex items-center gap-2">
+                                                        {sa.parentId !== null && <Layers className="h-3 w-3 text-muted-foreground ml-2" />}
+                                                        <span>{sa.name}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2 flex flex-col">
+                                    <Label htmlFor="secondarySubjectAreas">Secondary Subject Areas</Label>
+                                    <AntdSelect
+                                        mode="multiple"
+                                        id="secondarySubjectAreas"
+                                        className="w-full flex-1"
+                                        placeholder="Select secondary areas"
+                                        value={secondarySubjectAreaIds}
+                                        onChange={setSecondarySubjectAreaIds}
+                                        options={subjectAreas
+                                            .filter(sa => sa.id.toString() !== primarySubjectAreaId)
+                                            .map((sa) => ({ label: sa.name, value: sa.id }))}
+                                    />
+                                </div>
+                            </div>
+                        )}
                         <div className="pt-4 flex justify-end">
                             <Button onClick={handleSavePaper} disabled={saving} className="gap-2">
                                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}

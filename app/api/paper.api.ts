@@ -1,6 +1,7 @@
 import http from '@/lib/http'
 import { CreatePaperRequest, PaperResponse } from '@/types/paper'
 import { User } from '@/types/user'
+import { getTrack } from './track.api'
 
 import { PaperSubmissionRequest } from '@/types/submission-form'
 import { PaperFileResponse } from '@/types/paper'
@@ -21,8 +22,27 @@ export const updatePaper = async (paperId: number, body: any): Promise<PaperResp
 }
 
 export const getPapersByAuthor = async (userId: number): Promise<PaperResponse[]> => {
-    const response = await http.get<{ content: PaperResponse[] }>(`/paper/author/${userId}`)
-    return response.data.content
+    const response = await http.get<{ content: any[] }>(`/paper/author/${userId}`)
+    let papers = response.data.content || []
+    
+    // Deduplicate papers by ID to prevent UI bugs if a user has multiple author roles on the same paper
+    const uniquePapersMap = new Map()
+    papers.forEach((p) => {
+        if (!uniquePapersMap.has(p.id)) {
+            uniquePapersMap.set(p.id, p)
+        }
+    })
+    papers = Array.from(uniquePapersMap.values())
+    
+    // Fetch unique tracks to avoid undefined 'paper.track' on the UI
+    const trackIds = Array.from(new Set(papers.map((p) => p.trackId).filter(Boolean)))
+    const tracksArray = await Promise.all(trackIds.map((id: number) => getTrack(id)))
+    const trackMap = Object.fromEntries(tracksArray.map(t => [t.id, t]))
+    
+    return papers.map((paper) => ({
+        ...paper,
+        track: trackMap[paper.trackId]
+    })) as PaperResponse[]
 }
 
 export const assignAuthorToPaper = async (paperId: number, authorId: number): Promise<void> => {
@@ -31,8 +51,15 @@ export const assignAuthorToPaper = async (paperId: number, authorId: number): Pr
 }
 
 export const getAuthorsByPaper = async (paperId: number): Promise<User[]> => {
-    const response = await http.get<{ content: User[] }>(`/paper-author/paper/${paperId}`)
-    return response.data.content
+    try {
+        const response = await http.get<any>(`/paper-author/paper/${paperId}`)
+        const content = response.data?.content || response.data || []
+        const items = Array.isArray(content) ? content : []
+        return items.map((item: any) => item.user || item)
+    } catch (error) {
+        console.error("Failed to fetch authors:", error)
+        return [] // Return empty array to prevent undefined UI crash
+    }
 }
 
 export const uploadPaperFile = async (conferenceId: number, paperId: number, file: File): Promise<any> => {

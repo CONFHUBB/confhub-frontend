@@ -343,24 +343,6 @@ export default function ConferenceDetailsPage() {
                                         )}
 
                                         <div className="space-y-2 text-xs text-muted-foreground">
-                                            <div className="flex items-center justify-between">
-                                                <span className="flex items-center gap-1.5">
-                                                    <Send className="h-3 w-3" />
-                                                    Submission
-                                                </span>
-                                                <span className="font-medium text-foreground">
-                                                    {formatDateShort(track.submissionStart)} – {formatDateShort(track.submissionEnd)}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="flex items-center gap-1.5">
-                                                    <FileText className="h-3 w-3" />
-                                                    Camera-ready
-                                                </span>
-                                                <span className="font-medium text-foreground">
-                                                    {formatDateShort(track.cameraReadyStart)} – {formatDateShort(track.cameraReadyEnd)}
-                                                </span>
-                                            </div>
                                             {track.maxSubmissions > 0 && (
                                                 <div className="flex items-center justify-between">
                                                     <span>Max submissions</span>
@@ -371,7 +353,7 @@ export default function ConferenceDetailsPage() {
 
                                         <div className="pt-2">
                                             {submissionOpen ? (
-                                                <Link href={`/track/${track.id}/submit`}>
+                                                <Link href={`/track/${track.id}/submit?conferenceId=${conferenceId}`}>
                                                     <Button
                                                         className="w-full gap-2"
                                                         variant="default"

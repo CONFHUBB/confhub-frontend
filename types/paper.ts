@@ -1,5 +1,6 @@
 export interface PaperResponse {
     id: number
+    trackId: number
     track: {
         createdAt: string
         updatedAt: string
@@ -25,40 +26,8 @@ export interface PaperResponse {
         }
         maxSubmissions: number
     }
-    topic: {
-        createdAt: string
-        updatedAt: string
-        createdBy: string
-        updatedBy: string
-        id: number
-        track: {
-            createdAt: string
-            updatedAt: string
-            createdBy: string
-            updatedBy: string
-            id: number
-            name: string
-            description: string
-            conference: {
-                createdAt: string
-                updatedAt: string
-                createdBy: string
-                updatedBy: string
-                id: number
-                name: string
-                acronym: string
-                description: string
-                websiteUrl: string
-                location: string
-                status: string
-                startDate: string
-                endDate: string
-            }
-            maxSubmissions: number
-        }
-        title: string
-        description: string
-    }
+    primarySubjectAreaId: number
+    secondarySubjectAreaIds: number[]
     title: string
     abstractField: string
     keyword1: string
@@ -72,7 +41,8 @@ export interface PaperResponse {
 
 export interface CreatePaperRequest {
     conferenceTrackId: number,
-    topicId: number,
+    primarySubjectAreaId: number,
+    secondarySubjectAreaIds: number[],
     title: string,
     abstractField: string,
     keyword1: string,

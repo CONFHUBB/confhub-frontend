@@ -24,15 +24,16 @@ export interface TrackData {
     maxSubmissions: string
 }
 
-export interface TopicData {
+export interface SubjectAreaData {
     id: number
-    title: string
+    name: string
     description: string
+    parentId: number | null
 }
 
-export interface TrackWithTopics {
+export interface TrackWithSubjectAreas {
     track: TrackData
-    topics: TopicData[]
+    subjectAreas: SubjectAreaData[]
 }
 
 export interface RoleAssignmentData {

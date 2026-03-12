@@ -2,16 +2,17 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
-import { getTrack, getTopicsByTrack } from '@/app/api/track.api'
+import { getTrack, getSubjectAreasByTrack } from '@/app/api/track.api'
 import type { TrackResponse } from '@/types/track'
-import type { TopicResponse } from '@/types/topic'
+import type { SubjectAreaResponse } from '@/types/subject-area'
 import type { User } from '@/types/user'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select as AntdSelect } from 'antd'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, ArrowLeft, Check, FileText, Users, Upload, Search, Trash2, Send, FileUp } from 'lucide-react'
+import { Loader2, ArrowLeft, Check, FileText, Users, Upload, Search, Trash2, Send, FileUp, Layers } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { createPaper, assignAuthorToPaper, getAuthorsByPaper, uploadPaperFile } from '@/app/api/paper.api'
@@ -363,25 +364,26 @@ export default function SubmitPaperPage() {
     const [createdPaperTitle, setCreatedPaperTitle] = useState(paperTitleParam)
 
     const [track, setTrack] = useState<TrackResponse | null>(null)
-    const [topics, setTopics] = useState<TopicResponse[]>([])
+    const [subjectAreas, setSubjectAreas] = useState<SubjectAreaResponse[]>([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [definitionJson, setDefinitionJson] = useState<string>("")
     const [submissionFormId, setSubmissionFormId] = useState<number | null>(null)
-    const [selectedTopicId, setSelectedTopicId] = useState<string>("")
+    const [primarySubjectAreaId, setPrimarySubjectAreaId] = useState<string>("")
+    const [secondarySubjectAreaIds, setSecondarySubjectAreaIds] = useState<number[]>([])
     const [activities, setActivities] = useState<ConferenceActivityDTO[]>([])
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true)
-                const [trackData, topicsData] = await Promise.all([
+                const [trackData, areasData] = await Promise.all([
                     getTrack(trackId),
-                    getTopicsByTrack(trackId)
+                    getSubjectAreasByTrack(trackId)
                 ])
                 setTrack(trackData)
-                setTopics(topicsData)
+                setSubjectAreas(areasData)
 
                 if (conferenceId) {
                     const [formConfig, activitiesData] = await Promise.all([
@@ -436,8 +438,8 @@ export default function SubmitPaperPage() {
             return
         }
 
-        if (!selectedTopicId) {
-            toast.error('Please select a topic')
+        if (!primarySubjectAreaId) {
+            toast.error('Please select a primary subject area.')
             return
         }
 
@@ -445,8 +447,9 @@ export default function SubmitPaperPage() {
             setSubmitting(true)
             const payload: any = {
                 conferenceTrackId: trackId,
-                topicId: Number(selectedTopicId),
-                submissionFormId: submissionFormId || 0,
+                primarySubjectAreaId: Number(primarySubjectAreaId),
+                secondarySubjectAreaIds,
+                submissionFormId: submissionFormId || null,
                 title: fixedData.title,
                 abstractField: fixedData.abstractField,
                 keyword1: fixedData.keyword1 || "",
@@ -536,48 +539,76 @@ export default function SubmitPaperPage() {
             {currentStep === 1 && (
                 <Card>
                     <CardContent className="pt-6">
-                        {/* Topic selector */}
-                        <div className="mb-8 space-y-3">
-                            <Label htmlFor="topic" className="text-base">Select Track Topic <span className="text-destructive">*</span></Label>
-                            <p className="text-sm text-muted-foreground">Choose the topic that best fits your submission.</p>
+                        {/* Subject Area Selection */}
+                        <div className="mb-0 space-y-6">
+                            {/* Primary Subject Area */}
+                            <div className="space-y-3">
+                                <Label htmlFor="primary-subject-area" className="text-base">Primary Subject Area <span className="text-destructive">*</span></Label>
+                                <p className="text-sm text-muted-foreground">Choose the primary area that best fits your submission.</p>
 
-                            {topics && topics.length > 0 ? (
-                                <Select
-                                    value={selectedTopicId || undefined}
-                                    onValueChange={(value) => setSelectedTopicId(value)}
-                                >
-                                    <SelectTrigger id="topic" className="bg-background">
-                                        <SelectValue placeholder="Select a topic" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {topics.map((topic) => (
-                                            <SelectItem key={topic.id} value={topic.id.toString()}>
-                                                {topic.title}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            ) : (
-                                <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-md border border-destructive/20 font-medium">
-                                    No topics are available for this track. Please ask the organizer to create topics first.
+                                {subjectAreas && subjectAreas.length > 0 ? (
+                                    <Select
+                                        value={primarySubjectAreaId || undefined}
+                                        onValueChange={(value) => setPrimarySubjectAreaId(value)}
+                                    >
+                                        <SelectTrigger id="primary-subject-area" className="bg-background">
+                                            <SelectValue placeholder="Select primary subject area" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {subjectAreas.map((sa) => (
+                                                <SelectItem key={sa.id} value={sa.id.toString()}>
+                                                    <div className="flex items-center gap-2">
+                                                        {sa.parentId !== null && <Layers className="h-3 w-3 text-muted-foreground ml-2" />}
+                                                        <span>{sa.name}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                ) : (
+                                    <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-md border border-destructive/20 font-medium">
+                                        No subject areas are available for this track. Please ask the organizer to create subject areas first.
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Secondary Subject Areas */}
+                            {subjectAreas && subjectAreas.length > 0 && (
+                                <div className="space-y-3">
+                                    <Label htmlFor="secondary-subject-areas" className="text-base">Secondary Subject Areas</Label>
+                                    <p className="text-sm text-muted-foreground">Optionally, choose other relevant areas.</p>
+                                    <AntdSelect
+                                        mode="multiple"
+                                        className="w-full text-base"
+                                        placeholder="Select secondary subject areas"
+                                        value={secondarySubjectAreaIds}
+                                        onChange={(val) => setSecondarySubjectAreaIds(val)}
+                                        options={subjectAreas
+                                            // Optional: Don't show primary area in secondary list
+                                            .filter(sa => sa.id.toString() !== primarySubjectAreaId)
+                                            .map((sa) => ({ 
+                                                label: sa.name, 
+                                                value: sa.id 
+                                            }))}
+                                    />
                                 </div>
                             )}
                         </div>
 
                         {/* Divider */}
-                        {selectedTopicId && <div className="border-t mb-6" />}
+                        {primarySubjectAreaId && <div className="border-t my-8" />}
 
                         {/* Form */}
-                        {selectedTopicId ? (
+                        {primarySubjectAreaId ? (
                             <FormRenderer
                                 definitionJson={definitionJson}
                                 onSubmit={handleFormSubmit}
                                 isSubmitting={submitting}
                             />
                         ) : (
-                            topics && topics.length > 0 && (
-                                <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
-                                    Please select a topic above to start filling out your submission.
+                            subjectAreas && subjectAreas.length > 0 && (
+                                <div className="text-center py-12 mt-8 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
+                                    Please select a Primary Subject Area above to start filling out your submission.
                                 </div>
                             )
                         )}

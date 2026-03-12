@@ -1,5 +1,5 @@
 import http from '@/lib/http'
-import { TopicResponse } from '@/types/topic'
+import { SubjectAreaResponse } from '@/types/subject-area'
 import { TrackResponse, TrackReviewSetting, ReviewQuestionDTO } from '@/types/track'
 
 export const getTracks = async (): Promise<TrackResponse[]> => {
@@ -23,8 +23,8 @@ export const getTrack = async (id: number): Promise<TrackResponse> => {
     return response.data
 }
 
-export const getTopicsByTrack = async (trackId: number): Promise<TopicResponse[]> => {
-    const response = await http.get<any>(`/conference-track-topics/track/${trackId}`)
+export const getSubjectAreasByTrack = async (trackId: number): Promise<SubjectAreaResponse[]> => {
+    const response = await http.get<any>(`/subject-areas/track/${trackId}`)
     // Smartly handle both flat array and Spring Data paginated { content: [] } structures
     if (Array.isArray(response.data)) {
         return response.data
