@@ -6,7 +6,8 @@ import type {
     CreateTrackRequest, 
     UpdateTrackRequest,
     TrackResponse, 
-    ConferenceListResponse 
+    ConferenceListResponse,
+    ConferenceActivityDTO
 } from '@/types/conference'
 
 export const createConference = async (body: CreateConferenceRequest): Promise<ConferenceResponse> => {
@@ -48,5 +49,15 @@ export const getChairedConferences = async (userId: number, page = 0, size = 20)
 
 export const approveConference = async (id: number): Promise<any> => {
     const response = await http.put(`/conferences/${id}/approve-conference`)
+    return response.data
+}
+
+export const getConferenceActivities = async (conferenceId: number): Promise<ConferenceActivityDTO[]> => {
+    const response = await http.get<ConferenceActivityDTO[]>(`/conferences/${conferenceId}/activities`)
+    return response.data
+}
+
+export const updateConferenceActivities = async (conferenceId: number, body: ConferenceActivityDTO[]): Promise<ConferenceActivityDTO[]> => {
+    const response = await http.put<ConferenceActivityDTO[]>(`/conferences/${conferenceId}/activities`, body)
     return response.data
 }

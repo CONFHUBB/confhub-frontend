@@ -21,18 +21,18 @@ interface AddTopicProps {
     onSubmit: (topics: TopicData[]) => void
 }
 
-let nextId = 1
+let nextId = -1
 
 export function AddTopic({ initialTopics, onSubmit }: AddTopicProps) {
     const [errors, setErrors] = useState<Record<string, string>>({})
 
     const [topics, setTopics] = useState<TopicData[]>(() => {
-        if (initialTopics.length > 0) return initialTopics
-        return [{ id: nextId++, title: "", description: "" }]
+        if (initialTopics && initialTopics.length > 0) return initialTopics
+        return [{ id: nextId--, title: "", description: "" }]
     })
 
     const addTopic = () => {
-        setTopics((prev) => [...prev, { id: nextId++, title: "", description: "" }])
+        setTopics((prev) => [...prev, { id: nextId--, title: "", description: "" }])
     }
 
     const removeTopic = (id: number) => {
@@ -116,11 +116,12 @@ export function AddTopic({ initialTopics, onSubmit }: AddTopicProps) {
                                         !!errors[`title_${topic.id}`] || undefined
                                     }
                                 >
-                                    <FieldLabel>
+                                    <FieldLabel className="text-base font-semibold">
                                         <Type className="size-4" />
                                         Title
                                     </FieldLabel>
                                     <Input
+                                        className="h-12 text-base"
                                         placeholder="e.g. Machine Learning"
                                         value={topic.title}
                                         onChange={(e) =>
@@ -140,11 +141,12 @@ export function AddTopic({ initialTopics, onSubmit }: AddTopicProps) {
 
                                 {/* Description */}
                                 <Field>
-                                    <FieldLabel>
+                                    <FieldLabel className="text-base font-semibold">
                                         <FileText className="size-4" />
                                         Description
                                     </FieldLabel>
                                     <Textarea
+                                        className="min-h-[100px] text-base"
                                         placeholder="Describe the topic scope..."
                                         rows={3}
                                         value={topic.description}
@@ -178,7 +180,7 @@ export function AddTopic({ initialTopics, onSubmit }: AddTopicProps) {
             </FieldSet>
 
             <div className="mt-8 flex items-center justify-end gap-4">
-                <Button type="submit">
+                <Button type="submit" size="lg" className="px-8 text-base">
                     Save Topics
                 </Button>
             </div>

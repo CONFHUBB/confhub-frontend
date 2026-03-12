@@ -10,6 +10,7 @@ import { Select } from "antd"
 import { Loader2 } from "lucide-react"
 import toast from "react-hot-toast"
 import { AddTopic } from "./add-topic"
+import { TopicList } from "./topic-list"
 
 interface TopicManagerProps {
     conferenceId: number
@@ -23,6 +24,7 @@ export function TopicManager({ conferenceId }: TopicManagerProps) {
     const [loadingTracks, setLoadingTracks] = useState(true)
     const [loadingTopics, setLoadingTopics] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
+    const [topicRefreshKey, setTopicRefreshKey] = useState(0)
 
     useEffect(() => {
         const fetchTracks = async () => {
@@ -47,7 +49,7 @@ export function TopicManager({ conferenceId }: TopicManagerProps) {
         try {
             setLoadingTopics(true)
             const data = await getTopicsByTrack(trackId)
-            setTopics(data)
+            setTopics(data || [])
         } catch (err) {
             console.error("Failed to load topics:", err)
             toast.error("Failed to load topics")
@@ -73,17 +75,12 @@ export function TopicManager({ conferenceId }: TopicManagerProps) {
             const creates = []
             
             for (const t of submittedTopics) {
-                // If id is negative or very large or just not matching a known fetched topic id, it's new
-                // We generated IDs using `nextId++` which might collide if not careful, 
-                // but real IDs from DB are in "topics" state. Let's find by ID in existing topics.
-                const exists = topics.find(ex => ex.id === t.id)
-                
-                if (exists) {
-                    // Update
-                    updates.push(updateTopic({ id: exists.id, trackId: selectedTrackId, title: t.title, description: t.description || "" }))
-                } else {
-                    // Create
+                // If ID is negative, it's a new topic we created on the frontend
+                if (t.id < 0) {
                     creates.push(createTopic({ trackId: selectedTrackId, title: t.title, description: t.description || "" }))
+                } else {
+                    // It's an existing topic
+                    updates.push(updateTopic({ id: t.id, trackId: selectedTrackId, title: t.title, description: t.description || "" }))
                 }
             }
             
@@ -99,7 +96,8 @@ export function TopicManager({ conferenceId }: TopicManagerProps) {
             await Promise.all([...updates, ...creates, ...deletes])
             toast.success("Topics saved successfully!")
             
-            // Refresh to get actual full objects from backend
+            // Refresh to get actual full objects from backend and update list
+            setTopicRefreshKey(prev => prev + 1)
             await fetchTopics(selectedTrackId)
         } catch (err) {
             console.error("Failed to save topics:", err)
@@ -156,14 +154,22 @@ export function TopicManager({ conferenceId }: TopicManagerProps) {
                         </div>
                     )}
                     
-                    {/* AddTopic expects TopicData[]. We map our TopicResponse[] into it. */}
-                    {/* We MUST use a key with selectedTrackId so it unmounts and wipes state when switching tracks */}
+                    {/* Main Management Section */}
                     {selectedTrackId && (
-                        <AddTopic 
-                            key={`track-${selectedTrackId}-${topics.length}`}
-                            initialTopics={topics.map(t => ({ id: t.id, title: t.title, description: t.description }))} 
-                            onSubmit={handleSaveTopics} 
-                        />
+                        <div className="space-y-12">
+                            {/* 1. Existing Topics List (Display) */}
+                            <TopicList trackId={selectedTrackId} refreshKey={topicRefreshKey} />
+                            
+                            {/* 2. Management Form (Edit/Add/Delete) */}
+                            <div className="border-t pt-8">
+                                <h3 className="text-lg font-semibold mb-4 text-foreground/80">Manage Track Topics</h3>
+                                <AddTopic 
+                                    key={`track-${selectedTrackId}-${topicRefreshKey}-${topics.length}`}
+                                    initialTopics={(topics || []).map(t => ({ id: t.id, title: t.title, description: t.description }))} 
+                                    onSubmit={handleSaveTopics} 
+                                />
+                            </div>
+                        </div>
                     )}
                 </div>
             )}

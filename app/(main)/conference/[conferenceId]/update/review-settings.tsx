@@ -214,7 +214,7 @@ export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
                             type="number"
                             className="h-12 text-base max-w-xs"
                             min={1}
-                            value={settings.reviewerInviteExpirationDays}
+                            value={settings.reviewerInviteExpirationDays ?? 0}
                             onChange={(e) =>
                                 setSettings((prev) => ({
                                     ...prev,
@@ -232,7 +232,7 @@ export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
                         <Textarea
                             className="min-h-[150px] text-base"
                             placeholder="Provide detailed instructions for reviewers..."
-                            value={settings.reviewerInstructions}
+                            value={settings.reviewerInstructions ?? ""}
                             onChange={(e) =>
                                 setSettings((prev) => ({
                                     ...prev,

@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { getConference } from '@/app/api/conference.api'
+import { getConference, getConferenceActivities } from '@/app/api/conference.api'
 import { getTracksByConference } from '@/app/api/track.api'
-import type { ConferenceResponse, TrackResponse } from '@/types/conference'
+import type { ConferenceActivityDTO, ConferenceResponse, TrackResponse } from '@/types/conference'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -13,6 +13,7 @@ import {
     Globe, Phone, FileText, Clock, Send
 } from 'lucide-react'
 import Link from 'next/link'
+import { isActivityOpen } from '@/lib/activity'
 
 export default function ConferenceDetailsPage() {
     const params = useParams()
@@ -21,6 +22,7 @@ export default function ConferenceDetailsPage() {
 
     const [conference, setConference] = useState<ConferenceResponse | null>(null)
     const [tracks, setTracks] = useState<TrackResponse[]>([])
+    const [activities, setActivities] = useState<ConferenceActivityDTO[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
@@ -28,12 +30,14 @@ export default function ConferenceDetailsPage() {
         const fetchData = async () => {
             try {
                 setLoading(true)
-                const [conferenceData, tracksData] = await Promise.all([
+                const [conferenceData, tracksData, activitiesData] = await Promise.all([
                     getConference(conferenceId),
-                    getTracksByConference(conferenceId)
+                    getTracksByConference(conferenceId),
+                    getConferenceActivities(conferenceId).catch(() => [] as ConferenceActivityDTO[])
                 ])
                 setConference(conferenceData)
                 setTracks(tracksData)
+                setActivities(activitiesData)
             } catch (err: any) {
                 if (err.response?.status === 401 || err.response?.status === 403) {
                     setError('You must be logged in to view this conference.')
@@ -90,11 +94,41 @@ export default function ConferenceDetailsPage() {
         }
     }
 
-    const isSubmissionOpen = (track: TrackResponse) => {
-        if (!track.submissionStart || !track.submissionEnd) return false
-        const now = new Date()
-        return new Date(track.submissionStart) <= now && now <= new Date(track.submissionEnd)
+    const ACTIVITY_ORDER = [
+        'PAPER_SUBMISSION',
+        'REVIEWER_BIDDING',
+        'REVIEW_SUBMISSION',
+        'REVIEW_DISCUSSION',
+        'AUTHOR_NOTIFICATION',
+        'CAMERA_READY_SUBMISSION',
+    ]
+
+    const ACTIVITY_LABELS: Record<string, string> = {
+        PAPER_SUBMISSION: 'Paper Submission',
+        REVIEWER_BIDDING: 'Reviewer Bidding',
+        REVIEW_SUBMISSION: 'Review Submission',
+        REVIEW_DISCUSSION: 'Review Discussion',
+        AUTHOR_NOTIFICATION: 'Author Notification',
+        CAMERA_READY_SUBMISSION: 'Camera Ready Submission',
     }
+
+    const paperSubmissionActivity = activities.find(a => a.activityType === 'PAPER_SUBMISSION')
+    const isPaperSubmissionOpen = isActivityOpen(paperSubmissionActivity)
+
+    const isSubmissionOpen = () => {
+        return isPaperSubmissionOpen
+    }
+
+    const openActivities = activities.filter((a) => isActivityOpen(a))
+    const sortedOpenActivities = [...openActivities].sort((a, b) => {
+        const indexA = ACTIVITY_ORDER.indexOf(a.activityType)
+        const indexB = ACTIVITY_ORDER.indexOf(b.activityType)
+        if (indexA === -1 && indexB === -1) return 0
+        if (indexA === -1) return 1
+        if (indexB === -1) return -1
+        return indexA - indexB
+    })
+    const currentActivity = sortedOpenActivities[0] || null
 
     if (loading) {
         return (
@@ -275,7 +309,7 @@ export default function ConferenceDetailsPage() {
                 ) : (
                     <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
                         {tracks.map((track) => {
-                            const submissionOpen = isSubmissionOpen(track)
+                            const submissionOpen = isSubmissionOpen()
                             return (
                                 <Card key={track.id} className="hover:shadow-lg transition-shadow">
                                     <CardHeader className="pb-3">
@@ -283,14 +317,22 @@ export default function ConferenceDetailsPage() {
                                             <CardTitle className="text-lg leading-tight">
                                                 {track.name}
                                             </CardTitle>
-                                            <Badge
-                                                variant="outline"
-                                                className={submissionOpen
-                                                    ? 'border-green-300 text-green-700 bg-green-50 shrink-0'
-                                                    : 'border-gray-300 text-gray-500 bg-gray-50 shrink-0'}
-                                            >
-                                                {submissionOpen ? 'Open' : 'Closed'}
-                                            </Badge>
+                                            <div className="flex flex-col items-end gap-1">
+                                                <Badge
+                                                    variant="outline"
+                                                    className={
+                                                        !submissionOpen && currentActivity
+                                                            ? 'border-blue-300 text-blue-700 bg-blue-50 shrink-0'
+                                                            : submissionOpen
+                                                                ? 'border-green-300 text-green-700 bg-green-50 shrink-0'
+                                                                : 'border-gray-300 text-gray-500 bg-gray-50 shrink-0'
+                                                    }
+                                                >
+                                                    {!submissionOpen && currentActivity
+                                                        ? (ACTIVITY_LABELS[currentActivity.activityType] || currentActivity.name || currentActivity.activityType)
+                                                        : (submissionOpen ? 'Open' : 'Closed')}
+                                                </Badge>
+                                            </div>
                                         </div>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
@@ -328,16 +370,26 @@ export default function ConferenceDetailsPage() {
                                         </div>
 
                                         <div className="pt-2">
-                                            <Link href={`/track/${track.id}/submit`}>
+                                            {submissionOpen ? (
+                                                <Link href={`/track/${track.id}/submit`}>
+                                                    <Button
+                                                        className="w-full gap-2"
+                                                        variant="default"
+                                                    >
+                                                        <Send className="h-4 w-4" />
+                                                        Submit Paper
+                                                    </Button>
+                                                </Link>
+                                            ) : (
                                                 <Button
                                                     className="w-full gap-2"
-                                                    variant={submissionOpen ? 'default' : 'outline'}
-                                                    disabled={!submissionOpen}
+                                                    variant="outline"
+                                                    disabled
                                                 >
                                                     <Send className="h-4 w-4" />
-                                                    {submissionOpen ? 'Submit Paper' : 'Submission Closed'}
+                                                    Submission Closed
                                                 </Button>
-                                            </Link>
+                                            )}
                                         </div>
                                     </CardContent>
                                 </Card>

@@ -19,6 +19,7 @@ import { ConferenceTemplate } from './conference-template'
 import { ReviewSettings } from './review-settings'
 import { TrackList } from './track-list'
 import { ReviewQuestionsList } from './review-questions-list'
+import { ActivityTimeline } from './activity-timeline'
 
 import { createTrack } from '@/app/api/conference.api'
 import { createTopic } from '@/app/api/topic.api'
@@ -44,6 +45,7 @@ type SettingsTab =
     | 'forms-mail' 
     | 'forms-submission' 
     | 'forms-review'
+    | 'features-activity-timeline'
 
 const TAB_GROUPS = [
     {
@@ -70,6 +72,13 @@ const TAB_GROUPS = [
             { key: "forms-submission", label: "Submission form", implemented: true },
             { key: "forms-review", label: "Review form", implemented: true }
         ]
+    },
+    {
+        title: "Activity Timeline",
+        icon: <Calendar className="h-4 w-4" />,
+        items: [
+            { key: "features-activity-timeline", label: "Deadline", implemented: true }
+        ]
     }
 ]
 
@@ -82,7 +91,7 @@ export default function ConferenceUpdatePage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<SettingsTab>('general-detail')
-    const [expandedGroups, setExpandedGroups] = useState<string[]>(['General Setting', 'Features Setting', 'Form Setting'])
+    const [expandedGroups, setExpandedGroups] = useState<string[]>(['General Setting', 'Features Setting', 'Form Setting', 'Activity Timeline'])
     const [isUpdatingGeneral, setIsUpdatingGeneral] = useState(false)
 
     // Form Builder state
@@ -365,84 +374,103 @@ export default function ConferenceUpdatePage() {
                     </div>
                 )
 
+            case 'features-activity-timeline':
+                return (
+                    <div className="space-y-8">
+                        <div>
+                            <h2 className="text-xl font-bold mb-4">Activity Timeline</h2>
+                            <p className="text-sm text-muted-foreground mb-6">Manage timelines and toggle module availability for this conference.</p>
+                        </div>
+                        <ActivityTimeline conferenceId={conferenceId} />
+                    </div>
+                )
+
             default:
                 return null
         }
     }
 
     return (
-        <div className="container mx-auto py-8 px-4 max-w-8xl">
-            {/* Header */}
-            <div className="mb-8">
-                <Link href="/conference/my-conference">
-                    <Button variant="ghost" className="mb-4 -ml-2">
-                        <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back to My Conferences
-                    </Button>
-                </Link>
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">{conference.name}</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Manage and configure your conference settings
-                    </p>
+        <div className="min-h-screen bg-transparent flex flex-col overflow-hidden">
+            <div className="flex-1 w-full max-w-[1700px] mx-auto flex flex-col p-4 md:p-8 overflow-hidden">
+                {/* Header Area */}
+                <div className="mb-8 shrink-0">
+                    <Link href="/conference/my-conference">
+                        <Button variant="ghost" className="mb-4 -ml-2">
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Back to My Conferences
+                        </Button>
+                    </Link>
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">{conference.name}</h1>
+                        <p className="text-muted-foreground mt-1">
+                            Manage and configure your conference settings
+                        </p>
+                    </div>
                 </div>
+
+                {/* Dashboard Card with internal scrolling */}
+                <Card className="flex flex-col md:flex-row shadow-lg overflow-hidden flex-1 min-h-0 bg-background border border-border">
+                    {/* Sidebar Navigation */}
+                    <div className="md:w-72 shrink-0 bg-muted/5 border-r flex flex-col h-full overflow-hidden">
+                        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                            <nav className="space-y-6">
+                                {TAB_GROUPS.map((group) => {
+                                    const isExpanded = expandedGroups.includes(group.title)
+                                    return (
+                                        <div key={group.title} className="space-y-1">
+                                            <button
+                                                onClick={() => setExpandedGroups(prev => 
+                                                    isExpanded ? prev.filter(t => t !== group.title) : [...prev, group.title]
+                                                )}
+                                                className="w-full flex items-center justify-between px-2 py-2 text-sm font-bold text-foreground hover:text-primary transition-colors"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    {group.icon}
+                                                    <span className="uppercase tracking-wider text-xs">{group.title}</span>
+                                                </div>
+                                                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                            </button>
+                                            
+                                            {isExpanded && (
+                                                <div className="flex flex-col space-y-1 mt-1 pl-4 border-l ml-3 border-border/50">
+                                                    {group.items.map(item => (
+                                                        <button
+                                                            key={item.key}
+                                                            onClick={() => setActiveTab(item.key as SettingsTab)}
+                                                            className={`w-full flex items-center px-3 py-2 rounded-md text-left text-sm transition-colors
+                                                                ${activeTab === item.key
+                                                                    ? 'bg-primary/10 text-primary font-semibold'
+                                                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                                                }`}
+                                                        >
+                                                            <span className="relative">
+                                                                {item.label}
+                                                                {!item.implemented && (
+                                                                    <span className="ml-2 text-[10px] uppercase font-bold text-muted-foreground/50">Soon</span>
+                                                                )}
+                                                            </span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </nav>
+                        </div>
+                    </div>
+
+                    {/* Main Content Area - Scrollable */}
+                    <div className="flex-1 min-w-0 bg-background overflow-hidden flex flex-col h-full">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                            <div className="max-w-6xl mx-auto p-8 md:p-12 pb-24">
+                                {renderTabContent()}
+                            </div>
+                        </div>
+                    </div>
+                </Card>
             </div>
-
-            {/* Layout: Sidebar + Content */}
-            <Card className="flex flex-col md:flex-row shadow-sm overflow-hidden">
-                {/* Sidebar Navigation */}
-                <div className="md:w-72 shrink-0 bg-muted/10 border-r md:min-h-[600px] overflow-y-auto">
-                    <nav className="p-4 space-y-6">
-                        {TAB_GROUPS.map((group) => {
-                            const isExpanded = expandedGroups.includes(group.title)
-                            return (
-                                <div key={group.title} className="space-y-1">
-                                    <button
-                                        onClick={() => setExpandedGroups(prev => 
-                                            isExpanded ? prev.filter(t => t !== group.title) : [...prev, group.title]
-                                        )}
-                                        className="w-full flex items-center justify-between px-2 py-2 text-sm font-bold text-foreground hover:text-primary transition-colors"
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            {group.icon}
-                                            <span className="uppercase tracking-wider text-xs">{group.title}</span>
-                                        </div>
-                                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                    </button>
-                                    
-                                    {isExpanded && (
-                                        <div className="flex flex-col space-y-1 mt-1 pl-4 border-l ml-3 border-border/50">
-                                            {group.items.map(item => (
-                                                <button
-                                                    key={item.key}
-                                                    onClick={() => setActiveTab(item.key as SettingsTab)}
-                                                    className={`w-full flex items-center px-3 py-2 rounded-md text-left text-sm transition-colors
-                                                        ${activeTab === item.key
-                                                            ? 'bg-primary/10 text-primary font-semibold'
-                                                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                                                        }`}
-                                                >
-                                                    <span className="relative">
-                                                        {item.label}
-                                                        {!item.implemented && (
-                                                            <span className="ml-2 text-[10px] uppercase font-bold text-muted-foreground">Soon</span>
-                                                        )}
-                                                    </span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )
-                        })}
-                    </nav>
-                </div>
-
-                {/* Main Content */}
-                <div className="flex-1 min-w-0 p-6 md:p-8">
-                    {renderTabContent()}
-                </div>
-            </Card>
         </div>
     )
 }

@@ -69,3 +69,12 @@ export interface UpdateConferenceRequest extends CreateConferenceRequest {
 export interface UpdateTrackRequest extends CreateTrackRequest {
     id: number
 }
+
+export interface ConferenceActivityDTO {
+    id: number;
+    conferenceId: number;
+    activityType: string;
+    name: string;
+    isEnabled: boolean;
+    deadline: string | null;
+}
