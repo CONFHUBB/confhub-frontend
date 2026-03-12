@@ -2,14 +2,25 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { getPaperById, updatePaper, updatePaperFile, getPaperFiles } from '@/app/api/paper.api'
+import { assignAuthorToPaper, getAuthorsByPaper, getPaperById, getPaperFiles, updatePaper, updatePaperFile } from '@/app/api/paper.api'
+import { getUsers } from '@/app/api/user.api'
 import type { PaperResponse, PaperFileResponse } from '@/types/paper'
+import type { User } from '@/types/user'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2, ArrowLeft, Upload, FileUp, FileText, Trash2, Save, ExternalLink } from 'lucide-react'
+import { Loader2, ArrowLeft, Upload, FileUp, FileText, Trash2, Save, ExternalLink, UserPlus, Users } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function EditPaperPage() {
@@ -22,6 +33,12 @@ export default function EditPaperPage() {
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [uploading, setUploading] = useState(false)
+    const [users, setUsers] = useState<User[]>([])
+    const [authors, setAuthors] = useState<User[]>([])
+    const [selectedUser, setSelectedUser] = useState('')
+    const [isAssigning, setIsAssigning] = useState(false)
+    const [openAddAuthorDialog, setOpenAddAuthorDialog] = useState(false)
+    const [openViewAuthorsDialog, setOpenViewAuthorsDialog] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
     const [formData, setFormData] = useState({
@@ -32,6 +49,26 @@ export default function EditPaperPage() {
         keyword3: '',
         keyword4: '',
     })
+
+    const fetchUsers = async () => {
+        try {
+            const data = await getUsers()
+            setUsers(data)
+        } catch (error) {
+            console.error('Error fetching users:', error)
+            toast.error('Failed to load available authors')
+        }
+    }
+
+    const fetchAuthors = async () => {
+        try {
+            const data = await getAuthorsByPaper(paperId)
+            setAuthors(data)
+        } catch (error) {
+            console.error('Error fetching authors:', error)
+            toast.error('Failed to load authors')
+        }
+    }
 
     useEffect(() => {
         const fetchPaper = async () => {
@@ -68,6 +105,8 @@ export default function EditPaperPage() {
         }
         if (paperId) {
             fetchPaper()
+            fetchUsers()
+            fetchAuthors()
         }
     }, [paperId])
 
@@ -118,6 +157,26 @@ export default function EditPaperPage() {
             toast.error(error.response?.data?.message || 'Failed to upload manuscript')
         } finally {
             setUploading(false)
+        }
+    }
+
+    const handleAssignAuthor = async () => {
+        if (!selectedUser) {
+            toast.error('Please select a user')
+            return
+        }
+
+        try {
+            setIsAssigning(true)
+            await assignAuthorToPaper(paperId, Number(selectedUser))
+            toast.success('Author assigned successfully!')
+            setSelectedUser('')
+            setOpenAddAuthorDialog(false)
+            await fetchAuthors()
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to assign author')
+        } finally {
+            setIsAssigning(false)
         }
     }
 
@@ -206,6 +265,116 @@ export default function EditPaperPage() {
                                 Save Changes
                             </Button>
                         </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="md:col-span-2">
+                    <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <CardTitle>Authors</CardTitle>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Manage co-authors for this paper from the edit page.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            <Dialog open={openAddAuthorDialog} onOpenChange={setOpenAddAuthorDialog}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" className="gap-2">
+                                        <UserPlus className="h-4 w-4" />
+                                        Add Author
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Add Co-Author</DialogTitle>
+                                        <DialogDescription>
+                                            Select a user to add as a co-author to this paper.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="author-select">Select User</Label>
+                                            <Select value={selectedUser} onValueChange={setSelectedUser}>
+                                                <SelectTrigger id="author-select">
+                                                    <SelectValue placeholder="Choose a user" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {users.map((user) => (
+                                                        <SelectItem key={user.id} value={user.id.toString()}>
+                                                            {user.fullName} ({user.email})
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <Button onClick={handleAssignAuthor} disabled={isAssigning || !selectedUser} className="w-full">
+                                            {isAssigning ? (
+                                                <>
+                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                    Assigning...
+                                                </>
+                                            ) : (
+                                                'Assign Author'
+                                            )}
+                                        </Button>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+
+                            <Dialog
+                                open={openViewAuthorsDialog}
+                                onOpenChange={(open) => {
+                                    setOpenViewAuthorsDialog(open)
+                                    if (open) {
+                                        fetchAuthors()
+                                    }
+                                }}
+                            >
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" className="gap-2">
+                                        <Users className="h-4 w-4" />
+                                        View Authors
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Paper Authors</DialogTitle>
+                                        <DialogDescription>
+                                            List of all authors currently linked to this paper.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="py-3">
+                                        {authors.length === 0 ? (
+                                            <p className="text-center text-sm text-muted-foreground py-6">
+                                                No co-authors added yet
+                                            </p>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {authors.map((author) => (
+                                                    <Card key={author.id} className="shadow-sm">
+                                                        <CardContent className="py-2.5 px-3">
+                                                            <p className="text-sm font-medium">{author.fullName}</p>
+                                                            <p className="text-xs text-muted-foreground">{author.email}</p>
+                                                            {author.phoneNumber && (
+                                                                <p className="text-xs text-muted-foreground">{author.phoneNumber}</p>
+                                                            )}
+                                                            {author.country && (
+                                                                <p className="text-xs text-muted-foreground">{author.country}</p>
+                                                            )}
+                                                        </CardContent>
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground">
+                            Current co-authors: {authors.length}
+                        </p>
                     </CardContent>
                 </Card>
 

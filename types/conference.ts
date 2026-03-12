@@ -45,6 +45,8 @@ export interface ConferenceListResponse {
     endDate: string
     status: string
     bannerImageUrl: string
+    area: string
+    country: string
 }
 
 export interface CreateTrackRequest {

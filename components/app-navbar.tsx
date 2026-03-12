@@ -98,8 +98,8 @@ export function AppNavbar() {
 
             {/* ── Bottom Tier: Navigation Links ── */}
             <div className="bg-[#2A2D34]">
-                <div className="px-4 md:px-8 lg:px-12 flex items-center h-11 overflow-x-auto no-scrollbar">
-                    <div className="flex items-center gap-6 md:gap-8 min-w-max text-sm font-medium">
+                <div className="flex justify-center h-11 overflow-x-auto no-scrollbar">
+                    <div className="flex items-center gap-16 min-w-max text-sm font-medium">
                         {navLinks.map((link, i) => {
                             const isActive = pathname === link.path
                             return (
