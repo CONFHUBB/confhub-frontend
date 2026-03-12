@@ -13,16 +13,16 @@ import { FormBuilder } from '../submission-form/form-builder'
 import { saveConferenceSubmissionForm, getConferenceSubmissionForm } from '@/app/api/submission-form.api'
 
 import { AddTrack } from './add-track'
-import { TopicManager } from './topic-manager'
+import { SubjectAreaManager } from './subject-area-manager'
 import { AssignRole } from './assign-role'
 import { ConferenceTemplate } from './conference-template'
 import { ReviewSettings } from './review-settings'
+import { ConfigMembers } from './config-members'
 import { TrackList } from './track-list'
 import { ReviewQuestionsList } from './review-questions-list'
 import { ActivityTimeline } from './activity-timeline'
 
 import { createTrack } from '@/app/api/conference.api'
-import { createTopic } from '@/app/api/topic.api'
 import { assignRole } from '@/app/api/user.api'
 import { createTemplate } from '@/app/api/template.api'
 import { updateConference } from '@/app/api/conference.api'
@@ -32,7 +32,7 @@ import type { ConferenceData } from '@/types/conference-form'
 import type { DynamicField, FormDefinition } from '@/types/submission-form'
 import type {
     TrackData,
-    TopicData,
+    SubjectAreaData,
     RoleAssignmentData,
     TemplateData,
 } from "@/types/conference-form"
@@ -40,8 +40,9 @@ import type {
 type SettingsTab = 
     | 'general-detail' 
     | 'features-tracks' 
-    | 'features-topics' 
+    | 'features-subject-areas' 
     | 'features-review-setting' 
+    | 'features-members' 
     | 'forms-mail' 
     | 'forms-submission' 
     | 'forms-review'
@@ -60,8 +61,9 @@ const TAB_GROUPS = [
         icon: <Settings className="h-4 w-4" />,
         items: [
             { key: "features-tracks", label: "Config Tracks", implemented: true },
-            { key: "features-topics", label: "Config Topics", implemented: true },
-            { key: "features-review-setting", label: "Config Review Setting", implemented: true }
+            { key: "features-subject-areas", label: "Config Subject Areas", implemented: true },
+            { key: "features-review-setting", label: "Config Review Setting", implemented: true },
+            { key: "features-members", label: "Config Members", implemented: true }
         ]
     },
     {
@@ -313,14 +315,14 @@ export default function ConferenceUpdatePage() {
                     </div>
                 )
 
-            case 'features-topics':
+            case 'features-subject-areas':
                 return (
                     <div className="space-y-8">
                         <div>
-                            <h2 className="text-xl font-bold mb-4">Config Topics</h2>
-                            <p className="text-sm text-muted-foreground mb-6">Add topics to the available tracks.</p>
+                            <h2 className="text-xl font-bold mb-4">Config Subject Areas</h2>
+                            <p className="text-sm text-muted-foreground mb-6">Manage primary and secondary subject areas for tracks.</p>
                         </div>
-                        <TopicManager conferenceId={conferenceId} />
+                        <SubjectAreaManager conferenceId={conferenceId} />
                     </div>
                 )
 
@@ -336,6 +338,9 @@ export default function ConferenceUpdatePage() {
                         </div>
                     </div>
                 )
+
+            case 'features-members':
+                return <ConfigMembers conferenceId={conferenceId} />
 
             case 'forms-mail':
                 return (

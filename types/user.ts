@@ -9,12 +9,48 @@ export interface User {
 export interface AssignRoleRequest {
     userId: number
     conferenceId: number
-    trackId: number
+    trackId: number | null
     assignedRole: string
 }
 
 export interface AssignRoleResponse {
-    message: string
+    id: number
+    userId: number
+    conferenceId: number
+    conferenceTrackId: number | null
+    assignedRole: string
+    invitedAt: string | null
+    isAccepted: boolean | null
+    isRegistered: boolean | null
+    createdAt: string
+    updatedAt: string
+}
+
+export interface ConferenceUserTrack {
+    id: number
+    userId: number
+    conferenceId: number
+    conferenceTrackId: number | null
+    assignedRole: string
+    invitedAt: string | null
+    isAccepted: boolean | null
+    isRegistered: boolean | null
+    createdAt: string
+    updatedAt: string
+}
+
+export interface MemberWithRoles {
+    user: User
+    roles: ConferenceUserTrack[]
+}
+
+export interface MembersPageResponse {
+    content: MemberWithRoles[]
+    page: number
+    size: number
+    totalElements: number
+    totalPages: number
+    last: boolean
 }
 
 export interface UserProfileRequest {

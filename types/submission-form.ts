@@ -33,7 +33,8 @@ export interface ConferenceSubmissionFormRequest {
 // API: POST /api/v1/paper
 export interface PaperSubmissionRequest {
     conferenceTrackId: number
-    topicId: number
+    primarySubjectAreaId: number
+    secondarySubjectAreaIds: number[]
     submissionFormId?: number
     title: string
     abstractField: string
