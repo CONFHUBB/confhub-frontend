@@ -6,23 +6,27 @@ import { getConference } from '@/app/api/conference.api'
 import type { ConferenceResponse } from '@/types/conference'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Loader2, ArrowLeft, FileText, Users, LayoutTemplate, ClipboardList } from 'lucide-react'
+import { Loader2, ArrowLeft, FileText, Users, LayoutTemplate, ClipboardList, Settings, Calendar, ChevronDown, ChevronRight, Mail } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { FormBuilder } from '../submission-form/form-builder'
 import { saveConferenceSubmissionForm, getConferenceSubmissionForm } from '@/app/api/submission-form.api'
 
 import { AddTrack } from './add-track'
-import { AddTopic } from './add-topic'
-import { ReviewType } from './review-type'
+import { TopicManager } from './topic-manager'
 import { AssignRole } from './assign-role'
 import { ConferenceTemplate } from './conference-template'
+import { ReviewSettings } from './review-settings'
+import { TrackList } from './track-list'
+import { ReviewQuestionsList } from './review-questions-list'
 
 import { createTrack } from '@/app/api/conference.api'
 import { createTopic } from '@/app/api/topic.api'
 import { assignRole } from '@/app/api/user.api'
 import { createTemplate } from '@/app/api/template.api'
-import { createReviewType } from '@/app/api/review-type.api'
+import { updateConference } from '@/app/api/conference.api'
+import { ConferenceForm } from '../../create/conference-form'
+import type { ConferenceData } from '@/types/conference-form'
 
 import type { DynamicField, FormDefinition } from '@/types/submission-form'
 import type {
@@ -30,40 +34,43 @@ import type {
     TopicData,
     RoleAssignmentData,
     TemplateData,
-    ReviewTypeData,
 } from "@/types/conference-form"
 
-type SettingsTab = 'submission-form' | 'template' | 'members' | 'general'
+type SettingsTab = 
+    | 'general-detail' 
+    | 'features-tracks' 
+    | 'features-topics' 
+    | 'features-review-setting' 
+    | 'forms-mail' 
+    | 'forms-submission' 
+    | 'forms-review'
 
-const TABS: { key: SettingsTab; label: string; icon: React.ReactNode; description: string; implemented: boolean }[] = [
+const TAB_GROUPS = [
     {
-        key: 'submission-form',
-        label: 'Submission Form',
-        icon: <ClipboardList className="h-5 w-5" />,
-        description: 'Configure dynamic fields for paper submissions',
-        implemented: true,
+        title: "General Setting",
+        icon: <FileText className="h-4 w-4" />,
+        items: [
+            { key: "general-detail", label: "Config conference detail", implemented: true }
+        ]
     },
     {
-        key: 'template',
-        label: 'Config Template',
-        icon: <LayoutTemplate className="h-5 w-5" />,
-        description: 'Set up conference templates and deadlines',
-        implemented: false,
+        title: "Features Setting",
+        icon: <Settings className="h-4 w-4" />,
+        items: [
+            { key: "features-tracks", label: "Config Tracks", implemented: true },
+            { key: "features-topics", label: "Config Topics", implemented: true },
+            { key: "features-review-setting", label: "Config Review Setting", implemented: true }
+        ]
     },
     {
-        key: 'members',
-        label: 'Config Members',
-        icon: <Users className="h-5 w-5" />,
-        description: 'Manage organizers, reviewers, and roles',
-        implemented: false,
-    },
-    {
-        key: 'general',
-        label: 'General Settings',
-        icon: <FileText className="h-5 w-5" />,
-        description: 'Update conference info, dates, and location',
-        implemented: false,
-    },
+        title: "Form Setting",
+        icon: <ClipboardList className="h-4 w-4" />,
+        items: [
+            { key: "forms-mail", label: "Mail form", implemented: false },
+            { key: "forms-submission", label: "Submission form", implemented: true },
+            { key: "forms-review", label: "Review form", implemented: true }
+        ]
+    }
 ]
 
 export default function ConferenceUpdatePage() {
@@ -74,12 +81,14 @@ export default function ConferenceUpdatePage() {
     const [conference, setConference] = useState<ConferenceResponse | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [activeTab, setActiveTab] = useState<SettingsTab>('submission-form')
+    const [activeTab, setActiveTab] = useState<SettingsTab>('general-detail')
+    const [expandedGroups, setExpandedGroups] = useState<string[]>(['General Setting', 'Features Setting', 'Form Setting'])
+    const [isUpdatingGeneral, setIsUpdatingGeneral] = useState(false)
 
     // Form Builder state
     const [savedFields, setSavedFields] = useState<DynamicField[]>([])
     const [isSavingForm, setIsSavingForm] = useState(false)
-    const [isSavingReviewType, setIsSavingReviewType] = useState(false)
+    const [trackRefreshKey, setTrackRefreshKey] = useState(0)
 
     useEffect(() => {
         const fetchData = async () => {
@@ -143,26 +152,13 @@ export default function ConferenceUpdatePage() {
                 name: data.name,
                 description: data.description,
                 conferenceId,
-                submissionStart: new Date(data.submissionStart).toISOString(),
-                submissionEnd: new Date(data.submissionEnd).toISOString(),
-                registrationStart: new Date(data.registrationStart).toISOString(),
-                registrationEnd: new Date(data.registrationEnd).toISOString(),
-                cameraReadyStart: new Date(data.cameraReadyStart).toISOString(),
-                cameraReadyEnd: new Date(data.cameraReadyEnd).toISOString(),
-                biddingStart: new Date(data.biddingStart).toISOString(),
-                biddingEnd: new Date(data.biddingEnd).toISOString(),
-                reviewStart: new Date(data.reviewStart).toISOString(),
-                reviewEnd: new Date(data.reviewEnd).toISOString(),
                 maxSubmissions: Number(data.maxSubmissions),
             })
             toast.success("Track saved successfully!")
+            setTrackRefreshKey((k) => k + 1)
         } catch (err) {
             toast.error("Failed to save track")
         }
-    }
-
-    const handleSaveTopics = async (topics: TopicData[]) => {
-        toast.success("Topics generated/saved successfully! (Backend integration pending track selection)")
     }
 
     const handleSaveRoles = async (assignments: RoleAssignmentData[]) => {
@@ -210,19 +206,23 @@ export default function ConferenceUpdatePage() {
         }
     }
 
-    const handleSaveReviewType = async (data: ReviewTypeData) => {
-        setIsSavingReviewType(true)
+    const handleUpdateConference = async (data: ConferenceData) => {
+        setIsUpdatingGeneral(true)
         try {
-            await createReviewType({
-                conferenceId,
-                reviewOption: data.reviewOption,
-                isRebuttal: data.isRebuttal,
+            const updated = await updateConference(conferenceId, {
+                ...data,
+                id: conferenceId,
+                startDate: data.startDate ? new Date(data.startDate).toISOString() : "",
+                endDate: data.endDate ? new Date(data.endDate).toISOString() : "",
+                societySponsor: data.societySponsor.join(", "),
             })
-            toast.success("Review type saved!")
+            setConference(updated)
+            toast.success("Conference details updated successfully!")
         } catch (err) {
-            toast.error("Failed to save review type")
+            console.error("Failed to update conference:", err)
+            toast.error("Failed to update conference details. Please try again.")
         } finally {
-            setIsSavingReviewType(false)
+            setIsUpdatingGeneral(false)
         }
     }
 
@@ -255,41 +255,116 @@ export default function ConferenceUpdatePage() {
     }
 
     const renderTabContent = () => {
+        if (!conference) return null
+
         switch (activeTab) {
-            case 'submission-form':
+            case 'general-detail':
+                const safeDefaults = {
+                    name: conference.name || "",
+                    acronym: conference.acronym || "",
+                    description: conference.description || "",
+                    location: conference.location || "",
+                    startDate: conference.startDate ? conference.startDate.split("T")[0] : "",
+                    endDate: conference.endDate ? conference.endDate.split("T")[0] : "",
+                    websiteUrl: conference.websiteUrl || "",
+                    area: (conference as any).area || "",
+                    societySponsor: (conference as any).societySponsor 
+                        ? (conference as any).societySponsor.split(",").map((s: string) => s.trim()) 
+                        : [],
+                    conferenceIdNumber: (conference as any).conferenceIdNumber || "",
+                    country: (conference as any).country || "",
+                    province: (conference as any).province || "",
+                    bannerImageUrl: (conference as any).bannerImageUrl || "",
+                    contactInformation: (conference as any).contactInformation || "",
+                    chairEmails: (conference as any).chairEmails || "",
+                }
                 return (
-                    <FormBuilder
-                        initialFields={savedFields}
-                        onSave={handleSaveFormConfig}
-                        isSaving={isSavingForm}
-                    />
-                )
-            case 'template':
-                return (
-                    <ConferenceTemplate
-                        initialTemplates={[]}
-                        onSubmit={handleSaveTemplates}
-                    />
-                )
-            case 'members':
-                return (
-                    <AssignRole
-                        initialAssignments={[]}
-                        onSubmit={handleSaveRoles}
-                    />
-                )
-            case 'general':
-                return (
-                    <div className="space-y-8">
-                        <AddTrack defaultDates={null} onSubmit={handleSaveTrack} />
-                        <AddTopic initialTopics={[]} onSubmit={handleSaveTopics} />
-                        <ReviewType
-                            initialData={null}
-                            onSubmit={handleSaveReviewType}
-                            isSubmitting={isSavingReviewType}
+                    <div>
+                        <h2 className="text-xl font-bold mb-6">Config Conference Detail</h2>
+                        <ConferenceForm 
+                            initialData={safeDefaults} 
+                            onSubmit={handleUpdateConference} 
+                            isSubmitting={isUpdatingGeneral}
                         />
                     </div>
                 )
+            
+            case 'features-tracks':
+                return (
+                    <div className="space-y-8">
+                        <div>
+                            <h2 className="text-xl font-bold mb-4">Config Tracks</h2>
+                            <p className="text-sm text-muted-foreground mb-6">Manage tracks in this conference.</p>
+                        </div>
+                        <TrackList conferenceId={conferenceId} refreshKey={trackRefreshKey} />
+                        <div className="border-t pt-8">
+                            <h3 className="text-lg font-semibold mb-4">Add New Track</h3>
+                            <AddTrack onSubmit={handleSaveTrack} />
+                        </div>
+                    </div>
+                )
+
+            case 'features-topics':
+                return (
+                    <div className="space-y-8">
+                        <div>
+                            <h2 className="text-xl font-bold mb-4">Config Topics</h2>
+                            <p className="text-sm text-muted-foreground mb-6">Add topics to the available tracks.</p>
+                        </div>
+                        <TopicManager conferenceId={conferenceId} />
+                    </div>
+                )
+
+            case 'features-review-setting':
+                return (
+                    <div className="space-y-8">
+                        <div>
+                            <h2 className="text-xl font-bold mb-4">Track Review Settings</h2>
+                            <p className="text-sm text-muted-foreground mb-6">Manage individual track settings.</p>
+                        </div>
+                        <div className="border-t pt-2">
+                            <ReviewSettings conferenceId={conferenceId} />
+                        </div>
+                    </div>
+                )
+
+            case 'forms-mail':
+                return (
+                    <div className="flex flex-col items-center justify-center py-20 text-center border border-dashed rounded-lg bg-muted/10">
+                        <Mail className="h-10 w-10 text-muted-foreground mb-4 opacity-50" />
+                        <h3 className="text-lg font-semibold mb-2">Mail Form Config</h3>
+                        <p className="text-muted-foreground max-w-sm">
+                            Configuration for email templates will be implemented here.
+                        </p>
+                    </div>
+                )
+
+            case 'forms-submission':
+                return (
+                    <div className="space-y-8">
+                        <div>
+                            <h2 className="text-xl font-bold mb-4">Config Submission Form</h2>
+                            <p className="text-sm text-muted-foreground mb-6">Design the fields authors must fill out when submitting papers.</p>
+                        </div>
+                        <FormBuilder
+                            initialFields={savedFields}
+                            onSave={handleSaveFormConfig}
+                            isSaving={isSavingForm}
+                        />
+                    </div>
+                )
+
+            case 'forms-review':
+                return (
+                    <div className="space-y-8">
+                        <div>
+                            <h2 className="text-xl font-bold mb-4">Config Review Form</h2>
+                            <p className="text-sm text-muted-foreground mb-6">Configure the questions reviewers must answer for each track.</p>
+                        </div>
+                        <ReviewQuestionsList conferenceId={conferenceId} />
+                    </div>
+                )
+
             default:
                 return null
         }
@@ -316,26 +391,50 @@ export default function ConferenceUpdatePage() {
             {/* Layout: Sidebar + Content */}
             <Card className="flex flex-col md:flex-row shadow-sm overflow-hidden">
                 {/* Sidebar Navigation */}
-                <div className="md:w-64 shrink-0 bg-muted/10 border-r md:min-h-[600px]">
-                    <nav className="p-4 space-y-1">
-                        {TABS.map((tab) => (
-                            <button
-                                key={tab.key}
-                                onClick={() => setActiveTab(tab.key)}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-sm font-medium transition-colors
-                                    ${activeTab === tab.key
-                                        ? 'bg-primary text-primary-foreground shadow-sm'
-                                        : 'hover:bg-muted text-muted-foreground hover:text-foreground'
-                                    }`}
-                            >
-                                {tab.icon}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <span>{tab.label}</span>
-                                    </div>
+                <div className="md:w-72 shrink-0 bg-muted/10 border-r md:min-h-[600px] overflow-y-auto">
+                    <nav className="p-4 space-y-6">
+                        {TAB_GROUPS.map((group) => {
+                            const isExpanded = expandedGroups.includes(group.title)
+                            return (
+                                <div key={group.title} className="space-y-1">
+                                    <button
+                                        onClick={() => setExpandedGroups(prev => 
+                                            isExpanded ? prev.filter(t => t !== group.title) : [...prev, group.title]
+                                        )}
+                                        className="w-full flex items-center justify-between px-2 py-2 text-sm font-bold text-foreground hover:text-primary transition-colors"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            {group.icon}
+                                            <span className="uppercase tracking-wider text-xs">{group.title}</span>
+                                        </div>
+                                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                    </button>
+                                    
+                                    {isExpanded && (
+                                        <div className="flex flex-col space-y-1 mt-1 pl-4 border-l ml-3 border-border/50">
+                                            {group.items.map(item => (
+                                                <button
+                                                    key={item.key}
+                                                    onClick={() => setActiveTab(item.key as SettingsTab)}
+                                                    className={`w-full flex items-center px-3 py-2 rounded-md text-left text-sm transition-colors
+                                                        ${activeTab === item.key
+                                                            ? 'bg-primary/10 text-primary font-semibold'
+                                                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                                        }`}
+                                                >
+                                                    <span className="relative">
+                                                        {item.label}
+                                                        {!item.implemented && (
+                                                            <span className="ml-2 text-[10px] uppercase font-bold text-muted-foreground">Soon</span>
+                                                        )}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                            </button>
-                        ))}
+                            )
+                        })}
                     </nav>
                 </div>
 

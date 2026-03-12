@@ -23,16 +23,6 @@ export interface PaperResponse {
             startDate: string
             endDate: string
         }
-        submissionStart: string
-        submissionEnd: string
-        registrationStart: string
-        registrationEnd: string
-        cameraReadyStart: string
-        cameraReadyEnd: string
-        biddingStart: string
-        biddingEnd: string
-        reviewStart: string
-        reviewEnd: string
         maxSubmissions: number
     }
     topic: {
@@ -64,16 +54,6 @@ export interface PaperResponse {
                 startDate: string
                 endDate: string
             }
-            submissionStart: string
-            submissionEnd: string
-            registrationStart: string
-            registrationEnd: string
-            cameraReadyStart: string
-            cameraReadyEnd: string
-            biddingStart: string
-            biddingEnd: string
-            reviewStart: string
-            reviewEnd: string
             maxSubmissions: number
         }
         title: string

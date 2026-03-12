@@ -15,24 +15,12 @@ export interface ConferenceData {
     province: string
     bannerImageUrl: string
     contactInformation: string
-    paperDeadline: string
-    cameraReadyDeadline: string
     chairEmails: string
 }
 
 export interface TrackData {
     name: string
     description: string
-    submissionStart: string
-    submissionEnd: string
-    registrationStart: string
-    registrationEnd: string
-    cameraReadyStart: string
-    cameraReadyEnd: string
-    biddingStart: string
-    biddingEnd: string
-    reviewStart: string
-    reviewEnd: string
     maxSubmissions: string
 }
 
@@ -66,18 +54,4 @@ export interface TemplateData {
 export interface ReviewTypeData {
     reviewOption: string
     isRebuttal: boolean
-}
-
-// Default track dates to remember across multiple track additions
-export interface DefaultTrackDates {
-    submissionStart: string
-    submissionEnd: string
-    registrationStart: string
-    registrationEnd: string
-    cameraReadyStart: string
-    cameraReadyEnd: string
-    biddingStart: string
-    biddingEnd: string
-    reviewStart: string
-    reviewEnd: string
 }

@@ -1,17 +1,47 @@
+export interface TrackReviewSetting {
+    isDoubleBlind: boolean
+    reviewerInstructions: string
+    requireSubjectAreas: boolean
+    allowReviewerQuota: boolean
+    reviewerInviteExpirationDays: number
+    allowOthersReviewAccessAfterSubmit: boolean
+    allowReviewUpdateDuringDiscussion: boolean
+}
+
 export interface TrackResponse {
     id: number
     name: string
     description: string
     conferenceId: number
-    submissionStart: string
-    submissionEnd: string
-    registrationStart: string
-    registrationEnd: string
-    cameraReadyStart: string
-    cameraReadyEnd: string
-    biddingStart: string
-    biddingEnd: string
-    reviewStart: string
-    reviewEnd: string
     maxSubmissions: number
+    trackReviewSetting?: TrackReviewSetting
+}
+
+export type ReviewQuestionType = "COMMENT" | "AGREEMENT" | "OPTIONS" | "OPTIONS_WITH_VALUE"
+export type ReviewQuestionShowAs = "RADIO" | "CHECKBOX" | "DROPDOWN" | "LISTBOX"
+
+export interface ReviewQuestionChoiceDTO {
+    id?: number
+    text: string
+    value?: number
+    orderIndex?: number
+}
+
+export interface ReviewQuestionDTO {
+    id?: number
+    trackId?: number
+    text: string
+    note?: string
+    type: ReviewQuestionType
+    orderIndex?: number
+    maxLength?: number
+    showAs?: ReviewQuestionShowAs
+    isRequired?: boolean
+    lockedForEdit?: boolean
+    visibleToOtherReviewers?: boolean
+    visibleToAuthorsDuringFeedback?: boolean
+    visibleToAuthorsAfterNotification?: boolean
+    visibleToMetaReviewers?: boolean
+    visibleToSeniorMetaReviewers?: boolean
+    choices?: ReviewQuestionChoiceDTO[]
 }

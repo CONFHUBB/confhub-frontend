@@ -13,8 +13,6 @@ export interface CreateConferenceRequest {
     province: string
     bannerImageUrl: string
     contactInformation: string
-    paperDeadline: string
-    cameraReadyDeadline: string
     chairEmails: string
 }
 
@@ -53,16 +51,6 @@ export interface CreateTrackRequest {
     name: string
     description: string
     conferenceId: number
-    submissionStart: string
-    submissionEnd: string
-    registrationStart: string
-    registrationEnd: string
-    cameraReadyStart: string
-    cameraReadyEnd: string
-    biddingStart: string
-    biddingEnd: string
-    reviewStart: string
-    reviewEnd: string
     maxSubmissions: number
 }
 
@@ -71,15 +59,13 @@ export interface TrackResponse {
     name: string
     description: string
     conferenceId: number
-    submissionStart: string
-    submissionEnd: string
-    registrationStart: string
-    registrationEnd: string
-    cameraReadyStart: string
-    cameraReadyEnd: string
-    biddingStart: string
-    biddingEnd: string
-    reviewStart: string
-    reviewEnd: string
     maxSubmissions: number
+}
+
+export interface UpdateConferenceRequest extends CreateConferenceRequest {
+    id: number
+}
+
+export interface UpdateTrackRequest extends CreateTrackRequest {
+    id: number
 }
