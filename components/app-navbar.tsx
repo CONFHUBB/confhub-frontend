@@ -31,7 +31,7 @@ export function AppNavbar() {
     return (
         <header className="sticky top-0 left-0 w-full z-50 flex flex-col">
             {/* ── Top Tier: Logo + Search + Actions ── */}
-            <div className="bg-[#34c6eb] px-80 h-22 flex items-center justify-around">
+            <div className="bg-[#34c6eb] px-80 h-21 flex items-center justify-around">
                 {/* Logo */}
                 <Link href="/" className="shrink-0 flex items-center">
                     <Image
@@ -98,15 +98,15 @@ export function AppNavbar() {
 
             {/* ── Bottom Tier: Navigation Links ── */}
             <div className="bg-[#2A2D34]">
-                <div className="flex justify-center h-11 overflow-x-auto no-scrollbar">
-                    <div className="flex items-center gap-16 min-w-max text-sm font-medium">
+                <div className="flex justify-center h-17 overflow-x-auto no-scrollbar">
+                    <div className="flex items-center gap-16 text-md font-medium">
                         {navLinks.map((link, i) => {
                             const isActive = pathname === link.path
                             return (
                                 <Link
                                     key={i}
                                     href={link.path}
-                                    className={`relative py-3 whitespace-nowrap transition-colors ${isActive ? 'text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                                    className={`relative py-3 whitespace-nowrap transition-colors ${isActive ? 'text-white' : 'text-gray-100 hover:text-gray-500'}`}
                                 >
                                     {link.name}
                                     {isActive && (
