@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { isActivityOpen } from '@/lib/activity'
+import { useMockRole } from '@/hooks/useMockRole'
 
 export default function ConferenceDetailsPage() {
     const params = useParams()
@@ -25,6 +26,8 @@ export default function ConferenceDetailsPage() {
     const [activities, setActivities] = useState<ConferenceActivityDTO[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const { selectedRole } = useMockRole()
+    const canManageConference = selectedRole !== 'Author'
 
     useEffect(() => {
         const fetchData = async () => {
@@ -257,14 +260,16 @@ export default function ConferenceDetailsPage() {
                         )}
                     </div>
 
-                    <div className="flex gap-3 pt-2">
-                        <Link href={`/conference/${conferenceId}/update`}>
-                            <Button variant="outline" className="gap-2">
-                                <Settings className="h-4 w-4" />
-                                Manage Conference
-                            </Button>
-                        </Link>
-                    </div>
+                    {canManageConference && (
+                        <div className="flex gap-3 pt-2">
+                            <Link href={`/conference/${conferenceId}/update`}>
+                                <Button variant="outline" className="gap-2">
+                                    <Settings className="h-4 w-4" />
+                                    Manage Conference
+                                </Button>
+                            </Link>
+                        </div>
+                    )}
                 </div>
 
                 <div className="lg:col-span-2">

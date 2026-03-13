@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2, ArrowLeft, Upload, FileUp, FileText, Trash2, Save, ExternalLink, UserPlus, Users, Layers } from 'lucide-react'
+import { Loader2, ArrowLeft, Upload, FileUp, FileText, Trash2, Save, ExternalLink, UserPlus, Layers } from 'lucide-react'
 import { Select as AntdSelect } from 'antd'
 import toast from 'react-hot-toast'
 
@@ -41,7 +41,6 @@ export default function EditPaperPage() {
     const [selectedUser, setSelectedUser] = useState('')
     const [isAssigning, setIsAssigning] = useState(false)
     const [openAddAuthorDialog, setOpenAddAuthorDialog] = useState(false)
-    const [openViewAuthorsDialog, setOpenViewAuthorsDialog] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
     const [subjectAreas, setSubjectAreas] = useState<SubjectAreaResponse[]>([])
@@ -386,61 +385,43 @@ export default function EditPaperPage() {
                                     </div>
                                 </DialogContent>
                             </Dialog>
-
-                            <Dialog
-                                open={openViewAuthorsDialog}
-                                onOpenChange={(open) => {
-                                    setOpenViewAuthorsDialog(open)
-                                    if (open) {
-                                        fetchAuthors()
-                                    }
-                                }}
-                            >
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" className="gap-2">
-                                        <Users className="h-4 w-4" />
-                                        View Authors
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Paper Authors</DialogTitle>
-                                        <DialogDescription>
-                                            List of all authors currently linked to this paper.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="py-3">
-                                        {authors.length === 0 ? (
-                                            <p className="text-center text-sm text-muted-foreground py-6">
-                                                No co-authors added yet
-                                            </p>
-                                        ) : (
-                                            <div className="space-y-2">
-                                                {authors.map((author) => (
-                                                    <Card key={author.id} className="shadow-sm">
-                                                        <CardContent className="py-2.5 px-3">
-                                                            <p className="text-sm font-medium">{author.fullName}</p>
-                                                            <p className="text-xs text-muted-foreground">{author.email}</p>
-                                                            {author.phoneNumber && (
-                                                                <p className="text-xs text-muted-foreground">{author.phoneNumber}</p>
-                                                            )}
-                                                            {author.country && (
-                                                                <p className="text-xs text-muted-foreground">{author.country}</p>
-                                                            )}
-                                                        </CardContent>
-                                                    </Card>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
                         </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-4">
                         <p className="text-sm text-muted-foreground">
                             Current co-authors: {authors.length}
                         </p>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full text-sm">
+                                <thead className="bg-muted/60">
+                                    <tr>
+                                        <th className="px-4 py-2 text-left font-semibold text-muted-foreground">First Name</th>
+                                        <th className="px-4 py-2 text-left font-semibold text-muted-foreground">Full Name</th>
+                                        <th className="px-4 py-2 text-left font-semibold text-muted-foreground">Email</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {authors.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={3} className="px-4 py-3 text-center text-muted-foreground">
+                                                No co-authors added yet
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        authors.map((author) => {
+                                            const firstName = author.fullName?.split(' ')[0] || author.fullName
+                                            return (
+                                                <tr key={author.id} className="border-b last:border-0">
+                                                    <td className="px-4 py-3">{firstName}</td>
+                                                    <td className="px-4 py-3 font-medium">{author.fullName}</td>
+                                                    <td className="px-4 py-3 text-muted-foreground">{author.email}</td>
+                                                </tr>
+                                            )
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -453,16 +434,22 @@ export default function EditPaperPage() {
                         {currentFile && (
                             <div className="space-y-2">
                                 <Label>Current Manuscript</Label>
-                                <div className="p-4 rounded-lg border bg-muted/20 flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <FileText className="h-5 w-5 text-indigo-500" />
-                                        <span className="font-medium text-sm">Uploaded Manuscript Document</span>
+                                <div className="p-4 rounded-lg border bg-muted/20 flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <FileText className="h-5 w-5 text-indigo-500 shrink-0" />
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="font-medium text-sm">Uploaded Manuscript Document</span>
+                                            <a
+                                                href={currentFile.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-2 text-primary text-sm hover:underline truncate"
+                                            >
+                                                <ExternalLink className="h-4 w-4 shrink-0" />
+                                                <span className="truncate">{currentFile.url.split('/').pop() || 'View Previous File'}</span>
+                                            </a>
+                                        </div>
                                     </div>
-                                    <Button variant="outline" size="sm" asChild>
-                                        <a href={currentFile.url} target="_blank" rel="noopener noreferrer">
-                                            <ExternalLink className="h-4 w-4 mr-2" /> View File
-                                        </a>
-                                    </Button>
                                 </div>
                             </div>
                         )}
@@ -472,56 +459,55 @@ export default function EditPaperPage() {
                             <div className="p-4 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 text-sm text-blue-800 dark:text-blue-300">
                                 <p>Upload a new PDF to replace the current manuscript for this paper.</p>
                             </div>
-                            
                             <div className="flex gap-3 items-center">
-                            <div className="flex-1">
-                                <label
-                                    htmlFor="file-upload"
-                                    className="flex items-center gap-3 p-3 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-all"
-                                >
-                                    <FileUp className="h-5 w-5 text-muted-foreground" />
-                                    <span className="text-sm text-muted-foreground">
-                                        {selectedFile ? selectedFile.name : 'Choose a new PDF file...'}
-                                    </span>
-                                </label>
-                                <input
-                                    id="file-upload"
-                                    type="file"
-                                    accept=".pdf"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0]
-                                        if (file) {
-                                            if (file.type !== 'application/pdf') {
-                                                toast.error('Please select a PDF file')
-                                                return
+                                <div className="flex-1">
+                                    <label
+                                        htmlFor="file-upload"
+                                        className="flex items-center gap-3 p-3 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-all"
+                                    >
+                                        <FileUp className="h-5 w-5 text-muted-foreground" />
+                                        <span className="text-sm text-muted-foreground">
+                                            {selectedFile ? selectedFile.name : 'Choose a new PDF file...'}
+                                        </span>
+                                    </label>
+                                    <input
+                                        id="file-upload"
+                                        type="file"
+                                        accept=".pdf"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0]
+                                            if (file) {
+                                                if (file.type !== 'application/pdf') {
+                                                    toast.error('Please select a PDF file')
+                                                    return
+                                                }
+                                                setSelectedFile(file)
                                             }
-                                            setSelectedFile(file)
-                                        }
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        {selectedFile && (
-                            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                                <div className="flex items-center gap-2 text-sm">
-                                    <FileText className="h-4 w-4 text-primary" />
-                                    <span className="font-medium">{selectedFile.name}</span>
-                                    <span className="text-muted-foreground">({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                                        }}
+                                    />
                                 </div>
-                                <Button variant="ghost" size="sm" onClick={() => setSelectedFile(null)}>
-                                    <Trash2 className="h-4 w-4 text-destructive" />
+                            </div>
+
+                            {selectedFile && (
+                                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <FileText className="h-4 w-4 text-primary" />
+                                        <span className="font-medium">{selectedFile.name}</span>
+                                        <span className="text-muted-foreground">({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                                    </div>
+                                    <Button variant="ghost" size="sm" onClick={() => setSelectedFile(null)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                            )}
+
+                            <div className="pt-2 flex justify-end">
+                                <Button onClick={handleUploadFile} disabled={uploading || !selectedFile} className="gap-2">
+                                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                                    Upload Manuscript
                                 </Button>
                             </div>
-                        )}
-
-                        <div className="pt-2 flex justify-end">
-                            <Button onClick={handleUploadFile} disabled={uploading || !selectedFile} className="gap-2">
-                                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                                Upload Manuscript
-                            </Button>
-                        </div>
                         </div>
                     </CardContent>
                 </Card>

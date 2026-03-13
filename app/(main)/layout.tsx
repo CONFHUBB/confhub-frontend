@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { AppNavbar } from "@/components/app-navbar"
 import { useUserRole } from "@/hooks/useUserRole"
+import { MockRoleProvider } from "@/hooks/useMockRole"
 import {
     SidebarInset,
     SidebarProvider,
@@ -54,12 +55,14 @@ export default function MainLayout({
 
     // Other roles → navbar layout
     return (
-        <div className="min-h-screen bg-gray-50">
-            <AppNavbar />
-            {isHomePage && <HeroSection />}
-            <main>
-                {children}
-            </main>
-        </div>
+        <MockRoleProvider>
+            <div className="min-h-screen bg-gray-50">
+                <AppNavbar />
+                {isHomePage && <HeroSection />}
+                <main>
+                    {children}
+                </main>
+            </div>
+        </MockRoleProvider>
     )
 }
