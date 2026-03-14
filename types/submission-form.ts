@@ -38,10 +38,7 @@ export interface PaperSubmissionRequest {
     submissionFormId?: number
     title: string
     abstractField: string
-    keyword1?: string
-    keyword2?: string
-    keyword3?: string
-    keyword4?: string
+    keywords: string[]
     extraAnswersJson: string // JSON.stringify({ [fieldId]: value })
     submissionTime: string
     isPassedPlagiarism?: boolean

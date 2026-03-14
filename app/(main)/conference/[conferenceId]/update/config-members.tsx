@@ -41,24 +41,24 @@ import {
 // ── Role constants ──────────────────────────────────────
 const ROLE_OPTIONS = [
     { value: "ORGANIZER", label: "Conference Chair" },
-    { value: "TRACK_CHAIR", label: "Program Chair" },
+    { value: "PROGRAM_CHAIR", label: "Program Chair" },
     { value: "REVIEWER", label: "Reviewer" },
 ] as const
 
 const ROLE_DISPLAY: Record<string, string> = {
     ORGANIZER: "Conference Chair",
-    TRACK_CHAIR: "Program Chair",
+    PROGRAM_CHAIR: "Program Chair",
     REVIEWER: "Reviewer",
 }
 
 const ROLE_COLORS: Record<string, string> = {
     ORGANIZER: "bg-violet-500/15 text-violet-700 border-violet-500/25 dark:text-violet-400",
-    TRACK_CHAIR: "bg-sky-500/15 text-sky-700 border-sky-500/25 dark:text-sky-400",
+    PROGRAM_CHAIR: "bg-sky-500/15 text-sky-700 border-sky-500/25 dark:text-sky-400",
     REVIEWER: "bg-emerald-500/15 text-emerald-700 border-emerald-500/25 dark:text-emerald-400",
 }
 
 // Track-bound roles require at least 1 track
-const TRACK_BOUND_ROLES = ["TRACK_CHAIR", "REVIEWER"]
+const TRACK_BOUND_ROLES = ["PROGRAM_CHAIR", "REVIEWER"]
 
 // ── Internal types for the Manage Roles modal ───────────
 interface EditableRole {

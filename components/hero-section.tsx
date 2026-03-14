@@ -13,7 +13,7 @@ const Grainient = dynamic(
 
 export function HeroSection() {
   return (
-    <section className="relative flex min-h-[400px] items-center justify-center overflow-hidden mt-2">
+    <section className="relative flex min-h-[400px] items-center justify-center overflow-hidden">
       {/* Grainient Background */}
       <div className="absolute inset-0">
         <Grainient

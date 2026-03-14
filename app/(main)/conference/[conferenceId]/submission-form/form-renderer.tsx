@@ -3,6 +3,7 @@
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
+import { useState } from "react"
 import { DynamicField, DynamicFieldType, FormDefinition } from "@/types/submission-form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,7 +11,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { Loader2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Loader2, X } from "lucide-react"
 
 export interface FormRendererProps {
     definitionJson: string
@@ -22,10 +24,6 @@ const generateSchema = (fields: DynamicField[]) => {
     const schemaShape: Record<string, any> = {
         title: z.string().min(1, { message: "Title is required" }),
         abstractField: z.string().min(1, { message: "Abstract is required" }),
-        keyword1: z.string().min(1, { message: "Keyword 1 is required" }),
-        keyword2: z.string().optional(),
-        keyword3: z.string().optional(),
-        keyword4: z.string().optional(),
     }
 
     fields.forEach((field) => {
@@ -52,6 +50,10 @@ const generateSchema = (fields: DynamicField[]) => {
 }
 
 export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false }: FormRendererProps) {
+    const [keywords, setKeywords] = useState<string[]>([])
+    const [keywordInput, setKeywordInput] = useState("")
+    const [keywordError, setKeywordError] = useState("")
+
     let fields: DynamicField[] = []
 
     try {
@@ -71,10 +73,6 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false }:
         defaultValues: {
             title: "",
             abstractField: "",
-            keyword1: "",
-            keyword2: "",
-            keyword3: "",
-            keyword4: "",
             ...fields.reduce((acc, field) => {
                 acc[field.id] = field.type === DynamicFieldType.CHECKBOX ? false : ""
                 return acc
@@ -84,14 +82,40 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false }:
 
     const { formState: { errors } } = form
 
+    const addKeyword = () => {
+        const trimmed = keywordInput.trim()
+        if (!trimmed) return
+        if (keywords.includes(trimmed)) {
+            setKeywordError("This keyword already exists")
+            return
+        }
+        setKeywords((prev) => [...prev, trimmed])
+        setKeywordInput("")
+        setKeywordError("")
+    }
+
+    const removeKeyword = (index: number) => {
+        setKeywords((prev) => prev.filter((_, i) => i !== index))
+    }
+
+    const handleKeywordKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            e.preventDefault()
+            addKeyword()
+        }
+    }
+
     const handleSubmit = (data: FormData) => {
+        if (keywords.length === 0) {
+            setKeywordError("At least one keyword is required")
+            return
+        }
+        setKeywordError("")
+
         const fixedData = {
             title: data.title,
             abstractField: data.abstractField,
-            keyword1: data.keyword1,
-            keyword2: data.keyword2,
-            keyword3: data.keyword3,
-            keyword4: data.keyword4,
+            keywords,
         }
 
         const extraAnswers: Record<string, any> = {}
@@ -123,18 +147,39 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false }:
                 {errors.abstractField && <p className="text-sm text-destructive">{errors.abstractField.message as string}</p>}
             </div>
 
-            {/* Keywords */}
+            {/* Keywords — Tag Input */}
             <div className="space-y-3">
-                <Label>Keywords</Label>
-                <div className="space-y-3">
-                    <div className="space-y-1">
-                        <Input {...form.register("keyword1")} placeholder="Keyword 1 (required)" />
-                        {errors.keyword1 && <p className="text-sm text-destructive">{errors.keyword1.message as string}</p>}
+                <Label>Keywords <span className="text-destructive">*</span></Label>
+                {keywords.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                        {keywords.map((kw, i) => (
+                            <Badge key={i} variant="secondary" className="text-sm gap-1 pl-3 pr-1.5 py-1">
+                                {kw}
+                                <button
+                                    type="button"
+                                    onClick={() => removeKeyword(i)}
+                                    className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5 transition-colors"
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
+                            </Badge>
+                        ))}
                     </div>
-                    <Input {...form.register("keyword2")} placeholder="Keyword 2 (optional)" />
-                    <Input {...form.register("keyword3")} placeholder="Keyword 3 (optional)" />
-                    <Input {...form.register("keyword4")} placeholder="Keyword 4 (optional)" />
+                )}
+                <div className="flex gap-2">
+                    <Input
+                        value={keywordInput}
+                        onChange={(e) => { setKeywordInput(e.target.value); setKeywordError("") }}
+                        onKeyDown={handleKeywordKeyDown}
+                        placeholder="Type a keyword and press Enter"
+                        className="flex-1"
+                    />
+                    <Button type="button" variant="outline" onClick={addKeyword} className="shrink-0">
+                        Add
+                    </Button>
                 </div>
+                {keywordError && <p className="text-sm text-destructive">{keywordError}</p>}
+                <p className="text-xs text-muted-foreground">Press Enter or click Add to add each keyword.</p>
             </div>
 
             {/* Dynamic Fields - rendered linearly after fixed fields */}

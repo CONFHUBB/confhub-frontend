@@ -4,14 +4,49 @@ import * as React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
-import { Menu, X, Search, PlusCircle, LogOut, User } from 'lucide-react'
+import { Menu, X, Search, PlusCircle, LogOut } from 'lucide-react'
 import { MockRole, useMockRole } from '@/hooks/useMockRole'
+import { getUserByEmail, getUserProfile } from '@/app/api/user.api'
 
 export function AppNavbar() {
     const pathname = usePathname()
     const router = useRouter()
     const [isMenuOpen, setIsMenuOpen] = React.useState(false)
     const { selectedRole, setSelectedRole } = useMockRole()
+    const [userName, setUserName] = React.useState('')
+    const [avatarUrl, setAvatarUrl] = React.useState('')
+
+    // Fetch user profile data from JWT token
+    React.useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const token = localStorage.getItem('accessToken')
+                if (!token) return
+                const payload = JSON.parse(atob(token.split('.')[1]))
+                const email = payload.sub
+                if (!email) return
+
+                const user = await getUserByEmail(email)
+                if (user?.fullName) setUserName(user.fullName)
+
+                if (user?.id) {
+                    try {
+                        const profile = await getUserProfile(user.id)
+                        if (profile?.avatarUrl) setAvatarUrl(profile.avatarUrl)
+                    } catch {
+                        // Profile may not exist yet
+                    }
+                }
+            } catch {
+                // Token may be invalid
+            }
+        }
+        fetchUserData()
+    }, [])
+
+    const initials = userName
+        ? userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+        : 'U'
 
     const navLinks = React.useMemo(() => {
         const links = [
@@ -19,7 +54,7 @@ export function AppNavbar() {
             { name: 'Conferences', path: '/conference' },
         ]
 
-        if (selectedRole === 'Organizer' || selectedRole === 'Program Chair') {
+        if (selectedRole === 'Conference Chair' || selectedRole === 'Program Chair') {
             links.push({ name: 'My Conferences', path: '/conference/my-conference' })
         }
 
@@ -42,7 +77,7 @@ export function AppNavbar() {
     return (
         <header className="sticky top-0 left-0 w-full z-50 flex flex-col">
             {/* ── Top Tier: Logo + Search + Actions ── */}
-            <div className="bg-[#34c6eb] px-80 h-21 flex items-center justify-around">
+            <div className="bg-[#34c6eb] px-4 sm:px-8 md:px-16 lg:px-32 xl:px-80 h-21 flex items-center justify-between md:justify-around">
                 {/* Logo */}
                 <Link href="/" className="shrink-0 flex items-center">
                     <Image
@@ -65,46 +100,52 @@ export function AppNavbar() {
                             placeholder="Search conferences, papers..."
                             className="pl-2 flex-1 w-full h-full outline-none text-md text-gray-700 bg-transparent"
                         />
-                        <button className="px-4 h-full bg-gray-50 text-gray-600 text-sm font-semibold border-l hover:bg-gray-100 transition-colors tracking-wide">
+                        <button className="px-4 h-full bg-gray-50 text-gray-600 text-md font-semibold border-l hover:bg-gray-100 transition-colors tracking-wide">
                             Search
                         </button>
                     </div>
                 </div>
 
                 {/* Right Actions (Desktop) */}
-                <div className="hidden md:flex items-center gap-1 shrink-0">
+                <div className="hidden md:flex items-center gap-5 shrink-0">
+                    {selectedRole === 'Conference Chair' && (
+                        <Link
+                            href="/conference/create"
+                            className="flex items-center gap-1.5 text-md font-medium text-white bg-white/15 hover:bg-white/25 px-4 py-2 rounded-full border border-white/30 transition-colors"
+                        >
+                            <PlusCircle className="h-4 w-4" />
+                            Create Conference
+                        </Link>
+                    )}
                     <div className="flex items-center gap-2">
                         <label htmlFor="role-switcher" className="sr-only">Mock role</label>
                         <select
                             id="role-switcher"
                             value={selectedRole}
                             onChange={(e) => setSelectedRole(e.target.value as MockRole)}
-                            className="h-10 rounded-md border border-white/30 bg-white/10 px-3 text-sm font-medium text-white/90 backdrop-blur hover:bg-white/20 focus:outline-none"
+                            className="h-10 rounded-md border border-white/30 bg-white/10 px-3 text-md font-medium text-white/90 backdrop-blur hover:bg-white/20 focus:outline-none"
                         >
                             <option className="text-gray-800" value="Author">Author</option>
-                            <option className="text-gray-800" value="Organizer">Organizer</option>
                             <option className="text-gray-800" value="Program Chair">Program Chair</option>
+                            <option className="text-gray-800" value="Conference Chair">Conference Chair</option>
                         </select>
                     </div>
                     <Link
-                        href="/conference/create"
-                        className="flex items-center gap-1.5 text-sm font-medium text-white/90 hover:text-white px-3 py-1.5 rounded hover:bg-white/10 transition-colors"
-                    >
-                        <PlusCircle className="h-4 w-4" />
-                        Create Conference
-                    </Link>
-                    <div className="h-5 w-px bg-white/25 mx-1" />
-                    <Link
                         href="/my-profile"
-                        className="flex items-center gap-1.5 text-sm font-medium text-white/90 hover:text-white px-3 py-1.5 rounded hover:bg-white/10 transition-colors"
+                        className="flex items-center gap-2 text-md font-medium text-white/90 hover:text-white rounded-full hover:bg-white/10 transition-colors px-2 py-1"
                     >
-                        <User className="h-4 w-4" />
-                        Profile
+                        {avatarUrl ? (
+                            <img src={avatarUrl} alt={userName} className="h-8 w-8 rounded-full object-cover ring-2 ring-white/30" />
+                        ) : (
+                            <span className="flex items-center justify-center h-8 w-8 rounded-full bg-white/20 text-white text-xs font-bold ring-2 ring-white/30">
+                                {initials}
+                            </span>
+                        )}
+                        <span className="max-w-[120px] truncate">{userName || 'Profile'}</span>
                     </Link>
-                    <div className="h-5 w-px bg-white/25 mx-1" />
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-1.5 text-sm font-medium text-white/90 hover:text-white px-3 py-1.5 rounded hover:bg-white/10 transition-colors cursor-pointer"
+                        className="flex items-center gap-1.5 text-md font-medium text-white/90 hover:text-white px-3 py-1.5 rounded hover:bg-white/10 transition-colors cursor-pointer"
                     >
                         <LogOut className="h-4 w-4" />
                         Logout
@@ -154,11 +195,11 @@ export function AppNavbar() {
                             id="mobile-role-switcher"
                             value={selectedRole}
                             onChange={(e) => setSelectedRole(e.target.value as MockRole)}
-                            className="w-full rounded-md border px-3 py-2 text-sm"
+                            className="w-full rounded-md border px-3 py-2 text-md"
                         >
                             <option value="Author">Author</option>
-                            <option value="Organizer">Organizer</option>
                             <option value="Program Chair">Program Chair</option>
+                            <option value="Conference Chair">Conference Chair</option>
                         </select>
                     </div>
 
@@ -171,7 +212,7 @@ export function AppNavbar() {
                             <input
                                 type="text"
                                 placeholder="Search conferences, papers..."
-                                className="flex-1 w-full h-full outline-none text-sm text-gray-700"
+                                className="flex-1 w-full h-full outline-none text-md text-gray-700"
                             />
                         </div>
                     </div>
@@ -184,7 +225,7 @@ export function AppNavbar() {
                                 <Link
                                     key={i}
                                     href={link.path}
-                                    className={`block px-4 py-3 text-sm font-medium transition-colors ${isActive ? 'text-indigo-600 bg-indigo-50 border-l-2 border-indigo-600' : 'text-gray-700 hover:bg-gray-50'}`}
+                                    className={`block px-4 py-3 text-md font-medium transition-colors ${isActive ? 'text-indigo-600 bg-indigo-50 border-l-2 border-indigo-600' : 'text-gray-700 hover:bg-gray-50'}`}
                                 >
                                     {link.name}
                                 </Link>
@@ -194,16 +235,32 @@ export function AppNavbar() {
 
                     {/* Mobile Actions */}
                     <div className="border-t p-3 space-y-2">
-                        <Link
-                            href="/conference/create"
-                            className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-indigo-600 rounded-md hover:bg-indigo-50 transition-colors"
-                        >
-                            <PlusCircle className="h-4 w-4" />
-                            Create Conference
+                        {/* Mobile User Info */}
+                        <Link href="/my-profile" className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-gray-50 transition-colors">
+                            {avatarUrl ? (
+                                <img src={avatarUrl} alt={userName} className="h-9 w-9 rounded-full object-cover ring-2 ring-gray-200" />
+                            ) : (
+                                <span className="flex items-center justify-center h-9 w-9 rounded-full bg-indigo-100 text-indigo-600 text-sm font-bold">
+                                    {initials}
+                                </span>
+                            )}
+                            <div className="flex-1 min-w-0">
+                                <p className="text-md font-medium text-gray-900 truncate">{userName || 'Profile'}</p>
+                                <p className="text-xs text-gray-500">View profile</p>
+                            </div>
                         </Link>
+                        {selectedRole === 'Conference Chair' && (
+                            <Link
+                                href="/conference/create"
+                                className="flex items-center gap-2 px-4 py-2.5 text-md font-medium text-indigo-600 rounded-full border border-indigo-200 hover:bg-indigo-50 transition-colors"
+                            >
+                                <PlusCircle className="h-4 w-4" />
+                                Create Conference
+                            </Link>
+                        )}
                         <button
                             onClick={handleLogout}
-                            className="flex items-center gap-2 w-full px-3 py-2.5 text-sm font-medium text-red-600 rounded-md hover:bg-red-50 transition-colors cursor-pointer"
+                            className="flex items-center gap-2 w-full px-3 py-2.5 text-md font-medium text-red-600 rounded-md hover:bg-red-50 transition-colors cursor-pointer"
                         >
                             <LogOut className="h-4 w-4" />
                             Logout

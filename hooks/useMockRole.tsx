@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 
-export type MockRole = "Author" | "Organizer" | "Program Chair"
+export type MockRole = "Author" | "Program Chair" | "Conference Chair"
 
 interface MockRoleContextValue {
     selectedRole: MockRole

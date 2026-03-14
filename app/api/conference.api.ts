@@ -61,3 +61,13 @@ export const updateConferenceActivities = async (conferenceId: number, body: Con
     const response = await http.put<ConferenceActivityDTO[]>(`/conferences/${conferenceId}/activities`, body)
     return response.data
 }
+
+export const completeConference = async (id: number): Promise<any> => {
+    const response = await http.put(`/conferences/${id}/complete`)
+    return response.data
+}
+
+export const cancelConference = async (id: number): Promise<any> => {
+    const response = await http.put(`/conferences/${id}/cancel`)
+    return response.data
+}

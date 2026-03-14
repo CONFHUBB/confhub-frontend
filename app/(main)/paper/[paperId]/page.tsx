@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { assignAuthorToPaper, getAuthorsByPaper, getPaperById, getPaperFiles, updatePaper, updatePaperFile } from '@/app/api/paper.api'
+import { assignAuthorToPaper, getAuthorsByPaper, getPaperById, getPaperFiles, updatePaper, updatePaperFile, withdrawPaper, restorePaper } from '@/app/api/paper.api'
 import { getUsers } from '@/app/api/user.api'
 import { getSubjectAreasByTrack } from '@/app/api/track.api'
 import type { PaperResponse, PaperFileResponse } from '@/types/paper'
@@ -10,6 +10,7 @@ import type { SubjectAreaResponse } from '@/types/subject-area'
 import type { User } from '@/types/user'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
     Dialog,
     DialogContent,
@@ -22,7 +23,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2, ArrowLeft, Upload, FileUp, FileText, Trash2, Save, ExternalLink, UserPlus, Layers } from 'lucide-react'
+import { Loader2, ArrowLeft, Upload, FileUp, FileText, Trash2, Save, ExternalLink, UserPlus, Layers, X, AlertTriangle, RotateCcw } from 'lucide-react'
 import { Select as AntdSelect } from 'antd'
 import toast from 'react-hot-toast'
 
@@ -42,6 +43,7 @@ export default function EditPaperPage() {
     const [isAssigning, setIsAssigning] = useState(false)
     const [openAddAuthorDialog, setOpenAddAuthorDialog] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
+    const [withdrawing, setWithdrawing] = useState(false)
 
     const [subjectAreas, setSubjectAreas] = useState<SubjectAreaResponse[]>([])
     const [primarySubjectAreaId, setPrimarySubjectAreaId] = useState<string>('')
@@ -50,11 +52,9 @@ export default function EditPaperPage() {
     const [formData, setFormData] = useState({
         title: '',
         abstractField: '',
-        keyword1: '',
-        keyword2: '',
-        keyword3: '',
-        keyword4: '',
     })
+    const [keywords, setKeywords] = useState<string[]>([])
+    const [keywordInput, setKeywordInput] = useState('')
 
     const fetchUsers = async () => {
         try {
@@ -85,11 +85,8 @@ export default function EditPaperPage() {
                 setFormData({
                     title: data.title || '',
                     abstractField: data.abstractField || '',
-                    keyword1: data.keyword1 || '',
-                    keyword2: data.keyword2 || '',
-                    keyword3: data.keyword3 || '',
-                    keyword4: data.keyword4 || '',
                 })
+                setKeywords(data.keywords || [])
                 
                 if (data.primarySubjectAreaId) {
                     setPrimarySubjectAreaId(data.primarySubjectAreaId.toString())
@@ -145,6 +142,7 @@ export default function EditPaperPage() {
             await updatePaper(paperId, {
                 ...paper,
                 ...formData,
+                keywords,
                 primarySubjectAreaId: Number(primarySubjectAreaId),
                 secondarySubjectAreaIds: secondarySubjectAreaIds,
                 conferenceTrackId: paper?.trackId || paper?.track?.id
@@ -154,6 +152,33 @@ export default function EditPaperPage() {
             toast.error(error.response?.data?.message || 'Failed to update paper')
         } finally {
             setSaving(false)
+        }
+    }
+
+    const handleWithdraw = async () => {
+        if (!confirm('Are you sure you want to withdraw this paper? You can restore it later.')) return
+        try {
+            setWithdrawing(true)
+            const updated = await withdrawPaper(paperId)
+            setPaper(updated)
+            toast.success('Paper withdrawn successfully')
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to withdraw paper')
+        } finally {
+            setWithdrawing(false)
+        }
+    }
+
+    const handleRestore = async () => {
+        try {
+            setWithdrawing(true)
+            const updated = await restorePaper(paperId)
+            setPaper(updated)
+            toast.success('Paper restored successfully')
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to restore paper')
+        } finally {
+            setWithdrawing(false)
         }
     }
 
@@ -231,12 +256,67 @@ export default function EditPaperPage() {
                 Back to My Submissions
             </Button>
 
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Edit Paper</h1>
-                <p className="text-muted-foreground mt-1">
-                    Update your paper information and upload a new manuscript
-                </p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Edit Paper</h1>
+                    <p className="text-muted-foreground mt-1">
+                        Update your paper information and upload a new manuscript
+                    </p>
+                </div>
+                <Badge
+                    className={`text-sm px-3 py-1 ${
+                        paper.status === 'ACCEPTED' ? 'bg-green-600 text-white' :
+                        paper.status === 'REJECTED' ? 'bg-red-600 text-white' :
+                        paper.status === 'PUBLISHED' ? 'bg-emerald-600 text-white' :
+                        paper.status === 'CAMERA_READY' ? 'bg-blue-600 text-white' :
+                        paper.status === 'WITHDRAWN' ? 'bg-gray-500 text-white' :
+                        paper.status === 'DRAFT' ? 'bg-amber-500 text-white' :
+                        paper.status === 'UNDER_REVIEW' ? 'bg-purple-600 text-white' :
+                        ''
+                    }`}
+                >
+                    {paper.status.replace(/_/g, ' ')}
+                </Badge>
             </div>
+
+            {/* Withdraw / Restore Actions */}
+            {(paper.status === 'SUBMITTED' || paper.status === 'UNDER_REVIEW') && (
+                <div className="flex items-center gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <p className="text-sm text-amber-800 dark:text-amber-300 flex-1">
+                        You can withdraw this paper if you no longer wish it to be considered.
+                    </p>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleWithdraw}
+                        disabled={withdrawing}
+                        className="border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/50 shrink-0"
+                    >
+                        {withdrawing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <AlertTriangle className="h-4 w-4 mr-1" />}
+                        Withdraw Paper
+                    </Button>
+                </div>
+            )}
+
+            {paper.status === 'WITHDRAWN' && (
+                <div className="flex items-center gap-3 p-4 rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800">
+                    <RotateCcw className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />
+                    <p className="text-sm text-blue-800 dark:text-blue-300 flex-1">
+                        This paper has been withdrawn. You can restore it to resubmit.
+                    </p>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRestore}
+                        disabled={withdrawing}
+                        className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-950/50 shrink-0"
+                    >
+                        {withdrawing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RotateCcw className="h-4 w-4 mr-1" />}
+                        Restore Paper
+                    </Button>
+                </div>
+            )}
 
             <div className="grid gap-6 md:grid-cols-2">
                 {/* Paper Details Form */}
@@ -266,23 +346,57 @@ export default function EditPaperPage() {
                                 rows={5}
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="keyword1">Keyword 1</Label>
-                                <Input id="keyword1" name="keyword1" value={formData.keyword1} onChange={handleInputChange} />
+                        <div className="space-y-3">
+                            <Label>Keywords</Label>
+                            {keywords.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                    {keywords.map((kw, i) => (
+                                        <Badge key={i} variant="secondary" className="text-sm gap-1 pl-3 pr-1.5 py-1">
+                                            {kw}
+                                            <button
+                                                type="button"
+                                                onClick={() => setKeywords(prev => prev.filter((_, idx) => idx !== i))}
+                                                className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5 transition-colors"
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </Badge>
+                                    ))}
+                                </div>
+                            )}
+                            <div className="flex gap-2">
+                                <Input
+                                    value={keywordInput}
+                                    onChange={(e) => setKeywordInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault()
+                                            const trimmed = keywordInput.trim()
+                                            if (trimmed && !keywords.includes(trimmed)) {
+                                                setKeywords(prev => [...prev, trimmed])
+                                                setKeywordInput('')
+                                            }
+                                        }
+                                    }}
+                                    placeholder="Type a keyword and press Enter"
+                                    className="flex-1"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        const trimmed = keywordInput.trim()
+                                        if (trimmed && !keywords.includes(trimmed)) {
+                                            setKeywords(prev => [...prev, trimmed])
+                                            setKeywordInput('')
+                                        }
+                                    }}
+                                    className="shrink-0"
+                                >
+                                    Add
+                                </Button>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="keyword2">Keyword 2</Label>
-                                <Input id="keyword2" name="keyword2" value={formData.keyword2} onChange={handleInputChange} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="keyword3">Keyword 3</Label>
-                                <Input id="keyword3" name="keyword3" value={formData.keyword3} onChange={handleInputChange} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="keyword4">Keyword 4</Label>
-                                <Input id="keyword4" name="keyword4" value={formData.keyword4} onChange={handleInputChange} />
-                            </div>
+                            <p className="text-xs text-muted-foreground">Press Enter or click Add to add each keyword.</p>
                         </div>
 
                         {subjectAreas.length > 0 && (

@@ -26,10 +26,11 @@ interface AssignRoleProps {
 }
 
 const ROLES = [
-    { value: "ORGANIZER", label: "Organizer" },
-    { value: "TRACK_CHAIR", label: "Track Chair" },
+    { value: "CONFERENCE_CHAIR", label: "Conference Chair" },
+    { value: "PROGRAM_CHAIR", label: "Program Chair" },
     { value: "REVIEWER", label: "Reviewer" },
     { value: "AUTHOR", label: "Author" },
+    { value: "ATTENDEE", label: "Attendee" },
 ]
 
 let nextId = 1

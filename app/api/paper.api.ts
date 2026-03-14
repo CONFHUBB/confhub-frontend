@@ -89,3 +89,13 @@ export const updatePaperFile = async (paperId: number, file: File): Promise<any>
     })
     return response.data
 }
+
+export const withdrawPaper = async (paperId: number): Promise<PaperResponse> => {
+    const response = await http.put<PaperResponse>(`/paper/${paperId}/withdraw`)
+    return response.data
+}
+
+export const restorePaper = async (paperId: number): Promise<PaperResponse> => {
+    const response = await http.put<PaperResponse>(`/paper/${paperId}/restore`)
+    return response.data
+}

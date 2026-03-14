@@ -1,3 +1,13 @@
+export type PaperStatus =
+    | "DRAFT"
+    | "SUBMITTED"
+    | "UNDER_REVIEW"
+    | "ACCEPTED"
+    | "REJECTED"
+    | "WITHDRAWN"
+    | "CAMERA_READY"
+    | "PUBLISHED"
+
 export interface PaperResponse {
     id: number
     trackId: number
@@ -30,27 +40,21 @@ export interface PaperResponse {
     secondarySubjectAreaIds: number[]
     title: string
     abstractField: string
-    keyword1: string
-    keyword2: string
-    keyword3: string
-    keyword4: string
+    keywords: string[]
     submissionTime: string
     isPassedPlagiarism: boolean
-    status: string
+    status: PaperStatus
 }
 
 export interface CreatePaperRequest {
-    conferenceTrackId: number,
-    primarySubjectAreaId: number,
-    secondarySubjectAreaIds: number[],
-    title: string,
-    abstractField: string,
-    keyword1: string,
-    keyword2: string,
-    keyword3: string,
-    keyword4: string,
-    submissionTime: string,
-    isPassedPlagiarism: boolean,
+    conferenceTrackId: number
+    primarySubjectAreaId: number
+    secondarySubjectAreaIds: number[]
+    title: string
+    abstractField: string
+    keywords: string[]
+    submissionTime: string
+    isPassedPlagiarism: boolean
     status: string
 }
 

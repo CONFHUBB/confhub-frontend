@@ -194,8 +194,7 @@ export default function UserSubmissionsPage() {
                                                 <TableCell className="text-sm">{paper.track.name}</TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-wrap gap-1">
-                                                        {[paper.keyword1, paper.keyword2, paper.keyword3, paper.keyword4]
-                                                            .filter(Boolean)
+                                                        {(paper.keywords || [])
                                                             .map((kw, i) => (
                                                                 <Badge key={i} variant="outline" className="text-xs">{kw}</Badge>
                                                             ))}
@@ -210,8 +209,22 @@ export default function UserSubmissionsPage() {
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge variant={paper.status === 'SUBMITTED' ? 'default' : 'secondary'} className="text-xs">
-                                                        {paper.status}
+                                                    <Badge
+                                                        variant={
+                                                            paper.status === 'ACCEPTED' ? 'default' :
+                                                            paper.status === 'REJECTED' ? 'destructive' :
+                                                            'secondary'
+                                                        }
+                                                        className={`text-xs ${
+                                                            paper.status === 'ACCEPTED' ? 'bg-green-600' :
+                                                            paper.status === 'PUBLISHED' ? 'bg-emerald-600 text-white' :
+                                                            paper.status === 'CAMERA_READY' ? 'bg-blue-600 text-white' :
+                                                            paper.status === 'WITHDRAWN' ? 'bg-gray-500 text-white' :
+                                                            paper.status === 'DRAFT' ? 'bg-amber-500 text-white' :
+                                                            ''
+                                                        }`}
+                                                    >
+                                                        {paper.status.replace(/_/g, ' ')}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">
