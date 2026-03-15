@@ -42,7 +42,6 @@ export interface PaperResponse {
     abstractField: string
     keywords: string[]
     submissionTime: string
-    isPassedPlagiarism: boolean
     status: PaperStatus
 }
 
@@ -54,7 +53,6 @@ export interface CreatePaperRequest {
     abstractField: string
     keywords: string[]
     submissionTime: string
-    isPassedPlagiarism: boolean
     status: string
 }
 

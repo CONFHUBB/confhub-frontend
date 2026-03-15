@@ -21,9 +21,11 @@ interface ConferenceFormProps {
     initialData: ConferenceData | null
     onSubmit: (data: ConferenceData) => void
     isSubmitting?: boolean
+    submitLabel?: string
 }
 
-export function ConferenceForm({ initialData, onSubmit, isSubmitting }: ConferenceFormProps) {
+export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabel }: ConferenceFormProps) {
+    const isEditMode = !!initialData
     const [errors, setErrors] = useState<Record<string, string>>({})
 
     const [formData, setFormData] = useState<ConferenceData>(
@@ -450,7 +452,9 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting }: Conferen
 
             <div className="flex items-center justify-end gap-4 pt-4 border-t">
                 <Button type="submit" size="lg" className="text-base px-8" disabled={isSubmitting}>
-                    {isSubmitting ? "Creating..." : "Create Conference"}
+                    {isSubmitting 
+                        ? (isEditMode ? "Saving..." : "Creating...") 
+                        : (submitLabel || (isEditMode ? "Save Changes" : "Create Conference"))}
                 </Button>
             </div>
         </form>

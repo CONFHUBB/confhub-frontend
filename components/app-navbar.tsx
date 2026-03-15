@@ -5,14 +5,15 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { Menu, X, Search, PlusCircle, LogOut } from 'lucide-react'
-import { MockRole, useMockRole } from '@/hooks/useMockRole'
+import { useUserRoles } from '@/hooks/useUserConferenceRoles'
 import { getUserByEmail, getUserProfile } from '@/app/api/user.api'
+import { NotificationBell } from '@/components/notification-bell'
 
 export function AppNavbar() {
     const pathname = usePathname()
     const router = useRouter()
+    const { hasAnyRole, isLoading: rolesLoading } = useUserRoles()
     const [isMenuOpen, setIsMenuOpen] = React.useState(false)
-    const { selectedRole, setSelectedRole } = useMockRole()
     const [userName, setUserName] = React.useState('')
     const [avatarUrl, setAvatarUrl] = React.useState('')
 
@@ -54,15 +55,21 @@ export function AppNavbar() {
             { name: 'Conferences', path: '/conference' },
         ]
 
-        if (selectedRole === 'Conference Chair' || selectedRole === 'Program Chair') {
+        // Show "My Conferences" if user is a chair of any conference
+        if (hasAnyRole('CONFERENCE_CHAIR') || hasAnyRole('PROGRAM_CHAIR')) {
             links.push({ name: 'My Conferences', path: '/conference/my-conference' })
+        }
+
+        // Show "Reviewer Console" if user is a reviewer in any conference
+        if (hasAnyRole('REVIEWER')) {
+            links.push({ name: 'Reviewer', path: '/conference/reviewer-select' })
         }
 
         links.push({ name: 'My Papers', path: '/paper' })
         links.push({ name: 'Profile', path: '/my-profile' })
 
         return links
-    }, [selectedRole])
+    }, [hasAnyRole])
 
     // Close menu when route changes
     React.useEffect(() => {
@@ -107,8 +114,8 @@ export function AppNavbar() {
                 </div>
 
                 {/* Right Actions (Desktop) */}
-                <div className="hidden md:flex items-center gap-5 shrink-0">
-                    {selectedRole === 'Conference Chair' && (
+                <div className="hidden md:flex items-center gap-4 shrink-0">
+                    {hasAnyRole('CONFERENCE_CHAIR') && (
                         <Link
                             href="/conference/create"
                             className="flex items-center gap-1.5 text-md font-medium text-white bg-white/15 hover:bg-white/25 px-4 py-2 rounded-full border border-white/30 transition-colors"
@@ -117,19 +124,10 @@ export function AppNavbar() {
                             Create Conference
                         </Link>
                     )}
-                    <div className="flex items-center gap-2">
-                        <label htmlFor="role-switcher" className="sr-only">Mock role</label>
-                        <select
-                            id="role-switcher"
-                            value={selectedRole}
-                            onChange={(e) => setSelectedRole(e.target.value as MockRole)}
-                            className="h-10 rounded-md border border-white/30 bg-white/10 px-3 text-md font-medium text-white/90 backdrop-blur hover:bg-white/20 focus:outline-none"
-                        >
-                            <option className="text-gray-800" value="Author">Author</option>
-                            <option className="text-gray-800" value="Program Chair">Program Chair</option>
-                            <option className="text-gray-800" value="Conference Chair">Conference Chair</option>
-                        </select>
-                    </div>
+
+                    {/* Notification Bell */}
+                    <NotificationBell />
+
                     <Link
                         href="/my-profile"
                         className="flex items-center gap-2 text-md font-medium text-white/90 hover:text-white rounded-full hover:bg-white/10 transition-colors px-2 py-1"
@@ -187,22 +185,6 @@ export function AppNavbar() {
             {/* ── Mobile Dropdown Menu ── */}
             {isMenuOpen && (
                 <div className="md:hidden absolute top-full left-0 w-full bg-white shadow-xl border-t z-50">
-                    <div className="p-3 border-b bg-gray-50">
-                        <label htmlFor="mobile-role-switcher" className="block text-xs font-semibold text-gray-600 mb-1">
-                            Mock Role
-                        </label>
-                        <select
-                            id="mobile-role-switcher"
-                            value={selectedRole}
-                            onChange={(e) => setSelectedRole(e.target.value as MockRole)}
-                            className="w-full rounded-md border px-3 py-2 text-md"
-                        >
-                            <option value="Author">Author</option>
-                            <option value="Program Chair">Program Chair</option>
-                            <option value="Conference Chair">Conference Chair</option>
-                        </select>
-                    </div>
-
                     {/* Mobile Search */}
                     <div className="p-3 border-b bg-gray-50">
                         <div className="flex items-center w-full bg-white border rounded-md h-9 overflow-hidden">
@@ -249,7 +231,7 @@ export function AppNavbar() {
                                 <p className="text-xs text-gray-500">View profile</p>
                             </div>
                         </Link>
-                        {selectedRole === 'Conference Chair' && (
+                        {hasAnyRole('CONFERENCE_CHAIR') && (
                             <Link
                                 href="/conference/create"
                                 className="flex items-center gap-2 px-4 py-2.5 text-md font-medium text-indigo-600 rounded-full border border-indigo-200 hover:bg-indigo-50 transition-colors"

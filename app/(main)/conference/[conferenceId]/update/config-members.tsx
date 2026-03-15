@@ -10,6 +10,16 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
     Dialog,
     DialogContent,
     DialogHeader,
@@ -40,21 +50,25 @@ import {
 
 // ── Role constants ──────────────────────────────────────
 const ROLE_OPTIONS = [
-    { value: "ORGANIZER", label: "Conference Chair" },
+    { value: "CONFERENCE_CHAIR", label: "Conference Chair" },
     { value: "PROGRAM_CHAIR", label: "Program Chair" },
     { value: "REVIEWER", label: "Reviewer" },
 ] as const
 
 const ROLE_DISPLAY: Record<string, string> = {
-    ORGANIZER: "Conference Chair",
+    CONFERENCE_CHAIR: "Conference Chair",
     PROGRAM_CHAIR: "Program Chair",
     REVIEWER: "Reviewer",
+    AUTHOR: "Author",
+    ATTENDEE: "Attendee",
 }
 
 const ROLE_COLORS: Record<string, string> = {
-    ORGANIZER: "bg-violet-500/15 text-violet-700 border-violet-500/25 dark:text-violet-400",
+    CONFERENCE_CHAIR: "bg-violet-500/15 text-violet-700 border-violet-500/25 dark:text-violet-400",
     PROGRAM_CHAIR: "bg-sky-500/15 text-sky-700 border-sky-500/25 dark:text-sky-400",
     REVIEWER: "bg-emerald-500/15 text-emerald-700 border-emerald-500/25 dark:text-emerald-400",
+    AUTHOR: "bg-amber-500/15 text-amber-700 border-amber-500/25 dark:text-amber-400",
+    ATTENDEE: "bg-gray-500/15 text-gray-700 border-gray-500/25 dark:text-gray-400",
 }
 
 // Track-bound roles require at least 1 track
@@ -214,17 +228,15 @@ function ManageRolesDialog({
             // Execute deletes
             await Promise.all(toDelete.map((id) => deleteRoleAssignment(id)))
 
-            // Execute creates
-            await Promise.all(
-                newAssignments.map((a) =>
-                    assignRole({
-                        userId: user.id,
-                        conferenceId,
-                        trackId: a.trackId,
-                        assignedRole: a.role,
-                    })
-                )
-            )
+            // Execute creates SEQUENTIALLY to avoid duplicate notifications
+            for (const a of newAssignments) {
+                await assignRole({
+                    userId: user.id,
+                    conferenceId,
+                    trackId: a.trackId,
+                    assignedRole: a.role,
+                })
+            }
 
             toast.success("Roles updated successfully!")
             onSaved()
@@ -398,6 +410,11 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
     const [dialogUser, setDialogUser] = useState<User | null>(null)
     const [dialogRoles, setDialogRoles] = useState<ConferenceUserTrack[]>([])
 
+    // ── Remove member confirmation ──────────────────────
+    const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false)
+    const [memberToRemove, setMemberToRemove] = useState<MemberWithRoles | null>(null)
+    const [isRemoving, setIsRemoving] = useState(false)
+
     // ── Fetch members ───────────────────────────────────
     const fetchMembers = useCallback(
         async (page = 0) => {
@@ -474,6 +491,35 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
             }
         }
         return grouped
+    }
+
+    // ── Get acceptance status for member ─────────────────
+    const getAcceptanceStatus = (roles: ConferenceUserTrack[]) => {
+        const hasAccepted = roles.some((r) => r.isAccepted === true)
+        const hasDeclined = roles.some((r) => r.isAccepted === false)
+        const hasPending = roles.some((r) => r.isAccepted === null)
+        if (hasAccepted) return 'accepted'
+        if (hasDeclined) return 'declined'
+        if (hasPending) return 'pending'
+        return 'pending'
+    }
+
+    // ── Handle remove member ─────────────────────────────
+    const handleRemoveMember = async () => {
+        if (!memberToRemove) return
+        setIsRemoving(true)
+        try {
+            await Promise.all(memberToRemove.roles.map((r) => deleteRoleAssignment(r.id)))
+            toast.success('Member removed successfully!')
+            fetchMembers(currentPage)
+        } catch (err) {
+            console.error('Failed to remove member:', err)
+            toast.error('Failed to remove member.')
+        } finally {
+            setIsRemoving(false)
+            setRemoveConfirmOpen(false)
+            setMemberToRemove(null)
+        }
     }
 
     return (
@@ -599,6 +645,29 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                             <p className="text-xs text-muted-foreground mt-0.5">
                                                 {member.user.email}
                                             </p>
+                                            {/* Acceptance status */}
+                                            {(() => {
+                                                const status = getAcceptanceStatus(member.roles)
+                                                return (
+                                                    <div className="mt-1.5">
+                                                        {status === 'accepted' && (
+                                                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Accepted
+                                                            </span>
+                                                        )}
+                                                        {status === 'pending' && (
+                                                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Pending
+                                                            </span>
+                                                        )}
+                                                        {status === 'declined' && (
+                                                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Declined
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })()}
                                             {/* Role badges */}
                                             <div className="flex flex-wrap gap-1.5 mt-2">
                                                 {[...roleGroups.entries()].map(([role, trackNames]) => (
@@ -618,15 +687,27 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                             </div>
                                         </div>
                                     </div>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="shrink-0 mt-1"
-                                        onClick={() => openManageRoles(member.user, member.roles)}
-                                    >
-                                        <Settings2 className="h-3.5 w-3.5 mr-1.5" />
-                                        Manage Roles
-                                    </Button>
+                                    <div className="flex gap-1.5 shrink-0 mt-1">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => openManageRoles(member.user, member.roles)}
+                                        >
+                                            <Settings2 className="h-3.5 w-3.5 mr-1.5" />
+                                            Manage Roles
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                                            onClick={() => {
+                                                setMemberToRemove(member)
+                                                setRemoveConfirmOpen(true)
+                                            }}
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
                                 </div>
                             )
                         })}
@@ -673,6 +754,32 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                     onSaved={() => fetchMembers(currentPage)}
                 />
             )}
+            {/* ── Remove Member Confirmation ──────────── */}
+            <AlertDialog open={removeConfirmOpen} onOpenChange={setRemoveConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Remove Member</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to remove <strong>{memberToRemove?.user.fullName}</strong> from this conference?
+                            This will remove all their assigned roles.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isRemoving}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleRemoveMember}
+                            disabled={isRemoving}
+                            className="bg-red-600 hover:bg-red-700"
+                        >
+                            {isRemoving ? (
+                                <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Removing...</>
+                            ) : (
+                                'Remove'
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     )
 }

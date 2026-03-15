@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
     Calendar, CheckCircle, ChevronDown, ChevronLeft, ChevronRight,
     Filter, X
@@ -210,12 +211,12 @@ export function ConferenceFilterBar({ locations, areas, isStaff, filters, onFilt
 
                         {/* Bottom actions */}
                         <div className="flex gap-3 mt-5 pt-4 border-t">
-                            <button onClick={() => { onFiltersChange({ ...filters, datePreset: 'all' }); setShowDatePicker(false) }} className="flex-1 border border-gray-300 text-gray-600 rounded-lg py-2.5 text-sm font-medium hover:bg-gray-50 transition-colors cursor-pointer">
+                            <Button variant="outline" onClick={() => { onFiltersChange({ ...filters, datePreset: 'all' }); setShowDatePicker(false) }} className="flex-1">
                                 Reset
-                            </button>
-                            <button onClick={() => setShowDatePicker(false)} className="flex-1 bg-[#34c6eb] text-white rounded-lg py-2.5 text-sm font-medium hover:bg-[#2bb5d9] transition-colors cursor-pointer">
+                            </Button>
+                            <Button onClick={() => setShowDatePicker(false)} className="flex-1">
                                 Apply
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 )}
@@ -284,12 +285,12 @@ export function ConferenceFilterBar({ locations, areas, isStaff, filters, onFilt
 
                         {/* Bottom actions */}
                         <div className="flex gap-3 p-5 pt-0">
-                            <button onClick={resetFilters} className="flex-1 border border-gray-300 text-gray-600 rounded-lg py-2.5 text-sm font-medium hover:bg-gray-50 transition-colors cursor-pointer">
+                            <Button variant="outline" onClick={resetFilters} className="flex-1">
                                 Reset
-                            </button>
-                            <button onClick={applyFilters} className="flex-1 bg-[#34c6eb] text-white rounded-lg py-2.5 text-sm font-medium hover:bg-[#2bb5d9] transition-colors cursor-pointer">
+                            </Button>
+                            <Button onClick={applyFilters} className="flex-1">
                                 Apply
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 )}

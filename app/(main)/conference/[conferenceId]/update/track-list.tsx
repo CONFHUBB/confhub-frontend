@@ -42,7 +42,7 @@ export function TrackList({ conferenceId, refreshKey }: TrackListProps) {
         return (
             <div className="rounded-lg border border-dashed p-8 text-center">
                 <Layers className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-                <p className="text-muted-foreground">No tracks created yet. Use the form above to add your first track.</p>
+                <p className="text-muted-foreground">No tracks created yet. Add a track manually or import from Excel using the buttons below.</p>
             </div>
         )
     }

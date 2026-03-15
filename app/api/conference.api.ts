@@ -71,3 +71,51 @@ export const cancelConference = async (id: number): Promise<any> => {
     const response = await http.put(`/conferences/${id}/cancel`)
     return response.data
 }
+// ── Data Import ──
+
+export interface ImportError {
+    sheet: string; row: number; column: string; message: string
+}
+
+export interface ImportResult {
+    success: boolean
+    conferenceId?: number
+    conferenceName?: string
+    tracksCreated: number
+    subjectAreasCreated: number
+    errors: ImportError[]
+    conferencePreview?: Record<string, string>
+    trackPreviews?: Record<string, string>[]
+    subjectAreaPreviews?: Record<string, string>[]
+}
+
+const uploadFile = (url: string, file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return http.post<ImportResult>(url, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+}
+
+const downloadBlob = async (url: string): Promise<Blob> => {
+    const response = await http.get(url, { responseType: 'blob' })
+    return new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+}
+
+// Conference
+export const downloadConferenceTemplate = () => downloadBlob('/conferences/import/template')
+export const previewConferenceImport = (file: File) => uploadFile('/conferences/import/preview', file).then(r => r.data)
+export const importConference = (file: File) => uploadFile('/conferences/import', file).then(r => r.data)
+
+// Tracks
+export const downloadTrackTemplate = (conferenceId: number) => downloadBlob(`/conferences/${conferenceId}/tracks/import/template`)
+export const previewTrackImport = (conferenceId: number, file: File) => uploadFile(`/conferences/${conferenceId}/tracks/import/preview`, file).then(r => r.data)
+export const importTracks = (conferenceId: number, file: File) => uploadFile(`/conferences/${conferenceId}/tracks/import`, file).then(r => r.data)
+
+// Subject Areas
+export const downloadSubjectAreaTemplate = () => downloadBlob('/subject-areas/import/template')
+export const previewSubjectAreaImport = (file: File) => uploadFile('/subject-areas/import/preview', file).then(r => r.data)
+export const importSubjectAreas = (trackId: number, file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('trackId', trackId.toString())
+    return http.post<ImportResult>('/subject-areas/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
+}
