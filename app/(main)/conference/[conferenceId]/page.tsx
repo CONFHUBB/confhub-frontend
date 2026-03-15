@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { isActivityOpen } from '@/lib/activity'
-import { useMockRole } from '@/hooks/useMockRole'
+import { useUserRoles } from '@/hooks/useUserConferenceRoles'
 
 export default function ConferenceDetailsPage() {
     const params = useParams()
@@ -26,8 +26,8 @@ export default function ConferenceDetailsPage() {
     const [activities, setActivities] = useState<ConferenceActivityDTO[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const { selectedRole } = useMockRole()
-    const canManageConference = selectedRole !== 'Author'
+    const { hasRoleInConference } = useUserRoles()
+    const canManageConference = hasRoleInConference(conferenceId, 'CONFERENCE_CHAIR') || hasRoleInConference(conferenceId, 'PROGRAM_CHAIR')
 
     useEffect(() => {
         const fetchData = async () => {

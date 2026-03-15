@@ -455,7 +455,6 @@ export default function SubmitPaperPage() {
                 keywords: fixedData.keywords || [],
                 extraAnswersJson,
                 submissionTime: new Date().toISOString(),
-                isPassedPlagiarism: false,
                 status: 'SUBMITTED'
             }
 

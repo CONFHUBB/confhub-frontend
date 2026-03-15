@@ -274,7 +274,7 @@ export function ReviewQuestionsList({ conferenceId }: ReviewQuestionsListProps) 
                                         <Button variant="outline" size="sm" onClick={() => { setEditingQuestion(q); setShowQuestionDialog(true); }}>
                                             <Pencil className="h-4 w-4 mr-2" /> Edit
                                         </Button>
-                                        <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeleteQuestion(q.id as number)}>
+                                        <Button variant="destructive" size="sm" onClick={() => handleDeleteQuestion(q.id as number)}>
                                             <Trash2 className="h-4 w-4 mr-2" /> Delete
                                         </Button>
                                     </div>

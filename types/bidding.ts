@@ -1,0 +1,39 @@
+// ── Bidding Types ──
+
+export type BidValue = "EAGER" | "WILLING" | "IN_A_PINCH" | "NOT_WILLING"
+
+export interface BiddingRequest {
+    paperId: number
+    reviewerId: number
+    bidValue: BidValue
+}
+
+export interface BiddingResponse {
+    id: number
+    paperId: number
+    paperTitle: string
+    reviewerId: number
+    reviewerName: string
+    bidValue: BidValue
+    createdAt: string
+    updatedAt: string
+}
+
+export interface PaperForBidding {
+    paperId: number
+    title: string
+    abstractText: string | null   // null khi isDoubleBlind = true
+    primarySubjectArea: string
+    secondarySubjectAreas: string[]
+    relevanceScore: number        // 0.0 - 1.0
+    currentBid: BidValue | null   // null = chưa bid
+    isDoubleBlind: boolean
+}
+
+export interface BidsSummary {
+    reviewerId: number
+    conferenceId: number
+    bidCounts: Record<string, number>
+    totalBids: number
+    totalPapers: number
+}

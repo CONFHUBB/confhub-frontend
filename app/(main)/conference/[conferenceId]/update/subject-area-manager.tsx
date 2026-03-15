@@ -7,14 +7,19 @@ import type { TrackResponse } from "@/types/track"
 import type { SubjectAreaResponse } from "@/types/subject-area"
 import type { SubjectAreaData } from "@/types/conference-form"
 import { Select } from "antd"
-import { Loader2 } from "lucide-react"
+import { Loader2, Plus, Upload, FolderTree } from "lucide-react"
 import toast from "react-hot-toast"
 import { AddSubjectArea } from "./add-subject-area"
 import { SubjectAreaList } from "./subject-area-list"
+import { Button } from "@/components/ui/button"
+import { ExcelImport } from "@/components/excel-import"
+import { downloadSubjectAreaTemplate, previewSubjectAreaImport, importSubjectAreas } from "@/app/api/conference.api"
 
 interface SubjectAreaManagerProps {
     conferenceId: number
 }
+
+type ActivePanel = null | 'manage' | 'import'
 
 export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
     const [tracks, setTracks] = useState<TrackResponse[]>([])
@@ -25,6 +30,7 @@ export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
     const [loadingAreas, setLoadingAreas] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
     const [areaRefreshKey, setAreaRefreshKey] = useState(0)
+    const [activePanel, setActivePanel] = useState<ActivePanel>(null)
 
     useEffect(() => {
         const fetchTracks = async () => {
@@ -134,6 +140,7 @@ export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
             
             // Refresh to get actual full objects from backend and update list
             setAreaRefreshKey(prev => prev + 1)
+            setActivePanel(null)
             await fetchAreas(selectedTrackId)
         } catch (err) {
             console.error("Failed to save subject areas:", err)
@@ -155,56 +162,96 @@ export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
         return (
             <div className="text-center py-12 border border-dashed rounded-lg bg-muted/20">
                 <p className="text-muted-foreground text-lg mb-2">No tracks found.</p>
-                <p className="text-sm text-muted-foreground">Please add a track in 'Config Tracks' first.</p>
+                <p className="text-sm text-muted-foreground">Please add a track in &apos;Config Tracks&apos; first.</p>
             </div>
         )
     }
 
     return (
-        <div className="space-y-8 relative">
-            {/* Header / Track Selector */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b pb-6">
-                <div className="flex-1 max-w-sm">
-                    <h3 className="text-sm font-semibold mb-2">Select Track</h3>
-                    <Select
-                        className="w-full h-10"
-                        placeholder="Select a track"
-                        value={selectedTrackId ?? undefined}
-                        onChange={(val) => setSelectedTrackId(val)}
-                        options={tracks.map((t) => ({ label: t.name, value: t.id }))}
-                    />
-                </div>
+        <div className="space-y-6">
+            {/* Track Selector */}
+            <div className="flex-1 max-w-sm">
+                <h3 className="text-sm font-semibold mb-2">Select Track</h3>
+                <Select
+                    className="w-full h-10"
+                    placeholder="Select a track"
+                    value={selectedTrackId ?? undefined}
+                    onChange={(val) => setSelectedTrackId(val)}
+                    options={tracks.map((t) => ({ label: t.name, value: t.id }))}
+                />
             </div>
 
-            {/* Main Content */}
+            {/* Subject Areas List */}
             {loadingAreas ? (
-                <div className="flex items-center justify-center py-20">
+                <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
-            ) : (
+            ) : selectedTrackId && (
                 <div className="relative">
-                    {/* Dim the form if it is saving */}
                     {isSaving && (
                         <div className="absolute inset-0 z-10 bg-background/50 flex items-center justify-center rounded-lg">
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         </div>
                     )}
-                    
-                    {/* Main Management Section */}
-                    {selectedTrackId && (
-                        <div className="space-y-12">
-                            {/* 1. Existing Areas List (Display) */}
-                            <SubjectAreaList trackId={selectedTrackId} refreshKey={areaRefreshKey} />
-                            
-                            {/* 2. Management Form (Edit/Add/Delete) */}
-                            <div className="border-t pt-8">
-                                <h3 className="text-lg font-semibold mb-4 text-foreground/80">Manage Subject Areas</h3>
-                                <AddSubjectArea 
-                                    key={`track-${selectedTrackId}-${areaRefreshKey}-${subjectAreas.length}`}
-                                    initialSubjectAreas={(subjectAreas || []).map(sa => ({ id: sa.id, name: sa.name, description: sa.description, parentId: sa.parentId }))} 
-                                    onSubmit={handleSaveAreas} 
-                                />
-                            </div>
+                    <SubjectAreaList trackId={selectedTrackId} refreshKey={areaRefreshKey} />
+                </div>
+            )}
+
+            {/* Action Buttons */}
+            {selectedTrackId && (
+                <div className="space-y-4 border-t pt-6">
+                    <div className="flex items-center gap-3">
+                        <Button
+                            type="button"
+                            variant={activePanel === 'manage' ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setActivePanel(activePanel === 'manage' ? null : 'manage')}
+                        >
+                            <Plus className="mr-1.5 h-4 w-4" />
+                            {activePanel === 'manage' ? "Cancel" : "Add / Edit Subject Areas"}
+                        </Button>
+                        <Button
+                            type="button"
+                            variant={activePanel === 'import' ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setActivePanel(activePanel === 'import' ? null : 'import')}
+                        >
+                            <Upload className="mr-1.5 h-4 w-4" />
+                            {activePanel === 'import' ? "Cancel" : "Import from Excel"}
+                        </Button>
+                    </div>
+
+                    {/* Manage Panel */}
+                    {activePanel === 'manage' && (
+                        <div className="rounded-lg border bg-white p-5">
+                            <h3 className="font-semibold text-gray-900 mb-4">Manage Subject Areas</h3>
+                            <AddSubjectArea 
+                                key={`track-${selectedTrackId}-${areaRefreshKey}-${subjectAreas.length}`}
+                                initialSubjectAreas={(subjectAreas || []).map(sa => ({ id: sa.id, name: sa.name, description: sa.description, parentId: sa.parentId }))} 
+                                onSubmit={handleSaveAreas} 
+                            />
+                        </div>
+                    )}
+
+                    {/* Import Panel */}
+                    {activePanel === 'import' && (
+                        <div className="rounded-lg border bg-white p-5 space-y-3">
+                            <h3 className="font-semibold text-gray-900">Import Subject Areas from Excel</h3>
+                            <p className="text-sm text-gray-500">
+                                Upload an Excel file to batch-create subject areas for the selected track.
+                            </p>
+                            <ExcelImport
+                                entityName="Subject Area"
+                                previewHeaders={["name", "description", "parentName"]}
+                                onDownloadTemplate={downloadSubjectAreaTemplate}
+                                onPreview={previewSubjectAreaImport}
+                                onImport={(file) => importSubjectAreas(selectedTrackId, file)}
+                                onImportSuccess={() => {
+                                    setAreaRefreshKey(prev => prev + 1)
+                                    fetchAreas(selectedTrackId)
+                                }}
+                                templateFilename="subject_area_template.xlsx"
+                            />
                         </div>
                     )}
                 </div>
