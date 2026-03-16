@@ -180,7 +180,7 @@ export default function ConferenceDetailsPage() {
             </Link>
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 mb-10">
-                <div className="lg:col-span-3 space-y-6">
+                <div className="lg:col-span-2 space-y-6">
                     <div>
                         <div className="flex items-center gap-3 mb-3">
                             <span className="text-sm font-mono text-muted-foreground bg-muted px-2.5 py-1 rounded">
@@ -272,16 +272,16 @@ export default function ConferenceDetailsPage() {
                     )}
                 </div>
 
-                <div className="lg:col-span-2">
-                    <div className="sticky top-24 rounded-xl overflow-hidden border shadow-sm">
+                <div className="lg:col-span-3 pt-9">
+                    <div className="sticky rounded-xl overflow-hidden border shadow-sm">
                         {conference.bannerImageUrl ? (
                             <img
                                 src={conference.bannerImageUrl}
                                 alt={conference.name}
-                                className="w-full aspect-[4/3] object-cover"
+                                className="w-full object-cover"
                             />
                         ) : (
-                            <div className="w-full aspect-[4/3] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                            <div className="w-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                                 <span className="text-white/60 text-5xl font-bold tracking-wider">
                                     {conference.acronym}
                                 </span>

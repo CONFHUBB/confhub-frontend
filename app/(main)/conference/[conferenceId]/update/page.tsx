@@ -21,6 +21,7 @@ import { ConfigMembers } from './config-members'
 import { TrackList } from './track-list'
 import { ReviewQuestionsList } from './review-questions-list'
 import { ActivityTimeline } from './activity-timeline'
+import { EmailManagementInline } from './email-management'
 
 import { createTrack } from '@/app/api/conference.api'
 import { assignRole } from '@/app/api/user.api'
@@ -70,7 +71,7 @@ const TAB_GROUPS = [
         title: "Form Setting",
         icon: <ClipboardList className="h-4 w-4" />,
         items: [
-            { key: "forms-mail", label: "Mail form", implemented: false },
+            { key: "forms-mail", label: "Mail form", implemented: true },
             { key: "forms-submission", label: "Submission form", implemented: true },
             { key: "forms-review", label: "Review form", implemented: true }
         ]
@@ -340,15 +341,7 @@ export default function ConferenceUpdatePage() {
                 return <ConfigMembers conferenceId={conferenceId} />
 
             case 'forms-mail':
-                return (
-                    <div className="flex flex-col items-center justify-center py-20 text-center border border-dashed rounded-lg bg-muted/10">
-                        <Mail className="h-10 w-10 text-muted-foreground mb-4 opacity-50" />
-                        <h3 className="text-lg font-semibold mb-2">Mail Form Config</h3>
-                        <p className="text-muted-foreground max-w-sm">
-                            Configuration for email templates will be implemented here.
-                        </p>
-                    </div>
-                )
+                return <EmailManagementInline conferenceId={conferenceId} />
 
             case 'forms-submission':
                 return (

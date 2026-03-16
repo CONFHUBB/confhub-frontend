@@ -3,8 +3,11 @@
 import { useState, useEffect, useCallback } from "react"
 import { getUserByEmail, getConferenceMembers, assignRole, deleteRoleAssignment } from "@/app/api/user.api"
 import { getTracksByConference } from "@/app/api/track.api"
+import { getConference } from "@/app/api/conference.api"
+import { sendInvitationEmail } from "@/app/api/email.api"
 import type { User, ConferenceUserTrack, MemberWithRoles } from "@/types/user"
 import type { TrackResponse } from "@/types/track"
+import type { ConferenceResponse } from "@/types/conference"
 import toast from "react-hot-toast"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -46,6 +49,8 @@ import {
     ChevronRight,
     Settings2,
     Globe,
+    Mail,
+    Send,
 } from "lucide-react"
 
 // ── Role constants ──────────────────────────────────────
@@ -395,6 +400,14 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
     const [searchResult, setSearchResult] = useState<User | null>(null)
     const [searchError, setSearchError] = useState<string | null>(null)
 
+    // ── External invite state ───────────────────────────
+    const [showExternalInvite, setShowExternalInvite] = useState(false)
+    const [externalRole, setExternalRole] = useState("REVIEWER")
+    const [externalName, setExternalName] = useState("")
+    const [externalTrackId, setExternalTrackId] = useState<string>("")
+    const [isSendingInvite, setIsSendingInvite] = useState(false)
+    const [conference, setConference] = useState<ConferenceResponse | null>(null)
+
     // ── Members list state ──────────────────────────────
     const [members, setMembers] = useState<MemberWithRoles[]>([])
     const [totalElements, setTotalElements] = useState(0)
@@ -445,10 +458,21 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
         }
     }, [conferenceId])
 
+    // ── Fetch conference info ─────────────────────────
+    const fetchConference = useCallback(async () => {
+        try {
+            const data = await getConference(conferenceId)
+            setConference(data)
+        } catch (err) {
+            console.error("Failed to load conference:", err)
+        }
+    }, [conferenceId])
+
     useEffect(() => {
         fetchMembers()
         fetchTracks()
-    }, [fetchMembers, fetchTracks])
+        fetchConference()
+    }, [fetchMembers, fetchTracks, fetchConference])
 
     // ── Search handler ──────────────────────────────────
     const handleSearch = async () => {
@@ -462,11 +486,15 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
         try {
             const user = await getUserByEmail(email)
             setSearchResult(user)
+            setShowExternalInvite(false)
         } catch (err: any) {
             if (err.response?.status === 404) {
-                setSearchError("User with this email was not found.")
+                setSearchError("User with this email was not found in the system.")
+                setShowExternalInvite(true)
+                setExternalName("")
             } else {
                 setSearchError("An error occurred while searching. Please try again.")
+                setShowExternalInvite(false)
             }
         } finally {
             setIsSearching(false)
@@ -562,10 +590,138 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                     </Button>
                 </div>
 
-                {/* Search error */}
+                {/* Search error + External invite option */}
                 {searchError && (
-                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                        {searchError}
+                    <div className="space-y-3">
+                        <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                            {searchError}
+                        </div>
+
+                        {/* External invitation form */}
+                        {showExternalInvite && (
+                            <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-4 space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <Mail className="h-4 w-4 text-blue-600" />
+                                    <h4 className="text-sm font-semibold text-blue-800">Invite External User</h4>
+                                </div>
+                                <p className="text-xs text-blue-700">
+                                    This person is not registered in the system. You can send them an email invitation to join the conference.
+                                </p>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-gray-700">Recipient Name</label>
+                                        <Input
+                                            placeholder="Enter name..."
+                                            value={externalName}
+                                            onChange={(e) => setExternalName(e.target.value)}
+                                            className="h-9"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-gray-700">Role</label>
+                                        <Select value={externalRole} onValueChange={(v) => { setExternalRole(v); setExternalTrackId(""); }}>
+                                            <SelectTrigger className="h-9">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {ROLE_OPTIONS.map((opt) => (
+                                                    <SelectItem key={opt.value} value={opt.value}>
+                                                        {opt.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+
+                                {/* Track selector for track-bound roles */}
+                                {TRACK_BOUND_ROLES.includes(externalRole) && (
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-gray-700">
+                                            Track <span className="text-red-500">*</span>
+                                        </label>
+                                        {tracks.length === 0 ? (
+                                            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                                                No tracks available. Please create tracks first in Config Tracks.
+                                            </p>
+                                        ) : (
+                                            <Select value={externalTrackId} onValueChange={setExternalTrackId}>
+                                                <SelectTrigger className="h-9">
+                                                    <SelectValue placeholder="Select a track..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {tracks.map((t) => (
+                                                        <SelectItem key={t.id} value={String(t.id)}>
+                                                            {t.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-white/80 border rounded-md px-3 py-2">
+                                    <span>Email:</span>
+                                    <strong>{searchEmail}</strong>
+                                </div>
+
+                                <Button
+                                    size="sm"
+                                    className="gap-2 bg-blue-600 hover:bg-blue-700"
+                                    disabled={
+                                        isSendingInvite ||
+                                        !externalName.trim() ||
+                                        (TRACK_BOUND_ROLES.includes(externalRole) && !externalTrackId)
+                                    }
+                                    onClick={async () => {
+                                        if (TRACK_BOUND_ROLES.includes(externalRole) && !externalTrackId) {
+                                            toast.error("Please select a track for this role.")
+                                            return
+                                        }
+                                        setIsSendingInvite(true)
+                                        try {
+                                            const selectedTrack = tracks.find(t => String(t.id) === externalTrackId)
+                                            const roleLabel = ROLE_DISPLAY[externalRole] || externalRole
+                                            const trackLabel = selectedTrack ? ` — ${selectedTrack.name}` : ""
+
+                                            const formData = new FormData()
+                                            formData.append('to', searchEmail.trim())
+                                            formData.append('recipientName', externalName.trim())
+                                            formData.append('subject', `Invitation to ${conference?.name || 'Conference'} as ${roleLabel}${trackLabel}`)
+                                            formData.append('conferenceName', conference?.name || '')
+                                            formData.append('conferenceId', String(conferenceId))
+                                            formData.append('role', roleLabel)
+                                            if (selectedTrack) {
+                                                formData.append('trackName', selectedTrack.name)
+                                            }
+                                            formData.append('invitationToken', 'external-' + Date.now())
+
+                                            await sendInvitationEmail(formData)
+                                            toast.success(`Invitation email sent to ${searchEmail}`)
+                                            setShowExternalInvite(false)
+                                            setSearchError(null)
+                                            setSearchEmail("")
+                                            setExternalName("")
+                                            setExternalTrackId("")
+                                        } catch (err) {
+                                            console.error('Failed to send invitation:', err)
+                                            toast.error('Failed to send invitation email. Please try again.')
+                                        } finally {
+                                            setIsSendingInvite(false)
+                                        }
+                                    }}
+                                >
+                                    {isSendingInvite ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Send className="h-4 w-4" />
+                                    )}
+                                    Send Invitation Email
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 )}
 

@@ -7,6 +7,14 @@ export const getUserRoleAssignments = async (userId: number): Promise<Conference
     return response.data
 }
 
+// Get all users with their roles for a conference (pagination)
+export const getConferenceUsersWithRoles = async (conferenceId: number, page: number = 0, size: number = 20) => {
+    const response = await http.get(`/conference-user-tracks/conference/${conferenceId}/users-with-roles`, {
+        params: { page, size }
+    })
+    return response.data
+}
+
 // Get reviewer conferences (accepted only)
 export const getReviewerConferences = async (userId: number, page: number = 0, size: number = 20) => {
     const response = await http.get(`/conference-user-tracks/users/${userId}/reviewer-conferences`, {
@@ -28,5 +36,11 @@ export const declineInvitation = async (userId: number, conferenceId: number) =>
     const response = await http.put('/conference-user-tracks/decline', null, {
         params: { userId, conferenceId }
     })
+    return response.data
+}
+
+// Resend invitation (regenerate token, invalidate old link)
+export const resendInvitation = async (conferenceUserTrackId: number) => {
+    const response = await http.put(`/conference-user-tracks/${conferenceUserTrackId}/resend-invitation`)
     return response.data
 }
