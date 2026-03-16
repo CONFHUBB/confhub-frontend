@@ -18,6 +18,11 @@ export const getAllReviews = async (page: number = 0, size: number = 20) => {
     return response.data
 }
 
+export const getReviewsByReviewerAndConference = async (reviewerId: number, conferenceId: number): Promise<ReviewResponse[]> => {
+    const response = await http.get<ReviewResponse[]>(`/review/reviewer/${reviewerId}/conference/${conferenceId}`)
+    return response.data
+}
+
 // ── Review Answers ──
 
 export const getAnswersByReview = async (reviewId: number): Promise<ReviewAnswerResponse[]> => {

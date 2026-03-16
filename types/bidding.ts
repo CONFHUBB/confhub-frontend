@@ -25,6 +25,8 @@ export interface PaperForBidding {
     abstractText: string | null   // null khi isDoubleBlind = true
     primarySubjectArea: string
     secondarySubjectAreas: string[]
+    keywords: string[]
+    trackName: string
     relevanceScore: number        // 0.0 - 1.0
     currentBid: BidValue | null   // null = chưa bid
     isDoubleBlind: boolean

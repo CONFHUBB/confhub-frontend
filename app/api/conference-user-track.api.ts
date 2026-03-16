@@ -9,7 +9,7 @@ export const getUserRoleAssignments = async (userId: number): Promise<Conference
 
 // Get all users with their roles for a conference (pagination)
 export const getConferenceUsersWithRoles = async (conferenceId: number, page: number = 0, size: number = 20) => {
-    const response = await http.get(`/conference-user-tracks/conference/${conferenceId}/users-with-roles`, {
+    const response = await http.get(`/conference-user-tracks/conferences/${conferenceId}/users-roles`, {
         params: { page, size }
     })
     return response.data

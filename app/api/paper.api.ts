@@ -99,3 +99,13 @@ export const restorePaper = async (paperId: number): Promise<PaperResponse> => {
     const response = await http.put<PaperResponse>(`/paper/${paperId}/restore`)
     return response.data
 }
+
+export const getPapersByConference = async (conferenceId: number): Promise<PaperResponse[]> => {
+    const response = await http.get<PaperResponse[]>(`/paper/conference/${conferenceId}`)
+    return response.data
+}
+
+export const updatePaperStatus = async (paperId: number, status: string): Promise<PaperResponse> => {
+    const response = await http.put<PaperResponse>(`/paper/status/${paperId}`, { status })
+    return response.data
+}

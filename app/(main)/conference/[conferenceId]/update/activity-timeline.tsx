@@ -4,10 +4,11 @@ import { useEffect, useState } from "react"
 import { getConferenceActivities, updateConferenceActivities } from "@/app/api/conference.api"
 import type { ConferenceActivityDTO } from "@/types/conference"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Loader2, Calendar } from "lucide-react"
+import { Loader2, Calendar, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
+import { HelpTooltip } from "@/components/help-tooltip"
 import toast from "react-hot-toast"
 
 interface ActivityTimelineProps {
@@ -31,6 +32,15 @@ const ACTIVITY_LABELS: Record<string, string> = {
     "REVIEW_DISCUSSION": "Review Discussion",
     "AUTHOR_NOTIFICATION": "Author Decision Notification",
     "CAMERA_READY_SUBMISSION": "Camera-Ready Submission",
+}
+
+const ACTIVITY_DESCRIPTIONS: Record<string, string> = {
+    "PAPER_SUBMISSION": "When enabled, authors can submit new papers and update existing submissions. Set a deadline to auto-close submissions.",
+    "REVIEWER_BIDDING": "When enabled, reviewers can place bids on papers. Reviewers must select Subject Areas before bidding. Should be enabled after Paper Submission closes.",
+    "REVIEW_SUBMISSION": "When enabled, assigned reviewers can submit their reviews. Enable this after paper assignments are finalized.",
+    "REVIEW_DISCUSSION": "When enabled, reviewers can discuss papers and view each other's reviews. Typically enabled after all reviews are submitted.",
+    "AUTHOR_NOTIFICATION": "When enabled, authors receive acceptance/rejection decisions. Enable this after all review discussions are complete.",
+    "CAMERA_READY_SUBMISSION": "When enabled, accepted authors can upload final camera-ready versions. Enable after author notifications are sent.",
 }
 
 export function ActivityTimeline({ conferenceId }: ActivityTimelineProps) {
@@ -57,9 +67,10 @@ export function ActivityTimeline({ conferenceId }: ActivityTimelineProps) {
                 });
                 
                 setActivities(sortedData)
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Failed to load activities:", err)
-                toast.error("Failed to load activity timeline. Please try again.")
+                const msg = err?.response?.data?.detail || err?.response?.data?.message || "Failed to load activity timeline. Please try again."
+                toast.error(msg)
             } finally {
                 setLoading(false)
             }
@@ -88,9 +99,10 @@ export function ActivityTimeline({ conferenceId }: ActivityTimelineProps) {
             setSaving(true)
             await updateConferenceActivities(conferenceId, activities)
             toast.success("Activity timeline updated successfully!")
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to update activities:", err)
-            toast.error("Failed to update activity timeline. Please try again.")
+            const msg = err?.response?.data?.detail || err?.response?.data?.message || "Failed to update activity timeline. Please try again."
+            toast.error(msg)
         } finally {
             setSaving(false)
         }
@@ -107,12 +119,41 @@ export function ActivityTimeline({ conferenceId }: ActivityTimelineProps) {
     return (
         <Card className="border-none shadow-none">
             <CardHeader className="px-0 pt-0">
-                <CardTitle className="text-xl">Activity Timeline</CardTitle>
+                <div className="flex items-center gap-2">
+                    <CardTitle className="text-xl">Activity Timeline</CardTitle>
+                    <HelpTooltip title="Activity Timeline Guide">
+                        <p className="font-semibold mb-2">How the conference workflow works:</p>
+                        <p>Activities should be enabled <strong>sequentially</strong> following the conference lifecycle. Each activity represents a phase:</p>
+                        <ol className="list-decimal ml-4 mt-2 space-y-1.5">
+                            <li><strong>Paper Submission</strong> — Open first so authors can submit papers</li>
+                            <li><strong>Reviewer Bidding</strong> — Open after submissions close, reviewers bid on papers</li>
+                            <li><strong>Review Submission</strong> — Open after paper assignments, reviewers submit reviews</li>
+                            <li><strong>Review Discussion</strong> — Open for reviewers to discuss and reach consensus</li>
+                            <li><strong>Author Notification</strong> — Send accept/reject decisions to authors</li>
+                            <li><strong>Camera-Ready</strong> — Accepted authors upload final versions</li>
+                        </ol>
+                        <p className="mt-3 text-amber-700 bg-amber-50 rounded p-2 text-xs">
+                            <strong>Tip:</strong> Set deadlines for each phase. You can enable multiple phases at once, but the recommended flow is sequential.
+                        </p>
+                    </HelpTooltip>
+                </div>
                 <CardDescription>
                     Configure deadlines and enable/disable features for each phase of the conference.
                 </CardDescription>
             </CardHeader>
             <CardContent className="px-0 pb-0">
+                {/* Workflow guidance banner */}
+                <div className="flex items-start gap-3 p-4 mb-4 rounded-lg bg-blue-50 border border-blue-200 text-sm">
+                    <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                    <div className="text-blue-800">
+                        <p className="font-medium">Workflow Guide</p>
+                        <p className="mt-0.5 text-blue-700">
+                            Enable activities in order: <strong>Submission</strong> → <strong>Bidding</strong> → <strong>Review</strong> → <strong>Discussion</strong> → <strong>Notification</strong> → <strong>Camera-Ready</strong>. 
+                            Set a deadline for each phase, then toggle the switch to activate.
+                        </p>
+                    </div>
+                </div>
+
                 <div className="rounded-lg border divide-y mb-6">
                     {activities.length === 0 ? (
                         <div className="p-8 text-center text-muted-foreground">
@@ -121,14 +162,11 @@ export function ActivityTimeline({ conferenceId }: ActivityTimelineProps) {
                     ) : (
                         activities.map((activity, index) => {
                             // Format date for datetime-local input (YYYY-MM-DDThh:mm)
-                            // We need to strip timezone or extra seconds if the backend provides them
                             let formattedDate = activity.deadline || ""
                             if (formattedDate) {
-                                // Try to safely convert ISO string to what datetime-local expects
                                 try {
                                     const dateObj = new Date(formattedDate)
                                     if (!isNaN(dateObj.getTime())) {
-                                        // create a string format accepted by datetime-local (yyyy-MM-ddThh:mm)
                                         const yyyy = dateObj.getFullYear()
                                         const MM = String(dateObj.getMonth() + 1).padStart(2, '0')
                                         const dd = String(dateObj.getDate()).padStart(2, '0')
@@ -140,6 +178,8 @@ export function ActivityTimeline({ conferenceId }: ActivityTimelineProps) {
                                     console.error("Date parsing error", e)
                                 }
                             }
+
+                            const description = ACTIVITY_DESCRIPTIONS[activity.activityType] || ""
 
                             return (
                                 <div key={activity.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-4 hover:bg-muted/30 transition-colors">
@@ -163,9 +203,11 @@ export function ActivityTimeline({ conferenceId }: ActivityTimelineProps) {
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="text-xs text-muted-foreground font-mono">
-                                                {activity.activityType}
-                                            </div>
+                                            {description && (
+                                                <p className="text-xs text-muted-foreground leading-relaxed pr-4">
+                                                    {description}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
 
