@@ -11,6 +11,7 @@ export type PaperStatus =
 export interface PaperResponse {
     id: number
     trackId: number
+    trackName: string
     track: {
         createdAt: string
         updatedAt: string

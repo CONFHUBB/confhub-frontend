@@ -1,14 +1,16 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { getPapersForBidding, submitBid, getBidsSummary } from '@/app/api/bidding.api'
+import { getInterestsByReviewer } from '@/app/api/reviewer-interest.api'
 import type { PaperForBidding, BidValue, BidsSummary } from '@/types/bidding'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Loader2, ArrowLeft, Search, Zap, ThumbsUp, Minus, ThumbsDown, ChevronDown, ChevronUp, Filter } from 'lucide-react'
+import { Loader2, ArrowLeft, Search, Zap, ThumbsUp, Minus, ThumbsDown, ChevronDown, ChevronUp, AlertTriangle, Target, Tag } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const BID_OPTIONS: { value: BidValue; label: string; shortLabel: string; color: string; activeColor: string; icon: React.ReactNode }[] = [
@@ -29,11 +31,13 @@ export default function BiddingPage() {
     const [papers, setPapers] = useState<PaperForBidding[]>([])
     const [summary, setSummary] = useState<BidsSummary | null>(null)
     const [loading, setLoading] = useState(true)
-    const [submitting, setSubmitting] = useState<number | null>(null) // paperId being submitted
+    const [needsSubjectAreas, setNeedsSubjectAreas] = useState(false)
+    const [submitting, setSubmitting] = useState<number | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
     const [sortKey, setSortKey] = useState<SortKey>('relevance')
     const [sortAsc, setSortAsc] = useState(false)
     const [filterBid, setFilterBid] = useState<FilterBid>('all')
+    const [filterTrack, setFilterTrack] = useState<string>('all')
     const [expandedPaper, setExpandedPaper] = useState<number | null>(null)
     const [reviewerId, setReviewerId] = useState<number | null>(null)
 
@@ -51,15 +55,30 @@ export default function BiddingPage() {
         if (!reviewerId) return
         try {
             setLoading(true)
+            setNeedsSubjectAreas(false)
+
+            // First check if reviewer has subject areas
+            const interests = await getInterestsByReviewer(reviewerId).catch(() => [])
+            if (!interests || interests.length === 0) {
+                setNeedsSubjectAreas(true)
+                setLoading(false)
+                return
+            }
+
             const [papersData, summaryData] = await Promise.all([
                 getPapersForBidding(reviewerId, conferenceId),
                 getBidsSummary(reviewerId, conferenceId).catch(() => null),
             ])
             setPapers(papersData)
             setSummary(summaryData)
-        } catch (err) {
-            console.error('Failed to load bidding data:', err)
-            toast.error('Failed to load papers')
+        } catch (err: any) {
+            const msg = err?.response?.data?.message || ''
+            if (msg.includes('Subject Areas') || msg.includes('subject areas')) {
+                setNeedsSubjectAreas(true)
+            } else {
+                console.error('Failed to load bidding data:', err)
+                toast.error(msg || 'Failed to load papers')
+            }
         } finally {
             setLoading(false)
         }
@@ -74,11 +93,9 @@ export default function BiddingPage() {
         setSubmitting(paperId)
         try {
             await submitBid({ paperId, reviewerId, bidValue })
-            // Update local state
             setPapers(prev => prev.map(p =>
                 p.paperId === paperId ? { ...p, currentBid: p.currentBid === bidValue ? null : bidValue } : p
             ))
-            // Refresh summary
             const newSummary = await getBidsSummary(reviewerId, conferenceId).catch(() => null)
             if (newSummary) setSummary(newSummary)
         } catch (err: any) {
@@ -89,17 +106,24 @@ export default function BiddingPage() {
         }
     }
 
+    // Extract unique track names for filter
+    const trackNames = useMemo(() => {
+        const names = new Set(papers.map(p => p.trackName).filter(Boolean))
+        return Array.from(names).sort()
+    }, [papers])
+
     // Filter + Sort
     const filteredPapers = papers
         .filter(p => {
             if (searchQuery) {
                 const q = searchQuery.toLowerCase()
-                if (!p.title.toLowerCase().includes(q) &&
-                    !(p.abstractText || '').toLowerCase().includes(q) &&
-                    !p.primarySubjectArea.toLowerCase().includes(q)) {
-                    return false
-                }
+                const matchesTitle = p.title.toLowerCase().includes(q)
+                const matchesAbstract = (p.abstractText || '').toLowerCase().includes(q)
+                const matchesSA = (p.primarySubjectArea || '').toLowerCase().includes(q)
+                const matchesKeyword = p.keywords?.some(k => k.toLowerCase().includes(q))
+                if (!matchesTitle && !matchesAbstract && !matchesSA && !matchesKeyword) return false
             }
+            if (filterTrack !== 'all' && p.trackName !== filterTrack) return false
             if (filterBid === 'NOT_BID') return p.currentBid === null
             if (filterBid !== 'all') return p.currentBid === filterBid
             return true
@@ -118,6 +142,37 @@ export default function BiddingPage() {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        )
+    }
+
+    // Subject Area requirement banner
+    if (needsSubjectAreas) {
+        return (
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+                <Button variant="ghost" className="gap-2 -ml-2" onClick={() => router.push(`/conference/${conferenceId}/reviewer`)}>
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Reviewer Console
+                </Button>
+
+                <Card className="border-amber-200 bg-amber-50">
+                    <CardContent className="p-8 text-center space-y-4">
+                        <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center">
+                            <AlertTriangle className="h-8 w-8 text-amber-600" />
+                        </div>
+                        <h2 className="text-xl font-bold text-amber-900">Subject Areas Required</h2>
+                        <p className="text-amber-800 max-w-md mx-auto">
+                            Before you can bid on papers, you must first select your <strong>Subject Areas</strong> and indicate your level of expertise. 
+                            This helps us match you with relevant papers and calculate relevance scores.
+                        </p>
+                        <Link href={`/conference/${conferenceId}/reviewer/interests`}>
+                            <Button className="gap-2 mt-2 bg-amber-600 hover:bg-amber-700">
+                                <Target className="h-4 w-4" />
+                                Select Subject Areas
+                            </Button>
+                        </Link>
+                    </CardContent>
+                </Card>
             </div>
         )
     }
@@ -155,24 +210,37 @@ export default function BiddingPage() {
                 </div>
             )}
 
-            {/* Search + Filter */}
+            {/* Search + Filters */}
             <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                         className="pl-10 h-10"
-                        placeholder="Search by title, abstract, subject area..."
+                        placeholder="Search by title, abstract, subject area, keyword..."
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
+                    {/* Track filter */}
+                    {trackNames.length > 1 && (
+                        <select
+                            className="h-10 rounded-md border px-3 text-sm bg-white"
+                            value={filterTrack}
+                            onChange={e => setFilterTrack(e.target.value)}
+                        >
+                            <option value="all">All Tracks</option>
+                            {trackNames.map(t => (
+                                <option key={t} value={t}>{t}</option>
+                            ))}
+                        </select>
+                    )}
                     <select
-                        className="h-10 rounded-md border px-3 text-sm"
+                        className="h-10 rounded-md border px-3 text-sm bg-white"
                         value={filterBid}
                         onChange={e => setFilterBid(e.target.value as FilterBid)}
                     >
-                        <option value="all">All</option>
+                        <option value="all">All Bids</option>
                         <option value="NOT_BID">Not Bid</option>
                         <option value="EAGER">Eager</option>
                         <option value="WILLING">Willing</option>
@@ -180,7 +248,7 @@ export default function BiddingPage() {
                         <option value="NOT_WILLING">Not Willing</option>
                     </select>
                     <select
-                        className="h-10 rounded-md border px-3 text-sm"
+                        className="h-10 rounded-md border px-3 text-sm bg-white"
                         value={sortKey}
                         onChange={e => setSortKey(e.target.value as SortKey)}
                     >
@@ -198,7 +266,7 @@ export default function BiddingPage() {
             {filteredPapers.length === 0 ? (
                 <Card>
                     <CardContent className="py-12 text-center text-muted-foreground">
-                        {searchQuery || filterBid !== 'all'
+                        {searchQuery || filterBid !== 'all' || filterTrack !== 'all'
                             ? 'No papers match your search.'
                             : 'No papers available for bidding.'}
                     </CardContent>
@@ -224,7 +292,14 @@ export default function BiddingPage() {
                                                     </h3>
                                                 </button>
                                                 <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                                                    <Badge variant="secondary" className="text-xs">{paper.primarySubjectArea}</Badge>
+                                                    {paper.trackName && (
+                                                        <Badge variant="outline" className="text-xs border-purple-200 text-purple-700 bg-purple-50">
+                                                            {paper.trackName}
+                                                        </Badge>
+                                                    )}
+                                                    {paper.primarySubjectArea && (
+                                                        <Badge variant="secondary" className="text-xs">{paper.primarySubjectArea}</Badge>
+                                                    )}
                                                     {paper.secondarySubjectAreas?.slice(0, 2).map((sa, i) => (
                                                         <Badge key={i} variant="outline" className="text-xs">{sa}</Badge>
                                                     ))}
@@ -232,6 +307,20 @@ export default function BiddingPage() {
                                                         <span className="text-xs text-gray-400">+{paper.secondarySubjectAreas!.length - 2}</span>
                                                     )}
                                                 </div>
+                                                {/* Keywords */}
+                                                {paper.keywords && paper.keywords.length > 0 && (
+                                                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                                        <Tag className="h-3 w-3 text-gray-400" />
+                                                        {paper.keywords.slice(0, 5).map((kw, i) => (
+                                                            <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
+                                                                {kw}
+                                                            </span>
+                                                        ))}
+                                                        {paper.keywords.length > 5 && (
+                                                            <span className="text-xs text-gray-400">+{paper.keywords.length - 5}</span>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Relevance Score */}

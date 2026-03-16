@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getConference } from '@/app/api/conference.api'
 import { getBidsSummary } from '@/app/api/bidding.api'
-import { getAllReviews } from '@/app/api/review.api'
+import { getReviewsByReviewerAndConference } from '@/app/api/review.api'
 import type { ConferenceResponse } from '@/types/conference'
 import type { BidsSummary } from '@/types/bidding'
 import type { ReviewResponse } from '@/types/review'
@@ -67,14 +67,11 @@ export default function ReviewerConsolePage() {
                 if (reviewerId) {
                     const [summary, reviewsData] = await Promise.all([
                         getBidsSummary(reviewerId, conferenceId).catch(() => null),
-                        getAllReviews(0, 100).catch(() => ({ content: [] })),
+                        getReviewsByReviewerAndConference(reviewerId, conferenceId).catch(() => []),
                     ])
                     if (summary) setBidsSummary(summary)
-                    // Filter reviews for this conference
-                    const myReviews = (reviewsData?.content || []).filter(
-                        (r: any) => r.reviewer?.id === reviewerId
-                    )
-                    setReviews(myReviews)
+                    const list = Array.isArray(reviewsData) ? reviewsData : (reviewsData as any)?.content || []
+                    setReviews(list)
                 }
             } catch (err) {
                 console.error('Failed to load reviewer console:', err)

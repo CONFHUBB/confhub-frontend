@@ -22,6 +22,8 @@ import { TrackList } from './track-list'
 import { ReviewQuestionsList } from './review-questions-list'
 import { ActivityTimeline } from './activity-timeline'
 import { EmailManagementInline } from './email-management'
+import { PaperManagement } from './paper-management'
+import { ReviewerAssignment } from './reviewer-assignment'
 
 import { createTrack } from '@/app/api/conference.api'
 import { assignRole } from '@/app/api/user.api'
@@ -44,6 +46,8 @@ type SettingsTab =
     | 'features-subject-areas'
     | 'features-review-setting'
     | 'features-members'
+    | 'features-paper-management'
+    | 'features-reviewer-assignment'
     | 'forms-mail'
     | 'forms-submission'
     | 'forms-review'
@@ -64,7 +68,9 @@ const TAB_GROUPS = [
             { key: "features-tracks", label: "Config Tracks", implemented: true },
             { key: "features-subject-areas", label: "Config Subject Areas", implemented: true },
             { key: "features-review-setting", label: "Config Review Setting", implemented: true },
-            { key: "features-members", label: "Config Members", implemented: true }
+            { key: "features-members", label: "Config Members", implemented: true },
+            { key: "features-paper-management", label: "Paper Management", implemented: true },
+            { key: "features-reviewer-assignment", label: "Reviewer Assignment", implemented: true }
         ]
     },
     {
@@ -339,6 +345,12 @@ export default function ConferenceUpdatePage() {
 
             case 'features-members':
                 return <ConfigMembers conferenceId={conferenceId} />
+
+            case 'features-paper-management':
+                return <PaperManagement conferenceId={conferenceId} />
+
+            case 'features-reviewer-assignment':
+                return <ReviewerAssignment conferenceId={conferenceId} />
 
             case 'forms-mail':
                 return <EmailManagementInline conferenceId={conferenceId} />
