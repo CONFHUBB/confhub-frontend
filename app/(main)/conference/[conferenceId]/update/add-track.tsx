@@ -10,17 +10,23 @@ import {
     FieldError,
     FieldGroup,
     FieldLabel,
-    FieldLegend,
     FieldSet,
 } from "@/components/ui/field"
+import { ExcelImport } from "@/components/excel-import"
+import { downloadTrackTemplate, previewTrackImport, importTracks } from "@/app/api/conference.api"
+import { Plus, Upload } from "lucide-react"
 
 interface AddTrackProps {
     initialData?: TrackData
+    conferenceId: number
     onSubmit: (data: TrackData) => void
+    onImportSuccess?: () => void
 }
 
-export function AddTrack({ initialData, onSubmit }: AddTrackProps) {
+export function AddTrack({ initialData, conferenceId, onSubmit, onImportSuccess }: AddTrackProps) {
     const [errors, setErrors] = useState<Record<string, string>>({})
+    const [showForm, setShowForm] = useState(false)
+    const [showImport, setShowImport] = useState(false)
 
     const [formData, setFormData] = useState<TrackData>(
         initialData ?? {
@@ -57,72 +63,117 @@ export function AddTrack({ initialData, onSubmit }: AddTrackProps) {
         e.preventDefault()
         if (!validate()) return
         onSubmit(formData)
+        setFormData({ name: "", description: "", maxSubmissions: "" })
+        setShowForm(false)
     }
 
     return (
-        <form onSubmit={handleSubmit}>
-            <FieldSet>
-                <FieldLegend className="text-lg">Track Information</FieldLegend>
-
-                <FieldGroup>
-                    {/* Name + Max Submissions – 2 columns */}
-                    <div className="grid gap-6 sm:grid-cols-2">
-                        <Field data-invalid={!!errors.name || undefined}>
-                            <FieldLabel htmlFor="name" className="text-base font-semibold">
-                                Track Name
-                            </FieldLabel>
-                            <Input
-                                id="name"
-                                className="h-12 text-base"
-                                placeholder="e.g. Main Research Track"
-                                value={formData.name}
-                                onChange={handleChange}
-                                aria-invalid={!!errors.name}
-                            />
-                            {errors.name && <FieldError>{errors.name}</FieldError>}
-                        </Field>
-
-                        <Field data-invalid={!!errors.maxSubmissions || undefined}>
-                            <FieldLabel htmlFor="maxSubmissions" className="text-base font-semibold">
-                                Max Submissions
-                            </FieldLabel>
-                            <Input
-                                id="maxSubmissions"
-                                type="number"
-                                className="h-12 text-base"
-                                placeholder="e.g. 100"
-                                value={formData.maxSubmissions}
-                                onChange={handleChange}
-                                aria-invalid={!!errors.maxSubmissions}
-                            />
-                            {errors.maxSubmissions && (
-                                <FieldError>{errors.maxSubmissions}</FieldError>
-                            )}
-                        </Field>
-                    </div>
-
-                    {/* Description – full width */}
-                    <Field>
-                        <FieldLabel htmlFor="description" className="text-base font-semibold">
-                            Description
-                        </FieldLabel>
-                        <Textarea
-                            id="description"
-                            className="min-h-[100px] text-base"
-                            placeholder="Describe the track topics and scope..."
-                            rows={3}
-                            value={formData.description}
-                            onChange={handleChange}
-                        />
-                    </Field>
-                </FieldGroup>
-            </FieldSet>
-
-            <div className="mt-10 flex items-center justify-end gap-4">
-                <Button type="submit" size="lg" className="text-base px-8">
-                    Save Track
+        <div className="space-y-4 border-t pt-6">
+            {/* Action buttons */}
+            <div className="flex items-center gap-3">
+                <Button
+                    type="button"
+                    variant={showForm ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => { setShowForm(!showForm); if (!showForm) setShowImport(false) }}
+                >
+                    <Plus className="mr-1.5 h-4 w-4" />
+                    {showForm ? "Cancel" : "Add Track Manually"}
+                </Button>
+                <Button
+                    type="button"
+                    variant={showImport ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => { setShowImport(!showImport); if (!showImport) setShowForm(false) }}
+                >
+                    <Upload className="mr-1.5 h-4 w-4" />
+                    {showImport ? "Cancel" : "Import from Excel"}
                 </Button>
             </div>
-        </form>
+
+            {/* Manual Add Form */}
+            {showForm && (
+                <div className="rounded-lg border bg-white p-5 space-y-5">
+                    <h3 className="font-semibold text-gray-900">Add New Track</h3>
+                    <form onSubmit={handleSubmit}>
+                        <FieldSet>
+                            <FieldGroup>
+                                <div className="grid gap-6 sm:grid-cols-2">
+                                    <Field data-invalid={!!errors.name || undefined}>
+                                        <FieldLabel htmlFor="name" className="text-sm font-medium">
+                                            Track Name <span className="text-red-500">*</span>
+                                        </FieldLabel>
+                                        <Input
+                                            id="name"
+                                            className="h-10"
+                                            placeholder="e.g. Main Research Track"
+                                            value={formData.name}
+                                            onChange={handleChange}
+                                        />
+                                        {errors.name && <FieldError>{errors.name}</FieldError>}
+                                    </Field>
+
+                                    <Field data-invalid={!!errors.maxSubmissions || undefined}>
+                                        <FieldLabel htmlFor="maxSubmissions" className="text-sm font-medium">
+                                            Max Submissions <span className="text-red-500">*</span>
+                                        </FieldLabel>
+                                        <Input
+                                            id="maxSubmissions"
+                                            type="number"
+                                            className="h-10"
+                                            placeholder="e.g. 100"
+                                            value={formData.maxSubmissions}
+                                            onChange={handleChange}
+                                        />
+                                        {errors.maxSubmissions && (
+                                            <FieldError>{errors.maxSubmissions}</FieldError>
+                                        )}
+                                    </Field>
+                                </div>
+
+                                <Field>
+                                    <FieldLabel htmlFor="description" className="text-sm font-medium">
+                                        Description
+                                    </FieldLabel>
+                                    <Textarea
+                                        id="description"
+                                        className="min-h-[80px]"
+                                        placeholder="Describe the track topics and scope..."
+                                        rows={3}
+                                        value={formData.description}
+                                        onChange={handleChange}
+                                    />
+                                </Field>
+                            </FieldGroup>
+                        </FieldSet>
+
+                        <div className="mt-4 flex justify-end">
+                            <Button type="submit" size="sm" className="px-6">
+                                Save Track
+                            </Button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {/* Import from Excel */}
+            {showImport && (
+                <div className="rounded-lg border bg-white p-5 space-y-3">
+                    <h3 className="font-semibold text-gray-900">Import Tracks from Excel</h3>
+                    <p className="text-sm text-gray-500">
+                        Upload an Excel file to batch-create multiple tracks at once.
+                    </p>
+                    <ExcelImport
+                        entityName="Track"
+                        previewHeaders={["name", "description", "maxSubmissions"]}
+                        onDownloadTemplate={() => downloadTrackTemplate(conferenceId)}
+                        onPreview={(file) => previewTrackImport(conferenceId, file)}
+                        onImport={(file) => importTracks(conferenceId, file)}
+                        onImportSuccess={() => onImportSuccess?.()}
+                        templateFilename="track_template.xlsx"
+                    />
+                </div>
+            )}
+        </div>
     )
 }

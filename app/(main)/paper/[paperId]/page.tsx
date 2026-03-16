@@ -287,11 +287,11 @@ export default function EditPaperPage() {
                         You can withdraw this paper if you no longer wish it to be considered.
                     </p>
                     <Button
-                        variant="outline"
+                        variant="warning"
                         size="sm"
                         onClick={handleWithdraw}
                         disabled={withdrawing}
-                        className="border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/50 shrink-0"
+                        className="shrink-0"
                     >
                         {withdrawing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <AlertTriangle className="h-4 w-4 mr-1" />}
                         Withdraw Paper
@@ -310,7 +310,7 @@ export default function EditPaperPage() {
                         size="sm"
                         onClick={handleRestore}
                         disabled={withdrawing}
-                        className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-950/50 shrink-0"
+                        className="shrink-0"
                     >
                         {withdrawing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RotateCcw className="h-4 w-4 mr-1" />}
                         Restore Paper

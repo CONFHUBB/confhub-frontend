@@ -25,12 +25,12 @@ const ACTIVITY_ORDER = [
 ]
 
 const ACTIVITY_LABELS: Record<string, string> = {
-    "PAPER_SUBMISSION": "Nộp bài / Cập nhật bài",
-    "REVIEWER_BIDDING": "Đăng ký chấm bài (Bidding)",
-    "REVIEW_SUBMISSION": "Nộp đánh giá (Review)",
-    "REVIEW_DISCUSSION": "Thảo luận về Review",
-    "AUTHOR_NOTIFICATION": "Gửi thông báo kết quả cho tác giả",
-    "CAMERA_READY_SUBMISSION": "Nộp phiên bản bài báo cuối cùng (Camera-Ready)",
+    "PAPER_SUBMISSION": "Paper Submission / Update",
+    "REVIEWER_BIDDING": "Reviewer Bidding",
+    "REVIEW_SUBMISSION": "Review Submission",
+    "REVIEW_DISCUSSION": "Review Discussion",
+    "AUTHOR_NOTIFICATION": "Author Decision Notification",
+    "CAMERA_READY_SUBMISSION": "Camera-Ready Submission",
 }
 
 export function ActivityTimeline({ conferenceId }: ActivityTimelineProps) {

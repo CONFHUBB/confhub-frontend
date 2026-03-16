@@ -302,16 +302,13 @@ export default function ConferenceUpdatePage() {
 
             case 'features-tracks':
                 return (
-                    <div className="space-y-8">
+                    <div className="space-y-6">
                         <div>
-                            <h2 className="text-xl font-bold mb-4">Config Tracks</h2>
-                            <p className="text-sm text-muted-foreground mb-6">Manage tracks in this conference.</p>
+                            <h2 className="text-xl font-bold mb-2">Config Tracks</h2>
+                            <p className="text-sm text-muted-foreground">Manage tracks in this conference.</p>
                         </div>
                         <TrackList conferenceId={conferenceId} refreshKey={trackRefreshKey} />
-                        <div className="border-t pt-8">
-                            <h3 className="text-lg font-semibold mb-4">Add New Track</h3>
-                            <AddTrack onSubmit={handleSaveTrack} />
-                        </div>
+                        <AddTrack conferenceId={conferenceId} onSubmit={handleSaveTrack} onImportSuccess={() => setTrackRefreshKey(k => k + 1)} />
                     </div>
                 )
 

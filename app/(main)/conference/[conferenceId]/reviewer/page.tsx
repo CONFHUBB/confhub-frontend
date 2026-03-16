@@ -1,0 +1,240 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { getConference } from '@/app/api/conference.api'
+import { getBidsSummary } from '@/app/api/bidding.api'
+import { getAllReviews } from '@/app/api/review.api'
+import type { ConferenceResponse } from '@/types/conference'
+import type { BidsSummary } from '@/types/bidding'
+import type { ReviewResponse } from '@/types/review'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Loader2, ArrowLeft, ClipboardList, Target, FileSearch, ThumbsUp, ThumbsDown, Minus, Zap } from 'lucide-react'
+
+const STATUS_COLORS: Record<string, string> = {
+    ASSIGNED: 'bg-blue-100 text-blue-800',
+    IN_PROGRESS: 'bg-amber-100 text-amber-800',
+    COMPLETED: 'bg-green-100 text-green-800',
+    DECLINED: 'bg-red-100 text-red-800',
+}
+
+const STATUS_LABELS: Record<string, string> = {
+    ASSIGNED: 'Assigned',
+    IN_PROGRESS: 'In Progress',
+    COMPLETED: 'Completed',
+    DECLINED: 'Declined',
+}
+
+const BID_ICONS: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
+    EAGER: { icon: <Zap className="h-4 w-4" />, color: 'text-emerald-600', label: 'Eager' },
+    WILLING: { icon: <ThumbsUp className="h-4 w-4" />, color: 'text-blue-600', label: 'Willing' },
+    IN_A_PINCH: { icon: <Minus className="h-4 w-4" />, color: 'text-amber-600', label: 'In a Pinch' },
+    NOT_WILLING: { icon: <ThumbsDown className="h-4 w-4" />, color: 'text-red-600', label: 'Not Willing' },
+}
+
+export default function ReviewerConsolePage() {
+    const params = useParams()
+    const router = useRouter()
+    const conferenceId = Number(params.conferenceId)
+
+    const [conference, setConference] = useState<ConferenceResponse | null>(null)
+    const [bidsSummary, setBidsSummary] = useState<BidsSummary | null>(null)
+    const [reviews, setReviews] = useState<ReviewResponse[]>([])
+    const [loading, setLoading] = useState(true)
+    const [reviewerId, setReviewerId] = useState<number | null>(null)
+
+    useEffect(() => {
+        // Get userId from JWT
+        try {
+            const token = localStorage.getItem('accessToken')
+            if (token) {
+                const payload = JSON.parse(atob(token.split('.')[1]))
+                setReviewerId(payload.userId || payload.id)
+            }
+        } catch { /* ignore */ }
+    }, [])
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true)
+                const conf = await getConference(conferenceId)
+                setConference(conf)
+
+                if (reviewerId) {
+                    const [summary, reviewsData] = await Promise.all([
+                        getBidsSummary(reviewerId, conferenceId).catch(() => null),
+                        getAllReviews(0, 100).catch(() => ({ content: [] })),
+                    ])
+                    if (summary) setBidsSummary(summary)
+                    // Filter reviews for this conference
+                    const myReviews = (reviewsData?.content || []).filter(
+                        (r: any) => r.reviewer?.id === reviewerId
+                    )
+                    setReviews(myReviews)
+                }
+            } catch (err) {
+                console.error('Failed to load reviewer console:', err)
+            } finally {
+                setLoading(false)
+            }
+        }
+        if (reviewerId) fetchData()
+    }, [conferenceId, reviewerId])
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        )
+    }
+
+    return (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+            {/* Header */}
+            <div className="space-y-4">
+                <Button variant="ghost" className="gap-2 -ml-2" onClick={() => router.push('/conference/reviewer-select')}>
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Conferences
+                </Button>
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Reviewer Console</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                        {conference?.name || 'Conference'} — {conference?.acronym}
+                    </p>
+                </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid gap-4 sm:grid-cols-3">
+                <Link href={`/conference/${conferenceId}/reviewer/interests`}>
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-purple-500 h-full">
+                        <CardContent className="p-5 flex items-center gap-4">
+                            <div className="rounded-full bg-purple-100 p-3">
+                                <Target className="h-5 w-5 text-purple-600" />
+                            </div>
+                            <div>
+                                <p className="font-semibold text-gray-900">Subject Areas</p>
+                                <p className="text-xs text-muted-foreground">Select your areas of expertise</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Link>
+
+                <Link href={`/conference/${conferenceId}/reviewer/bidding`}>
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-blue-500 h-full">
+                        <CardContent className="p-5 flex items-center gap-4">
+                            <div className="rounded-full bg-blue-100 p-3">
+                                <FileSearch className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                                <p className="font-semibold text-gray-900">Bidding Papers</p>
+                                <p className="text-xs text-muted-foreground">
+                                    {bidsSummary ? `${bidsSummary.totalBids}/${bidsSummary.totalPapers} papers bid` : 'Place bids on papers'}
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Link>
+
+                <Card className="border-l-4 border-l-emerald-500">
+                    <CardContent className="p-5 flex items-center gap-4">
+                        <div className="rounded-full bg-emerald-100 p-3">
+                            <ClipboardList className="h-5 w-5 text-emerald-600" />
+                        </div>
+                        <div>
+                                <p className="font-semibold text-gray-900">My Reviews</p>
+                            <p className="text-xs text-muted-foreground">
+                                {reviews.length} paper(s) assigned for review
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Bidding Summary */}
+            {bidsSummary && bidsSummary.totalBids > 0 && (
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">Bidding Summary</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex flex-wrap gap-4">
+                            {Object.entries(BID_ICONS).map(([key, { icon, color, label }]) => (
+                                <div key={key} className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-50 ${color}`}>
+                                    {icon}
+                                    <span className="font-semibold">{bidsSummary.bidCounts?.[key] || 0}</span>
+                                    <span className="text-sm text-gray-600">{label}</span>
+                                </div>
+                            ))}
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-3">
+                            Bid on <strong>{bidsSummary.totalBids}</strong> / {bidsSummary.totalPapers} papers
+                        </p>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Reviews Table */}
+            <Card>
+                <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">Assigned Reviews</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {reviews.length === 0 ? (
+                        <div className="text-center py-12 text-muted-foreground">
+                            <ClipboardList className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                            <p>No reviews have been assigned to you yet.</p>
+                            <p className="text-sm mt-1">The Chair will assign papers after bidding is complete.</p>
+                        </div>
+                    ) : (
+                        <div className="overflow-auto rounded-lg border">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b bg-gray-50">
+                                        <th className="px-4 py-3 text-left font-medium text-gray-600">#</th>
+                                        <th className="px-4 py-3 text-left font-medium text-gray-600">Paper Title</th>
+                                        <th className="px-4 py-3 text-left font-medium text-gray-600">Status</th>
+                                        <th className="px-4 py-3 text-left font-medium text-gray-600">Score</th>
+                                        <th className="px-4 py-3 text-right font-medium text-gray-600">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {reviews.map((review, i) => (
+                                        <tr key={review.id} className="border-b last:border-0 hover:bg-gray-50">
+                                            <td className="px-4 py-3 text-gray-400">{i + 1}</td>
+                                            <td className="px-4 py-3 font-medium max-w-md truncate">
+                                                {review.paper?.title || `Paper #${review.paper?.id}`}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <Badge className={STATUS_COLORS[review.status] || 'bg-gray-100 text-gray-800'}>
+                                                    {STATUS_LABELS[review.status] || review.status}
+                                                </Badge>
+                                            </td>
+                                            <td className="px-4 py-3 font-mono">
+                                                {review.totalScore != null ? review.totalScore : '—'}
+                                            </td>
+                                            <td className="px-4 py-3 text-right">
+                                                {review.status !== 'DECLINED' && (
+                                                    <Link href={`/conference/${conferenceId}/reviewer/review/${review.id}`}>
+                                                        <Button size="sm" variant={review.status === 'COMPLETED' ? 'outline' : 'default'}>
+                                                            {review.status === 'COMPLETED' ? 'View' : review.status === 'ASSIGNED' ? 'Start' : 'Continue'}
+                                                        </Button>
+                                                    </Link>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+    )
+}

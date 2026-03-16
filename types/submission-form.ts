@@ -41,6 +41,5 @@ export interface PaperSubmissionRequest {
     keywords: string[]
     extraAnswersJson: string // JSON.stringify({ [fieldId]: value })
     submissionTime: string
-    isPassedPlagiarism?: boolean
     status?: string
 }
