@@ -37,7 +37,8 @@ export function MockRoleProvider({ children }: { children: ReactNode }) {
 export function useMockRole() {
     const context = useContext(MockRoleContext)
     if (!context) {
-        throw new Error("useMockRole must be used within a MockRoleProvider")
+        // Return safe default when used outside MockRoleProvider (e.g. admin/staff layout)
+        return { selectedRole: "Conference Chair" as MockRole, setSelectedRole: (() => {}) as (role: MockRole) => void }
     }
     return context
 }

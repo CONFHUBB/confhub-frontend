@@ -37,14 +37,14 @@ import type {
     TemplateData,
 } from "@/types/conference-form"
 
-type SettingsTab = 
-    | 'general-detail' 
-    | 'features-tracks' 
-    | 'features-subject-areas' 
-    | 'features-review-setting' 
-    | 'features-members' 
-    | 'forms-mail' 
-    | 'forms-submission' 
+type SettingsTab =
+    | 'general-detail'
+    | 'features-tracks'
+    | 'features-subject-areas'
+    | 'features-review-setting'
+    | 'features-members'
+    | 'forms-mail'
+    | 'forms-submission'
     | 'forms-review'
     | 'features-activity-timeline'
 
@@ -258,8 +258,8 @@ export default function ConferenceUpdatePage() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
                 <p className="text-muted-foreground text-lg">Conference not found</p>
-                <Link href="/conference/my-conference">
-                    <Button>Back to My Conferences</Button>
+                <Link href={`/conference/${conferenceId}`}>
+                    <Button>Back to Conference</Button>
                 </Link>
             </div>
         )
@@ -279,8 +279,8 @@ export default function ConferenceUpdatePage() {
                     endDate: conference.endDate ? conference.endDate.split("T")[0] : "",
                     websiteUrl: conference.websiteUrl || "",
                     area: (conference as any).area || "",
-                    societySponsor: (conference as any).societySponsor 
-                        ? (conference as any).societySponsor.split(",").map((s: string) => s.trim()) 
+                    societySponsor: (conference as any).societySponsor
+                        ? (conference as any).societySponsor.split(",").map((s: string) => s.trim())
                         : [],
                     conferenceIdNumber: (conference as any).conferenceIdNumber || "",
                     country: (conference as any).country || "",
@@ -292,14 +292,14 @@ export default function ConferenceUpdatePage() {
                 return (
                     <div>
                         <h2 className="text-xl font-bold mb-6">Config Conference Detail</h2>
-                        <ConferenceForm 
-                            initialData={safeDefaults} 
-                            onSubmit={handleUpdateConference} 
+                        <ConferenceForm
+                            initialData={safeDefaults}
+                            onSubmit={handleUpdateConference}
                             isSubmitting={isUpdatingGeneral}
                         />
                     </div>
                 )
-            
+
             case 'features-tracks':
                 return (
                     <div className="space-y-8">
@@ -400,7 +400,7 @@ export default function ConferenceUpdatePage() {
             <div className="flex-1 w-full max-w-[1700px] mx-auto flex flex-col p-4 md:p-8 overflow-hidden">
                 {/* Header Area */}
                 <div className="mb-8 shrink-0">
-                    <Link href="/conference/my-conference">
+                    <Link href={`/conference/${conferenceId}`}>
                         <Button variant="ghost" className="mb-4 -ml-2">
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Back to My Conferences
@@ -425,7 +425,7 @@ export default function ConferenceUpdatePage() {
                                     return (
                                         <div key={group.title} className="space-y-1">
                                             <button
-                                                onClick={() => setExpandedGroups(prev => 
+                                                onClick={() => setExpandedGroups(prev =>
                                                     isExpanded ? prev.filter(t => t !== group.title) : [...prev, group.title]
                                                 )}
                                                 className="w-full flex items-center justify-between px-2 py-2 text-sm font-bold text-foreground hover:text-primary transition-colors"
@@ -436,7 +436,7 @@ export default function ConferenceUpdatePage() {
                                                 </div>
                                                 {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                                             </button>
-                                            
+
                                             {isExpanded && (
                                                 <div className="flex flex-col space-y-1 mt-1 pl-4 border-l ml-3 border-border/50">
                                                     {group.items.map(item => (

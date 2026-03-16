@@ -113,7 +113,6 @@ export function AppNavbar() {
                             href="/conference/create"
                             className="flex items-center gap-1.5 text-md font-medium text-white bg-white/15 hover:bg-white/25 px-4 py-2 rounded-full border border-white/30 transition-colors"
                         >
-                            <PlusCircle className="h-4 w-4" />
                             Create Conference
                         </Link>
                     )}
