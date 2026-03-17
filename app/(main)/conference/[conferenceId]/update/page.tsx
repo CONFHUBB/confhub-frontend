@@ -24,6 +24,9 @@ import { ActivityTimeline } from './activity-timeline'
 import { EmailManagementInline } from './email-management'
 import { PaperManagement } from './paper-management'
 import { ReviewerAssignment } from './reviewer-assignment'
+import { ConflictManagement } from './conflict-management'
+import { DiscussionPanel } from './discussion-panel'
+import { AuthorNotificationWizard } from './author-notification-wizard'
 
 import { createTrack } from '@/app/api/conference.api'
 import { assignRole } from '@/app/api/user.api'
@@ -48,6 +51,9 @@ type SettingsTab =
     | 'features-members'
     | 'features-paper-management'
     | 'features-reviewer-assignment'
+    | 'features-conflict-management'
+    | 'features-discussion'
+    | 'features-notification-wizard'
     | 'forms-mail'
     | 'forms-submission'
     | 'forms-review'
@@ -70,7 +76,10 @@ const TAB_GROUPS = [
             { key: "features-review-setting", label: "Config Review Setting", implemented: true },
             { key: "features-members", label: "Config Members", implemented: true },
             { key: "features-paper-management", label: "Paper Management", implemented: true },
-            { key: "features-reviewer-assignment", label: "Reviewer Assignment", implemented: true }
+            { key: "features-reviewer-assignment", label: "Reviewer Assignment", implemented: true },
+            { key: "features-conflict-management", label: "Conflict Management", implemented: true },
+            { key: "features-discussion", label: "Discussion", implemented: true },
+            { key: "features-notification-wizard", label: "Review Aggregates & Notification", implemented: true }
         ]
     },
     {
@@ -351,6 +360,15 @@ export default function ConferenceUpdatePage() {
 
             case 'features-reviewer-assignment':
                 return <ReviewerAssignment conferenceId={conferenceId} />
+
+            case 'features-conflict-management':
+                return <ConflictManagement conferenceId={conferenceId} />
+
+            case 'features-discussion':
+                return <DiscussionPanel conferenceId={conferenceId} />
+
+            case 'features-notification-wizard':
+                return <AuthorNotificationWizard conferenceId={conferenceId} />
 
             case 'forms-mail':
                 return <EmailManagementInline conferenceId={conferenceId} />

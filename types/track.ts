@@ -6,6 +6,16 @@ export interface TrackReviewSetting {
     reviewerInviteExpirationDays: number
     allowOthersReviewAccessAfterSubmit: boolean
     allowReviewUpdateDuringDiscussion: boolean
+    showReviewerIdentityToOtherReviewer: boolean
+    showAggregateColumns: boolean
+    allowReviewerSeeStatusBeforeNotification: boolean
+    enableAllPapersForDiscussion: boolean
+    allowDiscussNonAssignedPapers: boolean
+    allowAuthorDiscuss: boolean
+    notifyReviewerOnReviewUpdateDuringDiscussion: boolean
+    notifyOnManualAssignment: boolean
+    doNotShowWithdrawnPapers: boolean
+    addReviewerOnInviteAccept: boolean
 }
 
 export interface TrackResponse {

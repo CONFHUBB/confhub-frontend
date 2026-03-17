@@ -28,6 +28,16 @@ const DEFAULT_SETTINGS: TrackReviewSetting = {
     reviewerInviteExpirationDays: 7,
     allowOthersReviewAccessAfterSubmit: false,
     allowReviewUpdateDuringDiscussion: false,
+    showReviewerIdentityToOtherReviewer: false,
+    showAggregateColumns: false,
+    allowReviewerSeeStatusBeforeNotification: false,
+    enableAllPapersForDiscussion: false,
+    allowDiscussNonAssignedPapers: false,
+    allowAuthorDiscuss: false,
+    notifyReviewerOnReviewUpdateDuringDiscussion: false,
+    notifyOnManualAssignment: false,
+    doNotShowWithdrawnPapers: false,
+    addReviewerOnInviteAccept: true,
 }
 
 export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
@@ -163,6 +173,56 @@ export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
             key: "allowReviewUpdateDuringDiscussion",
             label: "Allow Review Update During Discussion",
             description: "Reviewers can update their review during the discussion phase.",
+        },
+        {
+            key: "showReviewerIdentityToOtherReviewer",
+            label: "Show Reviewer Identity to Other Reviewers",
+            description: "Reviewers can see the names of other reviewers in discussion.",
+        },
+        {
+            key: "showAggregateColumns",
+            label: "Show Aggregate Columns",
+            description: "Display average score columns on the Chair Console.",
+        },
+        {
+            key: "allowReviewerSeeStatusBeforeNotification",
+            label: "Allow Reviewer See Status Before Notification",
+            description: "Reviewers can see paper status before Author Notification is sent.",
+        },
+        {
+            key: "enableAllPapersForDiscussion",
+            label: "Enable All Papers for Discussion",
+            description: "Automatically enable discussion for all papers when Discussion activity is enabled.",
+        },
+        {
+            key: "allowDiscussNonAssignedPapers",
+            label: "Allow Discuss Non-Assigned Papers",
+            description: "Reviewers can discuss papers they are not assigned to (if no conflict).",
+        },
+        {
+            key: "allowAuthorDiscuss",
+            label: "Allow Author Discuss",
+            description: "Authors can participate in discussion (only after PC posts first).",
+        },
+        {
+            key: "notifyReviewerOnReviewUpdateDuringDiscussion",
+            label: "Notify Reviewer on Review Update During Discussion",
+            description: "Notify reviewers when a review is updated during the discussion phase.",
+        },
+        {
+            key: "notifyOnManualAssignment",
+            label: "Notify on Manual Assignment",
+            description: "Send email to reviewer when Chair manually assigns a paper.",
+        },
+        {
+            key: "doNotShowWithdrawnPapers",
+            label: "Do Not Show Withdrawn Papers",
+            description: "Hide withdrawn papers from the Reviewer Console.",
+        },
+        {
+            key: "addReviewerOnInviteAccept",
+            label: "Add Reviewer on Invite Accept",
+            description: "Automatically add user as reviewer when they accept an invitation.",
         },
     ]
 
