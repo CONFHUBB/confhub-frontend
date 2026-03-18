@@ -45,7 +45,7 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
             const [conflictsData, papersData, usersData] = await Promise.all([
                 getConflictsByConference(conferenceId),
                 getPapersByConference(conferenceId),
-                getConferenceUsersWithRoles(conferenceId, 0, 200),
+                getConferenceUsersWithRoles(conferenceId, 0, 100),
             ])
             setConflicts(conflictsData)
             setPapers(papersData.map((p: any) => ({ id: p.id, title: p.title })))

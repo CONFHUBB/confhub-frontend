@@ -16,6 +16,7 @@ import { Loader2, ArrowLeft, Check, FileText, Users, Upload, Search, Trash2, Sen
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { createPaper, assignAuthorToPaper, getAuthorsByPaper, uploadPaperFile } from '@/app/api/paper.api'
+import type { PaperAuthorItem } from '@/app/api/paper.api'
 import { getConferenceSubmissionForm } from '@/app/api/submission-form.api'
 import { getConferenceActivities } from '@/app/api/conference.api'
 import type { ConferenceActivityDTO } from '@/types/conference'
@@ -94,7 +95,7 @@ function StepAddAuthors({
     paperTitle: string
     onNext: () => void
 }) {
-    const [authors, setAuthors] = useState<User[]>([])
+    const [authors, setAuthors] = useState<PaperAuthorItem[]>([])
     const [loadingAuthors, setLoadingAuthors] = useState(true)
     const [searchEmail, setSearchEmail] = useState('')
     const [addingAuthor, setAddingAuthor] = useState(false)
@@ -128,7 +129,7 @@ function StepAddAuthors({
                 return
             }
             // Check if already added
-            if (authors.some((a) => a.id === user.id)) {
+            if (authors.some((a) => a.user.id === user.id)) {
                 toast.error('This author is already added')
                 return
             }
@@ -186,11 +187,11 @@ function StepAddAuthors({
                                             </td>
                                         </tr>
                                     ) : (
-                                        authors.map((author, idx) => (
-                                            <tr key={author.id} className="hover:bg-muted/30 transition-colors">
+                                        authors.map((item, idx) => (
+                                            <tr key={item.paperAuthorId} className="hover:bg-muted/30 transition-colors">
                                                 <td className="px-4 py-3">{idx + 1}</td>
-                                                <td className="px-4 py-3 font-medium">{author.fullName}</td>
-                                                <td className="px-4 py-3 text-muted-foreground">{author.email}</td>
+                                                <td className="px-4 py-3 font-medium">{item.user.fullName}</td>
+                                                <td className="px-4 py-3 text-muted-foreground">{item.user.email}</td>
                                             </tr>
                                         ))
                                     )}

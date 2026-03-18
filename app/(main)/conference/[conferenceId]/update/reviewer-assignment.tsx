@@ -72,7 +72,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
             const data = await getCurrentAssignments(conferenceId)
             setCurrentData(data)
         } catch (err: any) {
-            const msg = err?.response?.data?.message || "Không thể tải dữ liệu assignments"
+            const msg = err?.response?.data?.message || "Failed to load assignments"
             toast.error(msg)
         } finally {
             setLoading(false)
@@ -137,9 +137,9 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
             const preview = await runAutoAssign(config)
             setPreviewData(preview)
             setViewMode("preview")
-            toast.success(`Tìm được ${preview.totalAssignments} assignments mới`)
+            toast.success(`Found ${preview.totalAssignments} new assignments`)
         } catch (err: any) {
-            const msg = err?.response?.data?.message || "Lỗi khi chạy auto-assign"
+            const msg = err?.response?.data?.message || "Error running auto-assign"
             toast.error(msg)
         } finally {
             setRunning(false)
@@ -151,12 +151,12 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
         try {
             setConfirming(true)
             await confirmAssignments(conferenceId, previewData.assignments)
-            toast.success(`Đã lưu ${previewData.assignments.length} assignments!`)
+            toast.success(`Saved ${previewData.assignments.length} assignments!`)
             setViewMode("overview")
             setPreviewData(null)
             fetchCurrentAssignments()
         } catch (err: any) {
-            const msg = err?.response?.data?.message || "Lỗi khi lưu assignments"
+            const msg = err?.response?.data?.message || "Error saving assignments"
             toast.error(msg)
         } finally {
             setConfirming(false)
@@ -165,19 +165,19 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
 
     const handleManualAssign = async () => {
         if (!manualPaperId || !manualReviewerId) {
-            toast.error("Vui lòng chọn paper và reviewer")
+            toast.error("Please select a paper and a reviewer")
             return
         }
         try {
             setAssigning(true)
             await manualAssign(conferenceId, Number(manualPaperId), Number(manualReviewerId))
-            toast.success("Đã gán reviewer thành công!")
+            toast.success("Reviewer assigned successfully!")
             setManualPaperId("")
             setManualReviewerId("")
             setShowManualAssign(false)
             fetchCurrentAssignments()
         } catch (err: any) {
-            const msg = err?.response?.data?.message || "Lỗi khi gán reviewer"
+            const msg = err?.response?.data?.message || "Error assigning reviewer"
             toast.error(msg)
         } finally {
             setAssigning(false)
@@ -186,16 +186,16 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
 
     const handleRemoveAssignment = async (reviewId: number | undefined) => {
         if (!reviewId) {
-            toast.error("Không tìm thấy review ID")
+            toast.error("Review ID not found")
             return
         }
-        if (!confirm("Xóa assignment này?")) return
+        if (!confirm("Remove this assignment?")) return
         try {
             await removeAssignment(conferenceId, reviewId)
-            toast.success("Đã xóa assignment")
+            toast.success("Assignment removed")
             fetchCurrentAssignments()
         } catch (err: any) {
-            const msg = err?.response?.data?.message || "Lỗi khi xóa assignment"
+            const msg = err?.response?.data?.message || "Error removing assignment"
             toast.error(msg)
         }
     }
@@ -245,16 +245,16 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold">Quản Lý Reviewer Assignment</h2>
-                    <HelpTooltip title="Hướng dẫn Assignment">
-                        <p className="font-semibold mb-2">Cách gán reviewer cho papers:</p>
+                    <h2 className="text-xl font-bold">Reviewer Assignment Management</h2>
+                    <HelpTooltip title="Assignment Guide">
+                        <p className="font-semibold mb-2">How to assign reviewers to papers:</p>
                         <ol className="list-decimal ml-4 space-y-1.5">
-                            <li><strong>Auto-Assign</strong> — cấu hình trọng số + constraints → chạy thuật toán → preview → xác nhận</li>
-                            <li><strong>Manual Assign</strong> — chọn paper + reviewer → gán trực tiếp</li>
-                            <li><strong>Xóa</strong> — bấm nút thùng rác bên cạnh mỗi assignment</li>
+                            <li><strong>Auto-Assign</strong> — configure weights + constraints → run algorithm → preview → confirm</li>
+                            <li><strong>Manual Assign</strong> — select paper + reviewer → assign directly</li>
+                            <li><strong>Remove</strong> — click the trash icon next to each assignment</li>
                         </ol>
                         <p className="mt-3 text-amber-700 bg-amber-50 rounded p-2 text-xs">
-                            <strong>Lưu ý:</strong> Hệ thống tự động loại trừ conflicts (bao gồm domain conflict).
+                            <strong>Note:</strong> The system automatically excludes conflicts (including domain conflicts).
                         </p>
                     </HelpTooltip>
                 </div>
@@ -265,7 +265,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                         onClick={() => setViewMode("overview")}
                     >
                         <BarChart3 className="h-4 w-4 mr-1" />
-                        Tổng quan
+                        Overview
                     </Button>
                     <Button
                         variant={viewMode === "auto-assign" ? "default" : "outline"}
@@ -306,7 +306,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                         <CardContent className="p-4 text-center">
                             <AlertTriangle className="h-5 w-5 mx-auto mb-1 text-amber-500" />
                             <p className="text-2xl font-bold">{currentData.unassignedPapers}</p>
-                            <p className="text-xs text-muted-foreground">Chưa đủ reviewer</p>
+                            <p className="text-xs text-muted-foreground">Insufficient Reviewers</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -318,17 +318,17 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                     <CardHeader className="pb-3">
                         <CardTitle className="text-lg flex items-center gap-2">
                             <Wand2 className="h-5 w-5 text-blue-600" />
-                            Cấu hình Auto-Assign
+                            Auto-Assign Configuration
                         </CardTitle>
                         <CardDescription>
-                            Điều chỉnh tham số để thuật toán tìm assignments tối ưu
+                            Adjust parameters for the algorithm to find optimal assignments
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-5">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className="text-sm font-medium text-gray-700 block mb-1">
-                                    Số reviewer tối thiểu / paper
+                                    Min reviewers per paper
                                 </label>
                                 <Input
                                     type="number"
@@ -341,7 +341,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-gray-700 block mb-1">
-                                    Số paper tối đa / reviewer
+                                    Max papers per reviewer
                                 </label>
                                 <Input
                                     type="number"
@@ -367,8 +367,8 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                 className="w-full accent-blue-600"
                             />
                             <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                                <span>← Ưu tiên Bid</span>
-                                <span>Ưu tiên Relevance →</span>
+                                <span>← Prioritize Bid</span>
+                                <span>Prioritize Relevance →</span>
                             </div>
                         </div>
 
@@ -381,8 +381,8 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                 className="rounded border-gray-300"
                             />
                             <label htmlFor="load-balancing" className="text-sm">
-                                <span className="font-medium">Cân bằng tải</span>
-                                <span className="text-muted-foreground ml-1">— phân bổ papers đều giữa các reviewers</span>
+                                <span className="font-medium">Load Balancing</span>
+                                <span className="text-muted-foreground ml-1">— distribute papers evenly among reviewers</span>
                             </label>
                         </div>
 
@@ -396,7 +396,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                             ) : (
                                 <Wand2 className="h-4 w-4" />
                             )}
-                            {running ? "Đang chạy..." : "Chạy Auto-Assign"}
+                            {running ? "Running..." : "Run Auto-Assign"}
                         </Button>
                     </CardContent>
                 </Card>
@@ -408,17 +408,17 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                     <CardHeader className="pb-3">
                         <CardTitle className="text-lg flex items-center gap-2">
                             <Check className="h-5 w-5 text-emerald-600" />
-                            Preview Kết Quả Auto-Assign
+                            Auto-Assign Results Preview
                         </CardTitle>
                         <CardDescription>
-                            Xem và xác nhận trước khi lưu vào hệ thống
+                            Review and confirm before saving to the system
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-3 gap-3 mb-4">
                             <div className="rounded-lg border p-3 text-center bg-white">
                                 <p className="text-2xl font-bold text-emerald-600">{previewData.totalAssignments}</p>
-                                <p className="text-xs text-muted-foreground">Assignments mới</p>
+                                <p className="text-xs text-muted-foreground">New Assignments</p>
                             </div>
                             <div className="rounded-lg border p-3 text-center bg-white">
                                 <p className="text-2xl font-bold">{previewData.totalPapers}</p>
@@ -426,7 +426,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                             </div>
                             <div className="rounded-lg border p-3 text-center bg-white">
                                 <p className="text-2xl font-bold text-amber-600">{previewData.unassignedPapers}</p>
-                                <p className="text-xs text-muted-foreground">Chưa đủ reviewer</p>
+                                <p className="text-xs text-muted-foreground">Insufficient Reviewers</p>
                             </div>
                         </div>
 
@@ -456,7 +456,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                             </div>
                         ) : (
                             <p className="text-center py-4 text-muted-foreground">
-                                Không tìm được assignments phù hợp. Thử điều chỉnh tham số.
+                                No suitable assignments found. Try adjusting the parameters.
                             </p>
                         )}
 
@@ -467,7 +467,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                 onClick={() => { setViewMode("auto-assign"); setPreviewData(null) }}
                             >
                                 <X className="h-4 w-4 mr-1" />
-                                Hủy & Cấu hình lại
+                                Cancel & Reconfigure
                             </Button>
                             <Button
                                 className="flex-1 gap-2"
@@ -479,7 +479,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                 ) : (
                                     <Check className="h-4 w-4" />
                                 )}
-                                {confirming ? "Đang lưu..." : `Xác nhận ${previewData.assignments.length} Assignments`}
+                                {confirming ? "Saving..." : `Confirm ${previewData.assignments.length} Assignments`}
                             </Button>
                         </div>
                     </CardContent>
@@ -495,7 +495,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <Input
                                 className="pl-10 h-10"
-                                placeholder="Tìm theo tên paper, reviewer..."
+                                placeholder="Search by paper title, reviewer name..."
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
                             />
@@ -507,7 +507,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                 onClick={() => setGroupBy("paper")}
                             >
                                 <FileText className="h-3.5 w-3.5 mr-1" />
-                                Theo Paper
+                                By Paper
                             </Button>
                             <Button
                                 size="sm"
@@ -515,7 +515,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                 onClick={() => setGroupBy("reviewer")}
                             >
                                 <Users className="h-3.5 w-3.5 mr-1" />
-                                Theo Reviewer
+                                By Reviewer
                             </Button>
                             <Button
                                 size="sm"
@@ -535,7 +535,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                             <CardContent className="p-4">
                                 <div className="flex items-center gap-2 mb-3">
                                     <UserPlus className="h-4 w-4 text-green-600" />
-                                    <h4 className="font-semibold text-sm">Gán Reviewer Thủ Công</h4>
+                                    <h4 className="font-semibold text-sm">Manual Reviewer Assignment</h4>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <div>
@@ -545,7 +545,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                             value={manualPaperId}
                                             onChange={e => setManualPaperId(e.target.value ? Number(e.target.value) : "")}
                                         >
-                                            <option value="">-- Chọn paper --</option>
+                                            <option value="">-- Select paper --</option>
                                             {papers.map(p => (
                                                 <option key={p.id} value={p.id}>
                                                     #{p.id} — {p.title}
@@ -560,7 +560,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                             value={manualReviewerId}
                                             onChange={e => setManualReviewerId(e.target.value ? Number(e.target.value) : "")}
                                         >
-                                            <option value="">-- Chọn reviewer --</option>
+                                            <option value="">-- Select reviewer --</option>
                                             {reviewers.map(r => (
                                                 <option key={r.id} value={r.id}>
                                                     {r.name} ({r.email})
@@ -580,7 +580,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                             ) : (
                                                 <Plus className="h-3.5 w-3.5" />
                                             )}
-                                            Gán
+                                            Assign
                                         </Button>
                                         <Button
                                             size="sm"
@@ -601,8 +601,8 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                             <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
                             <p>
                                 {searchQuery
-                                    ? "Không tìm thấy kết quả."
-                                    : "Chưa có assignments. Hãy chạy Auto-Assign hoặc Manual Assign."
+                                    ? "No results found."
+                                    : "No assignments yet. Run Auto-Assign or use Manual Assign."
                                 }
                             </p>
                             {!searchQuery && (
@@ -665,7 +665,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                     size="sm"
                                                                     className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
                                                                     onClick={() => handleRemoveAssignment(item.reviewId)}
-                                                                    title="Xóa assignment"
+                                                                    title="Remove assignment"
                                                                 >
                                                                     <Trash2 className="h-3.5 w-3.5" />
                                                                 </Button>
@@ -706,7 +706,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                     size="sm"
                                                                     className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
                                                                     onClick={() => handleRemoveAssignment(item.reviewId)}
-                                                                    title="Xóa assignment"
+                                                                    title="Remove assignment"
                                                                 >
                                                                     <Trash2 className="h-3.5 w-3.5" />
                                                                 </Button>

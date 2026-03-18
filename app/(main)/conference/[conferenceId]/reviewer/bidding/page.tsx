@@ -162,7 +162,7 @@ export default function BiddingPage() {
                         </div>
                         <h2 className="text-xl font-bold text-amber-900">Subject Areas Required</h2>
                         <p className="text-amber-800 max-w-md mx-auto">
-                            Before you can bid on papers, you must first select your <strong>Subject Areas</strong> and indicate your level of expertise. 
+                            Before you can bid on papers, you must first select your <strong>Subject Areas</strong> and indicate your level of expertise.
                             This helps us match you with relevant papers and calculate relevance scores.
                         </p>
                         <Link href={`/conference/${conferenceId}/reviewer/interests`}>
@@ -326,18 +326,26 @@ export default function BiddingPage() {
                                             {/* Relevance Score */}
                                             <div className="shrink-0 text-right">
                                                 <p className="text-xs text-gray-500 mb-1">Relevance</p>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center justify-end gap-2">
                                                     <div className="w-16 h-2 rounded-full bg-gray-200 overflow-hidden">
                                                         <div
-                                                            className={`h-full rounded-full transition-all ${
-                                                                paper.relevanceScore >= 0.7 ? 'bg-emerald-500' :
-                                                                paper.relevanceScore >= 0.4 ? 'bg-blue-500' : 'bg-gray-400'
-                                                            }`}
+                                                            className={`h-full rounded-full transition-all ${paper.relevanceScore >= 0.7 ? 'bg-emerald-500' :
+                                                                    paper.relevanceScore >= 0.4 ? 'bg-blue-500' : 'bg-gray-400'
+                                                                }`}
                                                             style={{ width: `${(paper.relevanceScore || 0) * 100}%` }}
                                                         />
                                                     </div>
                                                     <span className="text-sm font-mono font-semibold">{Math.round((paper.relevanceScore || 0) * 100)}%</span>
                                                 </div>
+                                                <p className={`text-[10px] mt-1 leading-tight max-w-[140px] ${paper.relevanceScore >= 0.7 ? 'text-emerald-600' :
+                                                        paper.relevanceScore >= 0.4 ? 'text-blue-600' : 'text-gray-400'
+                                                    }`}>
+                                                    {paper.relevanceScore >= 0.7
+                                                        ? 'High — your subject areas match well with this paper'
+                                                        : paper.relevanceScore >= 0.4
+                                                            ? 'Moderate — some overlap with your subject areas'
+                                                            : 'Low — limited overlap with your subject areas'}
+                                                </p>
                                             </div>
                                         </div>
 
@@ -365,9 +373,8 @@ export default function BiddingPage() {
                                                         type="button"
                                                         disabled={isLoading}
                                                         onClick={() => handleBid(paper.paperId, opt.value)}
-                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                                                            isActive ? opt.activeColor : opt.color
-                                                        } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${isActive ? opt.activeColor : opt.color
+                                                            } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                                                     >
                                                         {opt.icon}
                                                         <span className="hidden sm:inline">{opt.label}</span>

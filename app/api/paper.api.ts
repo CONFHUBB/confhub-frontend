@@ -50,16 +50,34 @@ export const assignAuthorToPaper = async (paperId: number, authorId: number): Pr
     return response.data
 }
 
-export const getAuthorsByPaper = async (paperId: number): Promise<User[]> => {
+export interface PaperAuthorItem {
+    paperAuthorId: number
+    user: User
+}
+
+export const getAuthorsByPaper = async (paperId: number): Promise<PaperAuthorItem[]> => {
     try {
         const response = await http.get<any>(`/paper-author/paper/${paperId}`)
         const content = response.data?.content || response.data || []
         const items = Array.isArray(content) ? content : []
-        return items.map((item: any) => item.user || item)
+        return items.map((item: any) => {
+            const u = item.user || item
+            return {
+                paperAuthorId: item.id,
+                user: {
+                    ...u,
+                    fullName: `${u.firstName || ''} ${u.lastName || ''}`.trim()
+                }
+            }
+        })
     } catch (error) {
         console.error("Failed to fetch authors:", error)
-        return [] // Return empty array to prevent undefined UI crash
+        return []
     }
+}
+
+export const deleteAuthorFromPaper = async (paperAuthorId: number): Promise<void> => {
+    await http.delete(`/paper-author/${paperAuthorId}`)
 }
 
 export const uploadPaperFile = async (conferenceId: number, paperId: number, file: File): Promise<any> => {
@@ -79,10 +97,11 @@ export const getPaperFiles = async (): Promise<PaperFileResponse[]> => {
     return response.data.content || []
 }
 
-export const updatePaperFile = async (paperId: number, file: File): Promise<any> => {
+export const updatePaperFile = async (conferenceId: number, paperId: number, file: File): Promise<any> => {
     const formData = new FormData()
     formData.append('file', file)
-    const response = await http.post(`/paper-file/${paperId}`, formData, {
+    const response = await http.post(`/paper-file/upload`, formData, {
+        params: { conferenceId, paperId },
         headers: {
             'Content-Type': 'multipart/form-data'
         }

@@ -1,9 +1,13 @@
 export interface User {
     id: number
-    fullName: string
+    firstName: string
+    lastName: string
+    fullName?: string
     email: string
-    phoneNumber: string
     country: string
+    title?: string
+    gender?: string
+    isActive?: boolean
 }
 
 export interface AssignRoleRequest {

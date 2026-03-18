@@ -89,7 +89,8 @@ export function ExcelImport({
     const previewRows: Record<string, string>[] =
         preview?.conferencePreview ? [preview.conferencePreview] :
         (preview?.trackPreviews?.length ?? 0) > 0 ? preview!.trackPreviews! :
-        (preview?.subjectAreaPreviews?.length ?? 0) > 0 ? preview!.subjectAreaPreviews! : []
+        (preview?.subjectAreaPreviews?.length ?? 0) > 0 ? preview!.subjectAreaPreviews! :
+        (preview?.memberPreviews?.length ?? 0) > 0 ? preview!.memberPreviews! : []
 
     return (
         <div className="space-y-4">

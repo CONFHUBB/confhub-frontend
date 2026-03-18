@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { assignAuthorToPaper, getAuthorsByPaper, getPaperById, getPaperFiles, updatePaper, updatePaperFile, withdrawPaper, restorePaper } from '@/app/api/paper.api'
+import { assignAuthorToPaper, getAuthorsByPaper, deleteAuthorFromPaper, getPaperById, getPaperFiles, updatePaper, updatePaperFile, withdrawPaper, restorePaper } from '@/app/api/paper.api'
+import type { PaperAuthorItem } from '@/app/api/paper.api'
 import { getUsers } from '@/app/api/user.api'
 import { getSubjectAreasByTrack } from '@/app/api/track.api'
 import type { PaperResponse, PaperFileResponse } from '@/types/paper'
@@ -38,12 +39,13 @@ export default function EditPaperPage() {
     const [saving, setSaving] = useState(false)
     const [uploading, setUploading] = useState(false)
     const [users, setUsers] = useState<User[]>([])
-    const [authors, setAuthors] = useState<User[]>([])
+    const [authors, setAuthors] = useState<PaperAuthorItem[]>([])
     const [selectedUser, setSelectedUser] = useState('')
     const [isAssigning, setIsAssigning] = useState(false)
     const [openAddAuthorDialog, setOpenAddAuthorDialog] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [withdrawing, setWithdrawing] = useState(false)
+    const [showPdfViewer, setShowPdfViewer] = useState(false)
 
     const [subjectAreas, setSubjectAreas] = useState<SubjectAreaResponse[]>([])
     const [primarySubjectAreaId, setPrimarySubjectAreaId] = useState<string>('')
@@ -189,7 +191,12 @@ export default function EditPaperPage() {
         }
         try {
             setUploading(true)
-            await updatePaperFile(paperId, selectedFile)
+            const conferenceId = paper?.track?.conference?.id
+            if (!conferenceId) {
+                toast.error('Conference information not available')
+                return
+            }
+            await updatePaperFile(conferenceId, paperId, selectedFile)
             toast.success('Manuscript file uploaded successfully!')
             setSelectedFile(null)
 
@@ -216,6 +223,12 @@ export default function EditPaperPage() {
             return
         }
 
+        // Duplicate check on frontend
+        if (authors.some(a => a.user.id === Number(selectedUser))) {
+            toast.error('This author is already added to the paper.')
+            return
+        }
+
         try {
             setIsAssigning(true)
             await assignAuthorToPaper(paperId, Number(selectedUser))
@@ -227,6 +240,17 @@ export default function EditPaperPage() {
             toast.error(error.response?.data?.message || 'Failed to assign author')
         } finally {
             setIsAssigning(false)
+        }
+    }
+
+    const handleRemoveAuthor = async (paperAuthorId: number, authorName: string) => {
+        if (!confirm(`Are you sure you want to remove ${authorName} as a co-author?`)) return
+        try {
+            await deleteAuthorFromPaper(paperAuthorId)
+            toast.success(`${authorName} has been removed and notified.`)
+            await fetchAuthors()
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to remove author')
         }
     }
 
@@ -509,9 +533,9 @@ export default function EditPaperPage() {
                             <table className="min-w-full text-sm">
                                 <thead className="bg-muted/60">
                                     <tr>
-                                        <th className="px-4 py-2 text-left font-semibold text-muted-foreground">First Name</th>
-                                        <th className="px-4 py-2 text-left font-semibold text-muted-foreground">Full Name</th>
+                                        <th className="px-4 py-2 text-left font-semibold text-muted-foreground">Name</th>
                                         <th className="px-4 py-2 text-left font-semibold text-muted-foreground">Email</th>
+                                        <th className="px-4 py-2 text-right font-semibold text-muted-foreground">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -522,16 +546,22 @@ export default function EditPaperPage() {
                                             </td>
                                         </tr>
                                     ) : (
-                                        authors.map((author) => {
-                                            const firstName = author.fullName?.split(' ')[0] || author.fullName
-                                            return (
-                                                <tr key={author.id} className="border-b last:border-0">
-                                                    <td className="px-4 py-3">{firstName}</td>
-                                                    <td className="px-4 py-3 font-medium">{author.fullName}</td>
-                                                    <td className="px-4 py-3 text-muted-foreground">{author.email}</td>
-                                                </tr>
-                                            )
-                                        })
+                                        authors.map((item) => (
+                                            <tr key={item.paperAuthorId} className="border-b last:border-0">
+                                                <td className="px-4 py-3 font-medium">{item.user.fullName}</td>
+                                                <td className="px-4 py-3 text-muted-foreground">{item.user.email}</td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleRemoveAuthor(item.paperAuthorId, item.user.fullName || item.user.email)}
+                                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))
                                     )}
                                 </tbody>
                             </table>
@@ -546,7 +576,7 @@ export default function EditPaperPage() {
                     </CardHeader>
                     <CardContent className="space-y-6">
                         {currentFile && (
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 <Label>Current Manuscript</Label>
                                 <div className="p-4 rounded-lg border bg-muted/20 flex items-center justify-between gap-3">
                                     <div className="flex items-center gap-2 min-w-0">
@@ -564,7 +594,26 @@ export default function EditPaperPage() {
                                             </a>
                                         </div>
                                     </div>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-2 shrink-0"
+                                        onClick={() => setShowPdfViewer(!showPdfViewer)}
+                                    >
+                                        <FileText className="h-4 w-4" />
+                                        {showPdfViewer ? 'Hide Viewer' : 'View Manuscript'}
+                                    </Button>
                                 </div>
+                                {showPdfViewer && (
+                                    <div className="rounded-lg border overflow-hidden bg-gray-100">
+                                        <iframe
+                                            src={currentFile.url}
+                                            className="w-full border-0"
+                                            style={{ height: '600px' }}
+                                            title="Manuscript PDF Viewer"
+                                        />
+                                    </div>
+                                )}
                             </div>
                         )}
 

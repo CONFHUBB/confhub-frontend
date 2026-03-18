@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { getUserByEmail, getConferenceMembers, assignRole, deleteRoleAssignment } from "@/app/api/user.api"
 import { getTracksByConference } from "@/app/api/track.api"
-import { getConference } from "@/app/api/conference.api"
+import { getConference, downloadMemberTemplate, previewMemberImport, importMembers } from "@/app/api/conference.api"
 import { sendInvitationEmail } from "@/app/api/email.api"
 import type { User, ConferenceUserTrack, MemberWithRoles } from "@/types/user"
 import type { TrackResponse } from "@/types/track"
@@ -12,6 +12,7 @@ import toast from "react-hot-toast"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { ExcelImport } from "@/components/excel-import"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -558,6 +559,26 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                 <p className="text-sm text-muted-foreground">
                     Manage conference members and their roles.
                 </p>
+            </div>
+
+            {/* ── Import from Excel ────────────────── */}
+            <div className="rounded-xl border bg-card p-6 space-y-4">
+                <h3 className="text-base font-semibold flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-primary" />
+                    Import Members from Excel
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                    Download the template, fill in member details (email, role, track), then upload to preview and import.
+                </p>
+                <ExcelImport
+                    entityName="Member"
+                    previewHeaders={["email", "role", "trackName"]}
+                    onDownloadTemplate={() => downloadMemberTemplate(conferenceId)}
+                    onPreview={(file) => previewMemberImport(conferenceId, file)}
+                    onImport={(file) => importMembers(conferenceId, file)}
+                    onImportSuccess={() => fetchMembers()}
+                    templateFilename="member_template.xlsx"
+                />
             </div>
 
             {/* ── Search Section ──────────────────────── */}

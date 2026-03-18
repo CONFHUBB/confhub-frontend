@@ -83,10 +83,12 @@ export interface ImportResult {
     conferenceName?: string
     tracksCreated: number
     subjectAreasCreated: number
+    membersCreated: number
     errors: ImportError[]
     conferencePreview?: Record<string, string>
     trackPreviews?: Record<string, string>[]
     subjectAreaPreviews?: Record<string, string>[]
+    memberPreviews?: Record<string, string>[]
 }
 
 const uploadFile = (url: string, file: File) => {
@@ -119,3 +121,8 @@ export const importSubjectAreas = (trackId: number, file: File) => {
     fd.append('trackId', trackId.toString())
     return http.post<ImportResult>('/subject-areas/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
 }
+
+// Members
+export const downloadMemberTemplate = (conferenceId: number) => downloadBlob(`/conferences/${conferenceId}/members/import/template`)
+export const previewMemberImport = (conferenceId: number, file: File) => uploadFile(`/conferences/${conferenceId}/members/import/preview`, file).then(r => r.data)
+export const importMembers = (conferenceId: number, file: File) => uploadFile(`/conferences/${conferenceId}/members/import`, file).then(r => r.data)
