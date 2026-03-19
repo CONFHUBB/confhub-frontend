@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getPapersForBidding, submitBid, getBidsSummary } from '@/app/api/bidding.api'
 import { getInterestsByReviewer } from '@/app/api/reviewer-interest.api'
+import { getConferenceActivities } from '@/app/api/conference.api'
 import type { PaperForBidding, BidValue, BidsSummary } from '@/types/bidding'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -40,6 +41,7 @@ export default function BiddingPage() {
     const [filterTrack, setFilterTrack] = useState<string>('all')
     const [expandedPaper, setExpandedPaper] = useState<number | null>(null)
     const [reviewerId, setReviewerId] = useState<number | null>(null)
+    const [activityClosed, setActivityClosed] = useState<string | null>(null) // null = open, string = reason
 
     useEffect(() => {
         try {
@@ -56,6 +58,25 @@ export default function BiddingPage() {
         try {
             setLoading(true)
             setNeedsSubjectAreas(false)
+            setActivityClosed(null)
+
+            // Check if REVIEWER_BIDDING activity is enabled
+            try {
+                const activities = await getConferenceActivities(conferenceId)
+                const biddingActivity = activities.find(a => a.activityType === 'REVIEWER_BIDDING')
+                if (biddingActivity) {
+                    if (!biddingActivity.isEnabled) {
+                        setActivityClosed('Reviewer bidding is currently disabled for this conference.')
+                        setLoading(false)
+                        return
+                    }
+                    if (biddingActivity.deadline && new Date(biddingActivity.deadline) < new Date()) {
+                        setActivityClosed(`Reviewer bidding deadline has passed (${new Date(biddingActivity.deadline).toLocaleString()}).`)
+                        setLoading(false)
+                        return
+                    }
+                }
+            } catch { /* ignore activity check errors */ }
 
             // First check if reviewer has subject areas
             const interests = await getInterestsByReviewer(reviewerId).catch(() => [])
@@ -142,6 +163,30 @@ export default function BiddingPage() {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        )
+    }
+
+    // Activity closed banner
+    if (activityClosed) {
+        return (
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+                <Button variant="ghost" className="gap-2 -ml-2" onClick={() => router.push(`/conference/${conferenceId}/reviewer`)}>
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Reviewer Console
+                </Button>
+
+                <Card className="border-red-200 bg-red-50">
+                    <CardContent className="p-8 text-center space-y-4">
+                        <div className="mx-auto w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                            <AlertTriangle className="h-8 w-8 text-red-600" />
+                        </div>
+                        <h2 className="text-xl font-bold text-red-900">Bidding Closed</h2>
+                        <p className="text-red-800 max-w-md mx-auto">
+                            {activityClosed}
+                        </p>
+                    </CardContent>
+                </Card>
             </div>
         )
     }

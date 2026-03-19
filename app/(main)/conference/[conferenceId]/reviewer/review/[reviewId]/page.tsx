@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { getReviewById, updateReview, getAnswersByReview, submitAnswer, getReviewQuestionsByTrack } from '@/app/api/review.api'
+import { getConferenceActivities } from '@/app/api/conference.api'
 import type { ReviewResponse, ReviewAnswerResponse, ReviewAnswerRequest } from '@/types/review'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -43,6 +44,7 @@ export default function ReviewPaperPage() {
     const [loading, setLoading] = useState(true)
     const [savingQuestion, setSavingQuestion] = useState<number | null>(null)
     const [submitting, setSubmitting] = useState(false)
+    const [activityClosed, setActivityClosed] = useState<string | null>(null)
 
     const fetchData = useCallback(async () => {
         try {
@@ -57,6 +59,23 @@ export default function ReviewPaperPage() {
                 const sorted = [...(questionsData || [])].sort((a: ReviewQuestion, b: ReviewQuestion) => a.orderIndex - b.orderIndex)
                 setQuestions(sorted)
             }
+
+            // Check if REVIEW_SUBMISSION activity is enabled
+            try {
+                const paper = reviewData.paper
+                if (paper) {
+                    // Derive conferenceId from route params
+                    const activities = await getConferenceActivities(conferenceId)
+                    const reviewActivity = activities.find(a => a.activityType === 'REVIEW_SUBMISSION')
+                    if (reviewActivity) {
+                        if (!reviewActivity.isEnabled) {
+                            setActivityClosed('Review submission is currently disabled for this conference.')
+                        } else if (reviewActivity.deadline && new Date(reviewActivity.deadline) < new Date()) {
+                            setActivityClosed(`Review submission deadline has passed (${new Date(reviewActivity.deadline).toLocaleString()}).`)
+                        }
+                    }
+                }
+            } catch { /* ignore */ }
 
             // Fetch existing answers
             const answersData = await getAnswersByReview(reviewId).catch(() => [])
@@ -218,7 +237,7 @@ export default function ReviewPaperPage() {
         )
     }
 
-    const isReadOnly = review.status === 'COMPLETED' || review.status === 'DECLINED'
+    const isReadOnly = review.status === 'COMPLETED' || review.status === 'DECLINED' || !!activityClosed
 
     return (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -250,6 +269,18 @@ export default function ReviewPaperPage() {
                     style={{ width: `${questions.length > 0 ? (answeredCount / questions.length) * 100 : 0}%` }}
                 />
             </div>
+
+            {/* Activity closed warning */}
+            {activityClosed && (
+                <div className="p-4 rounded-lg border border-red-200 bg-red-50 text-center">
+                    <div className="flex items-center justify-center gap-2 text-red-700">
+                        <AlertTriangle className="h-5 w-5" />
+                        <p className="font-semibold">Review Submission Closed</p>
+                    </div>
+                    <p className="text-sm text-red-600 mt-1">{activityClosed}</p>
+                    <p className="text-xs text-red-500 mt-1">The form is read-only. You can view your existing answers but cannot make changes.</p>
+                </div>
+            )}
 
             {/* Paper Info */}
             <Card className="border-l-4 border-l-indigo-500">

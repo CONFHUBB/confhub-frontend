@@ -24,9 +24,13 @@ export const getReviewerConferences = async (userId: number, page: number = 0, s
 }
 
 // Accept invitation
-export const acceptInvitation = async (userId: number, conferenceId: number) => {
+export const acceptInvitation = async (userId: number, conferenceId: number, reviewerQuota?: number) => {
+    const params: Record<string, number> = { userId, conferenceId }
+    if (reviewerQuota !== undefined && reviewerQuota !== null) {
+        params.reviewerQuota = reviewerQuota
+    }
     const response = await http.put('/conference-user-tracks/accept', null, {
-        params: { userId, conferenceId }
+        params
     })
     return response.data
 }

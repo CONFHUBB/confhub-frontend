@@ -125,7 +125,7 @@ export function NotificationBell() {
 
             {/* Dropdown */}
             {isOpen && (
-                <div className="absolute right-0 top-full mt-2 w-[360px] bg-white rounded-xl shadow-2xl border z-50 overflow-hidden">
+                <div className="absolute right-0 top-full mt-2 w-[420px] bg-white rounded-xl shadow-2xl border z-50 overflow-hidden">
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
                         <h3 className="font-semibold text-gray-900 text-sm">Notifications</h3>
@@ -158,9 +158,8 @@ export function NotificationBell() {
                                 <button
                                     key={notif.id}
                                     onClick={() => handleClickNotification(notif)}
-                                    className={`w-full text-left px-4 py-3 border-b last:border-0 hover:bg-gray-50 transition-colors flex gap-3 cursor-pointer ${
-                                        !notif.isRead ? 'bg-blue-50/50' : ''
-                                    }`}
+                                    className={`w-full text-left px-4 py-3 border-b last:border-0 hover:bg-gray-50 transition-colors flex gap-3 cursor-pointer ${!notif.isRead ? 'bg-blue-50/50' : ''
+                                        }`}
                                 >
                                     <span className="text-lg shrink-0 mt-0.5">
                                         {NOTIFICATION_TYPE_ICONS[notif.type] || '🔔'}

@@ -489,7 +489,7 @@ export default function ConferenceUpdatePage() {
                     {/* Main Content Area - Scrollable */}
                     <div className="flex-1 min-w-0 bg-background overflow-hidden flex flex-col h-full">
                         <div className="flex-1 overflow-y-auto custom-scrollbar">
-                            <div className="max-w-6xl mx-auto p-8 md:p-12 pb-24">
+                            <div className="max-w-8xl mx-auto p-8 md:p-12 pb-24">
                                 {renderTabContent()}
                             </div>
                         </div>

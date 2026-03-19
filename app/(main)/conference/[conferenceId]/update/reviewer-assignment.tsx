@@ -12,7 +12,14 @@ import {
     type AutoAssignConfig,
 } from "@/app/api/assignment.api"
 import { getConferenceUsersWithRoles } from "@/app/api/conference-user-track.api"
-import { getPapersByConference } from "@/app/api/paper.api"
+import { getPapersByConference, getAuthorsByPaper, type PaperAuthorItem } from "@/app/api/paper.api"
+import { getConflictsByConference } from "@/app/api/conflict.api"
+import { getBidsByPaper } from "@/app/api/bidding.api"
+import type { BiddingResponse } from "@/types/bidding"
+import { getSubjectAreasByTrack, getTrackReviewSettings } from "@/app/api/track.api"
+import { getAggregatesByConference, type ReviewAggregate } from "@/app/api/review-aggregate.api"
+import type { PaperResponse } from "@/types/paper"
+import type { PaperConflictResponse } from "@/types/conflict"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -20,7 +27,7 @@ import { Input } from "@/components/ui/input"
 import { HelpTooltip } from "@/components/help-tooltip"
 import {
     Loader2, Users, FileText, Wand2, Check, X, AlertTriangle,
-    Search, Trash2, Plus, BarChart3, Settings2, UserPlus
+    Search, Trash2, Plus, BarChart3, Settings2, UserPlus, ArrowLeft, Edit
 } from "lucide-react"
 import toast from "react-hot-toast"
 
@@ -28,12 +35,14 @@ interface ReviewerAssignmentProps {
     conferenceId: number
 }
 
-type ViewMode = "overview" | "auto-assign" | "preview"
+type ViewMode = "overview" | "auto-assign" | "preview" | "edit-paper"
 
 interface SimpleReviewer {
     id: number
     name: string
     email: string
+    quota: number | null
+    trackIds: number[]
 }
 
 interface SimplePaper {
@@ -49,7 +58,6 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
     const [running, setRunning] = useState(false)
     const [confirming, setConfirming] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")
-    const [groupBy, setGroupBy] = useState<"paper" | "reviewer">("paper")
 
     // Auto-assign config
     const [minReviewers, setMinReviewers] = useState(3)
@@ -58,14 +66,24 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
     const [relevanceWeight, setRelevanceWeight] = useState(0.4)
     const [loadBalancing, setLoadBalancing] = useState(false)
 
-    // Manual assign
-    const [showManualAssign, setShowManualAssign] = useState(false)
-    const [manualPaperId, setManualPaperId] = useState<number | "">("")
-    const [manualReviewerId, setManualReviewerId] = useState<number | "">("")
+    // Manual assign (for edit-paper view)
     const [assigning, setAssigning] = useState(false)
     const [reviewers, setReviewers] = useState<SimpleReviewer[]>([])
     const [papers, setPapers] = useState<SimplePaper[]>([])
 
+    // ── NEW: Paper-centric data ──
+    const [fullPapers, setFullPapers] = useState<PaperResponse[]>([])
+    const [paperAuthors, setPaperAuthors] = useState<Record<number, string>>({}) // paperId -> "Author1, Author2"
+    const [allConflicts, setAllConflicts] = useState<PaperConflictResponse[]>([])
+    const [subjectAreaMap, setSubjectAreaMap] = useState<Record<number, string>>({}) // saId -> name
+    const [editingPaperId, setEditingPaperId] = useState<number | null>(null)
+    const [paperSearchQuery, setPaperSearchQuery] = useState("")
+    const [reviewerSearchQuery, setReviewerSearchQuery] = useState("")
+    const [paperBids, setPaperBids] = useState<BiddingResponse[]>([])
+    const [showAggregateColumns, setShowAggregateColumns] = useState(false)
+    const [aggregateMap, setAggregateMap] = useState<Record<number, ReviewAggregate>>({})
+
+    // ── Fetch assignments ──
     const fetchCurrentAssignments = useCallback(async () => {
         try {
             setLoading(true)
@@ -79,45 +97,208 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
         }
     }, [conferenceId])
 
-    // Fetch reviewers + papers for manual assign dropdown
-    const fetchManualAssignData = useCallback(async () => {
+    // ── Fetch papers, authors, conflicts, subject areas ──
+    const fetchPaperData = useCallback(async () => {
         try {
-            const [usersData, papersData] = await Promise.all([
-                getConferenceUsersWithRoles(conferenceId, 0, 100),
+            const [papersData, conflictsData] = await Promise.all([
                 getPapersByConference(conferenceId),
+                getConflictsByConference(conferenceId),
             ])
-            // Data structure: { content: [{ user: {...}, roles: [{ assignedRole }] }] }
+            setFullPapers(papersData || [])
+            setAllConflicts(conflictsData || [])
+
+            // Fetch authors for all papers in parallel
+            const authorResults = await Promise.all(
+                (papersData || []).map(async (p) => {
+                    try {
+                        const authors = await getAuthorsByPaper(p.id)
+                        return { paperId: p.id, authors }
+                    } catch {
+                        return { paperId: p.id, authors: [] as PaperAuthorItem[] }
+                    }
+                })
+            )
+            const authorMap: Record<number, string> = {}
+            authorResults.forEach(({ paperId, authors }) => {
+                authorMap[paperId] = authors.map(a => a.user.fullName || `${a.user.firstName || ''} ${a.user.lastName || ''}`.trim()).join(", ") || "—"
+            })
+            setPaperAuthors(authorMap)
+
+            // Fetch subject areas for unique tracks
+            const trackIds = Array.from(new Set((papersData || []).map(p => p.trackId).filter(Boolean)))
+            const saMap: Record<number, string> = {}
+            await Promise.all(
+                trackIds.map(async (trackId) => {
+                    try {
+                        const areas = await getSubjectAreasByTrack(trackId)
+                        areas.forEach(sa => { saMap[sa.id] = sa.name })
+                    } catch { /* ignore */ }
+                })
+            )
+            setSubjectAreaMap(saMap)
+
+            // Check showAggregateColumns setting per track and fetch aggregates
+            try {
+                const settingsResults = await Promise.all(
+                    trackIds.map(async (trackId) => {
+                        try {
+                            const settings = await getTrackReviewSettings(trackId)
+                            return settings?.showAggregateColumns === true
+                        } catch { return false }
+                    })
+                )
+                const anyShowAggregate = settingsResults.some(v => v)
+                setShowAggregateColumns(anyShowAggregate)
+                if (anyShowAggregate) {
+                    const aggData = await getAggregatesByConference(conferenceId)
+                    const aggMap: Record<number, ReviewAggregate> = {}
+                    ;(aggData || []).forEach(a => { aggMap[a.paperId] = a })
+                    setAggregateMap(aggMap)
+                }
+            } catch { /* ignore */ }
+        } catch (err) {
+            console.error("Failed to load paper data:", err)
+        }
+    }, [conferenceId])
+
+    // ── Fetch reviewers for edit-paper view ──
+    const fetchReviewers = useCallback(async () => {
+        try {
+            const usersData = await getConferenceUsersWithRoles(conferenceId, 0, 100)
             const content = (usersData as any)?.content || usersData || []
             const revs: SimpleReviewer[] = content
-                .filter((u: any) => 
+                .filter((u: any) =>
                     (u.roles || []).some((r: any) => r.assignedRole === "REVIEWER")
                 )
-                .map((u: any) => ({
-                    id: u.user?.id || u.userId || u.id,
-                    name: `${u.user?.firstName || ""} ${u.user?.lastName || ""}`.trim() || "Unknown",
-                    email: u.user?.email || u.userEmail || "",
-                }))
+                .map((u: any) => {
+                    const reviewerRoles = (u.roles || []).filter((r: any) => r.assignedRole === "REVIEWER")
+                    const quota = reviewerRoles.length > 0 ? (reviewerRoles[0].reviewerQuota ?? null) : null
+                    const trackIds = reviewerRoles.map((r: any) => r.conferenceTrackId).filter(Boolean)
+                    return {
+                        id: u.user?.id || u.userId || u.id,
+                        name: `${u.user?.firstName || ""} ${u.user?.lastName || ""}`.trim() || "Unknown",
+                        email: u.user?.email || u.userEmail || "",
+                        quota,
+                        trackIds,
+                    }
+                })
             setReviewers(revs)
-            const paps: SimplePaper[] = (papersData || []).map((p: any) => ({
-                id: p.id,
-                title: p.title,
-            }))
-            setPapers(paps)
         } catch (err) {
-            console.error("Failed to load manual assign data:", err)
+            console.error("Failed to load reviewers:", err)
         }
     }, [conferenceId])
 
     useEffect(() => {
         fetchCurrentAssignments()
-    }, [fetchCurrentAssignments])
+        fetchPaperData()
+        fetchReviewers()
+    }, [fetchCurrentAssignments, fetchPaperData, fetchReviewers])
 
-    useEffect(() => {
-        if (showManualAssign && reviewers.length === 0) {
-            fetchManualAssignData()
+    // ── Derived: reviewer count per paper, assignment count per reviewer ──
+    const reviewerCountPerPaper = useMemo(() => {
+        const map: Record<number, number> = {}
+        ;(currentData?.assignments || []).forEach(a => {
+            map[a.paperId] = (map[a.paperId] || 0) + 1
+        })
+        return map
+    }, [currentData])
+
+    const assignmentCountPerReviewer = useMemo(() => {
+        const map: Record<number, number> = {}
+        ;(currentData?.assignments || []).forEach(a => {
+            map[a.reviewerId] = (map[a.reviewerId] || 0) + 1
+        })
+        return map
+    }, [currentData])
+
+    // Track-specific assignment count
+    const trackAssignmentCountPerReviewer = useMemo(() => {
+        if (!editingPaperId) return {} as Record<number, number>
+        const paper = fullPapers.find(p => p.id === editingPaperId)
+        if (!paper) return {} as Record<number, number>
+        const editTrackId = paper.trackId
+        const map: Record<number, number> = {}
+        const paperIdsInTrack = new Set(fullPapers.filter(p => p.trackId === editTrackId).map(p => p.id))
+        ;(currentData?.assignments || []).forEach(a => {
+            if (paperIdsInTrack.has(a.paperId)) {
+                map[a.reviewerId] = (map[a.reviewerId] || 0) + 1
+            }
+        })
+        return map
+    }, [currentData, editingPaperId, fullPapers])
+
+    // Bid map for current editing paper: reviewerId -> bidValue
+    const bidMapForPaper = useMemo(() => {
+        const map: Record<number, string> = {}
+        paperBids.forEach(b => { map[b.reviewerId] = b.bidValue })
+        return map
+    }, [paperBids])
+
+    const conflictCountPerPaper = useMemo(() => {
+        const map: Record<number, number> = {}
+        allConflicts.forEach(c => {
+            map[c.paper.id] = (map[c.paper.id] || 0) + 1
+        })
+        return map
+    }, [allConflicts])
+
+    // ── Filtered papers for table ──
+    const filteredPapers = useMemo(() => {
+        if (!paperSearchQuery.trim()) return fullPapers
+        const q = paperSearchQuery.toLowerCase()
+        return fullPapers.filter(p =>
+            p.title.toLowerCase().includes(q) ||
+            p.id.toString().includes(q) ||
+            (paperAuthors[p.id] || "").toLowerCase().includes(q) ||
+            (subjectAreaMap[p.primarySubjectAreaId] || "").toLowerCase().includes(q)
+        )
+    }, [fullPapers, paperSearchQuery, paperAuthors, subjectAreaMap])
+
+    // ── Edit paper: assignments and reviewers for the selected paper ──
+    const editingPaper = useMemo(() => fullPapers.find(p => p.id === editingPaperId), [fullPapers, editingPaperId])
+
+    const editPaperAssignments = useMemo(() => {
+        if (!editingPaperId) return []
+        return (currentData?.assignments || []).filter(a => a.paperId === editingPaperId)
+    }, [currentData, editingPaperId])
+
+    const editPaperConflictUserIds = useMemo(() => {
+        if (!editingPaperId) return new Set<number>()
+        return new Set(allConflicts.filter(c => c.paper.id === editingPaperId).map(c => c.user.id))
+    }, [allConflicts, editingPaperId])
+
+    const assignedReviewerIds = useMemo(() => {
+        return new Set(editPaperAssignments.map(a => a.reviewerId))
+    }, [editPaperAssignments])
+
+    const filteredReviewersForEdit = useMemo(() => {
+        let list = reviewers
+        if (reviewerSearchQuery.trim()) {
+            const q = reviewerSearchQuery.toLowerCase()
+            list = list.filter(r =>
+                r.name.toLowerCase().includes(q) ||
+                r.email.toLowerCase().includes(q)
+            )
         }
-    }, [showManualAssign, reviewers.length, fetchManualAssignData])
+        // Sort: assigned first, then conflicts, then others
+        return [...list].sort((a, b) => {
+            const aAssigned = assignedReviewerIds.has(a.id) ? 0 : 1
+            const bAssigned = assignedReviewerIds.has(b.id) ? 0 : 1
+            if (aAssigned !== bAssigned) return aAssigned - bAssigned
+            const aConflict = editPaperConflictUserIds.has(a.id) ? 1 : 0
+            const bConflict = editPaperConflictUserIds.has(b.id) ? 1 : 0
+            if (aConflict !== bConflict) return aConflict - bConflict
+            return a.name.localeCompare(b.name)
+        })
+    }, [reviewers, reviewerSearchQuery, assignedReviewerIds, editPaperConflictUserIds])
 
+    // ── Get relevance score for a reviewer on the editing paper ──
+    const getRelevanceForReviewer = (reviewerId: number) => {
+        const assignment = editPaperAssignments.find(a => a.reviewerId === reviewerId)
+        return assignment ? assignment.relevanceScore : null
+    }
+
+    // ── Handlers ──
     const handleBidWeightChange = (val: number) => {
         setBidWeight(val)
         setRelevanceWeight(parseFloat((1 - val).toFixed(2)))
@@ -163,18 +344,12 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
         }
     }
 
-    const handleManualAssign = async () => {
-        if (!manualPaperId || !manualReviewerId) {
-            toast.error("Please select a paper and a reviewer")
-            return
-        }
+    const handleManualAssignForPaper = async (reviewerId: number) => {
+        if (!editingPaperId) return
         try {
             setAssigning(true)
-            await manualAssign(conferenceId, Number(manualPaperId), Number(manualReviewerId))
+            await manualAssign(conferenceId, editingPaperId, reviewerId)
             toast.success("Reviewer assigned successfully!")
-            setManualPaperId("")
-            setManualReviewerId("")
-            setShowManualAssign(false)
             fetchCurrentAssignments()
         } catch (err: any) {
             const msg = err?.response?.data?.message || "Error assigning reviewer"
@@ -200,37 +375,18 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
         }
     }
 
-    // Group assignments
-    const groupedAssignments = useMemo(() => {
-        const assignments = currentData?.assignments || []
-        const filtered = searchQuery
-            ? assignments.filter(a =>
-                a.paperTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                a.reviewerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                a.reviewerEmail.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-            : assignments
-
-        if (groupBy === "paper") {
-            const groups = new Map<number, { title: string; items: AssignmentPreviewItem[] }>()
-            filtered.forEach(a => {
-                if (!groups.has(a.paperId)) {
-                    groups.set(a.paperId, { title: a.paperTitle, items: [] })
-                }
-                groups.get(a.paperId)!.items.push(a)
-            })
-            return Array.from(groups.entries()).sort((a, b) => a[0] - b[0])
-        } else {
-            const groups = new Map<number, { name: string; email: string; items: AssignmentPreviewItem[] }>()
-            filtered.forEach(a => {
-                if (!groups.has(a.reviewerId)) {
-                    groups.set(a.reviewerId, { name: a.reviewerName, email: a.reviewerEmail, items: [] })
-                }
-                groups.get(a.reviewerId)!.items.push(a)
-            })
-            return Array.from(groups.entries()).sort((a, b) => a[1].name.localeCompare(b[1].name))
+    const openEditPaper = async (paperId: number) => {
+        setEditingPaperId(paperId)
+        setReviewerSearchQuery("")
+        setViewMode("edit-paper")
+        // Fetch bids for this paper
+        try {
+            const bids = await getBidsByPaper(paperId)
+            setPaperBids(bids || [])
+        } catch {
+            setPaperBids([])
         }
-    }, [currentData, searchQuery, groupBy])
+    }
 
     if (loading) {
         return (
@@ -245,41 +401,56 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold">Reviewer Assignment Management</h2>
+                    {viewMode === "edit-paper" && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setViewMode("overview")}
+                            className="mr-1"
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                    )}
+                    <h2 className="text-xl font-bold">
+                        {viewMode === "edit-paper"
+                            ? "Edit Reviewer Assignments"
+                            : "Reviewer Assignment Management"}
+                    </h2>
                     <HelpTooltip title="Assignment Guide">
                         <p className="font-semibold mb-2">How to assign reviewers to papers:</p>
                         <ol className="list-decimal ml-4 space-y-1.5">
                             <li><strong>Auto-Assign</strong> — configure weights + constraints → run algorithm → preview → confirm</li>
-                            <li><strong>Manual Assign</strong> — select paper + reviewer → assign directly</li>
-                            <li><strong>Remove</strong> — click the trash icon next to each assignment</li>
+                            <li><strong>Edit Assignments</strong> — click the edit icon on a paper → assign/remove reviewers</li>
                         </ol>
                         <p className="mt-3 text-amber-700 bg-amber-50 rounded p-2 text-xs">
                             <strong>Note:</strong> The system automatically excludes conflicts (including domain conflicts).
                         </p>
                     </HelpTooltip>
                 </div>
-                <div className="flex gap-2">
-                    <Button
-                        variant={viewMode === "overview" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setViewMode("overview")}
-                    >
-                        <BarChart3 className="h-4 w-4 mr-1" />
-                        Overview
-                    </Button>
-                    <Button
-                        variant={viewMode === "auto-assign" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setViewMode("auto-assign")}
-                    >
-                        <Settings2 className="h-4 w-4 mr-1" />
-                        Auto-Assign
-                    </Button>
-                </div>
+                {viewMode !== "edit-paper" && (
+                    <div className="flex gap-2">
+                        <Button
+                            variant={viewMode === "overview" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setViewMode("overview")}
+                        >
+                            <BarChart3 className="h-4 w-4 mr-1" />
+                            Overview
+                        </Button>
+                        <Button
+                            variant={viewMode === "auto-assign" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setViewMode("auto-assign")}
+                        >
+                            <Settings2 className="h-4 w-4 mr-1" />
+                            Auto-Assign
+                        </Button>
+                    </div>
+                )}
             </div>
 
             {/* Summary cards */}
-            {currentData && (
+            {currentData && viewMode !== "edit-paper" && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <Card>
                         <CardContent className="p-4 text-center">
@@ -312,7 +483,337 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                 </div>
             )}
 
-            {/* Auto-Assign Config Panel */}
+            {/* ═══════════ OVERVIEW: Papers Table ═══════════ */}
+            {viewMode === "overview" && (
+                <Card>
+                    <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <FileText className="h-5 w-5 text-blue-600" />
+                                Submitted Papers
+                            </CardTitle>
+                            <div className="relative w-72">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input
+                                    className="pl-10 h-9"
+                                    placeholder="Search papers..."
+                                    value={paperSearchQuery}
+                                    onChange={e => setPaperSearchQuery(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b bg-muted/40">
+                                        <th className="text-left px-4 py-3 font-semibold text-muted-foreground w-12">#</th>
+                                        <th className="text-left px-4 py-3 font-semibold text-muted-foreground min-w-[200px]">Title</th>
+                                        <th className="text-left px-4 py-3 font-semibold text-muted-foreground min-w-[150px]">Authors</th>
+                                        <th className="text-left px-4 py-3 font-semibold text-muted-foreground min-w-[120px]">Subject Area</th>
+                                        <th className="text-center px-4 py-3 font-semibold text-muted-foreground w-28"># Reviewers</th>
+                                        <th className="text-center px-4 py-3 font-semibold text-muted-foreground w-24">Conflicts</th>
+                                        {showAggregateColumns && (
+                                            <th className="text-center px-4 py-3 font-semibold text-muted-foreground w-24">Avg Score</th>
+                                        )}
+                                        <th className="text-center px-4 py-3 font-semibold text-muted-foreground w-24">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {filteredPapers.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={showAggregateColumns ? 8 : 7} className="text-center py-8 text-muted-foreground">
+                                                {paperSearchQuery ? "No papers match your search." : "No papers submitted yet."}
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredPapers.map((paper) => {
+                                            const revCount = reviewerCountPerPaper[paper.id] || 0
+                                            const conflictCount = conflictCountPerPaper[paper.id] || 0
+                                            const saName = subjectAreaMap[paper.primarySubjectAreaId] || "—"
+                                            const insufficient = revCount < minReviewers
+
+                                            return (
+                                                <tr key={paper.id} className="hover:bg-muted/30 transition-colors">
+                                                    <td className="px-4 py-3 font-mono text-muted-foreground">{paper.id}</td>
+                                                    <td className="px-4 py-3">
+                                                        <p className="font-medium line-clamp-2">{paper.title}</p>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <p className="text-muted-foreground text-xs line-clamp-2">
+                                                            {paperAuthors[paper.id] || "Loading..."}
+                                                        </p>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <Badge variant="outline" className="text-xs font-normal whitespace-nowrap">
+                                                            {saName}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <Badge
+                                                            variant={insufficient ? "destructive" : "default"}
+                                                            className="text-xs"
+                                                        >
+                                                            {revCount} / {minReviewers}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        {conflictCount > 0 ? (
+                                                            <Badge variant="outline" className="text-xs text-amber-700 border-amber-300 bg-amber-50">
+                                                                {conflictCount}
+                                                            </Badge>
+                                                        ) : (
+                                                            <span className="text-muted-foreground text-xs">0</span>
+                                                        )}
+                                                    </td>
+                                                    {showAggregateColumns && (
+                                                        <td className="px-4 py-3 text-center">
+                                                            {(() => {
+                                                                const agg = aggregateMap[paper.id]
+                                                                if (!agg || agg.completedReviewCount === 0) {
+                                                                    return <span className="text-muted-foreground text-xs">—</span>
+                                                                }
+                                                                const score = agg.averageTotalScore
+                                                                const color = score >= 3.5 ? "text-emerald-600" : score >= 2 ? "text-blue-600" : "text-red-600"
+                                                                return (
+                                                                    <span className={`font-mono text-xs font-semibold ${color}`}>
+                                                                        {score.toFixed(2)}
+                                                                    </span>
+                                                                )
+                                                            })()}
+                                                        </td>
+                                                    )}
+                                                    <td className="px-4 py-3 text-center">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="gap-1 h-8 text-xs"
+                                                            onClick={() => openEditPaper(paper.id)}
+                                                        >
+                                                            <Edit className="h-3.5 w-3.5" />
+                                                            Edit
+                                                        </Button>
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* ═══════════ EDIT PAPER: Reviewer Table ═══════════ */}
+            {viewMode === "edit-paper" && editingPaper && (
+                <div className="space-y-4">
+                    {/* Paper info banner */}
+                    <Card className="border-blue-200 bg-blue-50/30">
+                        <CardContent className="p-4">
+                            <div className="flex items-start gap-3">
+                                <FileText className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                                <div className="min-w-0">
+                                    <h3 className="font-semibold text-sm">
+                                        Paper #{editingPaper.id}: {editingPaper.title}
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                        Authors: {paperAuthors[editingPaper.id] || "—"} •
+                                        Subject Area: {subjectAreaMap[editingPaper.primarySubjectAreaId] || "—"} •
+                                        Assigned: {editPaperAssignments.length} reviewer(s)
+                                    </p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Reviewer table */}
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                    <Users className="h-5 w-5 text-green-600" />
+                                    Available Reviewers ({reviewers.length})
+                                </CardTitle>
+                                <div className="relative w-72">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                    <Input
+                                        className="pl-10 h-9"
+                                        placeholder="Search reviewers..."
+                                        value={reviewerSearchQuery}
+                                        onChange={e => setReviewerSearchQuery(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b bg-muted/40">
+                                            <th className="text-left px-4 py-3 font-semibold text-muted-foreground min-w-[140px]">Reviewer</th>
+                                            <th className="text-left px-4 py-3 font-semibold text-muted-foreground min-w-[160px]">Email</th>
+                                            <th className="text-center px-4 py-3 font-semibold text-muted-foreground w-20">Bid</th>
+                                            <th className="text-center px-4 py-3 font-semibold text-muted-foreground w-20">Quota</th>
+                                            <th className="text-center px-3 py-3 font-semibold text-muted-foreground w-24 text-xs">Assign. (Track)</th>
+                                            <th className="text-center px-3 py-3 font-semibold text-muted-foreground w-24 text-xs">Assign. (All)</th>
+                                            <th className="text-center px-4 py-3 font-semibold text-muted-foreground w-24">Relevance</th>
+                                            <th className="text-center px-4 py-3 font-semibold text-muted-foreground w-20">Status</th>
+                                            <th className="text-center px-4 py-3 font-semibold text-muted-foreground w-20">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {filteredReviewersForEdit.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={9} className="text-center py-8 text-muted-foreground">
+                                                    No reviewers found.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            filteredReviewersForEdit.map((reviewer) => {
+                                                const isAssigned = assignedReviewerIds.has(reviewer.id)
+                                                const isConflict = editPaperConflictUserIds.has(reviewer.id)
+                                                const totalAssignments = assignmentCountPerReviewer[reviewer.id] || 0
+                                                const relevance = getRelevanceForReviewer(reviewer.id)
+                                                const assignmentForPaper = editPaperAssignments.find(a => a.reviewerId === reviewer.id)
+
+                                                return (
+                                                    <tr
+                                                        key={reviewer.id}
+                                                        className={`transition-colors ${
+                                                            isConflict
+                                                                ? "bg-red-50/50 hover:bg-red-50"
+                                                                : isAssigned
+                                                                    ? "bg-emerald-50/50 hover:bg-emerald-50"
+                                                                    : "hover:bg-muted/30"
+                                                        }`}
+                                                    >
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-medium">{reviewer.name}</span>
+                                                                {isConflict && (
+                                                                    <Badge variant="destructive" className="text-[10px] h-5 px-1.5">
+                                                                        Conflict
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-muted-foreground text-xs">{reviewer.email}</td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            {(() => {
+                                                                const bid = bidMapForPaper[reviewer.id]
+                                                                if (!bid) return <span className="text-muted-foreground text-xs">—</span>
+                                                                const colors: Record<string, string> = {
+                                                                    EAGER: "bg-emerald-100 text-emerald-700 border-emerald-300",
+                                                                    WILLING: "bg-blue-100 text-blue-700 border-blue-300",
+                                                                    IN_A_PINCH: "bg-amber-100 text-amber-700 border-amber-300",
+                                                                    NOT_WILLING: "bg-red-100 text-red-700 border-red-300",
+                                                                }
+                                                                const labels: Record<string, string> = {
+                                                                    EAGER: "Eager",
+                                                                    WILLING: "Willing",
+                                                                    IN_A_PINCH: "In a pinch",
+                                                                    NOT_WILLING: "Not willing",
+                                                                }
+                                                                return (
+                                                                    <Badge className={`text-[10px] ${colors[bid] || ""}`}>
+                                                                        {labels[bid] || bid}
+                                                                    </Badge>
+                                                                )
+                                                            })()}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            <span className="text-xs font-mono">
+                                                                {reviewer.quota !== null ? reviewer.quota : "—"}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-3 py-3 text-center">
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {trackAssignmentCountPerReviewer[reviewer.id] || 0}
+                                                            </Badge>
+                                                        </td>
+                                                        <td className="px-3 py-3 text-center">
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {totalAssignments}
+                                                            </Badge>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            {relevance !== null ? (
+                                                                <span className={`font-mono text-xs font-semibold ${
+                                                                    relevance >= 0.7 ? "text-emerald-600" :
+                                                                    relevance >= 0.4 ? "text-blue-600" : "text-gray-500"
+                                                                }`}>
+                                                                    {(relevance * 100).toFixed(0)}%
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-muted-foreground text-xs">—</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            {isAssigned ? (
+                                                                <Badge className="text-xs bg-emerald-100 text-emerald-700 border-emerald-300 hover:bg-emerald-100">
+                                                                    Assigned
+                                                                </Badge>
+                                                            ) : isConflict ? (
+                                                                <Badge variant="outline" className="text-xs text-red-600 border-red-300">
+                                                                    Blocked
+                                                                </Badge>
+                                                            ) : (
+                                                                <span className="text-muted-foreground text-xs">—</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            {isAssigned ? (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
+                                                                    onClick={() => handleRemoveAssignment(assignmentForPaper?.reviewId)}
+                                                                    title="Remove assignment"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            ) : isConflict ? (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-8 w-8 p-0"
+                                                                    disabled
+                                                                    title="Cannot assign — conflict exists"
+                                                                >
+                                                                    <X className="h-4 w-4 text-gray-300" />
+                                                                </Button>
+                                                            ) : (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-8 w-8 p-0 text-green-500 hover:text-green-700 hover:bg-green-50"
+                                                                    onClick={() => handleManualAssignForPaper(reviewer.id)}
+                                                                    disabled={assigning}
+                                                                    title="Assign reviewer"
+                                                                >
+                                                                    {assigning ? (
+                                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                                    ) : (
+                                                                        <Plus className="h-4 w-4" />
+                                                                    )}
+                                                                </Button>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* ═══════════ AUTO-ASSIGN CONFIG ═══════════ */}
             {viewMode === "auto-assign" && (
                 <Card className="border-blue-200 bg-blue-50/30">
                     <CardHeader className="pb-3">
@@ -356,7 +857,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
 
                         <div>
                             <label className="text-sm font-medium text-gray-700 block mb-2">
-                                Trọng số: Bid ({(bidWeight * 100).toFixed(0)}%) vs Relevance ({(relevanceWeight * 100).toFixed(0)}%)
+                                Weight: Bid ({(bidWeight * 100).toFixed(0)}%) vs Relevance ({(relevanceWeight * 100).toFixed(0)}%)
                             </label>
                             <input
                                 type="range"
@@ -402,7 +903,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                 </Card>
             )}
 
-            {/* Preview Panel */}
+            {/* ═══════════ PREVIEW PANEL ═══════════ */}
             {viewMode === "preview" && previewData && (
                 <Card className="border-emerald-200 bg-emerald-50/30">
                     <CardHeader className="pb-3">
@@ -484,244 +985,6 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                         </div>
                     </CardContent>
                 </Card>
-            )}
-
-            {/* Current Assignments - Overview */}
-            {viewMode === "overview" && currentData && (
-                <div className="space-y-4">
-                    {/* Toolbar: Search + Group + Manual Assign button */}
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                                className="pl-10 h-10"
-                                placeholder="Search by paper title, reviewer name..."
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex gap-2">
-                            <Button
-                                size="sm"
-                                variant={groupBy === "paper" ? "default" : "outline"}
-                                onClick={() => setGroupBy("paper")}
-                            >
-                                <FileText className="h-3.5 w-3.5 mr-1" />
-                                By Paper
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant={groupBy === "reviewer" ? "default" : "outline"}
-                                onClick={() => setGroupBy("reviewer")}
-                            >
-                                <Users className="h-3.5 w-3.5 mr-1" />
-                                By Reviewer
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                className="gap-1 border-green-300 text-green-700 hover:bg-green-50"
-                                onClick={() => setShowManualAssign(!showManualAssign)}
-                            >
-                                <UserPlus className="h-3.5 w-3.5" />
-                                Manual Assign
-                            </Button>
-                        </div>
-                    </div>
-
-                    {/* Manual Assign Form */}
-                    {showManualAssign && (
-                        <Card className="border-green-200 bg-green-50/30">
-                            <CardContent className="p-4">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <UserPlus className="h-4 w-4 text-green-600" />
-                                    <h4 className="font-semibold text-sm">Manual Reviewer Assignment</h4>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    <div>
-                                        <label className="text-xs font-medium text-gray-600 block mb-1">Paper</label>
-                                        <select
-                                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                                            value={manualPaperId}
-                                            onChange={e => setManualPaperId(e.target.value ? Number(e.target.value) : "")}
-                                        >
-                                            <option value="">-- Select paper --</option>
-                                            {papers.map(p => (
-                                                <option key={p.id} value={p.id}>
-                                                    #{p.id} — {p.title}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-medium text-gray-600 block mb-1">Reviewer</label>
-                                        <select
-                                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                                            value={manualReviewerId}
-                                            onChange={e => setManualReviewerId(e.target.value ? Number(e.target.value) : "")}
-                                        >
-                                            <option value="">-- Select reviewer --</option>
-                                            {reviewers.map(r => (
-                                                <option key={r.id} value={r.id}>
-                                                    {r.name} ({r.email})
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="flex items-end gap-2">
-                                        <Button
-                                            size="sm"
-                                            disabled={assigning || !manualPaperId || !manualReviewerId}
-                                            onClick={handleManualAssign}
-                                            className="gap-1"
-                                        >
-                                            {assigning ? (
-                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                            ) : (
-                                                <Plus className="h-3.5 w-3.5" />
-                                            )}
-                                            Assign
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => setShowManualAssign(false)}
-                                        >
-                                            <X className="h-3.5 w-3.5" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* Assignment List */}
-                    {groupedAssignments.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                            <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                            <p>
-                                {searchQuery
-                                    ? "No results found."
-                                    : "No assignments yet. Run Auto-Assign or use Manual Assign."
-                                }
-                            </p>
-                            {!searchQuery && (
-                                <div className="flex gap-2 justify-center mt-3">
-                                    <Button
-                                        variant="outline"
-                                        className="gap-2"
-                                        onClick={() => setViewMode("auto-assign")}
-                                    >
-                                        <Wand2 className="h-4 w-4" />
-                                        Auto-Assign
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        className="gap-2"
-                                        onClick={() => setShowManualAssign(true)}
-                                    >
-                                        <UserPlus className="h-4 w-4" />
-                                        Manual Assign
-                                    </Button>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {groupBy === "paper" ? (
-                                (groupedAssignments as [number, { title: string; items: AssignmentPreviewItem[] }][]).map(
-                                    ([paperId, group]) => (
-                                        <Card key={paperId}>
-                                            <CardContent className="p-4">
-                                                <div className="flex items-start justify-between mb-2">
-                                                    <div>
-                                                        <h4 className="font-semibold text-sm">
-                                                            #{paperId} — {group.title}
-                                                        </h4>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {group.items.length} reviewer(s) assigned
-                                                        </p>
-                                                    </div>
-                                                    <Badge
-                                                        variant={group.items.length >= minReviewers ? "default" : "destructive"}
-                                                        className="text-xs"
-                                                    >
-                                                        {group.items.length} / {minReviewers}
-                                                    </Badge>
-                                                </div>
-                                                <div className="divide-y rounded-lg border">
-                                                    {group.items.map((item, i) => (
-                                                        <div key={i} className="flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-50">
-                                                            <div className="flex-1 min-w-0">
-                                                                <span>{item.reviewerName}</span>
-                                                                <span className="text-muted-foreground text-xs ml-1">({item.reviewerEmail})</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-2 shrink-0">
-                                                                <span className="text-xs text-muted-foreground font-mono">
-                                                                    {(item.score * 100).toFixed(0)}%
-                                                                </span>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
-                                                                    onClick={() => handleRemoveAssignment(item.reviewId)}
-                                                                    title="Remove assignment"
-                                                                >
-                                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                                </Button>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    )
-                                )
-                            ) : (
-                                (groupedAssignments as [number, { name: string; email: string; items: AssignmentPreviewItem[] }][]).map(
-                                    ([reviewerId, group]) => (
-                                        <Card key={reviewerId}>
-                                            <CardContent className="p-4">
-                                                <div className="flex items-start justify-between mb-2">
-                                                    <div>
-                                                        <h4 className="font-semibold text-sm">{group.name}</h4>
-                                                        <p className="text-xs text-muted-foreground">{group.email}</p>
-                                                    </div>
-                                                    <Badge variant="outline" className="text-xs">
-                                                        {group.items.length} paper(s)
-                                                    </Badge>
-                                                </div>
-                                                <div className="divide-y rounded-lg border">
-                                                    {group.items.map((item, i) => (
-                                                        <div key={i} className="flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-50">
-                                                            <span className="flex-1 min-w-0 truncate">
-                                                                #{item.paperId} — {item.paperTitle}
-                                                            </span>
-                                                            <div className="flex items-center gap-2 shrink-0">
-                                                                <span className="text-xs text-muted-foreground font-mono">
-                                                                    {(item.score * 100).toFixed(0)}%
-                                                                </span>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
-                                                                    onClick={() => handleRemoveAssignment(item.reviewId)}
-                                                                    title="Remove assignment"
-                                                                >
-                                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                                </Button>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    )
-                                )
-                            )}
-                        </div>
-                    )}
-                </div>
             )}
         </div>
     )
