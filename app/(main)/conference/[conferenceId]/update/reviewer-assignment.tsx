@@ -1,5 +1,4 @@
 "use client"
-
 import { useEffect, useState, useMemo, useCallback } from "react"
 import {
     runAutoAssign,
@@ -18,6 +17,8 @@ import { getBidsByPaper } from "@/app/api/bidding.api"
 import type { BiddingResponse } from "@/types/bidding"
 import { getSubjectAreasByTrack, getTrackReviewSettings } from "@/app/api/track.api"
 import { getAggregatesByConference, type ReviewAggregate } from "@/app/api/review-aggregate.api"
+import { getReviewById } from "@/app/api/review.api"
+import type { ReviewStatus } from "@/types/review"
 import type { PaperResponse } from "@/types/paper"
 import type { PaperConflictResponse } from "@/types/conflict"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -27,9 +28,10 @@ import { Input } from "@/components/ui/input"
 import { HelpTooltip } from "@/components/help-tooltip"
 import {
     Loader2, Users, FileText, Wand2, Check, X, AlertTriangle,
-    Search, Trash2, Plus, BarChart3, Settings2, UserPlus, ArrowLeft, Edit
+    Search, Trash2, Plus, BarChart3, Settings2, UserPlus, ArrowLeft, Edit, Eye
 } from "lucide-react"
 import toast from "react-hot-toast"
+import { ReviewDetailDialog } from "./review-detail-dialog"
 
 interface ReviewerAssignmentProps {
     conferenceId: number
@@ -82,6 +84,8 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
     const [paperBids, setPaperBids] = useState<BiddingResponse[]>([])
     const [showAggregateColumns, setShowAggregateColumns] = useState(false)
     const [aggregateMap, setAggregateMap] = useState<Record<number, ReviewAggregate>>({})
+    const [reviewStatusMap, setReviewStatusMap] = useState<Record<number, { status: ReviewStatus; reviewId: number }>>({})
+    const [viewingReviewId, setViewingReviewId] = useState<number | null>(null)
 
     // ── Fetch assignments ──
     const fetchCurrentAssignments = useCallback(async () => {
@@ -386,6 +390,22 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
         } catch {
             setPaperBids([])
         }
+        // Fetch review statuses for assigned reviewers on this paper
+        try {
+            const paperAssignments = (currentData?.assignments || []).filter(a => a.paperId === paperId)
+            const statusMap: Record<number, { status: ReviewStatus; reviewId: number }> = {}
+            await Promise.all(
+                paperAssignments
+                    .filter(a => a.reviewId)
+                    .map(async (a) => {
+                        try {
+                            const review = await getReviewById(a.reviewId!)
+                            statusMap[a.reviewerId] = { status: review.status, reviewId: review.id }
+                        } catch { /* ignore */ }
+                    })
+            )
+            setReviewStatusMap(statusMap)
+        } catch { /* ignore */ }
     }
 
     if (loading) {
@@ -752,9 +772,27 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                         </td>
                                                         <td className="px-4 py-3 text-center">
                                                             {isAssigned ? (
-                                                                <Badge className="text-xs bg-emerald-100 text-emerald-700 border-emerald-300 hover:bg-emerald-100">
-                                                                    Assigned
-                                                                </Badge>
+                                                                (() => {
+                                                                    const reviewInfo = reviewStatusMap[reviewer.id]
+                                                                    const status = reviewInfo?.status || 'ASSIGNED'
+                                                                    const statusLabels: Record<string, string> = {
+                                                                        ASSIGNED: 'Assigned',
+                                                                        IN_PROGRESS: 'In Progress',
+                                                                        COMPLETED: 'Reviewed',
+                                                                        DECLINED: 'Declined',
+                                                                    }
+                                                                    const statusColors: Record<string, string> = {
+                                                                        ASSIGNED: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+                                                                        IN_PROGRESS: 'bg-amber-100 text-amber-700 border-amber-300',
+                                                                        COMPLETED: 'bg-blue-100 text-blue-700 border-blue-300',
+                                                                        DECLINED: 'bg-red-100 text-red-700 border-red-300',
+                                                                    }
+                                                                    return (
+                                                                        <Badge className={`text-xs ${statusColors[status] || 'bg-gray-100 text-gray-700'} hover:${statusColors[status]?.split(' ')[0]}`}>
+                                                                            {statusLabels[status] || status}
+                                                                        </Badge>
+                                                                    )
+                                                                })()
                                                             ) : isConflict ? (
                                                                 <Badge variant="outline" className="text-xs text-red-600 border-red-300">
                                                                     Blocked
@@ -764,16 +802,30 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                             )}
                                                         </td>
                                                         <td className="px-4 py-3 text-center">
+                                                            <div className="flex items-center justify-center gap-1">
                                                             {isAssigned ? (
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
-                                                                    onClick={() => handleRemoveAssignment(assignmentForPaper?.reviewId)}
-                                                                    title="Remove assignment"
-                                                                >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
+                                                                <>
+                                                                    {reviewStatusMap[reviewer.id] && (
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            className="h-8 w-8 p-0 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                                                                            onClick={() => setViewingReviewId(reviewStatusMap[reviewer.id].reviewId)}
+                                                                            title="View review details"
+                                                                        >
+                                                                            <Eye className="h-4 w-4" />
+                                                                        </Button>
+                                                                    )}
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
+                                                                        onClick={() => handleRemoveAssignment(assignmentForPaper?.reviewId)}
+                                                                        title="Remove assignment"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                </>
                                                             ) : isConflict ? (
                                                                 <Button
                                                                     variant="ghost"
@@ -800,6 +852,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                     )}
                                                                 </Button>
                                                             )}
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 )
@@ -986,6 +1039,12 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                     </CardContent>
                 </Card>
             )}
+            {/* Review Detail Dialog for Chair */}
+            <ReviewDetailDialog
+                reviewId={viewingReviewId}
+                open={viewingReviewId !== null}
+                onClose={() => setViewingReviewId(null)}
+            />
         </div>
     )
 }

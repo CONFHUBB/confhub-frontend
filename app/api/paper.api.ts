@@ -97,6 +97,14 @@ export const getPaperFiles = async (): Promise<PaperFileResponse[]> => {
     return response.data.content || []
 }
 
+export const getPaperFilesByPaperId = async (paperId: number): Promise<PaperFileResponse[]> => {
+    const response = await http.get<any>(`/paper-file/paper/${paperId}`)
+    const data = response.data
+    if (Array.isArray(data)) return data
+    if (data?.content && Array.isArray(data.content)) return data.content
+    return []
+}
+
 export const updatePaperFile = async (conferenceId: number, paperId: number, file: File): Promise<any> => {
     const formData = new FormData()
     formData.append('file', file)

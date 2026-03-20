@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { assignAuthorToPaper, getAuthorsByPaper, deleteAuthorFromPaper, getPaperById, getPaperFiles, updatePaper, updatePaperFile, withdrawPaper, restorePaper } from '@/app/api/paper.api'
+import { assignAuthorToPaper, getAuthorsByPaper, deleteAuthorFromPaper, getPaperById, getPaperFilesByPaperId, updatePaper, updatePaperFile, withdrawPaper, restorePaper } from '@/app/api/paper.api'
 import type { PaperAuthorItem } from '@/app/api/paper.api'
 import { getUsers } from '@/app/api/user.api'
 import { getSubjectAreasByTrack } from '@/app/api/track.api'
@@ -24,7 +24,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2, ArrowLeft, Upload, FileUp, FileText, Trash2, Save, ExternalLink, UserPlus, Layers, X, AlertTriangle, RotateCcw } from 'lucide-react'
+import { Loader2, ArrowLeft, Upload, FileUp, FileText, Trash2, Save, ExternalLink, UserPlus, Layers, X, AlertTriangle, RotateCcw, Eye, EyeOff } from 'lucide-react'
 import { Select as AntdSelect } from 'antd'
 import toast from 'react-hot-toast'
 
@@ -34,7 +34,7 @@ export default function EditPaperPage() {
     const paperId = Number(params.paperId)
 
     const [paper, setPaper] = useState<PaperResponse | null>(null)
-    const [currentFile, setCurrentFile] = useState<PaperFileResponse | null>(null)
+    const [paperFiles, setPaperFiles] = useState<PaperFileResponse[]>([])
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [uploading, setUploading] = useState(false)
@@ -45,7 +45,7 @@ export default function EditPaperPage() {
     const [openAddAuthorDialog, setOpenAddAuthorDialog] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [withdrawing, setWithdrawing] = useState(false)
-    const [showPdfViewer, setShowPdfViewer] = useState(false)
+    const [previewFileId, setPreviewFileId] = useState<number | null>(null)
 
     const [subjectAreas, setSubjectAreas] = useState<SubjectAreaResponse[]>([])
     const [primarySubjectAreaId, setPrimarySubjectAreaId] = useState<string>('')
@@ -108,13 +108,10 @@ export default function EditPaperPage() {
                     }
                 }
 
-                // Load existing paper file
+                // Load existing paper files
                 try {
-                    const files = await getPaperFiles()
-                    const matchingFile = files.find(f => f.paper.id === paperId && f.isActive)
-                    if (matchingFile) {
-                        setCurrentFile(matchingFile)
-                    }
+                    const rawFiles = await getPaperFilesByPaperId(paperId)
+                    setPaperFiles(Array.isArray(rawFiles) ? rawFiles : [])
                 } catch (err) {
                     console.error('Could not fetch paper files', err)
                 }
@@ -191,7 +188,7 @@ export default function EditPaperPage() {
         }
         try {
             setUploading(true)
-            const conferenceId = paper?.track?.conference?.id
+            const conferenceId = paper?.conferenceId ?? paper?.track?.conference?.id
             if (!conferenceId) {
                 toast.error('Conference information not available')
                 return
@@ -200,13 +197,10 @@ export default function EditPaperPage() {
             toast.success('Manuscript file uploaded successfully!')
             setSelectedFile(null)
 
-            // Refresh the current file
+            // Refresh file list
             try {
-                const files = await getPaperFiles()
-                const matchingFile = files.find(f => f.paper.id === paperId && f.isActive)
-                if (matchingFile) {
-                    setCurrentFile(matchingFile)
-                }
+                const rawFiles = await getPaperFilesByPaperId(paperId)
+                setPaperFiles(Array.isArray(rawFiles) ? rawFiles : [])
             } catch (err) {
                 console.error(err)
             }
@@ -575,53 +569,101 @@ export default function EditPaperPage() {
                         <CardTitle>Manuscript File</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        {currentFile && (
+                        {/* All Paper Files Table */}
+                        {paperFiles.length > 0 && (
                             <div className="space-y-3">
-                                <Label>Current Manuscript</Label>
-                                <div className="p-4 rounded-lg border bg-muted/20 flex items-center justify-between gap-3">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <FileText className="h-5 w-5 text-indigo-500 shrink-0" />
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="font-medium text-sm">Uploaded Manuscript Document</span>
-                                            <a
-                                                href={currentFile.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-2 text-primary text-sm hover:underline truncate"
-                                            >
-                                                <ExternalLink className="h-4 w-4 shrink-0" />
-                                                <span className="truncate">{currentFile.url.split('/').pop() || 'View Previous File'}</span>
-                                            </a>
-                                        </div>
-                                    </div>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="gap-2 shrink-0"
-                                        onClick={() => setShowPdfViewer(!showPdfViewer)}
-                                    >
-                                        <FileText className="h-4 w-4" />
-                                        {showPdfViewer ? 'Hide Viewer' : 'View Manuscript'}
-                                    </Button>
+                                <Label>Submitted Files ({paperFiles.length})</Label>
+                                <div className="border rounded-lg overflow-hidden">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-muted/50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left font-medium text-muted-foreground">#</th>
+                                                <th className="px-4 py-3 text-left font-medium text-muted-foreground">File</th>
+                                                <th className="px-4 py-3 text-center font-medium text-muted-foreground">Status</th>
+                                                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y">
+                                            {paperFiles.map((pf, idx) => (
+                                                <tr key={pf.id} className="hover:bg-muted/30 transition-colors">
+                                                    <td className="px-4 py-3 text-muted-foreground">{idx + 1}</td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            <FileText className="h-4 w-4 text-indigo-500 shrink-0" />
+                                                            <a
+                                                                href={pf.url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-primary hover:underline truncate max-w-[300px] inline-block"
+                                                            >
+                                                                {decodeURIComponent(pf.url.split('/').pop() || 'paper-file')}
+                                                            </a>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        {pf.isActive ? (
+                                                            <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-0">Active</Badge>
+                                                        ) : (
+                                                            <Badge variant="secondary" className="text-muted-foreground">Previous</Badge>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="gap-1.5 text-xs"
+                                                                onClick={() => setPreviewFileId(previewFileId === pf.id ? null : pf.id)}
+                                                            >
+                                                                {previewFileId === pf.id ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                                                {previewFileId === pf.id ? 'Hide' : 'Preview'}
+                                                            </Button>
+                                                            <a href={pf.url} target="_blank" rel="noopener noreferrer">
+                                                                <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
+                                                                    <ExternalLink className="h-3.5 w-3.5" />
+                                                                    Open
+                                                                </Button>
+                                                            </a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
-                                {showPdfViewer && (
-                                    <div className="rounded-lg border overflow-hidden bg-gray-100">
-                                        <iframe
-                                            src={currentFile.url}
-                                            className="w-full border-0"
-                                            style={{ height: '600px' }}
-                                            title="Manuscript PDF Viewer"
-                                        />
-                                    </div>
-                                )}
+
+                                {/* PDF Preview for selected file */}
+                                {previewFileId && (() => {
+                                    const pf = paperFiles.find(f => f.id === previewFileId)
+                                    if (!pf) return null
+                                    return (
+                                        <div className="rounded-lg border overflow-hidden bg-gray-100 dark:bg-gray-900">
+                                            <div className="px-4 py-2 bg-muted/50 flex items-center justify-between">
+                                                <span className="text-xs text-muted-foreground font-medium">Preview: {decodeURIComponent(pf.url.split('/').pop() || 'file')}</span>
+                                                <Button variant="ghost" size="sm" onClick={() => setPreviewFileId(null)} className="h-6 w-6 p-0">
+                                                    <X className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                            <iframe
+                                                src={pf.url}
+                                                className="w-full border-0"
+                                                style={{ height: '600px' }}
+                                                title="Manuscript PDF Viewer"
+                                            />
+                                        </div>
+                                    )
+                                })()}
                             </div>
                         )}
 
-                        <div className="space-y-4">
-                            <Label>Upload New Manuscript</Label>
-                            <div className="p-4 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 text-sm text-blue-800 dark:text-blue-300">
-                                <p>Upload a new PDF to replace the current manuscript for this paper.</p>
+                        {paperFiles.length === 0 && (
+                            <div className="text-center py-6 text-muted-foreground text-sm">
+                                No manuscript files have been uploaded yet.
                             </div>
+                        )}
+
+                        <div className="space-y-4 border-t pt-6">
+                            <Label>Upload New Manuscript</Label>
                             <div className="flex gap-3 items-center">
                                 <div className="flex-1">
                                     <label
@@ -630,7 +672,7 @@ export default function EditPaperPage() {
                                     >
                                         <FileUp className="h-5 w-5 text-muted-foreground" />
                                         <span className="text-sm text-muted-foreground">
-                                            {selectedFile ? selectedFile.name : 'Choose a new PDF file...'}
+                                            {selectedFile ? selectedFile.name : 'Choose a PDF file...'}
                                         </span>
                                     </label>
                                     <input

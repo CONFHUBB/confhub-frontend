@@ -3,15 +3,16 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { getPapersForBidding, submitBid, getBidsSummary } from '@/app/api/bidding.api'
+import { getPapersForBidding, submitBid, getBidsSummary, deleteBid, getBidsByReviewerAndConference } from '@/app/api/bidding.api'
 import { getInterestsByReviewer } from '@/app/api/reviewer-interest.api'
 import { getConferenceActivities } from '@/app/api/conference.api'
+import { getTracksByConference, getTrackReviewSettings } from '@/app/api/track.api'
 import type { PaperForBidding, BidValue, BidsSummary } from '@/types/bidding'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Loader2, ArrowLeft, Search, Zap, ThumbsUp, Minus, ThumbsDown, ChevronDown, ChevronUp, AlertTriangle, Target, Tag } from 'lucide-react'
+import { Loader2, ArrowLeft, Search, Zap, ThumbsUp, Minus, ThumbsDown, ChevronDown, ChevronUp, AlertTriangle, Target, Tag, Pencil, XCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const BID_OPTIONS: { value: BidValue; label: string; shortLabel: string; color: string; activeColor: string; icon: React.ReactNode }[] = [
@@ -40,6 +41,8 @@ export default function BiddingPage() {
     const [filterBid, setFilterBid] = useState<FilterBid>('all')
     const [filterTrack, setFilterTrack] = useState<string>('all')
     const [expandedPaper, setExpandedPaper] = useState<number | null>(null)
+    const [editingBidPaperId, setEditingBidPaperId] = useState<number | null>(null)
+    const [bidIdMap, setBidIdMap] = useState<Record<number, number>>({})
     const [reviewerId, setReviewerId] = useState<number | null>(null)
     const [activityClosed, setActivityClosed] = useState<string | null>(null) // null = open, string = reason
 
@@ -78,20 +81,49 @@ export default function BiddingPage() {
                 }
             } catch { /* ignore activity check errors */ }
 
-            // First check if reviewer has subject areas
-            const interests = await getInterestsByReviewer(reviewerId).catch(() => [])
-            if (!interests || interests.length === 0) {
-                setNeedsSubjectAreas(true)
-                setLoading(false)
-                return
+            // Check if any track requires subject areas before bidding
+            let requiresExpertise = true // default: require (fail-safe)
+            try {
+                const tracks = await getTracksByConference(conferenceId)
+                // First try inline trackReviewSetting from tracks response
+                const inlineSettings = tracks.map(t => t.trackReviewSetting).filter(Boolean)
+                if (inlineSettings.length > 0) {
+                    requiresExpertise = inlineSettings.some(s => s!.requireSubjectAreas === true)
+                } else {
+                    // Fallback: fetch settings individually
+                    const settingsResults = await Promise.all(
+                        tracks.map(t => getTrackReviewSettings(t.id).catch(() => null))
+                    )
+                    const validSettings = settingsResults.filter(Boolean)
+                    if (validSettings.length > 0) {
+                        requiresExpertise = validSettings.some(s => s!.requireSubjectAreas === true)
+                    }
+                }
+            } catch { /* keep default requiresExpertise = true */ }
+
+            // Check if reviewer has subject areas (only block if required)
+            if (requiresExpertise) {
+                const interests = await getInterestsByReviewer(reviewerId).catch(() => [])
+                if (!interests || interests.length === 0) {
+                    setNeedsSubjectAreas(true)
+                    setLoading(false)
+                    return
+                }
             }
 
-            const [papersData, summaryData] = await Promise.all([
+            const [papersData, summaryData, bidsData] = await Promise.all([
                 getPapersForBidding(reviewerId, conferenceId),
                 getBidsSummary(reviewerId, conferenceId).catch(() => null),
+                getBidsByReviewerAndConference(reviewerId, conferenceId).catch(() => []),
             ])
             setPapers(papersData)
             setSummary(summaryData)
+            // Build bidId map: paperId -> bidId
+            const idMap: Record<number, number> = {}
+            if (Array.isArray(bidsData)) {
+                bidsData.forEach(b => { idMap[b.paperId] = b.id })
+            }
+            setBidIdMap(idMap)
         } catch (err: any) {
             const msg = err?.response?.data?.message || ''
             if (msg.includes('Subject Areas') || msg.includes('subject areas')) {
@@ -113,15 +145,48 @@ export default function BiddingPage() {
         if (!reviewerId) return
         setSubmitting(paperId)
         try {
-            await submitBid({ paperId, reviewerId, bidValue })
+            const result = await submitBid({ paperId, reviewerId, bidValue })
             setPapers(prev => prev.map(p =>
-                p.paperId === paperId ? { ...p, currentBid: p.currentBid === bidValue ? null : bidValue } : p
+                p.paperId === paperId ? { ...p, currentBid: bidValue } : p
             ))
+            // Update bidId map
+            setBidIdMap(prev => ({ ...prev, [paperId]: result.id }))
+            setEditingBidPaperId(null)
             const newSummary = await getBidsSummary(reviewerId, conferenceId).catch(() => null)
             if (newSummary) setSummary(newSummary)
+            toast.success('Bid submitted')
         } catch (err: any) {
             const msg = err?.response?.data?.message || 'Failed to submit bid'
             toast.error(msg)
+        } finally {
+            setSubmitting(null)
+        }
+    }
+
+    const handleCancelBid = async (paperId: number) => {
+        if (!reviewerId) return
+        const bidId = bidIdMap[paperId]
+        if (!bidId) {
+            toast.error('Bid not found')
+            return
+        }
+        setSubmitting(paperId)
+        try {
+            await deleteBid(bidId)
+            setPapers(prev => prev.map(p =>
+                p.paperId === paperId ? { ...p, currentBid: null } : p
+            ))
+            setBidIdMap(prev => {
+                const updated = { ...prev }
+                delete updated[paperId]
+                return updated
+            })
+            setEditingBidPaperId(null)
+            const newSummary = await getBidsSummary(reviewerId, conferenceId).catch(() => null)
+            if (newSummary) setSummary(newSummary)
+            toast.success('Bid cancelled')
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Failed to cancel bid')
         } finally {
             setSubmitting(null)
         }
@@ -408,26 +473,76 @@ export default function BiddingPage() {
                                         )}
 
                                         {/* Bid buttons */}
-                                        <div className="flex flex-wrap gap-2">
-                                            {BID_OPTIONS.map(opt => {
-                                                const isActive = paper.currentBid === opt.value
-                                                const isLoading = submitting === paper.paperId
-                                                return (
-                                                    <button
-                                                        key={opt.value}
-                                                        type="button"
-                                                        disabled={isLoading}
-                                                        onClick={() => handleBid(paper.paperId, opt.value)}
-                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${isActive ? opt.activeColor : opt.color
-                                                            } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                        {paper.currentBid && editingBidPaperId !== paper.paperId ? (
+                                            /* View mode: show current bid + Edit/Cancel */
+                                            <div className="flex items-center gap-2">
+                                                {(() => {
+                                                    const opt = BID_OPTIONS.find(o => o.value === paper.currentBid)
+                                                    if (!opt) return null
+                                                    return (
+                                                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border ${opt.activeColor}`}>
+                                                            {opt.icon}
+                                                            <span>{opt.label}</span>
+                                                        </div>
+                                                    )
+                                                })()}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="gap-1.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                    onClick={() => setEditingBidPaperId(paper.paperId)}
+                                                >
+                                                    <Pencil className="h-3.5 w-3.5" />
+                                                    Edit Bid
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="gap-1.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                    disabled={submitting === paper.paperId}
+                                                    onClick={() => handleCancelBid(paper.paperId)}
+                                                >
+                                                    {submitting === paper.paperId ? (
+                                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                    ) : (
+                                                        <XCircle className="h-3.5 w-3.5" />
+                                                    )}
+                                                    Cancel Bid
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            /* Edit mode: show bid options */
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                {BID_OPTIONS.map(opt => {
+                                                    const isActive = paper.currentBid === opt.value
+                                                    const isLoading = submitting === paper.paperId
+                                                    return (
+                                                        <button
+                                                            key={opt.value}
+                                                            type="button"
+                                                            disabled={isLoading}
+                                                            onClick={() => handleBid(paper.paperId, opt.value)}
+                                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${isActive ? opt.activeColor : opt.color
+                                                                } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                                        >
+                                                            {opt.icon}
+                                                            <span className="hidden sm:inline">{opt.label}</span>
+                                                            <span className="sm:hidden">{opt.shortLabel}</span>
+                                                        </button>
+                                                    )
+                                                })}
+                                                {editingBidPaperId === paper.paperId && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-xs text-gray-500"
+                                                        onClick={() => setEditingBidPaperId(null)}
                                                     >
-                                                        {opt.icon}
-                                                        <span className="hidden sm:inline">{opt.label}</span>
-                                                        <span className="sm:hidden">{opt.shortLabel}</span>
-                                                    </button>
-                                                )
-                                            })}
-                                        </div>
+                                                        Cancel
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </CardContent>
                             </Card>

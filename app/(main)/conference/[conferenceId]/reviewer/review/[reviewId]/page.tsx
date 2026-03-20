@@ -3,13 +3,15 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { getReviewById, updateReview, getAnswersByReview, submitAnswer, getReviewQuestionsByTrack } from '@/app/api/review.api'
+import { getPaperFilesByPaperId } from '@/app/api/paper.api'
 import { getConferenceActivities } from '@/app/api/conference.api'
 import type { ReviewResponse, ReviewAnswerResponse, ReviewAnswerRequest } from '@/types/review'
+import type { PaperFileResponse } from '@/types/paper'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2, ArrowLeft, FileText, Check, X, AlertTriangle, Save } from 'lucide-react'
+import { Loader2, ArrowLeft, FileText, Check, X, AlertTriangle, Save, Eye, ExternalLink, FileDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface ReviewQuestion {
@@ -45,6 +47,8 @@ export default function ReviewPaperPage() {
     const [savingQuestion, setSavingQuestion] = useState<number | null>(null)
     const [submitting, setSubmitting] = useState(false)
     const [activityClosed, setActivityClosed] = useState<string | null>(null)
+    const [paperFiles, setPaperFiles] = useState<PaperFileResponse[]>([])
+    const [showPdfPreview, setShowPdfPreview] = useState(true)
 
     const fetchData = useCallback(async () => {
         try {
@@ -90,6 +94,16 @@ export default function ReviewPaperPage() {
                 })
             })
             setAnswers(answersMap)
+
+            // Fetch paper files
+            if (reviewData.paper?.id) {
+                try {
+                    const files = await getPaperFilesByPaperId(reviewData.paper.id)
+                    if (Array.isArray(files)) {
+                        setPaperFiles(files)
+                    }
+                } catch { /* ignore */ }
+            }
         } catch (err) {
             console.error('Failed to load review:', err)
             toast.error('Failed to load review information')
@@ -318,6 +332,52 @@ export default function ReviewPaperPage() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Manuscript Files */}
+            {paperFiles.length > 0 && (() => {
+                const activeFile = paperFiles.find(f => f.isActive) || paperFiles[0]
+                return (
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <FileDown className="h-5 w-5 text-blue-500" />
+                                    <CardTitle className="text-base">Manuscript File</CardTitle>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-1.5 text-xs"
+                                        onClick={() => setShowPdfPreview(!showPdfPreview)}
+                                    >
+                                        <Eye className="h-3.5 w-3.5" />
+                                        {showPdfPreview ? 'Hide Preview' : 'Show Preview'}
+                                    </Button>
+                                    <a href={activeFile.url} target="_blank" rel="noopener noreferrer">
+                                        <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                                            <ExternalLink className="h-3.5 w-3.5" />
+                                            Open in New Tab
+                                        </Button>
+                                    </a>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            {showPdfPreview && (
+                                <div className="rounded-lg border overflow-hidden bg-gray-50">
+                                    <iframe
+                                        src={activeFile.url}
+                                        className="w-full border-0"
+                                        style={{ height: '700px' }}
+                                        title="Manuscript PDF"
+                                    />
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )
+            })()}
 
             {/* Review Questions */}
             {questions.length === 0 ? (

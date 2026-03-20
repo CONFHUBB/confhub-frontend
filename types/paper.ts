@@ -10,6 +10,7 @@ export type PaperStatus =
 
 export interface PaperResponse {
     id: number
+    conferenceId: number
     trackId: number
     trackName: string
     track: {
@@ -59,9 +60,7 @@ export interface CreatePaperRequest {
 
 export interface PaperFileResponse {
     id: number
+    paperId: number
     url: string
     isActive: boolean
-    paper: {
-        id: number
-    }
 }

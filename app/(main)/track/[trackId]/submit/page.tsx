@@ -244,6 +244,28 @@ function StepUploadManuscript({
     const router = useRouter()
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [uploading, setUploading] = useState(false)
+    const [uploaded, setUploaded] = useState(false)
+    const [showPreview, setShowPreview] = useState(false)
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+    // Generate local preview URL when file is selected
+    const handleFileSelect = (file: File) => {
+        setSelectedFile(file)
+        setUploaded(false)
+        // Revoke old URL to avoid memory leak
+        if (previewUrl) URL.revokeObjectURL(previewUrl)
+        const url = URL.createObjectURL(file)
+        setPreviewUrl(url)
+        setShowPreview(true)
+    }
+
+    const handleClearFile = () => {
+        setSelectedFile(null)
+        setUploaded(false)
+        setShowPreview(false)
+        if (previewUrl) URL.revokeObjectURL(previewUrl)
+        setPreviewUrl(null)
+    }
 
     const handleUpload = async () => {
         if (!selectedFile) {
@@ -254,7 +276,7 @@ function StepUploadManuscript({
             setUploading(true)
             await uploadPaperFile(conferenceId, paperId, selectedFile)
             toast.success('Manuscript uploaded successfully!')
-            router.push(`/track?conferenceId=${conferenceId}`)
+            setUploaded(true)
         } catch (err: any) {
             toast.error(err.response?.data?.message || 'Failed to upload manuscript')
             console.error('Error uploading:', err)
@@ -285,6 +307,16 @@ function StepUploadManuscript({
                 </p>
             </div>
 
+            {/* Upload success banner */}
+            {uploaded && (
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+                    <Check className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                        Manuscript uploaded successfully! You can preview it below or go back to the tracks page.
+                    </p>
+                </div>
+            )}
+
             {/* Upload Card */}
             <Card>
                 <CardContent className="pt-6 space-y-4">
@@ -312,7 +344,7 @@ function StepUploadManuscript({
                                             toast.error('Please select a PDF file')
                                             return
                                         }
-                                        setSelectedFile(file)
+                                        handleFileSelect(file)
                                     }
                                 }}
                             />
@@ -326,20 +358,59 @@ function StepUploadManuscript({
                                 <span className="font-medium">{selectedFile.name}</span>
                                 <span className="text-muted-foreground">({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
                             </div>
-                            <Button variant="ghost" size="sm" onClick={() => setSelectedFile(null)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setShowPreview(!showPreview)}
+                                    className="text-xs gap-1.5"
+                                >
+                                    <FileText className="h-3.5 w-3.5" />
+                                    {showPreview ? 'Hide Preview' : 'Preview'}
+                                </Button>
+                                {!uploaded && (
+                                    <Button variant="ghost" size="sm" onClick={handleClearFile}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PDF Preview */}
+                    {showPreview && previewUrl && (
+                        <div className="rounded-lg border overflow-hidden bg-gray-100 dark:bg-gray-900">
+                            <iframe
+                                src={previewUrl}
+                                className="w-full border-0"
+                                style={{ height: '600px' }}
+                                title="Manuscript PDF Preview"
+                            />
                         </div>
                     )}
 
                     <div className="flex gap-3 pt-2">
-                        <Button onClick={handleUpload} disabled={uploading || !selectedFile} className="gap-2">
-                            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                            {uploading ? 'Uploading...' : 'Upload PDF'}
-                        </Button>
-                        <Button variant="outline" onClick={() => router.push(`/track?conferenceId=${conferenceId}`)}>
-                            Skip for now
-                        </Button>
+                        {!uploaded ? (
+                            <>
+                                <Button onClick={handleUpload} disabled={uploading || !selectedFile} className="gap-2">
+                                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                                    {uploading ? 'Uploading...' : 'Upload PDF'}
+                                </Button>
+                                <Button variant="outline" onClick={() => router.push(`/track?conferenceId=${conferenceId}`)}>
+                                    Skip for now
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <Button onClick={() => router.push(`/track?conferenceId=${conferenceId}`)} className="gap-2">
+                                    <Check className="h-4 w-4" />
+                                    Done — Go to Tracks
+                                </Button>
+                                <Button variant="outline" onClick={() => { handleClearFile(); setUploaded(false) }}>
+                                    Upload a Different File
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </CardContent>
             </Card>

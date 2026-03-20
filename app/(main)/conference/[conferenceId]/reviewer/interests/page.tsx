@@ -67,7 +67,10 @@ export default function ReviewerInterestsPage() {
 
             // Fetch saved interests by reviewerId
             const myInterests = await getInterestsByReviewer(reviewerId).catch(() => [])
-            setSelections(myInterests.map(i => ({
+            // Filter to only interests matching this conference's subject areas
+            const conferenceAreaIds = new Set(uniqueAreas.map(a => a.id))
+            const relevantInterests = myInterests.filter(i => conferenceAreaIds.has(i.subjectAreaId))
+            setSelections(relevantInterests.map(i => ({
                 subjectAreaId: i.subjectAreaId,
                 expertise: i.expertise,
                 savedId: i.id,
