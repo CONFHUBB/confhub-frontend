@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { ExcelImport } from "@/components/excel-import"
 import { downloadConferenceTemplate, previewConferenceImport, importConference, type ImportResult } from "@/app/api/conference.api"
 
-const CONFERENCE_PREVIEW_HEADERS = ["name", "acronym", "location", "startDate", "endDate", "websiteUrl", "country", "bannerImageUrl", "conferenceIdNumber", "societySponsor"]
+const CONFERENCE_PREVIEW_HEADERS = ["name", "acronym", "location", "startDate", "endDate", "websiteUrl", "country", "bannerImageUrl", "societySponsor"]
 
 export function ConferenceImport() {
     const router = useRouter()

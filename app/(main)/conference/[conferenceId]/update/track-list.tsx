@@ -61,10 +61,7 @@ export function TrackList({ conferenceId, refreshKey }: TrackListProps) {
                                     <p className="text-xs text-muted-foreground truncate max-w-md">{track.description}</p>
                                 )}
                             </div>
-                        </div>
-                        <span className="text-xs text-muted-foreground shrink-0 ml-4">
-                            Max: <span className="font-semibold">{track.maxSubmissions}</span>
-                        </span>
+                    </div>
                     </div>
                 ))}
             </div>

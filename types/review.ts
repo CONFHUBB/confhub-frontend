@@ -1,7 +1,7 @@
 // ── Review Types ──
 
 export type ReviewStatus = "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "DECLINED"
-export type Expertise = "EXPERT" | "KNOWLEDGEABLE" | "INTERESTED"
+
 
 // ── Review ──
 
@@ -59,14 +59,14 @@ export interface ReviewAnswerResponse {
 export interface ReviewerInterestRequest {
     reviewerId: number
     subjectAreaId: number
-    expertise: Expertise
+    isPrimary: boolean
 }
 
 export interface ReviewerInterestResponse {
     id: number
     reviewerId: number
     subjectAreaId: number
-    expertise: Expertise
+    isPrimary: boolean
 }
 
 // ── Assignment ──

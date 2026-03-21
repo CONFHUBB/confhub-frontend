@@ -179,7 +179,6 @@ export default function ConferenceUpdatePage() {
                 name: data.name,
                 description: data.description,
                 conferenceId,
-                maxSubmissions: Number(data.maxSubmissions),
             })
             toast.success("Track saved successfully!")
             setTrackRefreshKey((k) => k + 1)
@@ -298,7 +297,7 @@ export default function ConferenceUpdatePage() {
                     societySponsor: (conference as any).societySponsor
                         ? (conference as any).societySponsor.split(",").map((s: string) => s.trim())
                         : [],
-                    conferenceIdNumber: (conference as any).conferenceIdNumber || "",
+
                     country: (conference as any).country || "",
                     province: (conference as any).province || "",
                     bannerImageUrl: (conference as any).bannerImageUrl || "",
@@ -312,6 +311,7 @@ export default function ConferenceUpdatePage() {
                             initialData={safeDefaults}
                             onSubmit={handleUpdateConference}
                             isSubmitting={isUpdatingGeneral}
+                            conferenceId={conferenceId}
                         />
                     </div>
                 )

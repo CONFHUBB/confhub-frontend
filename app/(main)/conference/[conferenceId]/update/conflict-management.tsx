@@ -4,10 +4,13 @@ import { useEffect, useState } from "react"
 import { getConflictsByConference, createPaperConflict, deletePaperConflict } from "@/app/api/conflict.api"
 import { getPapersByConference } from "@/app/api/paper.api"
 import { getConferenceUsersWithRoles } from "@/app/api/conference-user-track.api"
+import { getTracksByConference, getTrackReviewSettings, updateTrackReviewSettings } from "@/app/api/track.api"
 import type { PaperConflictResponse, ConflictType } from "@/types/conflict"
 import { CONFLICT_TYPE_LABELS } from "@/types/conflict"
+import type { TrackResponse } from "@/types/track"
 import { Button } from "@/components/ui/button"
-import { Loader2, Plus, Trash2, AlertTriangle, Shield } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { Loader2, Plus, Trash2, AlertTriangle, Shield, Lock, Globe, UserX, Settings2 } from "lucide-react"
 import { Select } from "antd"
 import toast from "react-hot-toast"
 
@@ -26,6 +29,12 @@ interface UserOption {
     email: string
 }
 
+interface ConflictSettings {
+    enableDomainConflict: boolean
+    enableAuthorSelfConflict: boolean
+    allowAuthorConfigureConflict: boolean
+}
+
 export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
     const [conflicts, setConflicts] = useState<PaperConflictResponse[]>([])
     const [papers, setPapers] = useState<PaperOption[]>([])
@@ -33,6 +42,16 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
     const [loading, setLoading] = useState(true)
     const [isAdding, setIsAdding] = useState(false)
     const [showAddForm, setShowAddForm] = useState(false)
+    const [savingSettings, setSavingSettings] = useState(false)
+
+    // Track + settings state
+    const [tracks, setTracks] = useState<TrackResponse[]>([])
+    const [selectedTrackId, setSelectedTrackId] = useState<number | null>(null)
+    const [settings, setSettings] = useState<ConflictSettings>({
+        enableDomainConflict: true,
+        enableAuthorSelfConflict: true,
+        allowAuthorConfigureConflict: false,
+    })
 
     // Form state
     const [selectedPaperId, setSelectedPaperId] = useState<number | null>(null)
@@ -42,15 +61,33 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
     const fetchAll = async () => {
         try {
             setLoading(true)
-            const [conflictsData, papersData, usersData] = await Promise.all([
+            const [conflictsData, papersData, usersData, tracksData] = await Promise.all([
                 getConflictsByConference(conferenceId),
                 getPapersByConference(conferenceId),
                 getConferenceUsersWithRoles(conferenceId, 0, 100),
+                getTracksByConference(conferenceId),
             ])
             setConflicts(conflictsData)
             setPapers(papersData.map((p: any) => ({ id: p.id, title: p.title })))
+            setTracks(tracksData)
 
-            // Extract unique users from conference user tracks
+            // Load settings from first track
+            if (tracksData.length > 0) {
+                const firstTrackId = tracksData[0].id
+                setSelectedTrackId(firstTrackId)
+                try {
+                    const trackSettings = await getTrackReviewSettings(firstTrackId)
+                    setSettings({
+                        enableDomainConflict: trackSettings.enableDomainConflict ?? true,
+                        enableAuthorSelfConflict: trackSettings.enableAuthorSelfConflict ?? true,
+                        allowAuthorConfigureConflict: trackSettings.allowAuthorConfigureConflict ?? false,
+                    })
+                } catch {
+                    // Use defaults if settings don't exist yet
+                }
+            }
+
+            // Extract unique users
             const userMap = new Map<number, UserOption>()
             const usersContent = usersData.content || usersData
             if (Array.isArray(usersContent)) {
@@ -78,13 +115,44 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
         fetchAll()
     }, [conferenceId])
 
+    const handleTrackChange = async (trackId: number) => {
+        setSelectedTrackId(trackId)
+        try {
+            const trackSettings = await getTrackReviewSettings(trackId)
+            setSettings({
+                enableDomainConflict: trackSettings.enableDomainConflict ?? true,
+                enableAuthorSelfConflict: trackSettings.enableAuthorSelfConflict ?? true,
+                allowAuthorConfigureConflict: trackSettings.allowAuthorConfigureConflict ?? false,
+            })
+        } catch {
+            setSettings({
+                enableDomainConflict: true,
+                enableAuthorSelfConflict: true,
+                allowAuthorConfigureConflict: false,
+            })
+        }
+    }
+
+    const handleSaveSettings = async () => {
+        if (!selectedTrackId) return
+        setSavingSettings(true)
+        try {
+            await updateTrackReviewSettings(selectedTrackId, settings)
+            toast.success("Conflict settings saved!")
+        } catch (err) {
+            console.error("Failed to save settings:", err)
+            toast.error("Failed to save settings")
+        } finally {
+            setSavingSettings(false)
+        }
+    }
+
     const handleAdd = async () => {
         if (!selectedPaperId || !selectedUserId) {
             toast.error("Please select both a paper and a user")
             return
         }
 
-        // Check duplicate
         const exists = conflicts.some(
             (c) => c.paper?.id === selectedPaperId && c.user?.id === selectedUserId
         )
@@ -139,15 +207,107 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
 
     return (
         <div className="space-y-6">
+            {/* Conflict Settings */}
+            <div className="rounded-lg border p-6 space-y-5">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Settings2 className="h-5 w-5 text-violet-600" />
+                        <h3 className="text-lg font-bold">Conflict Detection Settings</h3>
+                    </div>
+                    {tracks.length > 1 && (
+                        <Select
+                            className="w-48"
+                            value={selectedTrackId ?? undefined}
+                            onChange={handleTrackChange}
+                            options={tracks.map((t) => ({ value: t.id, label: t.name }))}
+                        />
+                    )}
+                </div>
+
+                <div className="space-y-4">
+                    {/* Author Self-Review Block — always on, locked */}
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border">
+                        <div className="flex items-center gap-3">
+                            <UserX className="h-5 w-5 text-red-500" />
+                            <div>
+                                <p className="font-medium text-sm flex items-center gap-1.5">
+                                    Author Self-Review Block
+                                    <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Authors cannot review or bid on their own papers. This is always enforced.
+                                </p>
+                            </div>
+                        </div>
+                        <Switch
+                            checked={true}
+                            disabled={true}
+                            aria-label="Author self-review block (always on)"
+                        />
+                    </div>
+
+                    {/* Domain Conflict Detection — toggleable */}
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border">
+                        <div className="flex items-center gap-3">
+                            <Globe className="h-5 w-5 text-blue-500" />
+                            <div>
+                                <p className="font-medium text-sm">Domain Conflict Detection</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Auto-detect conflicts when reviewer and author share the same institutional email domain.
+                                    Turn off for internal conferences.
+                                </p>
+                            </div>
+                        </div>
+                        <Switch
+                            checked={settings.enableDomainConflict}
+                            onCheckedChange={(checked) =>
+                                setSettings((prev) => ({ ...prev, enableDomainConflict: checked }))
+                            }
+                            aria-label="Toggle domain conflict detection"
+                        />
+                    </div>
+
+                    {/* Allow Author Self-Config */}
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border">
+                        <div className="flex items-center gap-3">
+                            <Shield className="h-5 w-5 text-amber-500" />
+                            <div>
+                                <p className="font-medium text-sm">Allow Author to Declare Conflicts</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Let authors declare their own conflicts of interest with reviewers when submitting papers.
+                                </p>
+                            </div>
+                        </div>
+                        <Switch
+                            checked={settings.allowAuthorConfigureConflict}
+                            onCheckedChange={(checked) =>
+                                setSettings((prev) => ({ ...prev, allowAuthorConfigureConflict: checked }))
+                            }
+                            aria-label="Toggle author conflict declaration"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex justify-end">
+                    <Button onClick={handleSaveSettings} disabled={savingSettings} size="sm">
+                        {savingSettings ? (
+                            <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Saving...</>
+                        ) : (
+                            "Save Settings"
+                        )}
+                    </Button>
+                </div>
+            </div>
+
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-xl font-bold flex items-center gap-2">
                         <Shield className="h-5 w-5" />
-                        Conflict Management
+                        Manual Conflicts
                     </h2>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Manage conflicts of interest between papers and reviewers.
+                        Manually block specific reviewer–paper pairs. Select a conflict type for each entry.
                     </p>
                 </div>
                 <Button onClick={() => setShowAddForm(!showAddForm)} size="lg" className="text-base">
@@ -225,7 +385,7 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
             {conflicts.length === 0 ? (
                 <div className="text-center py-12 border rounded-lg bg-muted/5">
                     <AlertTriangle className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground text-lg">No conflicts configured yet.</p>
+                    <p className="text-muted-foreground text-lg">No manual conflicts configured yet.</p>
                     <p className="text-sm text-muted-foreground mt-1">
                         Add conflicts to prevent reviewers from being assigned to papers they have a conflict with.
                     </p>

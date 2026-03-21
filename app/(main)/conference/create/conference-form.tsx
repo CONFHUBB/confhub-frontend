@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import type { ConferenceData } from "@/types/conference-form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -16,17 +16,23 @@ import {
 import { CountrySelect } from "@/components/ui/country-select"
 import { Select } from "antd"
 import { AREA_OPTIONS, SOCIETY_SPONSOR_OPTIONS } from "@/lib/constants/conference-options"
+import { uploadBannerImage } from "@/app/api/conference.api"
+import toast from "react-hot-toast"
+import { Upload, Loader2 } from "lucide-react"
 
 interface ConferenceFormProps {
     initialData: ConferenceData | null
     onSubmit: (data: ConferenceData) => void
     isSubmitting?: boolean
     submitLabel?: string
+    conferenceId?: number
 }
 
-export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabel }: ConferenceFormProps) {
+export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabel, conferenceId }: ConferenceFormProps) {
     const isEditMode = !!initialData
     const [errors, setErrors] = useState<Record<string, string>>({})
+    const [isUploading, setIsUploading] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     const [formData, setFormData] = useState<ConferenceData>(
         initialData ?? {
@@ -39,7 +45,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
             websiteUrl: "",
             area: "",
             societySponsor: [],
-            conferenceIdNumber: "",
+
             country: "",
             province: "",
             bannerImageUrl: "",
@@ -111,7 +117,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
 
         if (formData.location.length > SHORT_MAX) newErrors.location = `Location must be ${SHORT_MAX} characters or less.`
         if (formData.province.length > SHORT_MAX) newErrors.province = `Province must be ${SHORT_MAX} characters or less.`
-        if (formData.conferenceIdNumber.length > SHORT_MAX) newErrors.conferenceIdNumber = `ID number must be ${SHORT_MAX} characters or less.`
+
         if (formData.contactInformation.length > SHORT_MAX) newErrors.contactInformation = `Contact info must be ${SHORT_MAX} characters or less.`
         if (formData.description.length > LONG_MAX) newErrors.description = `Description must be ${LONG_MAX} characters or less.`
         if (formData.chairEmails.length > LONG_MAX) newErrors.chairEmails = `Chair emails must be ${LONG_MAX} characters or less.`
@@ -212,20 +218,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
                                     )}
                                 </Field>
 
-                                {/* Conference ID Number */}
-                                <Field>
-                                    <FieldLabel htmlFor="conferenceIdNumber" className="text-base font-semibold">
-                                        Conference identification number
-                                    </FieldLabel>
-                                    <Input
-                                        id="conferenceIdNumber"
-                                        className="h-12 text-base"
-                                        placeholder="e.g. IEEE Conference Record # from IEEE EuA"
-                                        maxLength={SHORT_MAX}
-                                        value={formData.conferenceIdNumber}
-                                        onChange={handleChange}
-                                    />
-                                </Field>
+
 
                                 {/* Description */}
                                 <Field data-invalid={!!errors.description || undefined}>
@@ -337,15 +330,52 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
                                     <FieldLabel htmlFor="bannerImageUrl" className="text-base font-semibold">
                                         URL for conference banner image (JPEG, GIF, or PNG)
                                     </FieldLabel>
-                                    <Input
-                                        id="bannerImageUrl"
-                                        type="url"
-                                        className="h-12 text-base"
-                                        placeholder="https://example.com/banner.png"
-                                        maxLength={SHORT_MAX}
-                                        value={formData.bannerImageUrl}
-                                        onChange={handleChange}
-                                    />
+                                    <div className="flex gap-2">
+                                        <Input
+                                            id="bannerImageUrl"
+                                            type="url"
+                                            className="h-12 text-base flex-1"
+                                            placeholder="https://example.com/banner.png"
+                                            maxLength={SHORT_MAX}
+                                            value={formData.bannerImageUrl}
+                                            onChange={handleChange}
+                                        />
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/gif"
+                                            className="hidden"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0]
+                                                if (!file) return
+                                                setIsUploading(true)
+                                                try {
+                                                    const url = await uploadBannerImage(conferenceId ?? 0, file)
+                                                    setFormData((prev) => ({ ...prev, bannerImageUrl: url }))
+                                                    toast.success("Banner image uploaded successfully!")
+                                                } catch (err) {
+                                                    console.error("Upload failed:", err)
+                                                    toast.error("Failed to upload image. Please try again.")
+                                                } finally {
+                                                    setIsUploading(false)
+                                                    if (fileInputRef.current) fileInputRef.current.value = ""
+                                                }
+                                            }}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="h-12 px-4 shrink-0"
+                                            disabled={isUploading}
+                                            onClick={() => fileInputRef.current?.click()}
+                                        >
+                                            {isUploading ? (
+                                                <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Uploading...</>
+                                            ) : (
+                                                <><Upload className="h-4 w-4 mr-2" /> Upload Image</>
+                                            )}
+                                        </Button>
+                                    </div>
                                     {errors.bannerImageUrl && (
                                         <FieldError>{errors.bannerImageUrl}</FieldError>
                                     )}

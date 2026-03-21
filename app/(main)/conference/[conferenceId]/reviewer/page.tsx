@@ -116,7 +116,7 @@ export default function ReviewerConsolePage() {
                             </div>
                             <div>
                                 <p className="font-semibold text-gray-900">Subject Areas</p>
-                                <p className="text-xs text-muted-foreground">Select your areas of expertise</p>
+                                <p className="text-xs text-muted-foreground">Select your subject areas</p>
                             </div>
                         </CardContent>
                     </Card>

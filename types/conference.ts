@@ -8,7 +8,7 @@ export interface CreateConferenceRequest {
     websiteUrl: string
     area: string
     societySponsor: string
-    conferenceIdNumber: string
+
     country: string
     province: string
     bannerImageUrl: string
@@ -53,7 +53,6 @@ export interface CreateTrackRequest {
     name: string
     description: string
     conferenceId: number
-    maxSubmissions: number
 }
 
 export interface TrackResponse {
@@ -61,7 +60,6 @@ export interface TrackResponse {
     name: string
     description: string
     conferenceId: number
-    maxSubmissions: number
 }
 
 export interface UpdateConferenceRequest extends CreateConferenceRequest {

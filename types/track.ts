@@ -1,7 +1,6 @@
 export interface TrackReviewSetting {
     isDoubleBlind: boolean
     reviewerInstructions: string
-    requireSubjectAreas: boolean
     allowReviewerQuota: boolean
     reviewerInviteExpirationDays: number
     allowOthersReviewAccessAfterSubmit: boolean
@@ -12,10 +11,10 @@ export interface TrackReviewSetting {
     enableAllPapersForDiscussion: boolean
     allowDiscussNonAssignedPapers: boolean
     allowAuthorDiscuss: boolean
-    notifyReviewerOnReviewUpdateDuringDiscussion: boolean
-    notifyOnManualAssignment: boolean
     doNotShowWithdrawnPapers: boolean
-    addReviewerOnInviteAccept: boolean
+    enableDomainConflict: boolean
+    enableAuthorSelfConflict: boolean
+    allowAuthorConfigureConflict: boolean
 }
 
 export interface TrackResponse {
@@ -23,7 +22,6 @@ export interface TrackResponse {
     name: string
     description: string
     conferenceId: number
-    maxSubmissions: number
     trackReviewSetting?: TrackReviewSetting
 }
 

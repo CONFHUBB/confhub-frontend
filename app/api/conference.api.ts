@@ -71,6 +71,15 @@ export const cancelConference = async (id: number): Promise<any> => {
     const response = await http.put(`/conferences/${id}/cancel`)
     return response.data
 }
+
+export const uploadBannerImage = async (conferenceId: number, file: File): Promise<string> => {
+    const fd = new FormData()
+    fd.append('file', file)
+    const response = await http.post<{ url: string }>(`/conferences/${conferenceId}/upload-banner`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return response.data.url
+}
 // ── Data Import ──
 
 export interface ImportError {
@@ -113,14 +122,9 @@ export const previewTrackImport = (conferenceId: number, file: File) => uploadFi
 export const importTracks = (conferenceId: number, file: File) => uploadFile(`/conferences/${conferenceId}/tracks/import`, file).then(r => r.data)
 
 // Subject Areas
-export const downloadSubjectAreaTemplate = () => downloadBlob('/subject-areas/import/template')
-export const previewSubjectAreaImport = (file: File) => uploadFile('/subject-areas/import/preview', file).then(r => r.data)
-export const importSubjectAreas = (trackId: number, file: File) => {
-    const fd = new FormData()
-    fd.append('file', file)
-    fd.append('trackId', trackId.toString())
-    return http.post<ImportResult>('/subject-areas/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
-}
+export const downloadSubjectAreaTemplate = (conferenceId: number) => downloadBlob(`/conferences/${conferenceId}/subject-areas/import/template`)
+export const previewSubjectAreaImport = (conferenceId: number, file: File) => uploadFile(`/conferences/${conferenceId}/subject-areas/import/preview`, file).then(r => r.data)
+export const importSubjectAreas = (conferenceId: number, file: File) => uploadFile(`/conferences/${conferenceId}/subject-areas/import`, file).then(r => r.data)
 
 // Members
 export const downloadMemberTemplate = (conferenceId: number) => downloadBlob(`/conferences/${conferenceId}/members/import/template`)

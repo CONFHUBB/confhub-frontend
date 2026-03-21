@@ -32,7 +32,6 @@ export function AddTrack({ initialData, conferenceId, onSubmit, onImportSuccess 
         initialData ?? {
             name: "",
             description: "",
-            maxSubmissions: "",
         }
     )
 
@@ -53,8 +52,6 @@ export function AddTrack({ initialData, conferenceId, onSubmit, onImportSuccess 
     const validate = () => {
         const newErrors: Record<string, string> = {}
         if (!formData.name.trim()) newErrors.name = "Track name is required."
-        if (!formData.maxSubmissions || Number(formData.maxSubmissions) <= 0)
-            newErrors.maxSubmissions = "Max submissions must be a positive number."
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
     }
@@ -63,7 +60,7 @@ export function AddTrack({ initialData, conferenceId, onSubmit, onImportSuccess 
         e.preventDefault()
         if (!validate()) return
         onSubmit(formData)
-        setFormData({ name: "", description: "", maxSubmissions: "" })
+        setFormData({ name: "", description: "" })
         setShowForm(false)
     }
 
@@ -112,23 +109,6 @@ export function AddTrack({ initialData, conferenceId, onSubmit, onImportSuccess 
                                         />
                                         {errors.name && <FieldError>{errors.name}</FieldError>}
                                     </Field>
-
-                                    <Field data-invalid={!!errors.maxSubmissions || undefined}>
-                                        <FieldLabel htmlFor="maxSubmissions" className="text-sm font-medium">
-                                            Max Submissions <span className="text-red-500">*</span>
-                                        </FieldLabel>
-                                        <Input
-                                            id="maxSubmissions"
-                                            type="number"
-                                            className="h-10"
-                                            placeholder="e.g. 100"
-                                            value={formData.maxSubmissions}
-                                            onChange={handleChange}
-                                        />
-                                        {errors.maxSubmissions && (
-                                            <FieldError>{errors.maxSubmissions}</FieldError>
-                                        )}
-                                    </Field>
                                 </div>
 
                                 <Field>
@@ -165,7 +145,7 @@ export function AddTrack({ initialData, conferenceId, onSubmit, onImportSuccess 
                     </p>
                     <ExcelImport
                         entityName="Track"
-                        previewHeaders={["name", "description", "maxSubmissions"]}
+                        previewHeaders={["name", "description"]}
                         onDownloadTemplate={() => downloadTrackTemplate(conferenceId)}
                         onPreview={(file) => previewTrackImport(conferenceId, file)}
                         onImport={(file) => importTracks(conferenceId, file)}
