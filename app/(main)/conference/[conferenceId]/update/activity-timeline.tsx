@@ -80,9 +80,16 @@ export function ActivityTimeline({ conferenceId }: ActivityTimelineProps) {
 
     const handleToggle = (id: number, checked: boolean) => {
         setActivities(prev => 
-            prev.map(activity => 
-                activity.id === id ? { ...activity, isEnabled: checked } : activity
-            )
+            prev.map(activity => {
+                if (activity.id === id) {
+                    return { ...activity, isEnabled: checked }
+                }
+                // If enabling one, disable all others
+                if (checked) {
+                    return { ...activity, isEnabled: false }
+                }
+                return activity
+            })
         )
     }
 
@@ -133,7 +140,7 @@ export function ActivityTimeline({ conferenceId }: ActivityTimelineProps) {
                             <li><strong>Camera-Ready</strong> — Accepted authors upload final versions</li>
                         </ol>
                         <p className="mt-3 text-amber-700 bg-amber-50 rounded p-2 text-xs">
-                            <strong>Tip:</strong> Set deadlines for each phase. You can enable multiple phases at once, but the recommended flow is sequential.
+                            <strong>Note:</strong> Only one activity can be active at a time. Enabling an activity will automatically disable the currently active one.
                         </p>
                     </HelpTooltip>
                 </div>

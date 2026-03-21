@@ -10,7 +10,7 @@ export interface ConferenceData {
     websiteUrl: string
     area: string
     societySponsor: string[]
-    conferenceIdNumber: string
+
     country: string
     province: string
     bannerImageUrl: string
@@ -21,7 +21,6 @@ export interface ConferenceData {
 export interface TrackData {
     name: string
     description: string
-    maxSubmissions: string
 }
 
 export interface SubjectAreaData {

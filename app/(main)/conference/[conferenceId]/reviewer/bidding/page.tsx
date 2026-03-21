@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { getPapersForBidding, submitBid, getBidsSummary, deleteBid, getBidsByReviewerAndConference } from '@/app/api/bidding.api'
 import { getInterestsByReviewer } from '@/app/api/reviewer-interest.api'
 import { getConferenceActivities } from '@/app/api/conference.api'
-import { getTracksByConference, getTrackReviewSettings } from '@/app/api/track.api'
 import type { PaperForBidding, BidValue, BidsSummary } from '@/types/bidding'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -81,34 +80,12 @@ export default function BiddingPage() {
                 }
             } catch { /* ignore activity check errors */ }
 
-            // Check if any track requires subject areas before bidding
-            let requiresExpertise = true // default: require (fail-safe)
-            try {
-                const tracks = await getTracksByConference(conferenceId)
-                // First try inline trackReviewSetting from tracks response
-                const inlineSettings = tracks.map(t => t.trackReviewSetting).filter(Boolean)
-                if (inlineSettings.length > 0) {
-                    requiresExpertise = inlineSettings.some(s => s!.requireSubjectAreas === true)
-                } else {
-                    // Fallback: fetch settings individually
-                    const settingsResults = await Promise.all(
-                        tracks.map(t => getTrackReviewSettings(t.id).catch(() => null))
-                    )
-                    const validSettings = settingsResults.filter(Boolean)
-                    if (validSettings.length > 0) {
-                        requiresExpertise = validSettings.some(s => s!.requireSubjectAreas === true)
-                    }
-                }
-            } catch { /* keep default requiresExpertise = true */ }
-
-            // Check if reviewer has subject areas (only block if required)
-            if (requiresExpertise) {
-                const interests = await getInterestsByReviewer(reviewerId).catch(() => [])
-                if (!interests || interests.length === 0) {
-                    setNeedsSubjectAreas(true)
-                    setLoading(false)
-                    return
-                }
+            // Subject areas are always required before bidding
+            const interests = await getInterestsByReviewer(reviewerId).catch(() => [])
+            if (!interests || interests.length === 0) {
+                setNeedsSubjectAreas(true)
+                setLoading(false)
+                return
             }
 
             const [papersData, summaryData, bidsData] = await Promise.all([
@@ -272,7 +249,7 @@ export default function BiddingPage() {
                         </div>
                         <h2 className="text-xl font-bold text-amber-900">Subject Areas Required</h2>
                         <p className="text-amber-800 max-w-md mx-auto">
-                            Before you can bid on papers, you must first select your <strong>Subject Areas</strong> and indicate your level of expertise.
+                            Before you can bid on papers, you must first select your <strong>Subject Areas</strong> (Primary and Secondary).
                             This helps us match you with relevant papers and calculate relevance scores.
                         </p>
                         <Link href={`/conference/${conferenceId}/reviewer/interests`}>

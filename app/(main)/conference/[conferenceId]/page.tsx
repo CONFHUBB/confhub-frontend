@@ -348,12 +348,6 @@ export default function ConferenceDetailsPage() {
                                         )}
 
                                         <div className="space-y-2 text-xs text-muted-foreground">
-                                            {track.maxSubmissions > 0 && (
-                                                <div className="flex items-center justify-between">
-                                                    <span>Max submissions</span>
-                                                    <span className="font-medium text-foreground">{track.maxSubmissions}</span>
-                                                </div>
-                                            )}
                                         </div>
 
                                         <div className="pt-2">

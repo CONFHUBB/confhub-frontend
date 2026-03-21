@@ -149,6 +149,9 @@ export function ExcelImport({
                                     {previewHeaders.map(h => (
                                         <th key={h} className="px-3 py-2 text-left font-medium text-gray-600">{h}</th>
                                     ))}
+                                    {previewRows[0]?.status && (
+                                        <th className="px-3 py-2 text-left font-medium text-gray-600">Status</th>
+                                    )}
                                 </tr>
                             </thead>
                             <tbody>
@@ -158,6 +161,19 @@ export function ExcelImport({
                                         {previewHeaders.map(h => (
                                             <td key={h} className="px-3 py-2 max-w-[200px] truncate">{row[h] || <span className="text-gray-300">—</span>}</td>
                                         ))}
+                                        {row.status && (
+                                            <td className="px-3 py-2">
+                                                {row.status === "EXISTING" ? (
+                                                    <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                                                        ✓ In System
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-700">
+                                                        ⚡ New Account
+                                                    </span>
+                                                )}
+                                            </td>
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>

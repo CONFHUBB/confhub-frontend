@@ -23,7 +23,6 @@ interface ReviewSettingsProps {
 const DEFAULT_SETTINGS: TrackReviewSetting = {
     isDoubleBlind: false,
     reviewerInstructions: "",
-    requireSubjectAreas: false,
     allowReviewerQuota: false,
     reviewerInviteExpirationDays: 7,
     allowOthersReviewAccessAfterSubmit: false,
@@ -34,10 +33,7 @@ const DEFAULT_SETTINGS: TrackReviewSetting = {
     enableAllPapersForDiscussion: false,
     allowDiscussNonAssignedPapers: false,
     allowAuthorDiscuss: false,
-    notifyReviewerOnReviewUpdateDuringDiscussion: false,
-    notifyOnManualAssignment: false,
     doNotShowWithdrawnPapers: false,
-    addReviewerOnInviteAccept: true,
 }
 
 export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
@@ -48,7 +44,7 @@ export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
     const [loadingSettings, setLoadingSettings] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
     const [showCopyDialog, setShowCopyDialog] = useState(false)
-    const [sourceTrackId, setSourceTrackId] = useState<number | null>(null)
+    const [targetTrackIds, setTargetTrackIds] = useState<number[]>([])
     const [isCopying, setIsCopying] = useState(false)
 
     useEffect(() => {
@@ -102,22 +98,21 @@ export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
         }
     }
 
-    const handleCopy = async () => {
-        if (!selectedTrackId || !sourceTrackId) return
+    const handleCopyToTracks = async () => {
+        if (!selectedTrackId || targetTrackIds.length === 0) return
         setIsCopying(true)
         try {
-            await copyTrackReviewSettings(selectedTrackId, sourceTrackId)
-            // Explicitly refetch to ensure the UI updates with the exact backend state
-            const freshSettings = await getTrackReviewSettings(selectedTrackId)
-            setSettings(freshSettings)
+            for (const targetId of targetTrackIds) {
+                await copyTrackReviewSettings(targetId, selectedTrackId)
+            }
             setShowCopyDialog(false)
-            setSourceTrackId(null)
-            toast.success("Settings copied successfully!")
+            setTargetTrackIds([])
+            toast.success(`Settings copied to ${targetTrackIds.length} track(s) successfully!`)
         } catch (err: any) {
             console.error("Failed to copy settings:", err)
             const status = err?.response?.status
             if (status === 400) {
-                toast.error("The selected source track does not have review settings configured yet. Please save settings for that track first.")
+                toast.error("Current track does not have review settings configured yet. Please save settings first.")
             } else {
                 toast.error("Failed to copy settings. Please try again.")
             }
@@ -153,11 +148,6 @@ export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
             key: "isDoubleBlind",
             label: "Double-Blind Review",
             description: "Hide author identities from reviewers and vice versa.",
-        },
-        {
-            key: "requireSubjectAreas",
-            label: "Require Subject Areas",
-            description: "Require reviewers to specify their subject-area expertise.",
         },
         {
             key: "allowReviewerQuota",
@@ -205,24 +195,9 @@ export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
             description: "Authors can participate in discussion (only after PC posts first).",
         },
         {
-            key: "notifyReviewerOnReviewUpdateDuringDiscussion",
-            label: "Notify Reviewer on Review Update During Discussion",
-            description: "Notify reviewers when a review is updated during the discussion phase.",
-        },
-        {
-            key: "notifyOnManualAssignment",
-            label: "Notify on Manual Assignment",
-            description: "Send email to reviewer when Chair manually assigns a paper.",
-        },
-        {
             key: "doNotShowWithdrawnPapers",
             label: "Do Not Show Withdrawn Papers",
             description: "Hide withdrawn papers from the Reviewer Console.",
-        },
-        {
-            key: "addReviewerOnInviteAccept",
-            label: "Add Reviewer on Invite Accept",
-            description: "Automatically add user as reviewer when they accept an invitation.",
         },
     ]
 
@@ -319,47 +294,65 @@ export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
                             onClick={() => setShowCopyDialog(true)}
                         >
                             <Copy className="h-4 w-4 mr-2" />
-                            Copy Settings From Another Track
+                            Copy Settings To Other Tracks
                         </Button>
                     </div>
 
-                    {/* Copy Dialog */}
+                    {/* Copy To Dialog */}
                     {showCopyDialog && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                             <div className="bg-background rounded-xl border shadow-2xl p-6 w-full max-w-md mx-4">
-                                <h4 className="text-lg font-semibold mb-4">Copy Settings From Track</h4>
+                                <h4 className="text-lg font-semibold mb-2">Copy Settings To Other Tracks</h4>
                                 <p className="text-sm text-muted-foreground mb-4">
-                                    Select the source track whose review settings you want to copy to the current track.
+                                    Select the tracks you want to copy the current track&apos;s review settings to.
                                 </p>
-                                <Select
-                                    className="w-full h-12 mb-6"
-                                    placeholder="Select source track"
-                                    value={sourceTrackId ?? undefined}
-                                    onChange={(val) => setSourceTrackId(val)}
-                                    options={tracks
+                                <div className="space-y-2 max-h-60 overflow-y-auto mb-6">
+                                    {tracks
                                         .filter((t) => t.id !== selectedTrackId)
-                                        .map((t) => ({ label: t.name, value: t.id }))}
-                                />
+                                        .map((t) => (
+                                            <label
+                                                key={t.id}
+                                                className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    className="h-4 w-4 rounded border-gray-300"
+                                                    checked={targetTrackIds.includes(t.id)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setTargetTrackIds((prev) => [...prev, t.id])
+                                                        } else {
+                                                            setTargetTrackIds((prev) => prev.filter((id) => id !== t.id))
+                                                        }
+                                                    }}
+                                                />
+                                                <span className="text-sm font-medium">{t.name}</span>
+                                            </label>
+                                        ))}
+                                    {tracks.filter((t) => t.id !== selectedTrackId).length === 0 && (
+                                        <p className="text-sm text-muted-foreground text-center py-4">No other tracks available.</p>
+                                    )}
+                                </div>
                                 <div className="flex items-center justify-end gap-3">
                                     <Button
                                         variant="outline"
                                         onClick={() => {
                                             setShowCopyDialog(false)
-                                            setSourceTrackId(null)
+                                            setTargetTrackIds([])
                                         }}
                                     >
                                         Cancel
                                     </Button>
                                     <Button
-                                        disabled={!sourceTrackId || isCopying}
-                                        onClick={handleCopy}
+                                        disabled={targetTrackIds.length === 0 || isCopying}
+                                        onClick={handleCopyToTracks}
                                     >
                                         {isCopying ? (
                                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                         ) : (
                                             <Copy className="h-4 w-4 mr-2" />
                                         )}
-                                        Confirm Copy
+                                        Copy to {targetTrackIds.length} Track{targetTrackIds.length !== 1 ? "s" : ""}
                                     </Button>
                                 </div>
                             </div>

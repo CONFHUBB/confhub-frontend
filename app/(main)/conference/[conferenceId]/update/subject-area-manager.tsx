@@ -238,17 +238,17 @@ export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
                         <div className="rounded-lg border bg-white p-5 space-y-3">
                             <h3 className="font-semibold text-gray-900">Import Subject Areas from Excel</h3>
                             <p className="text-sm text-gray-500">
-                                Upload an Excel file to batch-create subject areas for the selected track.
+                                Upload an Excel file to batch-create subject areas. Include the <strong>trackName</strong> column to import for multiple tracks at once.
                             </p>
                             <ExcelImport
                                 entityName="Subject Area"
-                                previewHeaders={["name", "description", "parentName"]}
-                                onDownloadTemplate={downloadSubjectAreaTemplate}
-                                onPreview={previewSubjectAreaImport}
-                                onImport={(file) => importSubjectAreas(selectedTrackId, file)}
+                                previewHeaders={["trackName", "name", "description", "parentName"]}
+                                onDownloadTemplate={() => downloadSubjectAreaTemplate(conferenceId)}
+                                onPreview={(file) => previewSubjectAreaImport(conferenceId, file)}
+                                onImport={(file) => importSubjectAreas(conferenceId, file)}
                                 onImportSuccess={() => {
                                     setAreaRefreshKey(prev => prev + 1)
-                                    fetchAreas(selectedTrackId)
+                                    if (selectedTrackId) fetchAreas(selectedTrackId)
                                 }}
                                 templateFilename="subject_area_template.xlsx"
                             />

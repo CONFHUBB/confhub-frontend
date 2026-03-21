@@ -36,7 +36,6 @@ export interface PaperResponse {
             startDate: string
             endDate: string
         }
-        maxSubmissions: number
     }
     primarySubjectAreaId: number
     secondarySubjectAreaIds: number[]

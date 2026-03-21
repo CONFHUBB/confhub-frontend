@@ -118,12 +118,6 @@ export default function TracksPage() {
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-3">
-                                    <div className="pt-2 border-t">
-                                        <p className="text-sm text-muted-foreground">
-                                            Max Submissions: <span className="font-semibold">{track.maxSubmissions}</span>
-                                        </p>
-                                    </div>
-
                                     <div className="pt-4">
                                         <Link href={`/track/${track.id}/submit?conferenceId=${conferenceId}`}>
                                             <Button className="w-full">
