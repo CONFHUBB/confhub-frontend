@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Fragment, useEffect, useState } from "react"
 import { getAggregatesByConference, sendAuthorNotifications } from "@/app/api/review-aggregate.api"
 import type { ReviewAggregate, AuthorNotificationRequest } from "@/app/api/review-aggregate.api"
 import { Button } from "@/components/ui/button"
@@ -155,8 +155,8 @@ export function AuthorNotificationWizard({ conferenceId }: AuthorNotificationWiz
                                 </thead>
                                 <tbody className="divide-y">
                                     {aggregates.map((agg) => (
-                                        <>
-                                            <tr key={agg.paperId} className="hover:bg-muted/30 transition-colors">
+                                        <Fragment key={agg.paperId}>
+                                            <tr className="hover:bg-muted/30 transition-colors">
                                                 <td className="px-4 py-3">
                                                     <span className="font-medium">#{agg.paperId}</span>{" "}
                                                     <span className="text-muted-foreground">{agg.paperTitle}</span>
@@ -204,7 +204,7 @@ export function AuthorNotificationWizard({ conferenceId }: AuthorNotificationWiz
                                                     </td>
                                                 </tr>
                                             )}
-                                        </>
+                                        </Fragment>
                                     ))}
                                 </tbody>
                             </table>

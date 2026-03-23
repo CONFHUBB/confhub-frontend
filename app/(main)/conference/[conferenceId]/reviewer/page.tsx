@@ -3,16 +3,16 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { getConference } from '@/app/api/conference.api'
+import { getConference, getConferenceActivities } from '@/app/api/conference.api'
 import { getBidsSummary } from '@/app/api/bidding.api'
 import { getReviewsByReviewerAndConference } from '@/app/api/review.api'
-import type { ConferenceResponse } from '@/types/conference'
+import type { ConferenceResponse, ConferenceActivityDTO } from '@/types/conference'
 import type { BidsSummary } from '@/types/bidding'
 import type { ReviewResponse } from '@/types/review'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, ArrowLeft, ClipboardList, Target, FileSearch, ThumbsUp, ThumbsDown, Minus, Zap } from 'lucide-react'
+import { Loader2, ArrowLeft, ClipboardList, Target, FileSearch, ThumbsUp, ThumbsDown, Minus, Zap, Clock, ChevronDown, ChevronUp } from 'lucide-react'
 
 const STATUS_COLORS: Record<string, string> = {
     ASSIGNED: 'bg-blue-100 text-blue-800',
@@ -43,8 +43,10 @@ export default function ReviewerConsolePage() {
     const [conference, setConference] = useState<ConferenceResponse | null>(null)
     const [bidsSummary, setBidsSummary] = useState<BidsSummary | null>(null)
     const [reviews, setReviews] = useState<ReviewResponse[]>([])
+    const [activities, setActivities] = useState<ConferenceActivityDTO[]>([])
     const [loading, setLoading] = useState(true)
     const [reviewerId, setReviewerId] = useState<number | null>(null)
+    const [expandedReview, setExpandedReview] = useState<number | null>(null)
 
     useEffect(() => {
         // Get userId from JWT
@@ -65,13 +67,15 @@ export default function ReviewerConsolePage() {
                 setConference(conf)
 
                 if (reviewerId) {
-                    const [summary, reviewsData] = await Promise.all([
+                    const [summary, reviewsData, activitiesData] = await Promise.all([
                         getBidsSummary(reviewerId, conferenceId).catch(() => null),
                         getReviewsByReviewerAndConference(reviewerId, conferenceId).catch(() => []),
+                        getConferenceActivities(conferenceId).catch(() => []),
                     ])
                     if (summary) setBidsSummary(summary)
                     const list = Array.isArray(reviewsData) ? reviewsData : (reviewsData as any)?.content || []
                     setReviews(list)
+                    setActivities(activitiesData)
                 }
             } catch (err) {
                 console.error('Failed to load reviewer console:', err)
@@ -104,6 +108,36 @@ export default function ReviewerConsolePage() {
                         {conference?.name || 'Conference'} — {conference?.acronym}
                     </p>
                 </div>
+
+                {/* Deadline countdown badges */}
+                {activities.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                        {activities
+                            .filter(a => a.isEnabled && a.deadline && ['REVIEWER_BIDDING', 'REVIEW_SUBMISSION'].includes(a.activityType))
+                            .map(a => {
+                                const deadline = new Date(a.deadline!)
+                                const now = new Date()
+                                const diffMs = deadline.getTime() - now.getTime()
+                                const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+                                const isPast = diffMs <= 0
+                                const isUrgent = diffDays <= 3 && !isPast
+                                const label = a.activityType === 'REVIEWER_BIDDING' ? 'Bidding Deadline' : 'Review Deadline'
+                                return (
+                                    <span
+                                        key={a.activityType}
+                                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${
+                                            isPast ? 'bg-gray-100 text-gray-500 border-gray-200' :
+                                            isUrgent ? 'bg-red-50 text-red-700 border-red-200 animate-pulse' :
+                                            'bg-blue-50 text-blue-700 border-blue-200'
+                                        }`}
+                                    >
+                                        <Clock className="h-3 w-3" />
+                                        {label}: {isPast ? 'Closed' : `${diffDays} day${diffDays !== 1 ? 's' : ''} left`}
+                                    </span>
+                                )
+                            })}
+                    </div>
+                )}
             </div>
 
             {/* Quick Actions */}
@@ -202,10 +236,14 @@ export default function ReviewerConsolePage() {
                                 </thead>
                                 <tbody>
                                     {reviews.map((review, i) => (
-                                        <tr key={review.id} className="border-b last:border-0 hover:bg-gray-50">
+                                        <>
+                                        <tr key={review.id} className="border-b last:border-0 hover:bg-gray-50 cursor-pointer" onClick={() => setExpandedReview(expandedReview === review.id ? null : review.id)}>
                                             <td className="px-4 py-3 text-gray-400">{i + 1}</td>
-                                            <td className="px-4 py-3 font-medium max-w-md truncate">
-                                                {review.paper?.title || `Paper #${review.paper?.id}`}
+                                            <td className="px-4 py-3 font-medium max-w-md">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="truncate">{review.paper?.title || `Paper #${review.paper?.id}`}</span>
+                                                    {expandedReview === review.id ? <ChevronUp className="h-3 w-3 text-gray-400 shrink-0" /> : <ChevronDown className="h-3 w-3 text-gray-400 shrink-0" />}
+                                                </div>
                                             </td>
                                             <td className="px-4 py-3">
                                                 <Badge className={STATUS_COLORS[review.status] || 'bg-gray-100 text-gray-800'}>
@@ -215,7 +253,7 @@ export default function ReviewerConsolePage() {
                                             <td className="px-4 py-3 font-mono">
                                                 {review.totalScore != null ? review.totalScore : '—'}
                                             </td>
-                                            <td className="px-4 py-3 text-right">
+                                            <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
                                                 {review.status !== 'DECLINED' && (
                                                     <Link href={`/conference/${conferenceId}/reviewer/review/${review.id}`}>
                                                         <Button size="sm" variant={review.status === 'COMPLETED' ? 'outline' : 'default'}>
@@ -225,6 +263,17 @@ export default function ReviewerConsolePage() {
                                                 )}
                                             </td>
                                         </tr>
+                                        {expandedReview === review.id && review.paper?.abstractField && (
+                                            <tr key={`${review.id}-abstract`}>
+                                                <td colSpan={5} className="px-4 py-3 bg-blue-50/50">
+                                                    <div className="text-sm text-gray-600 max-w-3xl">
+                                                        <p className="font-medium text-gray-700 text-xs uppercase tracking-wider mb-1">Abstract</p>
+                                                        <p className="leading-relaxed line-clamp-4">{review.paper.abstractField}</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                        </>
                                     ))}
                                 </tbody>
                             </table>

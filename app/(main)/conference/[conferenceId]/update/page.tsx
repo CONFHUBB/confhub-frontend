@@ -6,7 +6,10 @@ import { getConference } from '@/app/api/conference.api'
 import type { ConferenceResponse } from '@/types/conference'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Loader2, ArrowLeft, FileText, Users, LayoutTemplate, ClipboardList, Settings, Calendar, ChevronDown, ChevronRight, Mail } from 'lucide-react'
+import {
+    Settings, FileText, Calendar, ClipboardList, Lock, ChevronRight, ChevronDown,
+    ArrowLeft, Shield, Users, LayoutDashboard, Loader2
+} from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { FormBuilder } from '../submission-form/form-builder'
@@ -23,9 +26,10 @@ import { ReviewQuestionsList } from './review-questions-list'
 import { ActivityTimeline } from './activity-timeline'
 import { EmailManagementInline } from './email-management'
 import { PaperManagement } from './paper-management'
-import { ReviewerAssignment } from './reviewer-assignment'
-import { ConflictManagement } from './conflict-management'
-import { DiscussionPanel } from './discussion-panel'
+import { ReviewManagement } from './review-management'
+import { CameraReadyManagement } from './camera-ready-management'
+import { ChairDashboard } from './chair-dashboard'
+
 import { AuthorNotificationWizard } from './author-notification-wizard'
 
 import { createTrack } from '@/app/api/conference.api'
@@ -44,16 +48,14 @@ import type {
 } from "@/types/conference-form"
 
 type SettingsTab =
+    | 'dashboard'
     | 'general-detail'
     | 'features-tracks'
     | 'features-subject-areas'
-    | 'features-review-setting'
     | 'features-members'
     | 'features-paper-management'
-    | 'features-reviewer-assignment'
-    | 'features-conflict-management'
-    | 'features-discussion'
-    | 'features-notification-wizard'
+    | 'features-review-management'
+    | 'features-camera-ready'
     | 'forms-mail'
     | 'forms-submission'
     | 'forms-review'
@@ -61,41 +63,39 @@ type SettingsTab =
 
 const TAB_GROUPS = [
     {
-        title: "General Setting",
-        icon: <FileText className="h-4 w-4" />,
+        title: "Overview",
+        icon: <LayoutDashboard className="h-4 w-4" />,
         items: [
-            { key: "general-detail", label: "Config conference detail", implemented: true }
+            { key: "dashboard", label: "Dashboard", implemented: true }
         ]
     },
     {
-        title: "Features Setting",
+        title: "Conference Setup",
         icon: <Settings className="h-4 w-4" />,
         items: [
-            { key: "features-tracks", label: "Config Tracks", implemented: true },
-            { key: "features-subject-areas", label: "Config Subject Areas", implemented: true },
-            { key: "features-review-setting", label: "Config Review Setting", implemented: true },
-            { key: "features-members", label: "Config Members", implemented: true },
-            { key: "features-paper-management", label: "Paper Management", implemented: true },
-            { key: "features-reviewer-assignment", label: "Reviewer Assignment", implemented: true },
-            { key: "features-conflict-management", label: "Conflict Management", implemented: true },
-            { key: "features-discussion", label: "Discussion", implemented: true },
-            { key: "features-notification-wizard", label: "Review Aggregates & Notification", implemented: true }
+            { key: "general-detail", label: "Conference Detail", implemented: true },
+            { key: "features-tracks", label: "Tracks", implemented: true },
+            { key: "features-subject-areas", label: "Subject Areas", implemented: true },
+            { key: "features-members", label: "Members", implemented: true },
+            { key: "features-activity-timeline", label: "Activity Timeline", implemented: true }
         ]
     },
     {
-        title: "Form Setting",
+        title: "Paper & Review",
+        icon: <FileText className="h-4 w-4" />,
+        items: [
+            { key: "features-paper-management", label: "Paper Management", implemented: true },
+            { key: "features-review-management", label: "Review Management", implemented: true },
+            { key: "features-camera-ready", label: "Camera-Ready", implemented: true }
+        ]
+    },
+    {
+        title: "Forms & Templates",
         icon: <ClipboardList className="h-4 w-4" />,
         items: [
-            { key: "forms-mail", label: "Mail form", implemented: true },
-            { key: "forms-submission", label: "Submission form", implemented: true },
-            { key: "forms-review", label: "Review form", implemented: true }
-        ]
-    },
-    {
-        title: "Activity Timeline",
-        icon: <Calendar className="h-4 w-4" />,
-        items: [
-            { key: "features-activity-timeline", label: "Deadline", implemented: true }
+            { key: "forms-mail", label: "Email Templates", implemented: true },
+            { key: "forms-submission", label: "Submission Form", implemented: true },
+            { key: "forms-review", label: "Review Form", implemented: true }
         ]
     }
 ]
@@ -108,8 +108,8 @@ export default function ConferenceUpdatePage() {
     const [conference, setConference] = useState<ConferenceResponse | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [activeTab, setActiveTab] = useState<SettingsTab>('general-detail')
-    const [expandedGroups, setExpandedGroups] = useState<string[]>(['General Setting', 'Features Setting', 'Form Setting', 'Activity Timeline'])
+    const [activeTab, setActiveTab] = useState<SettingsTab>('dashboard')
+    const [expandedGroups, setExpandedGroups] = useState<string[]>(['Overview', 'Conference Setup', 'Paper & Review', 'Forms & Templates'])
     const [isUpdatingGeneral, setIsUpdatingGeneral] = useState(false)
 
     // Form Builder state
@@ -316,6 +316,9 @@ export default function ConferenceUpdatePage() {
                     </div>
                 )
 
+            case 'dashboard':
+                return <ChairDashboard conferenceId={conferenceId} />
+
             case 'features-tracks':
                 return (
                     <div className="space-y-6">
@@ -339,37 +342,17 @@ export default function ConferenceUpdatePage() {
                     </div>
                 )
 
-            case 'features-review-setting':
-                return (
-                    <div className="space-y-8">
-                        <div>
-                            <h2 className="text-xl font-bold mb-4">Track Review Settings</h2>
-                            <p className="text-sm text-muted-foreground mb-6">Manage individual track settings.</p>
-                        </div>
-                        <div className="border-t pt-2">
-                            <ReviewSettings conferenceId={conferenceId} />
-                        </div>
-                    </div>
-                )
-
             case 'features-members':
                 return <ConfigMembers conferenceId={conferenceId} />
 
             case 'features-paper-management':
                 return <PaperManagement conferenceId={conferenceId} />
 
-            case 'features-reviewer-assignment':
-                return <ReviewerAssignment conferenceId={conferenceId} />
+            case 'features-review-management':
+                return <ReviewManagement conferenceId={conferenceId} />
 
-            case 'features-conflict-management':
-                return <ConflictManagement conferenceId={conferenceId} />
-
-            case 'features-discussion':
-                return <DiscussionPanel conferenceId={conferenceId} />
-
-            case 'features-notification-wizard':
-                return <AuthorNotificationWizard conferenceId={conferenceId} />
-
+            case 'features-camera-ready':
+                return <CameraReadyManagement conferenceId={conferenceId} />
             case 'forms-mail':
                 return <EmailManagementInline conferenceId={conferenceId} />
 
@@ -462,7 +445,15 @@ export default function ConferenceUpdatePage() {
                                                     {group.items.map(item => (
                                                         <button
                                                             key={item.key}
-                                                            onClick={() => setActiveTab(item.key as SettingsTab)}
+                                                            onClick={() => {
+                                                                if ((item as any).isLink) {
+                                                                    if (item.key === 'features-camera-ready') {
+                                                                        router.push(`/conference/${conferenceId}/author/camera-ready`)
+                                                                    }
+                                                                } else {
+                                                                    setActiveTab(item.key as SettingsTab)
+                                                                }
+                                                            }}
                                                             className={`w-full flex items-center px-3 py-2 rounded-md text-left text-sm transition-colors
                                                                 ${activeTab === item.key
                                                                     ? 'bg-primary/10 text-primary font-semibold'
