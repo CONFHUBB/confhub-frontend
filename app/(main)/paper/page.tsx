@@ -4,13 +4,16 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getPapersByAuthor } from '@/app/api/paper.api'
 import { getUserByEmail } from '@/app/api/user.api'
+import { getAggregateByPaper, type ReviewAggregate } from '@/app/api/review-aggregate.api'
+import { getMetaReviewByPaper } from '@/app/api/meta-review.api'
+import type { MetaReviewResponse } from '@/types/meta-review'
 import type { PaperResponse, PaperStatus } from '@/types/paper'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
     Loader2, Edit, FileText, Send, Search, CheckCircle2, XCircle, Ban,
-    Camera, Globe, AlertTriangle, Calendar, Tag, Layers
+    Camera, Globe, AlertTriangle, Calendar, Tag, Layers, BarChart3, Star, Upload
 } from 'lucide-react'
 
 // ── Status Configuration ──
@@ -82,6 +85,18 @@ const STATUS_CONFIG: Record<PaperStatus, {
 // Statuses that need user action
 const ACTION_STATUSES: PaperStatus[] = ['DRAFT', 'CAMERA_READY']
 
+// Decision config
+const DECISION_STYLE: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+    APPROVE: { label: 'Accepted', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <CheckCircle2 className="h-3 w-3" /> },
+    REJECT: { label: 'Rejected', color: 'bg-red-100 text-red-700 border-red-200', icon: <XCircle className="h-3 w-3" /> },
+    REVISION: { label: 'Revision Required', color: 'bg-amber-100 text-amber-700 border-amber-200', icon: <AlertTriangle className="h-3 w-3" /> },
+}
+
+interface ReviewInfo {
+    aggregate: ReviewAggregate | null
+    metaReview: MetaReviewResponse | null
+}
+
 // ── StatusBadge Component ──
 function StatusBadge({ status }: { status: PaperStatus }) {
     const config = STATUS_CONFIG[status]
@@ -94,9 +109,14 @@ function StatusBadge({ status }: { status: PaperStatus }) {
 }
 
 // ── PaperCard Component ──
-function PaperCard({ paper, onEdit }: { paper: PaperResponse; onEdit: () => void }) {
+function PaperCard({ paper, reviewInfo, onEdit }: { paper: PaperResponse; reviewInfo?: ReviewInfo; onEdit: () => void }) {
+    const router = useRouter()
     const needsAction = ACTION_STATUSES.includes(paper.status)
     const statusConfig = STATUS_CONFIG[paper.status]
+    const agg = reviewInfo?.aggregate
+    const meta = reviewInfo?.metaReview
+    const decision = meta?.finalDecision ? DECISION_STYLE[meta.finalDecision] : null
+    const isAccepted = paper.status === 'ACCEPTED'
 
     return (
         <div className={`group relative rounded-xl border bg-card shadow-sm transition-all hover:shadow-md hover:border-primary/30 ${
@@ -143,6 +163,33 @@ function PaperCard({ paper, onEdit }: { paper: PaperResponse; onEdit: () => void
                             </span>
                         </div>
 
+                        {/* Review Results — visible when reviews exist */}
+                        {agg && agg.reviewCount > 0 && (
+                            <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-dashed">
+                                <span className="inline-flex items-center gap-1.5 text-xs">
+                                    <BarChart3 className="h-3.5 w-3.5 text-blue-500" />
+                                    <span className="text-muted-foreground">Reviews:</span>
+                                    <span className="font-semibold">{agg.completedReviewCount}/{agg.reviewCount}</span>
+                                </span>
+                                {agg.averageTotalScore !== null && agg.averageTotalScore > 0 && (
+                                    <span className="inline-flex items-center gap-1.5 text-xs">
+                                        <Star className="h-3.5 w-3.5 text-amber-500" />
+                                        <span className="text-muted-foreground">Avg Score:</span>
+                                        <span className={`font-semibold font-mono ${
+                                            agg.averageTotalScore >= 3.5 ? 'text-emerald-600' :
+                                            agg.averageTotalScore >= 2 ? 'text-blue-600' : 'text-red-600'
+                                        }`}>{agg.averageTotalScore.toFixed(1)}</span>
+                                    </span>
+                                )}
+                                {decision && (
+                                    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${decision.color}`}>
+                                        {decision.icon}
+                                        {decision.label}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+
                         {/* Keywords */}
                         {paper.keywords && paper.keywords.length > 0 && (
                             <div className="flex flex-wrap items-center gap-1.5">
@@ -156,16 +203,28 @@ function PaperCard({ paper, onEdit }: { paper: PaperResponse; onEdit: () => void
                         )}
                     </div>
 
-                    {/* Edit button */}
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="shrink-0 gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity"
-                        onClick={onEdit}
-                    >
-                        <Edit className="h-3.5 w-3.5" />
-                        Edit
-                    </Button>
+                    {/* Right side: Edit + Camera-ready buttons */}
+                    <div className="flex flex-col gap-2 shrink-0">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity"
+                            onClick={onEdit}
+                        >
+                            <Edit className="h-3.5 w-3.5" />
+                            Edit
+                        </Button>
+                        {isAccepted && (
+                            <Button
+                                size="sm"
+                                className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
+                                onClick={() => router.push(`/conference/${paper.track.conference.id}/author/camera-ready`)}
+                            >
+                                <Upload className="h-3.5 w-3.5" />
+                                Camera-Ready
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
@@ -176,6 +235,7 @@ function PaperCard({ paper, onEdit }: { paper: PaperResponse; onEdit: () => void
 export default function UserSubmissionsPage() {
     const router = useRouter()
     const [papers, setPapers] = useState<PaperResponse[]>([])
+    const [reviewInfoMap, setReviewInfoMap] = useState<Record<number, ReviewInfo>>({})
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
@@ -211,6 +271,22 @@ export default function UserSubmissionsPage() {
 
             const data = await getPapersByAuthor(user.id)
             setPapers(data)
+
+            // Fetch review info for non-draft papers
+            const reviewablePapers = data.filter(p => p.status !== 'DRAFT')
+            const reviewMap: Record<number, ReviewInfo> = {}
+            await Promise.all(
+                reviewablePapers.map(async (p) => {
+                    try {
+                        const [aggregate, metaReview] = await Promise.all([
+                            getAggregateByPaper(p.id).catch(() => null),
+                            getMetaReviewByPaper(p.id).catch(() => null),
+                        ])
+                        reviewMap[p.id] = { aggregate, metaReview }
+                    } catch { /* ignore */ }
+                })
+            )
+            setReviewInfoMap(reviewMap)
         } catch (err: any) {
             console.error('Error fetching papers:', err)
             if (err.response?.status === 401 || err.response?.status === 403) {
@@ -356,6 +432,7 @@ export default function UserSubmissionsPage() {
                                     <PaperCard
                                         key={paper.id}
                                         paper={paper}
+                                        reviewInfo={reviewInfoMap[paper.id]}
                                         onEdit={() => router.push(`/paper/${paper.id}`)}
                                     />
                                 ))}

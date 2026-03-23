@@ -108,6 +108,29 @@ export function ReviewDetailDialog({ reviewId, open, onClose }: ReviewDetailDial
     return (
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
             <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                    <div className="flex items-center gap-3">
+                        <DialogTitle className="text-lg">Review Detail</DialogTitle>
+                        {review && (
+                            <Badge className={STATUS_COLORS[review.status]}>
+                                {STATUS_LABELS[review.status] || review.status}
+                            </Badge>
+                        )}
+                    </div>
+                    {review && (
+                        <>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Reviewer: <span className="font-medium text-foreground">{review.reviewer.firstName} {review.reviewer.lastName}</span>
+                                {" "}({review.reviewer.email})
+                            </p>
+                            {review.totalScore != null && (
+                                <p className="text-sm text-muted-foreground">
+                                    Total Score: <span className="font-semibold text-foreground">{review.totalScore}</span>
+                                </p>
+                            )}
+                        </>
+                    )}
+                </DialogHeader>
                 {loading ? (
                     <div className="flex items-center justify-center py-16">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -119,24 +142,6 @@ export function ReviewDetailDialog({ reviewId, open, onClose }: ReviewDetailDial
                     </div>
                 ) : (
                     <>
-                        {/* Header */}
-                        <DialogHeader>
-                            <div className="flex items-center gap-3">
-                                <DialogTitle className="text-lg">Review Detail</DialogTitle>
-                                <Badge className={STATUS_COLORS[review.status]}>
-                                    {STATUS_LABELS[review.status] || review.status}
-                                </Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Reviewer: <span className="font-medium text-foreground">{review.reviewer.firstName} {review.reviewer.lastName}</span>
-                                {" "}({review.reviewer.email})
-                            </p>
-                            {review.totalScore != null && (
-                                <p className="text-sm text-muted-foreground">
-                                    Total Score: <span className="font-semibold text-foreground">{review.totalScore}</span>
-                                </p>
-                            )}
-                        </DialogHeader>
 
                         {/* Paper Info */}
                         <Card className="border-l-4 border-l-indigo-500 mt-2">

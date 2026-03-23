@@ -15,6 +15,7 @@ import {
 import Link from 'next/link'
 import { isActivityOpen } from '@/lib/activity'
 import { useUserRoles } from '@/hooks/useUserConferenceRoles'
+import { ChairOverview } from './chair-overview'
 
 export default function ConferenceDetailsPage() {
     const params = useParams()
@@ -250,15 +251,21 @@ export default function ConferenceDetailsPage() {
                                         href={conference.websiteUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
+                                        className="text-sm font-medium text-blue-600 hover:underline flex items-center gap-1"
                                     >
-                                        {conference.websiteUrl}
-                                        <ExternalLink className="h-3 w-3" />
+                                        Visit site <ExternalLink className="h-3 w-3" />
                                     </a>
                                 </div>
                             </div>
                         )}
                     </div>
+
+                    {/* Chair Overview Stats */}
+                    {canManageConference && (
+                        <div className="pt-4 border-t">
+                            <ChairOverview conferenceId={conferenceId} />
+                        </div>
+                    )}
 
                     {canManageConference && (
                         <div className="flex gap-3 pt-2">
