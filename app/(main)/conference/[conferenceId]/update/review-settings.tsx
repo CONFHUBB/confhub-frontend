@@ -278,7 +278,7 @@ export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex items-center gap-4 pt-4 border-t">
+                    <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t py-4 -mx-8 px-8 md:-mx-12 md:px-12 flex items-center gap-4">
                         <Button onClick={handleSave} disabled={isSaving} size="lg" className="text-base px-6">
                             {isSaving ? (
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

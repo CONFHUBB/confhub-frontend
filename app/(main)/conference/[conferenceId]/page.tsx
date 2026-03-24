@@ -298,6 +298,60 @@ export default function ConferenceDetailsPage() {
                 </div>
             </div>
 
+            {/* Phase Indicator */}
+            {activities.length > 0 && (
+                <div className="mb-8 rounded-xl border bg-card p-4 sm:p-5">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                        Conference Progress
+                    </h3>
+                    <div className="flex items-center gap-1 sm:gap-0 overflow-x-auto pb-1">
+                        {ACTIVITY_ORDER.map((actType, idx) => {
+                            const activity = activities.find(a => a.activityType === actType)
+                            const isActive = activity?.isEnabled === true
+                            const isCompleted = !isActive && activities
+                                .filter(a => ACTIVITY_ORDER.indexOf(a.activityType) > ACTIVITY_ORDER.indexOf(actType))
+                                .some(a => a.isEnabled)
+                            const isPast = activity?.deadline ? new Date(activity.deadline).getTime() < Date.now() : false
+                            const done = isCompleted || (isPast && !isActive)
+
+                            return (
+                                <div key={actType} className="flex items-center flex-1 min-w-0">
+                                    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap
+                                        ${isActive 
+                                            ? 'bg-primary/10 text-primary ring-1 ring-primary/30' 
+                                            : done 
+                                                ? 'bg-emerald-50 text-emerald-700' 
+                                                : 'bg-muted text-muted-foreground/50'
+                                        }`}
+                                    >
+                                        {done ? (
+                                            <svg className="h-3.5 w-3.5 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                            </svg>
+                                        ) : isActive ? (
+                                            <span className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />
+                                        ) : (
+                                            <span className="h-2 w-2 rounded-full bg-muted-foreground/30 shrink-0" />
+                                        )}
+                                        <span className="hidden sm:inline truncate">
+                                            {ACTIVITY_LABELS[actType]}
+                                        </span>
+                                        <span className="sm:hidden truncate">
+                                            {ACTIVITY_LABELS[actType].split(' ')[0]}
+                                        </span>
+                                    </div>
+                                    {idx < ACTIVITY_ORDER.length - 1 && (
+                                        <div className={`hidden sm:block flex-1 h-px mx-1 ${
+                                            done ? 'bg-emerald-300' : 'bg-border'
+                                        }`} />
+                                    )}
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
+
             <section>
                 <div className="flex items-center justify-between mb-6">
                     <div>

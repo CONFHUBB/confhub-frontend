@@ -1,18 +1,20 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getConferenceActivities, updateConferenceActivities } from "@/app/api/conference.api"
-import type { ConferenceActivityDTO } from "@/types/conference"
+import { getConferenceActivities, updateConferenceActivities, getActivityAuditLogs } from "@/app/api/conference.api"
+import type { ConferenceActivityDTO, ActivityAuditLogDTO } from "@/types/conference"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Loader2, Calendar, Info } from "lucide-react"
+import { Loader2, Calendar, Info, ExternalLink, ChevronDown, ChevronUp, Clock, User, ArrowRight, ToggleLeft, ToggleRight, CalendarClock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import { HelpTooltip } from "@/components/help-tooltip"
 import toast from "react-hot-toast"
 
 interface ActivityTimelineProps {
     conferenceId: number
+    onNavigate?: (tab: string) => void
 }
 
 // Activity types in logical order for displaying
@@ -43,10 +45,40 @@ const ACTIVITY_DESCRIPTIONS: Record<string, string> = {
     "CAMERA_READY_SUBMISSION": "When enabled, accepted authors can upload final camera-ready versions. Enable after author notifications are sent.",
 }
 
-export function ActivityTimeline({ conferenceId }: ActivityTimelineProps) {
+// Quick action configuration per activity type
+const QUICK_ACTIONS: Record<string, { label: string; tab: string }> = {
+    "PAPER_SUBMISSION": { label: "View Papers", tab: "features-paper-management" },
+    "REVIEWER_BIDDING": { label: "View Bidding", tab: "features-review-management" },
+    "REVIEW_SUBMISSION": { label: "View Reviews", tab: "features-review-management" },
+    "REVIEW_DISCUSSION": { label: "View Reviews", tab: "features-review-management" },
+    "AUTHOR_NOTIFICATION": { label: "View Decisions", tab: "features-review-management" },
+    "CAMERA_READY_SUBMISSION": { label: "View Camera-Ready", tab: "features-camera-ready" },
+}
+
+// Activity icons/emoji
+const ACTIVITY_ICONS: Record<string, string> = {
+    "PAPER_SUBMISSION": "📄",
+    "REVIEWER_BIDDING": "🔨",
+    "REVIEW_SUBMISSION": "📝",
+    "REVIEW_DISCUSSION": "💬",
+    "AUTHOR_NOTIFICATION": "📧",
+    "CAMERA_READY_SUBMISSION": "🏁",
+}
+
+// Audit log action config
+const ACTION_CONFIG: Record<string, { label: string; color: string; icon: typeof ToggleRight }> = {
+    "ENABLED": { label: "Enabled", color: "text-emerald-700 bg-emerald-50 border-emerald-200", icon: ToggleRight },
+    "DISABLED": { label: "Disabled", color: "text-red-700 bg-red-50 border-red-200", icon: ToggleLeft },
+    "DEADLINE_CHANGED": { label: "Deadline Changed", color: "text-blue-700 bg-blue-50 border-blue-200", icon: CalendarClock },
+}
+
+export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineProps) {
     const [activities, setActivities] = useState<ConferenceActivityDTO[]>([])
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+    const [auditLogs, setAuditLogs] = useState<ActivityAuditLogDTO[]>([])
+    const [auditLogsOpen, setAuditLogsOpen] = useState(false)
+    const [auditLoading, setAuditLoading] = useState(false)
 
     useEffect(() => {
         const fetchActivities = async () => {
@@ -78,6 +110,23 @@ export function ActivityTimeline({ conferenceId }: ActivityTimelineProps) {
         fetchActivities()
     }, [conferenceId])
 
+    // Fetch audit logs when section is opened
+    useEffect(() => {
+        if (!auditLogsOpen) return
+        const fetchAuditLogs = async () => {
+            try {
+                setAuditLoading(true)
+                const data = await getActivityAuditLogs(conferenceId)
+                setAuditLogs(data)
+            } catch {
+                setAuditLogs([])
+            } finally {
+                setAuditLoading(false)
+            }
+        }
+        fetchAuditLogs()
+    }, [auditLogsOpen, conferenceId])
+
     const handleToggle = (id: number, checked: boolean) => {
         setActivities(prev => 
             prev.map(activity => {
@@ -106,12 +155,42 @@ export function ActivityTimeline({ conferenceId }: ActivityTimelineProps) {
             setSaving(true)
             await updateConferenceActivities(conferenceId, activities)
             toast.success("Activity timeline updated successfully!")
+            // Refresh audit logs if panel is open
+            if (auditLogsOpen) {
+                const data = await getActivityAuditLogs(conferenceId)
+                setAuditLogs(data)
+            }
         } catch (err: any) {
             console.error("Failed to update activities:", err)
             const msg = err?.response?.data?.detail || err?.response?.data?.message || "Failed to update activity timeline. Please try again."
             toast.error(msg)
         } finally {
             setSaving(false)
+        }
+    }
+
+    const formatAuditDate = (iso: string) => {
+        try {
+            const d = new Date(iso)
+            return d.toLocaleDateString('vi-VN', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit',
+            })
+        } catch {
+            return iso
+        }
+    }
+
+    const formatDeadlineValue = (val: string | null) => {
+        if (!val || val === 'none') return '—'
+        try {
+            const d = new Date(val)
+            return d.toLocaleDateString('vi-VN', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit',
+            })
+        } catch {
+            return val
         }
     }
 
@@ -187,48 +266,80 @@ export function ActivityTimeline({ conferenceId }: ActivityTimelineProps) {
                             }
 
                             const description = ACTIVITY_DESCRIPTIONS[activity.activityType] || ""
+                            const quickAction = QUICK_ACTIONS[activity.activityType]
+                            const icon = ACTIVITY_ICONS[activity.activityType] || "⚙️"
+
+                            // Determine phase status for visual cue
+                            const orderIdx = ACTIVITY_ORDER.indexOf(activity.activityType)
+                            const activeIdx = activities.findIndex(a => a.isEnabled)
+                            const activeOrderIdx = activeIdx >= 0 ? ACTIVITY_ORDER.indexOf(activities[activeIdx].activityType) : -1
+                            const isPast = activeOrderIdx >= 0 && orderIdx < activeOrderIdx
+                            const isCurrent = activity.isEnabled
+                            const isFuture = activeOrderIdx >= 0 && orderIdx > activeOrderIdx
 
                             return (
-                                <div key={activity.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-4 hover:bg-muted/30 transition-colors">
-                                    <div className="flex items-top gap-3 flex-1 min-w-0">
-                                        <div className="mt-0.5 w-6 shrink-0 flex justify-center text-xs font-mono text-muted-foreground">
-                                            {index + 1}
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <p className="font-semibold text-sm">
-                                                    {ACTIVITY_LABELS[activity.activityType] || activity.name || activity.activityType}
-                                                </p>
-                                                {activity.isEnabled && (
-                                                    <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                                                        Active
-                                                    </span>
-                                                )}
-                                                {!activity.isEnabled && (
-                                                    <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                                                        Disabled
-                                                    </span>
+                                <div
+                                    key={activity.id}
+                                    className={`flex flex-col p-4 gap-3 transition-colors ${
+                                        isCurrent
+                                            ? "bg-emerald-50/40 border-l-4 border-l-emerald-500"
+                                            : isPast
+                                                ? "bg-muted/20 border-l-4 border-l-gray-300"
+                                                : "hover:bg-muted/30 border-l-4 border-l-transparent"
+                                    }`}
+                                >
+                                    {/* Row 1: Main info */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <div className="flex items-top gap-3 flex-1 min-w-0">
+                                            <div className="mt-0.5 w-8 shrink-0 flex justify-center text-lg">
+                                                {icon}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                    <p className="font-semibold text-sm">
+                                                        {ACTIVITY_LABELS[activity.activityType] || activity.name || activity.activityType}
+                                                    </p>
+                                                    {isCurrent && (
+                                                        <Badge className="text-[10px] bg-emerald-100 text-emerald-700 border-emerald-300 animate-pulse">
+                                                            ● Active
+                                                        </Badge>
+                                                    )}
+                                                    {isPast && (
+                                                        <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                                                            Completed
+                                                        </Badge>
+                                                    )}
+                                                    {isFuture && (
+                                                        <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                                                            Upcoming
+                                                        </Badge>
+                                                    )}
+                                                    {!isCurrent && !isPast && !isFuture && (
+                                                        <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                                                            Disabled
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                {description && (
+                                                    <p className="text-xs text-muted-foreground leading-relaxed pr-4">
+                                                        {description}
+                                                    </p>
                                                 )}
                                             </div>
-                                            {description && (
-                                                <p className="text-xs text-muted-foreground leading-relaxed pr-4">
-                                                    {description}
-                                                </p>
-                                            )}
                                         </div>
-                                    </div>
 
-                                    <div className="flex items-center gap-4 pl-9 sm:pl-0 shrink-0 flex-wrap sm:flex-nowrap">
-                                        <div className="flex-1 sm:w-48 relative">
-                                            <Input 
-                                                type="datetime-local" 
-                                                value={formattedDate}
-                                                onChange={(e) => handleDateChange(activity.id, e.target.value)}
-                                                className="text-sm cursor-pointer w-full text-foreground/90 pl-8"
-                                            />
-                                            <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                                        </div>
-                                        <div className="flex items-center gap-2 shrink-0">
+                                        <div className="flex items-center gap-3 pl-11 sm:pl-0 shrink-0 flex-wrap sm:flex-nowrap">
+                                            {/* Deadline input */}
+                                            <div className="flex-1 sm:w-48 relative">
+                                                <Input 
+                                                    type="datetime-local" 
+                                                    value={formattedDate}
+                                                    onChange={(e) => handleDateChange(activity.id, e.target.value)}
+                                                    className="text-sm cursor-pointer w-full text-foreground/90 pl-8"
+                                                />
+                                                <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                            </div>
+                                            {/* Toggle */}
                                             <Switch 
                                                 checked={activity.isEnabled}
                                                 onCheckedChange={(checked) => handleToggle(activity.id, checked)}
@@ -236,13 +347,29 @@ export function ActivityTimeline({ conferenceId }: ActivityTimelineProps) {
                                             />
                                         </div>
                                     </div>
+
+                                    {/* Row 2: Quick Action */}
+                                    {quickAction && onNavigate && (
+                                        <div className="pl-11">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-7 text-xs gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                                                onClick={() => onNavigate(quickAction.tab)}
+                                            >
+                                                <ExternalLink className="h-3 w-3" />
+                                                {quickAction.label}
+                                                <ArrowRight className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                             )
                         })
                     )}
                 </div>
 
-                <div className="flex justify-end">
+                <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t py-4 -mx-8 px-8 md:-mx-12 md:px-12 flex justify-end">
                     <Button onClick={handleSave} disabled={saving || activities.length === 0}>
                         {saving ? (
                             <>
@@ -253,6 +380,83 @@ export function ActivityTimeline({ conferenceId }: ActivityTimelineProps) {
                             "Save Changes"
                         )}
                     </Button>
+                </div>
+
+                {/* ── Audit Logs Section ── */}
+                <div className="rounded-lg border">
+                    <button
+                        onClick={() => setAuditLogsOpen(!auditLogsOpen)}
+                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+                    >
+                        <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-indigo-600" />
+                            <span className="text-sm font-semibold">Change History</span>
+                            {auditLogs.length > 0 && (
+                                <Badge variant="outline" className="text-[10px]">{auditLogs.length}</Badge>
+                            )}
+                        </div>
+                        {auditLogsOpen ? (
+                            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                    </button>
+
+                    {auditLogsOpen && (
+                        <div className="border-t px-4 py-3">
+                            {auditLoading ? (
+                                <div className="flex items-center justify-center py-6">
+                                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                                </div>
+                            ) : auditLogs.length === 0 ? (
+                                <div className="text-center py-6 text-sm text-muted-foreground">
+                                    <Clock className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                                    <p>No changes recorded yet.</p>
+                                    <p className="text-xs mt-1">Changes will appear here after saving activity updates.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2 max-h-80 overflow-y-auto">
+                                    {auditLogs.map((log) => {
+                                        const config = ACTION_CONFIG[log.action] || ACTION_CONFIG["ENABLED"]
+                                        const IconComp = config.icon
+                                        return (
+                                            <div
+                                                key={log.id}
+                                                className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border text-sm ${config.color}`}
+                                            >
+                                                <IconComp className="h-4 w-4 mt-0.5 shrink-0" />
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-medium">
+                                                            {ACTIVITY_ICONS[log.activityType] || ''} {log.activityLabel}
+                                                        </span>
+                                                        <Badge variant="outline" className={`text-[10px] ${config.color}`}>
+                                                            {config.label}
+                                                        </Badge>
+                                                    </div>
+                                                    {log.action === "DEADLINE_CHANGED" && (
+                                                        <p className="text-xs mt-0.5 opacity-80">
+                                                            {formatDeadlineValue(log.oldValue)} → {formatDeadlineValue(log.newValue)}
+                                                        </p>
+                                                    )}
+                                                    <div className="flex items-center gap-3 mt-1 text-xs opacity-70">
+                                                        <span className="flex items-center gap-1">
+                                                            <User className="h-3 w-3" />
+                                                            {log.performedBy}
+                                                        </span>
+                                                        <span className="flex items-center gap-1">
+                                                            <Clock className="h-3 w-3" />
+                                                            {formatAuditDate(log.createdAt)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </CardContent>
         </Card>

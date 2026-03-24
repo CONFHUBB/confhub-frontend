@@ -3,24 +3,35 @@
 import { useEffect, useState } from "react"
 import { getTracksByConference } from "@/app/api/track.api"
 import type { TrackResponse } from "@/types/track"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Layers } from "lucide-react"
+import { Loader2, Layers, ChevronLeft, ChevronRight } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
 
 interface TrackListProps {
     conferenceId: number
     refreshKey: number
 }
 
+const PAGE_SIZE = 10
+
 export function TrackList({ conferenceId, refreshKey }: TrackListProps) {
-    const [tracks, setTracks] = useState<TrackResponse[]>([])
+    const [allTracks, setAllTracks] = useState<TrackResponse[]>([])
     const [loading, setLoading] = useState(true)
+    const [currentPage, setCurrentPage] = useState(0)
 
     useEffect(() => {
         const fetchTracks = async () => {
             try {
                 setLoading(true)
                 const data = await getTracksByConference(conferenceId)
-                setTracks(data)
+                setAllTracks(data)
             } catch (err) {
                 console.error("Failed to load tracks:", err)
             } finally {
@@ -30,41 +41,95 @@ export function TrackList({ conferenceId, refreshKey }: TrackListProps) {
         fetchTracks()
     }, [conferenceId, refreshKey])
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
-        )
-    }
+    // Reset to page 0 when data changes
+    useEffect(() => {
+        setCurrentPage(0)
+    }, [allTracks.length])
 
-    if (tracks.length === 0) {
-        return (
-            <div className="rounded-lg border border-dashed p-8 text-center">
-                <Layers className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-                <p className="text-muted-foreground">No tracks created yet. Add a track manually or import from Excel using the buttons below.</p>
-            </div>
-        )
-    }
+    const totalElements = allTracks.length
+    const totalPages = Math.max(1, Math.ceil(totalElements / PAGE_SIZE))
+    const paginatedTracks = allTracks.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
 
     return (
-        <div>
-            <h3 className="text-lg font-semibold mb-4">Existing Tracks ({tracks.length})</h3>
-            <div className="rounded-lg border divide-y">
-                {tracks.map((track, index) => (
-                    <div key={track.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center gap-3 min-w-0">
-                            <span className="text-xs font-mono text-muted-foreground w-6 shrink-0">{index + 1}</span>
-                            <div className="min-w-0">
-                                <p className="font-medium text-sm truncate">{track.name}</p>
-                                {track.description && (
-                                    <p className="text-xs text-muted-foreground truncate max-w-md">{track.description}</p>
-                                )}
-                            </div>
-                    </div>
-                    </div>
-                ))}
+        <div className="rounded-xl border bg-card p-6 space-y-4">
+            <div className="flex items-center justify-between">
+                <h3 className="text-base font-semibold flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-primary" />
+                    Conference Tracks
+                    {!loading && (
+                        <span className="text-xs font-normal text-muted-foreground">
+                            ({totalElements})
+                        </span>
+                    )}
+                </h3>
             </div>
+
+            {loading ? (
+                <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+            ) : allTracks.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground text-sm">
+                    <Layers className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+                    No tracks created yet. Use the Add Tracks section above to create tracks.
+                </div>
+            ) : (
+                <div className="rounded-lg border overflow-hidden">
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-muted/30">
+                                <TableHead className="w-12 text-center">#</TableHead>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Description</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {paginatedTracks.map((track, idx) => (
+                                <TableRow key={track.id}>
+                                    <TableCell className="text-center text-xs text-muted-foreground font-medium">
+                                        {currentPage * PAGE_SIZE + idx + 1}
+                                    </TableCell>
+                                    <TableCell>
+                                        <p className="font-medium text-sm">{track.name}</p>
+                                    </TableCell>
+                                    <TableCell>
+                                        <p className="text-sm text-muted-foreground truncate max-w-md">
+                                            {track.description || "—"}
+                                        </p>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4 border-t">
+                    <p className="text-xs text-muted-foreground">
+                        Page {currentPage + 1} of {totalPages} · {totalElements} tracks
+                    </p>
+                    <div className="flex gap-1">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={currentPage === 0}
+                            onClick={() => setCurrentPage(p => p - 1)}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={currentPage >= totalPages - 1}
+                            onClick={() => setCurrentPage(p => p + 1)}
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
