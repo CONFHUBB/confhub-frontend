@@ -34,6 +34,9 @@ const DEFAULT_SETTINGS: TrackReviewSetting = {
     allowDiscussNonAssignedPapers: false,
     allowAuthorDiscuss: false,
     doNotShowWithdrawnPapers: false,
+    enableDomainConflict: true,
+    enableAuthorSelfConflict: true,
+    allowAuthorConfigureConflict: false,
 }
 
 export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {

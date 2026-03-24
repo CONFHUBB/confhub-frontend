@@ -47,8 +47,8 @@ export default function MyProfilePage() {
             }
 
             setUserId(user.id)
-            setUserName(user.fullName)
-            setUserEmail(user.email)
+            setUserName(user.fullName || "")
+            setUserEmail(user.email || "")
 
             try {
                 const profileData = await getUserProfile(user.id)

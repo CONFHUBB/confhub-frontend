@@ -176,7 +176,7 @@ export function EmailManagementInline({ conferenceId }: EmailManagementInlinePro
             {/* Header */}
             <div>
                 <h2 className="text-xl font-bold flex items-center gap-2">
-                    <Mail className="h-5 w-5 text-blue-600" />
+                    <Mail className="h-5 w-5 text-indigo-600" />
                     Email Management
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -314,7 +314,7 @@ export function EmailManagementInline({ conferenceId }: EmailManagementInlinePro
                                 value={bulkSubject}
                                 onChange={(e) => setBulkSubject(e.target.value)}
                                 placeholder="Enter email subject..."
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                             />
                         </div>
 
@@ -329,17 +329,17 @@ export function EmailManagementInline({ conferenceId }: EmailManagementInlinePro
                                 onChange={(e) => setBulkBody(e.target.value)}
                                 placeholder={`Dear {Recipient.Name},\n\nThank you for participating in {Conference.Name}...\n\nBest regards`}
                                 rows={6}
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-y"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-y"
                             />
                         </div>
 
                         {/* Placeholders Help */}
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                            <p className="text-sm font-medium text-blue-800 mb-1">Available Placeholders</p>
+                        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                            <p className="text-sm font-medium text-indigo-800 mb-1">Available Placeholders</p>
                             <div className="flex flex-wrap gap-2">
                                 {["{Conference.Name}", "{Conference.StartDate}", "{Conference.EndDate}", "{Conference.Location}",
                                   "{Recipient.Name}", "{Recipient.Email}", "{Sender.Email}"].map(ph => (
-                                    <code key={ph} className="text-xs bg-white border border-blue-200 rounded px-1.5 py-0.5 text-blue-700 cursor-pointer hover:bg-blue-100"
+                                    <code key={ph} className="text-xs bg-white border border-indigo-200 rounded px-1.5 py-0.5 text-indigo-700 cursor-pointer hover:bg-indigo-100"
                                           onClick={() => setBulkBody(prev => prev + ph)}>
                                         {ph}
                                     </code>

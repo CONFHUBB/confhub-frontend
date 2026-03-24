@@ -409,7 +409,7 @@ export function ProfileForm({ initialData, onSubmit, userName, userEmail }: Prof
                                 </div>
 
                                 <div className="flex items-start gap-4 p-4 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 shrink-0">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 shrink-0">
                                         <GraduationCap className="h-5 w-5" />
                                     </div>
                                     <div className="flex-1 space-y-1.5">

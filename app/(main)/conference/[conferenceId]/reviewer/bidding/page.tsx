@@ -16,7 +16,7 @@ import toast from 'react-hot-toast'
 
 const BID_OPTIONS: { value: BidValue; label: string; shortLabel: string; color: string; activeColor: string; icon: React.ReactNode }[] = [
     { value: 'EAGER', label: 'Eager to review', shortLabel: 'Eager', color: 'border-gray-200 text-gray-500 hover:border-emerald-300 hover:text-emerald-600', activeColor: 'bg-emerald-100 border-emerald-400 text-emerald-700 ring-1 ring-emerald-300', icon: <Zap className="h-3.5 w-3.5" /> },
-    { value: 'WILLING', label: 'Willing', shortLabel: 'Willing', color: 'border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-600', activeColor: 'bg-blue-100 border-blue-400 text-blue-700 ring-1 ring-blue-300', icon: <ThumbsUp className="h-3.5 w-3.5" /> },
+    { value: 'WILLING', label: 'Willing', shortLabel: 'Willing', color: 'border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600', activeColor: 'bg-indigo-100 border-indigo-400 text-indigo-700 ring-1 ring-blue-300', icon: <ThumbsUp className="h-3.5 w-3.5" /> },
     { value: 'IN_A_PINCH', label: 'In a Pinch', shortLabel: 'Pinch', color: 'border-gray-200 text-gray-500 hover:border-amber-300 hover:text-amber-600', activeColor: 'bg-amber-100 border-amber-400 text-amber-700 ring-1 ring-amber-300', icon: <Minus className="h-3.5 w-3.5" /> },
     { value: 'NOT_WILLING', label: 'Not Willing', shortLabel: 'No', color: 'border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-600', activeColor: 'bg-red-100 border-red-400 text-red-700 ring-1 ring-red-300', icon: <ThumbsDown className="h-3.5 w-3.5" /> },
 ]
@@ -374,7 +374,7 @@ export default function BiddingPage() {
                                                     onClick={() => setExpandedPaper(isExpanded ? null : paper.paperId)}
                                                     className="text-left"
                                                 >
-                                                    <h3 className="font-semibold text-gray-900 hover:text-blue-600 transition-colors">
+                                                    <h3 className="font-semibold text-gray-900 hover:text-indigo-600 transition-colors">
                                                         {paper.title}
                                                     </h3>
                                                 </button>
@@ -417,7 +417,7 @@ export default function BiddingPage() {
                                                     <div className="w-16 h-2 rounded-full bg-gray-200 overflow-hidden">
                                                         <div
                                                             className={`h-full rounded-full transition-all ${paper.relevanceScore >= 0.7 ? 'bg-emerald-500' :
-                                                                    paper.relevanceScore >= 0.4 ? 'bg-blue-500' : 'bg-gray-400'
+                                                                    paper.relevanceScore >= 0.4 ? 'bg-indigo-500' : 'bg-gray-400'
                                                                 }`}
                                                             style={{ width: `${(paper.relevanceScore || 0) * 100}%` }}
                                                         />
@@ -425,7 +425,7 @@ export default function BiddingPage() {
                                                     <span className="text-sm font-mono font-semibold">{Math.round((paper.relevanceScore || 0) * 100)}%</span>
                                                 </div>
                                                 <p className={`text-[10px] mt-1 leading-tight max-w-[140px] ${paper.relevanceScore >= 0.7 ? 'text-emerald-600' :
-                                                        paper.relevanceScore >= 0.4 ? 'text-blue-600' : 'text-gray-400'
+                                                        paper.relevanceScore >= 0.4 ? 'text-indigo-600' : 'text-gray-400'
                                                     }`}>
                                                     {paper.relevanceScore >= 0.7
                                                         ? 'High — your subject areas match well with this paper'
@@ -466,7 +466,7 @@ export default function BiddingPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="gap-1.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                    className="gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
                                                     onClick={() => setEditingBidPaperId(paper.paperId)}
                                                 >
                                                     <Pencil className="h-3.5 w-3.5" />

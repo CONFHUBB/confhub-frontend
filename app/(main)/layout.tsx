@@ -56,7 +56,7 @@ export default function MainLayout({
     // Other roles → navbar layout
     return (
         <UserRolesProvider>
-            <div className="min-h-screen bg-gray-50">
+            <div className={`min-h-screen ${isHomePage ? 'bg-white' : 'bg-gray-50'}`}>
                 <AppNavbar />
                 {isHomePage && <HeroSection />}
                 <main>

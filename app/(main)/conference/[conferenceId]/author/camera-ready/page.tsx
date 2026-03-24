@@ -130,7 +130,7 @@ export default function CameraReadyPage() {
                                                     {p.paperStatus}
                                                 </Badge>
                                                 {hasUploaded && (
-                                                    <Badge className="bg-blue-100 text-blue-800">
+                                                    <Badge className="bg-indigo-100 text-indigo-800">
                                                         Camera-Ready Uploaded
                                                     </Badge>
                                                 )}
@@ -145,7 +145,7 @@ export default function CameraReadyPage() {
                                                             href={f.url}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                                                            className="flex items-center gap-2 text-sm text-indigo-600 hover:underline"
                                                         >
                                                             <ExternalLink className="h-3 w-3" />
                                                             Camera-ready file #{f.id}

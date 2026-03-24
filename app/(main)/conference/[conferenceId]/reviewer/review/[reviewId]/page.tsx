@@ -27,7 +27,7 @@ interface ReviewQuestion {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-    ASSIGNED: 'bg-blue-100 text-blue-800',
+    ASSIGNED: 'bg-indigo-100 text-indigo-800',
     IN_PROGRESS: 'bg-amber-100 text-amber-800',
     COMPLETED: 'bg-green-100 text-green-800',
     DECLINED: 'bg-red-100 text-red-800',
@@ -341,7 +341,7 @@ export default function ReviewPaperPage() {
                         <CardHeader className="pb-3">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <FileDown className="h-5 w-5 text-blue-500" />
+                                    <FileDown className="h-5 w-5 text-indigo-500" />
                                     <CardTitle className="text-base">Manuscript File</CardTitle>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -470,13 +470,13 @@ export default function ReviewPaperPage() {
                                                         onClick={() => handleAnswerChange(question.id, choice.text, choice.id)}
                                                         className={`w-full text-left flex items-center justify-between px-4 py-3 rounded-lg border text-sm transition-all ${
                                                             isActive
-                                                                ? 'bg-blue-50 border-blue-400 text-blue-800 ring-1 ring-blue-200'
+                                                                ? 'bg-indigo-50 border-indigo-400 text-indigo-800 ring-1 ring-indigo-200'
                                                                 : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                                                         }`}
                                                     >
                                                         <div className="flex items-center gap-3">
                                                             <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                                                                isActive ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                                                                isActive ? 'border-indigo-500 bg-indigo-500' : 'border-gray-300'
                                                             }`}>
                                                                 {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                                                             </div>

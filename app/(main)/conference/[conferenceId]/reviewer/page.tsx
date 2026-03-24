@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { Loader2, ArrowLeft, ClipboardList, Target, FileSearch, ThumbsUp, ThumbsDown, Minus, Zap, Clock, ChevronDown, ChevronUp } from 'lucide-react'
 
 const STATUS_COLORS: Record<string, string> = {
-    ASSIGNED: 'bg-blue-100 text-blue-800',
+    ASSIGNED: 'bg-indigo-100 text-indigo-800',
     IN_PROGRESS: 'bg-amber-100 text-amber-800',
     COMPLETED: 'bg-green-100 text-green-800',
     DECLINED: 'bg-red-100 text-red-800',
@@ -30,7 +30,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const BID_ICONS: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
     EAGER: { icon: <Zap className="h-4 w-4" />, color: 'text-emerald-600', label: 'Eager' },
-    WILLING: { icon: <ThumbsUp className="h-4 w-4" />, color: 'text-blue-600', label: 'Willing' },
+    WILLING: { icon: <ThumbsUp className="h-4 w-4" />, color: 'text-indigo-600', label: 'Willing' },
     IN_A_PINCH: { icon: <Minus className="h-4 w-4" />, color: 'text-amber-600', label: 'In a Pinch' },
     NOT_WILLING: { icon: <ThumbsDown className="h-4 w-4" />, color: 'text-red-600', label: 'Not Willing' },
 }
@@ -100,7 +100,7 @@ export default function ReviewerConsolePage() {
             <div className="space-y-4">
                 <Button variant="ghost" className="gap-2 -ml-2" onClick={() => router.push('/conference/reviewer-select')}>
                     <ArrowLeft className="h-4 w-4" />
-                    Back to Conferences
+                    Back to Reviewer
                 </Button>
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Reviewer Console</h1>
@@ -128,7 +128,7 @@ export default function ReviewerConsolePage() {
                                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${
                                             isPast ? 'bg-gray-100 text-gray-500 border-gray-200' :
                                             isUrgent ? 'bg-red-50 text-red-700 border-red-200 animate-pulse' :
-                                            'bg-blue-50 text-blue-700 border-blue-200'
+                                            'bg-indigo-50 text-indigo-700 border-indigo-200'
                                         }`}
                                     >
                                         <Clock className="h-3 w-3" />
@@ -159,8 +159,8 @@ export default function ReviewerConsolePage() {
                 <Link href={`/conference/${conferenceId}/reviewer/bidding`}>
                     <Card className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-blue-500 h-full">
                         <CardContent className="p-5 flex items-center gap-4">
-                            <div className="rounded-full bg-blue-100 p-3">
-                                <FileSearch className="h-5 w-5 text-blue-600" />
+                            <div className="rounded-full bg-indigo-100 p-3">
+                                <FileSearch className="h-5 w-5 text-indigo-600" />
                             </div>
                             <div>
                                 <p className="font-semibold text-gray-900">Bidding Papers</p>
@@ -223,37 +223,37 @@ export default function ReviewerConsolePage() {
                             <p className="text-sm mt-1">The Chair will assign papers after bidding is complete.</p>
                         </div>
                     ) : (
-                        <div className="overflow-auto rounded-lg border">
+                        <div className="overflow-auto rounded-xl border bg-white">
                             <table className="w-full text-sm">
                                 <thead>
-                                    <tr className="border-b bg-gray-50">
-                                        <th className="px-4 py-3 text-left font-medium text-gray-600">#</th>
-                                        <th className="px-4 py-3 text-left font-medium text-gray-600">Paper Title</th>
-                                        <th className="px-4 py-3 text-left font-medium text-gray-600">Status</th>
-                                        <th className="px-4 py-3 text-left font-medium text-gray-600">Score</th>
-                                        <th className="px-4 py-3 text-right font-medium text-gray-600">Action</th>
+                                    <tr className="border-b bg-muted/30">
+                                        <th className="px-5 py-3.5 text-left font-medium text-xs uppercase tracking-wider text-muted-foreground">#</th>
+                                        <th className="px-5 py-3.5 text-left font-medium text-xs uppercase tracking-wider text-muted-foreground">Paper Title</th>
+                                        <th className="px-5 py-3.5 text-left font-medium text-xs uppercase tracking-wider text-muted-foreground">Status</th>
+                                        <th className="px-5 py-3.5 text-left font-medium text-xs uppercase tracking-wider text-muted-foreground">Score</th>
+                                        <th className="px-5 py-3.5 text-right font-medium text-xs uppercase tracking-wider text-muted-foreground">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody className="divide-y">
                                     {reviews.map((review, i) => (
                                         <>
-                                        <tr key={review.id} className="border-b last:border-0 hover:bg-gray-50 cursor-pointer" onClick={() => setExpandedReview(expandedReview === review.id ? null : review.id)}>
-                                            <td className="px-4 py-3 text-gray-400">{i + 1}</td>
-                                            <td className="px-4 py-3 font-medium max-w-md">
+                                        <tr key={review.id} className="hover:bg-indigo-50/30 transition-colors cursor-pointer" onClick={() => setExpandedReview(expandedReview === review.id ? null : review.id)}>
+                                            <td className="px-5 py-4 text-xs text-muted-foreground font-medium">{i + 1}</td>
+                                            <td className="px-5 py-4 font-medium max-w-md">
                                                 <div className="flex items-center gap-2">
                                                     <span className="truncate">{review.paper?.title || `Paper #${review.paper?.id}`}</span>
                                                     {expandedReview === review.id ? <ChevronUp className="h-3 w-3 text-gray-400 shrink-0" /> : <ChevronDown className="h-3 w-3 text-gray-400 shrink-0" />}
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-3">
+                                            <td className="px-5 py-4">
                                                 <Badge className={STATUS_COLORS[review.status] || 'bg-gray-100 text-gray-800'}>
                                                     {STATUS_LABELS[review.status] || review.status}
                                                 </Badge>
                                             </td>
-                                            <td className="px-4 py-3 font-mono">
+                                            <td className="px-5 py-4 font-mono">
                                                 {review.totalScore != null ? review.totalScore : '—'}
                                             </td>
-                                            <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
+                                            <td className="px-5 py-4 text-right" onClick={e => e.stopPropagation()}>
                                                 {review.status !== 'DECLINED' && (
                                                     <Link href={`/conference/${conferenceId}/reviewer/review/${review.id}`}>
                                                         <Button size="sm" variant={review.status === 'COMPLETED' ? 'outline' : 'default'}>
@@ -265,7 +265,7 @@ export default function ReviewerConsolePage() {
                                         </tr>
                                         {expandedReview === review.id && review.paper?.abstractField && (
                                             <tr key={`${review.id}-abstract`}>
-                                                <td colSpan={5} className="px-4 py-3 bg-blue-50/50">
+                                                <td colSpan={5} className="px-5 py-4 bg-indigo-50/50">
                                                     <div className="text-sm text-gray-600 max-w-3xl">
                                                         <p className="font-medium text-gray-700 text-xs uppercase tracking-wider mb-1">Abstract</p>
                                                         <p className="leading-relaxed line-clamp-4">{review.paper.abstractField}</p>

@@ -86,7 +86,7 @@ export default function ConferenceDetailsPage() {
             case 'APPROVED':
                 return 'bg-green-100 text-green-800 border-green-200'
             case 'UPCOMING':
-                return 'bg-blue-100 text-blue-800 border-blue-200'
+                return 'bg-indigo-100 text-indigo-800 border-indigo-200'
             case 'PENDING':
                 return 'bg-amber-100 text-amber-800 border-amber-200'
             case 'REJECTED':
@@ -244,14 +244,14 @@ export default function ConferenceDetailsPage() {
                         )}
                         {conference.websiteUrl && (
                             <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                                <Globe className="h-5 w-5 text-blue-500 mt-0.5 shrink-0" />
+                                <Globe className="h-5 w-5 text-indigo-500 mt-0.5 shrink-0" />
                                 <div>
                                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Website</p>
                                     <a
                                         href={conference.websiteUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-sm font-medium text-blue-600 hover:underline flex items-center gap-1"
+                                        className="text-sm font-medium text-indigo-600 hover:underline flex items-center gap-1"
                                     >
                                         Visit site <ExternalLink className="h-3 w-3" />
                                     </a>
@@ -388,7 +388,7 @@ export default function ConferenceDetailsPage() {
                                                     variant="outline"
                                                     className={
                                                         !submissionOpen && currentActivity
-                                                            ? 'border-blue-300 text-blue-700 bg-blue-50 shrink-0'
+                                                            ? 'border-indigo-300 text-indigo-700 bg-indigo-50 shrink-0'
                                                             : submissionOpen
                                                                 ? 'border-green-300 text-green-700 bg-green-50 shrink-0'
                                                                 : 'border-gray-300 text-gray-500 bg-gray-50 shrink-0'

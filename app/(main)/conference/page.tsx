@@ -67,7 +67,7 @@ export default function ConferencesPage() {
     const getStatusColor = (status: string) => {
         switch (status.toUpperCase()) {
             case 'ACTIVE': case 'APPROVED': return 'bg-green-100 text-green-800'
-            case 'UPCOMING': return 'bg-blue-100 text-blue-800'
+            case 'UPCOMING': return 'bg-indigo-100 text-indigo-800'
             case 'PENDING': return 'bg-amber-100 text-amber-800'
             case 'REJECTED': return 'bg-red-100 text-red-800'
             default: return 'bg-gray-100 text-gray-800'
@@ -164,7 +164,7 @@ export default function ConferencesPage() {
                                 {/* Card Body */}
                                 <div className="p-4 space-y-3">
                                     <div>
-                                        <h3 className="font-bold text-base leading-tight line-clamp-2 group-hover:text-[#34c6eb] transition-colors">
+                                        <h3 className="font-bold text-base leading-tight line-clamp-2 group-hover:text-indigo-600 transition-colors">
                                             {conference.name}
                                         </h3>
                                         <p className="text-xs text-muted-foreground font-mono mt-1">

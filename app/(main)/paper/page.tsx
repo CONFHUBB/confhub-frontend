@@ -33,9 +33,9 @@ const STATUS_CONFIG: Record<PaperStatus, {
     },
     SUBMITTED: {
         label: 'Submitted',
-        color: 'text-blue-700 dark:text-blue-400',
-        bgColor: 'bg-blue-50 dark:bg-blue-950/30',
-        borderColor: 'border-blue-200 dark:border-blue-800',
+        color: 'text-indigo-700 dark:text-indigo-400',
+        bgColor: 'bg-indigo-50 dark:bg-indigo-950/30',
+        borderColor: 'border-indigo-200 dark:border-indigo-800',
         icon: <Send className="h-3.5 w-3.5" />,
     },
     UNDER_REVIEW: {
@@ -167,7 +167,7 @@ function PaperCard({ paper, reviewInfo, onEdit }: { paper: PaperResponse; review
                         {agg && agg.reviewCount > 0 && (
                             <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-dashed">
                                 <span className="inline-flex items-center gap-1.5 text-xs">
-                                    <BarChart3 className="h-3.5 w-3.5 text-blue-500" />
+                                    <BarChart3 className="h-3.5 w-3.5 text-indigo-500" />
                                     <span className="text-muted-foreground">Reviews:</span>
                                     <span className="font-semibold">{agg.completedReviewCount}/{agg.reviewCount}</span>
                                 </span>
@@ -177,7 +177,7 @@ function PaperCard({ paper, reviewInfo, onEdit }: { paper: PaperResponse; review
                                         <span className="text-muted-foreground">Avg Score:</span>
                                         <span className={`font-semibold font-mono ${
                                             agg.averageTotalScore >= 3.5 ? 'text-emerald-600' :
-                                            agg.averageTotalScore >= 2 ? 'text-blue-600' : 'text-red-600'
+                                            agg.averageTotalScore >= 2 ? 'text-indigo-600' : 'text-red-600'
                                         }`}>{agg.averageTotalScore.toFixed(1)}</span>
                                     </span>
                                 )}

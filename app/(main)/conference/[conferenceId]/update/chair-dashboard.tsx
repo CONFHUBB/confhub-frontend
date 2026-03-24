@@ -167,7 +167,7 @@ export function ChairDashboard({ conferenceId }: ChairDashboardProps) {
                 <Card>
                     <CardHeader className="pb-3">
                         <CardTitle className="text-sm font-medium flex items-center gap-2">
-                            <UserCheck className="h-4 w-4 text-blue-500" />
+                            <UserCheck className="h-4 w-4 text-indigo-500" />
                             Assignment Progress
                         </CardTitle>
                     </CardHeader>
@@ -178,7 +178,7 @@ export function ChairDashboard({ conferenceId }: ChairDashboardProps) {
                         </div>
                         <div className="w-full h-3 rounded-full bg-gray-100 overflow-hidden">
                             <div
-                                className={`h-full rounded-full transition-all duration-500 ${assignmentProgress === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                                className={`h-full rounded-full transition-all duration-500 ${assignmentProgress === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
                                 style={{ width: `${assignmentProgress}%` }}
                             />
                         </div>
@@ -204,7 +204,7 @@ export function ChairDashboard({ conferenceId }: ChairDashboardProps) {
                         </div>
                         <div className="w-full h-3 rounded-full bg-gray-100 overflow-hidden">
                             <div
-                                className={`h-full rounded-full transition-all duration-500 ${reviewProgress === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                                className={`h-full rounded-full transition-all duration-500 ${reviewProgress === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
                                 style={{ width: `${reviewProgress}%` }}
                             />
                         </div>
@@ -227,7 +227,7 @@ export function ChairDashboard({ conferenceId }: ChairDashboardProps) {
                     <div className="space-y-2">
                         {[
                             { label: 'Draft', count: papers.filter(p => p.status === 'DRAFT').length, color: 'bg-gray-400' },
-                            { label: 'Submitted', count: papers.filter(p => p.status === 'SUBMITTED').length, color: 'bg-blue-500' },
+                            { label: 'Submitted', count: papers.filter(p => p.status === 'SUBMITTED').length, color: 'bg-indigo-500' },
                             { label: 'Under Review', count: underReview, color: 'bg-amber-500' },
                             { label: 'Accepted', count: accepted, color: 'bg-emerald-500' },
                             { label: 'Rejected', count: rejected, color: 'bg-red-500' },
@@ -254,7 +254,7 @@ export function ChairDashboard({ conferenceId }: ChairDashboardProps) {
                 <Card>
                     <CardHeader className="pb-3">
                         <CardTitle className="text-sm font-medium flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-blue-500" />
+                            <Clock className="h-4 w-4 text-indigo-500" />
                             Activity Timeline
                         </CardTitle>
                     </CardHeader>
@@ -269,7 +269,7 @@ export function ChairDashboard({ conferenceId }: ChairDashboardProps) {
                                 return (
                                     <div key={a.activityType} className="flex items-center justify-between py-2 border-b last:border-0">
                                         <div className="flex items-center gap-2">
-                                            <div className={`w-2 h-2 rounded-full ${isPast ? 'bg-gray-300' : isUrgent ? 'bg-red-500 animate-pulse' : 'bg-blue-500'}`} />
+                                            <div className={`w-2 h-2 rounded-full ${isPast ? 'bg-gray-300' : isUrgent ? 'bg-red-500 animate-pulse' : 'bg-indigo-500'}`} />
                                             <span className="text-sm font-medium">{ACTIVITY_LABELS[a.activityType] || a.name || a.activityType}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -283,7 +283,7 @@ export function ChairDashboard({ conferenceId }: ChairDashboardProps) {
                                                 className={`text-[10px] ${
                                                     isPast ? 'text-gray-500 border-gray-200' :
                                                     isUrgent ? 'text-red-700 border-red-200 bg-red-50' :
-                                                    'text-blue-700 border-blue-200 bg-blue-50'
+                                                    'text-indigo-700 border-indigo-200 bg-indigo-50'
                                                 }`}
                                             >
                                                 {isPast ? 'Closed' : diffDays !== null ? `${diffDays}d left` : 'No deadline'}
