@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
-    Loader2, Search, FileText, Eye, CheckCircle, ExternalLink, FileCheck, Upload
+    Loader2, Search, FileText, Eye, CheckCircle, ExternalLink, FileCheck, Upload, ChevronLeft, ChevronRight
 } from "lucide-react"
 import toast from "react-hot-toast"
 
@@ -36,6 +36,8 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
     const [filter, setFilter] = useState<CRFilter>("all")
     const [sheetPaper, setSheetPaper] = useState<PaperCameraReadySummary | null>(null)
     const [approving, setApproving] = useState<number | null>(null)
+    const [currentPage, setCurrentPage] = useState(0)
+    const PAGE_SIZE = 10
 
     const fetchData = useCallback(async () => {
         try {
@@ -115,6 +117,12 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
     const uploaded = data.filter(p => p.hasUploaded).length
     const approved = data.filter(p => p.isApproved).length
     const pending = data.filter(p => !p.hasUploaded && !p.isApproved).length
+
+    // Reset page on filter/search change
+    useEffect(() => { setCurrentPage(0) }, [search, filter])
+
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+    const paginatedData = filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
 
     if (loading) {
         return (
@@ -196,6 +204,7 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                     <p>No papers match your filters.</p>
                 </div>
             ) : (
+                <>
                 <div className="overflow-auto rounded-lg border bg-white">
                     <table className="w-full text-sm">
                         <thead>
@@ -210,12 +219,12 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.map((p, idx) => (
+                            {paginatedData.map((p, idx) => (
                                 <tr
                                     key={p.paperId}
                                     className="border-b last:border-0 hover:bg-gray-50 transition-colors"
                                 >
-                                    <td className="px-3 py-3 text-gray-400 text-xs font-medium">{idx + 1}</td>
+                                    <td className="px-3 py-3 text-gray-400 text-xs font-medium">{currentPage * PAGE_SIZE + idx + 1}</td>
                                     <td className="px-3 py-3 text-gray-400 font-mono text-xs">{p.paperId}</td>
                                     <td className="px-3 py-3 font-medium line-clamp-1">{p.paperTitle}</td>
                                     <td className="px-3 py-3 text-xs text-muted-foreground">{p.trackName}</td>
@@ -274,6 +283,23 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                         </tbody>
                     </table>
                 </div>
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between pt-3">
+                        <p className="text-xs text-muted-foreground">
+                            Showing {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
+                        </p>
+                        <div className="flex items-center gap-1">
+                            <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <span className="text-xs text-muted-foreground px-2">{currentPage + 1} / {totalPages}</span>
+                            <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                )}
+                </>
             )}
 
             {/* ── Detail Sheet ── */}

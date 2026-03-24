@@ -10,7 +10,7 @@ import { CONFLICT_TYPE_LABELS } from "@/types/conflict"
 import type { TrackResponse } from "@/types/track"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { Loader2, Plus, Trash2, AlertTriangle, Shield, Lock, Globe, UserX, Settings2 } from "lucide-react"
+import { Loader2, Plus, Trash2, AlertTriangle, Shield, Lock, Globe, UserX, Settings2, ChevronLeft, ChevronRight } from "lucide-react"
 import { Select } from "antd"
 import toast from "react-hot-toast"
 
@@ -57,6 +57,8 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
     const [selectedPaperId, setSelectedPaperId] = useState<number | null>(null)
     const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
     const [selectedConflictType, setSelectedConflictType] = useState<ConflictType>("PERSONAL")
+    const [currentPage, setCurrentPage] = useState(0)
+    const PAGE_SIZE = 10
 
     const fetchAll = async () => {
         try {
@@ -288,7 +290,7 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                     </div>
                 </div>
 
-                <div className="flex justify-end">
+                <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t py-4 -mx-8 px-8 md:-mx-12 md:px-12 flex justify-end">
                     <Button onClick={handleSaveSettings} disabled={savingSettings} size="sm">
                         {savingSettings ? (
                             <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Saving...</>
@@ -391,10 +393,12 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                     </p>
                 </div>
             ) : (
+                <>
                 <div className="border rounded-lg overflow-hidden">
                     <table className="w-full text-sm">
                         <thead className="bg-muted/50 border-b">
                             <tr>
+                                <th className="text-left px-4 py-3 font-semibold w-12">#</th>
                                 <th className="text-left px-4 py-3 font-semibold">Paper</th>
                                 <th className="text-left px-4 py-3 font-semibold">User</th>
                                 <th className="text-left px-4 py-3 font-semibold">Type</th>
@@ -402,8 +406,9 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                             </tr>
                         </thead>
                         <tbody className="divide-y">
-                            {conflicts.map((conflict) => (
+                            {conflicts.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE).map((conflict, idx) => (
                                 <tr key={conflict.id} className="hover:bg-muted/30 transition-colors">
+                                    <td className="px-4 py-3 text-gray-400 text-xs font-medium">{currentPage * PAGE_SIZE + idx + 1}</td>
                                     <td className="px-4 py-3">
                                         <span className="font-medium">#{conflict.paper?.id}</span>{" "}
                                         <span className="text-muted-foreground">{conflict.paper?.title}</span>
@@ -438,6 +443,23 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                         </tbody>
                     </table>
                 </div>
+                {Math.ceil(conflicts.length / PAGE_SIZE) > 1 && (
+                    <div className="flex items-center justify-between pt-3">
+                        <p className="text-xs text-muted-foreground">
+                            Showing {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, conflicts.length)} of {conflicts.length}
+                        </p>
+                        <div className="flex items-center gap-1">
+                            <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <span className="text-xs text-muted-foreground px-2">{currentPage + 1} / {Math.ceil(conflicts.length / PAGE_SIZE)}</span>
+                            <Button variant="outline" size="sm" disabled={currentPage >= Math.ceil(conflicts.length / PAGE_SIZE) - 1} onClick={() => setCurrentPage(p => p + 1)}>
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                )}
+                </>
             )}
 
             {/* Summary */}

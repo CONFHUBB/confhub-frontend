@@ -7,7 +7,8 @@ import type {
     UpdateTrackRequest,
     TrackResponse, 
     ConferenceListResponse,
-    ConferenceActivityDTO
+    ConferenceActivityDTO,
+    ActivityAuditLogDTO
 } from '@/types/conference'
 
 export const createConference = async (body: CreateConferenceRequest): Promise<ConferenceResponse> => {
@@ -59,6 +60,11 @@ export const getConferenceActivities = async (conferenceId: number): Promise<Con
 
 export const updateConferenceActivities = async (conferenceId: number, body: ConferenceActivityDTO[]): Promise<ConferenceActivityDTO[]> => {
     const response = await http.put<ConferenceActivityDTO[]>(`/conferences/${conferenceId}/activities`, body)
+    return response.data
+}
+
+export const getActivityAuditLogs = async (conferenceId: number): Promise<ActivityAuditLogDTO[]> => {
+    const response = await http.get<ActivityAuditLogDTO[]>(`/conferences/${conferenceId}/activities/audit-logs`)
     return response.data
 }
 

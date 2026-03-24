@@ -341,7 +341,7 @@ export function ConferenceTemplate({ initialTemplates, onSubmit }: ConferenceTem
                     </Button>
                 </FieldSet>
 
-                <div className="mt-8 flex items-center justify-end gap-4">
+                <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t py-4 -mx-8 px-8 md:-mx-12 md:px-12 flex items-center justify-end gap-4">
                     <Button type="submit">
                         Save Templates
                     </Button>

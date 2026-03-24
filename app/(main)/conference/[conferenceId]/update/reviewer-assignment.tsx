@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState, useMemo, useCallback } from "react"
+import { Fragment, useEffect, useState, useMemo, useCallback } from "react"
 import {
     runAutoAssign,
     confirmAssignments,
@@ -18,9 +18,11 @@ import type { BiddingResponse } from "@/types/bidding"
 import { getSubjectAreasByTrack, getTrackReviewSettings } from "@/app/api/track.api"
 import { getAggregatesByConference, type ReviewAggregate } from "@/app/api/review-aggregate.api"
 import { getReviewById } from "@/app/api/review.api"
+import { getUserProfile } from "@/app/api/user.api"
 import type { ReviewStatus } from "@/types/review"
 import type { PaperResponse } from "@/types/paper"
 import type { PaperConflictResponse } from "@/types/conflict"
+import type { UserProfile } from "@/types/user"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -35,7 +37,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
     Loader2, Users, FileText, Wand2, Check, X, AlertTriangle,
-    Search, Trash2, Plus, BarChart3, Settings2, UserPlus, ArrowLeft, Edit, Eye, MoreHorizontal
+    Search, Trash2, Plus, BarChart3, Settings2, UserPlus, ArrowLeft, Edit, Eye, MoreHorizontal, Gavel, User2,
+    ChevronDown, ChevronRight, Building2, Phone, GraduationCap
 } from "lucide-react"
 import toast from "react-hot-toast"
 import { ReviewDetailDialog } from "./review-detail-dialog"
@@ -93,6 +96,34 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
     const [aggregateMap, setAggregateMap] = useState<Record<number, ReviewAggregate>>({})
     const [reviewStatusMap, setReviewStatusMap] = useState<Record<number, { status: ReviewStatus; reviewId: number }>>({})
     const [viewingReviewId, setViewingReviewId] = useState<number | null>(null)
+
+    // ── Bid summary for overview table ──
+    const [allPaperBidSummary, setAllPaperBidSummary] = useState<Record<number, { eager: number; willing: number; inAPinch: number; notWilling: number; total: number }>>({})
+    const [bidSheetPaperId, setBidSheetPaperId] = useState<number | null>(null)
+    const [bidSheetBids, setBidSheetBids] = useState<BiddingResponse[]>([])
+    const [bidSheetLoading, setBidSheetLoading] = useState(false)
+    // ── Reviewer info sheet ──
+    const [reviewerInfoId, setReviewerInfoId] = useState<number | null>(null)
+    const [reviewerProfile, setReviewerProfile] = useState<UserProfile | null>(null)
+    const [reviewerProfileLoading, setReviewerProfileLoading] = useState(false)
+
+    // ── Expandable row state ──
+    const [expandedPaperId, setExpandedPaperId] = useState<number | null>(null)
+    const [expandedBids, setExpandedBids] = useState<BiddingResponse[]>([])
+    const [expandedReviewStatus, setExpandedReviewStatus] = useState<Record<number, { status: ReviewStatus; reviewId: number }>>({})
+    const [expandedLoading, setExpandedLoading] = useState(false)
+    const [inlineAssigning, setInlineAssigning] = useState<number | null>(null) // reviewerId being assigned
+
+    // ── Fetch reviewer profile when info sheet opens ──
+    useEffect(() => {
+        if (reviewerInfoId === null) return
+        setReviewerProfileLoading(true)
+        setReviewerProfile(null)
+        getUserProfile(reviewerInfoId)
+            .then(p => setReviewerProfile(p))
+            .catch(() => setReviewerProfile(null))
+            .finally(() => setReviewerProfileLoading(false))
+    }, [reviewerInfoId])
 
     // ── NEW: Paper detail sheet ──
     interface DetailReviewerInfo {
@@ -180,6 +211,25 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                     ;(aggData || []).forEach(a => { aggMap[a.paperId] = a })
                     setAggregateMap(aggMap)
                 }
+            } catch { /* ignore */ }
+            // ── Fetch bid summary for all papers ──
+            try {
+                const bidSummaryMap: Record<number, { eager: number; willing: number; inAPinch: number; notWilling: number; total: number }> = {}
+                await Promise.all(
+                    (papersData || []).map(async (p) => {
+                        try {
+                            const bids = await getBidsByPaper(p.id)
+                            const eager = bids.filter(b => b.bidValue === 'EAGER').length
+                            const willing = bids.filter(b => b.bidValue === 'WILLING').length
+                            const inAPinch = bids.filter(b => b.bidValue === 'IN_A_PINCH').length
+                            const notWilling = bids.filter(b => b.bidValue === 'NOT_WILLING').length
+                            bidSummaryMap[p.id] = { eager, willing, inAPinch, notWilling, total: eager + willing + inAPinch + notWilling }
+                        } catch {
+                            bidSummaryMap[p.id] = { eager: 0, willing: 0, inAPinch: 0, notWilling: 0, total: 0 }
+                        }
+                    })
+                )
+                setAllPaperBidSummary(bidSummaryMap)
             } catch { /* ignore */ }
         } catch (err) {
             console.error("Failed to load paper data:", err)
@@ -384,6 +434,65 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
         }
     }
 
+    // ── Inline assign from expanded row ──
+    const handleInlineAssign = async (paperId: number, reviewerId: number) => {
+        try {
+            setInlineAssigning(reviewerId)
+            await manualAssign(conferenceId, paperId, reviewerId)
+            toast.success("Reviewer assigned!")
+            await fetchCurrentAssignments()
+            // Re-expand to refresh
+            toggleExpandPaper(paperId, true)
+        } catch (err: any) {
+            const msg = err?.response?.data?.message || "Error assigning reviewer"
+            toast.error(msg)
+        } finally {
+            setInlineAssigning(null)
+        }
+    }
+
+    const handleInlineRemove = async (paperId: number, reviewId: number | undefined) => {
+        if (!reviewId) { toast.error("Review ID not found"); return }
+        if (!confirm("Remove this assignment?")) return
+        try {
+            await removeAssignment(conferenceId, reviewId)
+            toast.success("Assignment removed")
+            await fetchCurrentAssignments()
+            toggleExpandPaper(paperId, true)
+        } catch (err: any) {
+            const msg = err?.response?.data?.message || "Error removing assignment"
+            toast.error(msg)
+        }
+    }
+
+    // ── Toggle expand paper row ──
+    const toggleExpandPaper = async (paperId: number, forceOpen: boolean = false) => {
+        if (expandedPaperId === paperId && !forceOpen) {
+            setExpandedPaperId(null)
+            return
+        }
+        setExpandedPaperId(paperId)
+        setExpandedLoading(true)
+        try {
+            // Fetch bids
+            const bids = await getBidsByPaper(paperId)
+            setExpandedBids(bids || [])
+            // Fetch review statuses
+            const paperAssignments = (currentData?.assignments || []).filter(a => a.paperId === paperId)
+            const statusMap: Record<number, { status: ReviewStatus; reviewId: number }> = {}
+            await Promise.all(
+                paperAssignments.filter(a => a.reviewId).map(async (a) => {
+                    try {
+                        const review = await getReviewById(a.reviewId!)
+                        statusMap[a.reviewerId] = { status: review.status, reviewId: review.id }
+                    } catch { /* ignore */ }
+                })
+            )
+            setExpandedReviewStatus(statusMap)
+        } catch { /* ignore */ }
+        finally { setExpandedLoading(false) }
+    }
+
     const handleRemoveAssignment = async (reviewId: number | undefined) => {
         if (!reviewId) {
             toast.error("Review ID not found")
@@ -464,6 +573,21 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
             console.error("Failed to load detail:", err)
         } finally {
             setDetailLoading(false)
+        }
+    }
+
+    // ── Open bid detail sheet ──
+    const openBidSheet = async (paperId: number) => {
+        setBidSheetPaperId(paperId)
+        setBidSheetLoading(true)
+        setBidSheetBids([])
+        try {
+            const bids = await getBidsByPaper(paperId)
+            setBidSheetBids(bids || [])
+        } catch {
+            setBidSheetBids([])
+        } finally {
+            setBidSheetLoading(false)
         }
     }
 
@@ -592,6 +716,18 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                         <th className="text-left px-4 py-3 font-semibold text-muted-foreground min-w-[150px]">Authors</th>
                                         <th className="text-left px-4 py-3 font-semibold text-muted-foreground min-w-[120px]">Subject Area</th>
                                         <th className="text-center px-4 py-3 font-semibold text-muted-foreground w-28"># Reviewers</th>
+                                        <th className="text-center px-3 py-3 font-semibold text-muted-foreground w-16">
+                                            <span className="flex items-center justify-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Eager</span>
+                                        </th>
+                                        <th className="text-center px-3 py-3 font-semibold text-muted-foreground w-16">
+                                            <span className="flex items-center justify-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" /> Willing</span>
+                                        </th>
+                                        <th className="text-center px-3 py-3 font-semibold text-muted-foreground w-16">
+                                            <span className="flex items-center justify-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" /> Pinch</span>
+                                        </th>
+                                        <th className="text-center px-3 py-3 font-semibold text-muted-foreground w-20">
+                                            <span className="flex items-center justify-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Not willing</span>
+                                        </th>
                                         <th className="text-center px-4 py-3 font-semibold text-muted-foreground w-24">Conflicts</th>
                                         {showAggregateColumns && (
                                             <th className="text-center px-4 py-3 font-semibold text-muted-foreground w-24">Avg Score</th>
@@ -602,7 +738,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                 <tbody className="divide-y">
                                     {filteredPapers.length === 0 ? (
                                         <tr>
-                                            <td colSpan={showAggregateColumns ? 8 : 7} className="text-center py-8 text-muted-foreground">
+                                            <td colSpan={showAggregateColumns ? 12 : 11} className="text-center py-8 text-muted-foreground">
                                                 {paperSearchQuery ? "No papers match your search." : "No papers submitted yet."}
                                             </td>
                                         </tr>
@@ -612,77 +748,292 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                             const conflictCount = conflictCountPerPaper[paper.id] || 0
                                             const saName = subjectAreaMap[paper.primarySubjectAreaId] || "—"
                                             const insufficient = revCount < minReviewers
+                                            const isExpanded = expandedPaperId === paper.id
+                                            const shortage = minReviewers - revCount
+
+                                            // Data for expanded panel
+                                            const paperAssignments = (currentData?.assignments || []).filter(a => a.paperId === paper.id)
+                                            const assignedIds = new Set(paperAssignments.map(a => a.reviewerId))
+                                            const paperConflictIds = new Set(allConflicts.filter(c => c.paper.id === paper.id).map(c => c.user.id))
+
+                                            // Build bid map for this paper from expandedBids
+                                            const bidMap: Record<number, string> = {}
+                                            if (isExpanded) {
+                                                expandedBids.forEach(b => { bidMap[b.reviewerId] = b.bidValue })
+                                            }
+
+                                            // Suggested reviewers (not assigned, no conflict), sorted by relevance
+                                            const suggestedReviewers = isExpanded ? reviewers
+                                                .filter(r => !assignedIds.has(r.id) && !paperConflictIds.has(r.id))
+                                                .map(r => {
+                                                    const bid = bidMap[r.id]
+                                                    const bidScore = bid === 'EAGER' ? 1 : bid === 'WILLING' ? 0.75 : bid === 'IN_A_PINCH' ? 0.25 : 0
+                                                    return { ...r, bid, bidScore }
+                                                })
+                                                .sort((a, b) => b.bidScore - a.bidScore)
+                                                .slice(0, 10) : []
 
                                             return (
-                                                <tr key={paper.id} className="hover:bg-muted/30 transition-colors">
-                                                    <td className="px-4 py-3 font-mono text-muted-foreground">{paper.id}</td>
-                                                    <td className="px-4 py-3">
-                                                        <p className="font-medium line-clamp-2">{paper.title}</p>
-                                                    </td>
-                                                    <td className="px-4 py-3">
-                                                        <p className="text-muted-foreground text-xs line-clamp-2">
-                                                            {paperAuthors[paper.id] || "Loading..."}
-                                                        </p>
-                                                    </td>
-                                                    <td className="px-4 py-3">
-                                                        <Badge variant="outline" className="text-xs font-normal whitespace-nowrap">
-                                                            {saName}
-                                                        </Badge>
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center">
-                                                        <Badge
-                                                            variant={insufficient ? "destructive" : "default"}
-                                                            className="text-xs"
-                                                        >
-                                                            {revCount} / {minReviewers}
-                                                        </Badge>
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center">
-                                                        {conflictCount > 0 ? (
-                                                            <Badge variant="outline" className="text-xs text-amber-700 border-amber-300 bg-amber-50">
-                                                                {conflictCount}
-                                                            </Badge>
-                                                        ) : (
-                                                            <span className="text-muted-foreground text-xs">0</span>
-                                                        )}
-                                                    </td>
-                                                    {showAggregateColumns && (
-                                                        <td className="px-4 py-3 text-center">
-                                                            {(() => {
-                                                                const agg = aggregateMap[paper.id]
-                                                                if (!agg || agg.completedReviewCount === 0) {
-                                                                    return <span className="text-muted-foreground text-xs">—</span>
-                                                                }
-                                                                const score = agg.averageTotalScore
-                                                                const color = score >= 3.5 ? "text-emerald-600" : score >= 2 ? "text-blue-600" : "text-red-600"
-                                                                return (
-                                                                    <span className={`font-mono text-xs font-semibold ${color}`}>
-                                                                        {score.toFixed(2)}
-                                                                    </span>
-                                                                )
-                                                            })()}
+                                                <Fragment key={paper.id}>
+                                                    <tr
+                                                        className={`transition-colors cursor-pointer ${
+                                                            isExpanded ? "bg-blue-50/40" : "hover:bg-muted/30"
+                                                        }`}
+                                                        onClick={() => toggleExpandPaper(paper.id)}
+                                                    >
+                                                        <td className="px-4 py-3 font-mono text-muted-foreground">
+                                                            <div className="flex items-center gap-1">
+                                                                {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                                                {paper.id}
+                                                            </div>
                                                         </td>
-                                                    )}
-                                                    <td className="px-4 py-3 text-center">
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="outline" size="sm" className="h-8 gap-1 text-xs">
-                                                                    <MoreHorizontal className="h-3.5 w-3.5" />
+                                                        <td className="px-4 py-3">
+                                                            <p className="font-medium line-clamp-2">{paper.title}</p>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <p className="text-muted-foreground text-xs line-clamp-2">
+                                                                {paperAuthors[paper.id] || "Loading..."}
+                                                            </p>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <span className="text-xs text-muted-foreground">{saName}</span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            <span className={`font-semibold text-sm ${insufficient ? "text-red-600" : "text-emerald-600"}`}>
+                                                                {revCount}<span className="text-muted-foreground font-normal">/</span>{minReviewers}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-3 py-3 text-center">
+                                                            {(allPaperBidSummary[paper.id]?.eager || 0) > 0 ? (
+                                                                <span className="font-semibold text-xs text-emerald-600">{allPaperBidSummary[paper.id].eager}</span>
+                                                            ) : <span className="text-muted-foreground text-xs">0</span>}
+                                                        </td>
+                                                        <td className="px-3 py-3 text-center">
+                                                            {(allPaperBidSummary[paper.id]?.willing || 0) > 0 ? (
+                                                                <span className="font-semibold text-xs text-blue-600">{allPaperBidSummary[paper.id].willing}</span>
+                                                            ) : <span className="text-muted-foreground text-xs">0</span>}
+                                                        </td>
+                                                        <td className="px-3 py-3 text-center">
+                                                            {(allPaperBidSummary[paper.id]?.inAPinch || 0) > 0 ? (
+                                                                <span className="font-semibold text-xs text-amber-600">{allPaperBidSummary[paper.id].inAPinch}</span>
+                                                            ) : <span className="text-muted-foreground text-xs">0</span>}
+                                                        </td>
+                                                        <td className="px-3 py-3 text-center">
+                                                            {(allPaperBidSummary[paper.id]?.notWilling || 0) > 0 ? (
+                                                                <span className="font-semibold text-xs text-red-600">{allPaperBidSummary[paper.id].notWilling}</span>
+                                                            ) : <span className="text-muted-foreground text-xs">0</span>}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            {conflictCount > 0 ? (
+                                                                <span className="font-semibold text-xs text-amber-600">{conflictCount}</span>
+                                                            ) : (
+                                                                <span className="text-muted-foreground text-xs">0</span>
+                                                            )}
+                                                        </td>
+                                                        {showAggregateColumns && (
+                                                            <td className="px-4 py-3 text-center">
+                                                                {(() => {
+                                                                    const agg = aggregateMap[paper.id]
+                                                                    if (!agg || agg.completedReviewCount === 0) {
+                                                                        return <span className="text-muted-foreground text-xs">—</span>
+                                                                    }
+                                                                    const score = agg.averageTotalScore
+                                                                    const color = score >= 3.5 ? "text-emerald-600" : score >= 2 ? "text-blue-600" : "text-red-600"
+                                                                    return (
+                                                                        <span className={`font-mono text-xs font-semibold ${color}`}>
+                                                                            {score.toFixed(2)}
+                                                                        </span>
+                                                                    )
+                                                                })()}
+                                                            </td>
+                                                        )}
+                                                        <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                <Button
+                                                                    variant={isExpanded ? "default" : "outline"}
+                                                                    size="sm"
+                                                                    className="h-7 text-xs gap-1"
+                                                                    onClick={() => toggleExpandPaper(paper.id)}
+                                                                >
+                                                                    <UserPlus className="h-3 w-3" />
+                                                                    Manage
                                                                 </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem onClick={() => openPaperDetail(paper.id)}>
-                                                                    <Eye className="h-4 w-4 mr-2" />
-                                                                    View Details
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => openEditPaper(paper.id)}>
-                                                                    <Edit className="h-4 w-4 mr-2" />
-                                                                    Edit Assignments
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </td>
-                                                </tr>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-7 w-7 p-0"
+                                                                    onClick={() => openBidSheet(paper.id)}
+                                                                    title="View Bids"
+                                                                >
+                                                                    <Gavel className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+
+                                                    {/* ── Expanded Inline Panel ── */}
+                                                    {isExpanded && (
+                                                        <tr>
+                                                            <td colSpan={showAggregateColumns ? 12 : 11} className="p-0">
+                                                                <div className="bg-blue-50/30 border-t border-b border-blue-200 px-6 py-4">
+                                                                    {expandedLoading ? (
+                                                                        <div className="flex items-center justify-center py-6">
+                                                                            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="space-y-4">
+                                                                            {/* Shortfall banner */}
+                                                                            {insufficient ? (
+                                                                                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+                                                                                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                                                                                    <span>Needs <strong>{shortage}</strong> more reviewer(s) ({revCount}/{minReviewers})</span>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-emerald-700">
+                                                                                    <Check className="h-4 w-4 shrink-0" />
+                                                                                    <span>Fully assigned ({revCount}/{minReviewers})</span>
+                                                                                </div>
+                                                                            )}
+
+                                                                            {/* Assigned reviewers */}
+                                                                            {paperAssignments.length > 0 && (
+                                                                                <div>
+                                                                                    <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                                                                                        <Check className="h-3 w-3" /> Assigned ({paperAssignments.length})
+                                                                                    </p>
+                                                                                    <div className="space-y-1.5">
+                                                                                        {paperAssignments.map(a => {
+                                                                                            const rev = reviewers.find(r => r.id === a.reviewerId)
+                                                                                            const revStatus = expandedReviewStatus[a.reviewerId]
+                                                                                            const statusLabels: Record<string, string> = { ASSIGNED: 'Assigned', IN_PROGRESS: 'In Progress', COMPLETED: 'Reviewed', DECLINED: 'Declined' }
+                                                                                            const statusColors: Record<string, string> = { ASSIGNED: 'text-gray-600', IN_PROGRESS: 'text-amber-600', COMPLETED: 'text-emerald-600', DECLINED: 'text-red-600' }
+                                                                                            const st = revStatus?.status || 'ASSIGNED'
+                                                                                            return (
+                                                                                                <div key={a.reviewerId} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white border text-sm">
+                                                                                                    <div className="flex items-center gap-2 min-w-0">
+                                                                                                        <div className="w-6 h-6 rounded-full bg-emerald-100 border border-emerald-300 flex items-center justify-center text-[10px] font-bold text-emerald-700 shrink-0">
+                                                                                                            {rev?.name?.charAt(0)?.toUpperCase() || '?'}
+                                                                                                        </div>
+                                                                                                        <span className="font-medium truncate">{rev?.name || `Reviewer #${a.reviewerId}`}</span>
+                                                                                                        <span className={`text-xs ${statusColors[st]}`}>• {statusLabels[st] || st}</span>
+                                                                                                        <span className="text-xs text-muted-foreground">Relevance: {(a.relevanceScore * 100).toFixed(0)}%</span>
+                                                                                                    </div>
+                                                                                                    <div className="flex items-center gap-1 shrink-0">
+                                                                                                        <Button
+                                                                                                            variant="ghost" size="sm"
+                                                                                                            className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
+                                                                                                            onClick={() => setReviewerInfoId(a.reviewerId)}
+                                                                                                            title="View reviewer profile"
+                                                                                                        >
+                                                                                                            <Eye className="h-3.5 w-3.5" />
+                                                                                                        </Button>
+                                                                                                        {revStatus?.reviewId && (
+                                                                                                            <Button
+                                                                                                                variant="ghost" size="sm"
+                                                                                                                className="h-6 w-6 p-0 text-indigo-500 hover:text-indigo-700"
+                                                                                                                onClick={() => setViewingReviewId(revStatus.reviewId)}
+                                                                                                                title="View review"
+                                                                                                            >
+                                                                                                                <FileText className="h-3.5 w-3.5" />
+                                                                                                            </Button>
+                                                                                                        )}
+                                                                                                        <Button
+                                                                                                            variant="ghost" size="sm"
+                                                                                                            className="h-6 w-6 p-0 text-red-400 hover:text-red-600"
+                                                                                                            onClick={() => handleInlineRemove(paper.id, a.reviewId)}
+                                                                                                            title="Remove assignment"
+                                                                                                        >
+                                                                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                                                                        </Button>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            )
+                                                                                        })}
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+
+                                                                            {/* Suggested reviewers */}
+                                                                            <div>
+                                                                                <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                                                                                    <UserPlus className="h-3 w-3" /> Suggested Reviewers
+                                                                                </p>
+                                                                                {suggestedReviewers.length === 0 ? (
+                                                                                    <p className="text-xs text-muted-foreground px-3 py-2">No suitable reviewers found.</p>
+                                                                                ) : (
+                                                                                    <div className="space-y-1.5">
+                                                                                        {suggestedReviewers.map(r => {
+                                                                                            const bidLabels: Record<string, { label: string; color: string }> = {
+                                                                                                EAGER: { label: 'Eager', color: 'text-emerald-600' },
+                                                                                                WILLING: { label: 'Willing', color: 'text-blue-600' },
+                                                                                                IN_A_PINCH: { label: 'In a pinch', color: 'text-amber-600' },
+                                                                                                NOT_WILLING: { label: 'Not willing', color: 'text-red-600' },
+                                                                                            }
+                                                                                            const bidInfo = r.bid ? bidLabels[r.bid] : null
+                                                                                            const totalAssign = assignmentCountPerReviewer[r.id] || 0
+                                                                                            return (
+                                                                                                <div key={r.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white border text-sm hover:border-blue-300 transition-colors">
+                                                                                                    <div className="flex items-center gap-2 min-w-0">
+                                                                                                        <div className="w-6 h-6 rounded-full bg-gray-100 border flex items-center justify-center text-[10px] font-bold text-gray-600 shrink-0">
+                                                                                                            {r.name?.charAt(0)?.toUpperCase() || '?'}
+                                                                                                        </div>
+                                                                                                        <span className="font-medium truncate">{r.name}</span>
+                                                                                                        {bidInfo && (
+                                                                                                            <span className={`text-xs font-medium ${bidInfo.color}`}>• {bidInfo.label}</span>
+                                                                                                        )}
+                                                                                                        <span className="text-xs text-muted-foreground">Workload: {totalAssign}</span>
+                                                                                                        {r.quota !== null && (
+                                                                                                            <span className="text-xs text-muted-foreground">Quota: {r.quota}</span>
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                    <div className="flex items-center gap-1 shrink-0">
+                                                                                                        <Button
+                                                                                                            variant="ghost" size="sm"
+                                                                                                            className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
+                                                                                                            onClick={() => setReviewerInfoId(r.id)}
+                                                                                                            title="View profile"
+                                                                                                        >
+                                                                                                            <Eye className="h-3.5 w-3.5" />
+                                                                                                        </Button>
+                                                                                                        <Button
+                                                                                                            size="sm"
+                                                                                                            className="h-7 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                                                                            onClick={() => handleInlineAssign(paper.id, r.id)}
+                                                                                                            disabled={inlineAssigning === r.id}
+                                                                                                        >
+                                                                                                            {inlineAssigning === r.id ? (
+                                                                                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                                                                                            ) : (
+                                                                                                                <Plus className="h-3 w-3" />
+                                                                                                            )}
+                                                                                                            Assign
+                                                                                                        </Button>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            )
+                                                                                        })}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+
+                                                                            {/* Link to full edit view */}
+                                                                            <div className="pt-2 border-t">
+                                                                                <Button
+                                                                                    variant="outline" size="sm"
+                                                                                    className="text-xs gap-1"
+                                                                                    onClick={() => openEditPaper(paper.id)}
+                                                                                >
+                                                                                    <Edit className="h-3 w-3" />
+                                                                                    View All Reviewers (Full View)
+                                                                                </Button>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </Fragment>
                                             )
                                         })
                                     )}
@@ -779,6 +1130,15 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                         <td className="px-4 py-3">
                                                             <div className="flex items-center gap-2">
                                                                 <span className="font-medium">{reviewer.name}</span>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                                                                    onClick={() => setReviewerInfoId(reviewer.id)}
+                                                                    title="View reviewer info"
+                                                                >
+                                                                    <User2 className="h-3.5 w-3.5" />
+                                                                </Button>
                                                                 {isConflict && (
                                                                     <Badge variant="destructive" className="text-[10px] h-5 px-1.5">
                                                                         Conflict
@@ -1239,6 +1599,344 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                 open={viewingReviewId !== null}
                 onClose={() => setViewingReviewId(null)}
             />
+
+            {/* ── Bid Detail Sheet ── */}
+            <Sheet open={bidSheetPaperId !== null} onOpenChange={v => !v && setBidSheetPaperId(null)}>
+                <SheetContent className="w-full sm:max-w-lg overflow-y-auto p-0">
+                    <SheetHeader className="px-6 pt-6 pb-4 border-b sticky top-0 bg-white z-10">
+                        <SheetTitle className="text-lg flex items-center gap-2">
+                            <Gavel className="h-5 w-5 text-indigo-600" />
+                            Bid Details — Paper #{bidSheetPaperId}
+                        </SheetTitle>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                            {fullPapers.find(p => p.id === bidSheetPaperId)?.title}
+                        </p>
+                    </SheetHeader>
+                    <div className="p-6 space-y-4">
+                        {bidSheetLoading ? (
+                            <div className="flex items-center justify-center py-12">
+                                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                            </div>
+                        ) : bidSheetBids.length === 0 ? (
+                            <div className="text-center py-12 text-muted-foreground">
+                                <Gavel className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                                <p className="text-sm">No bids submitted for this paper yet.</p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Summary */}
+                                <div className="grid grid-cols-4 gap-2">
+                                    {[
+                                        { label: 'Eager', value: bidSheetBids.filter(b => b.bidValue === 'EAGER').length, color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
+                                        { label: 'Willing', value: bidSheetBids.filter(b => b.bidValue === 'WILLING').length, color: 'bg-blue-50 border-blue-200 text-blue-700' },
+                                        { label: 'In a pinch', value: bidSheetBids.filter(b => b.bidValue === 'IN_A_PINCH').length, color: 'bg-amber-50 border-amber-200 text-amber-700' },
+                                        { label: 'Not willing', value: bidSheetBids.filter(b => b.bidValue === 'NOT_WILLING').length, color: 'bg-red-50 border-red-200 text-red-700' },
+                                    ].map(item => (
+                                        <div key={item.label} className={`rounded-lg border p-3 text-center ${item.color}`}>
+                                            <p className="text-lg font-bold">{item.value}</p>
+                                            <p className="text-[10px]">{item.label}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                {/* Bid list grouped by type */}
+                                {(['EAGER', 'WILLING', 'IN_A_PINCH', 'NOT_WILLING'] as const).map(bidType => {
+                                    const bidsOfType = bidSheetBids.filter(b => b.bidValue === bidType)
+                                    if (bidsOfType.length === 0) return null
+                                    const config: Record<string, { label: string; dot: string }> = {
+                                        EAGER: { label: 'Eager', dot: 'bg-emerald-500' },
+                                        WILLING: { label: 'Willing', dot: 'bg-blue-500' },
+                                        IN_A_PINCH: { label: 'In a pinch', dot: 'bg-amber-500' },
+                                        NOT_WILLING: { label: 'Not willing', dot: 'bg-red-500' },
+                                    }
+                                    return (
+                                        <div key={bidType} className="space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`w-2.5 h-2.5 rounded-full ${config[bidType].dot}`} />
+                                                <span className="text-sm font-semibold">{config[bidType].label} ({bidsOfType.length})</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                {bidsOfType.map(b => (
+                                                    <div key={b.id} className="flex items-center justify-between px-3 py-2 rounded-lg border bg-white text-sm">
+                                                        <span className="font-medium">{b.reviewerName || `Reviewer #${b.reviewerId}`}</span>
+                                                        <span className="text-xs text-muted-foreground">ID: {b.reviewerId}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </>
+                        )}
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            {/* ── Reviewer Info Sheet ── */}
+            <Sheet open={reviewerInfoId !== null} onOpenChange={v => { if (!v) { setReviewerInfoId(null); setReviewerProfile(null) } }}>
+                <SheetContent className="w-full sm:max-w-xl overflow-y-auto p-0">
+                    {(() => {
+                        const rev = reviewers.find(r => r.id === reviewerInfoId)
+                        if (!rev) return (
+                            <div className="p-6 text-center text-muted-foreground">
+                                <User2 className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                                <p>Reviewer not found.</p>
+                            </div>
+                        )
+                        const totalAssign = assignmentCountPerReviewer[rev.id] || 0
+                        const revAssignments = (currentData?.assignments || []).filter(a => a.reviewerId === rev.id)
+                        const bidForCurrentPaper = editingPaperId ? bidMapForPaper[rev.id] : null
+                        const bidLabels: Record<string, { label: string; color: string }> = {
+                            EAGER: { label: 'Eager', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
+                            WILLING: { label: 'Willing', color: 'bg-blue-100 text-blue-700 border-blue-300' },
+                            IN_A_PINCH: { label: 'In a pinch', color: 'bg-amber-100 text-amber-700 border-amber-300' },
+                            NOT_WILLING: { label: 'Not willing', color: 'bg-red-100 text-red-700 border-red-300' },
+                        }
+                        const p = reviewerProfile
+                        return (
+                            <>
+                                {/* Header */}
+                                <SheetHeader className="px-6 pt-6 pb-4 border-b sticky top-0 bg-white z-10">
+                                    <div className="flex items-center gap-3">
+                                        {p?.avatarUrl ? (
+                                            <img src={p.avatarUrl} alt={rev.name} className="w-12 h-12 rounded-full object-cover ring-2 ring-primary/20" />
+                                        ) : (
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg">
+                                                {rev.name?.charAt(0)?.toUpperCase() || '?'}
+                                            </div>
+                                        )}
+                                        <div className="min-w-0">
+                                            <SheetTitle className="text-lg truncate">{rev.name}</SheetTitle>
+                                            <p className="text-sm text-muted-foreground">{rev.email}</p>
+                                            {p?.jobTitle && <p className="text-xs text-muted-foreground">{p.jobTitle}{p.institution ? ` at ${p.institution}` : ''}</p>}
+                                        </div>
+                                    </div>
+                                </SheetHeader>
+
+                                <div className="p-6 space-y-5">
+                                    {/* Stats */}
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <div className="rounded-lg border p-3 text-center">
+                                            <p className="text-lg font-bold">{totalAssign}</p>
+                                            <p className="text-[10px] text-muted-foreground">Assignments</p>
+                                        </div>
+                                        <div className="rounded-lg border p-3 text-center">
+                                            <p className="text-lg font-bold">{rev.quota !== null ? rev.quota : '∞'}</p>
+                                            <p className="text-[10px] text-muted-foreground">Quota</p>
+                                        </div>
+                                        <div className="rounded-lg border p-3 text-center">
+                                            <p className="text-lg font-bold">{rev.trackIds.length}</p>
+                                            <p className="text-[10px] text-muted-foreground">Tracks</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Bid for current paper */}
+                                    {editingPaperId && (
+                                        <div className="rounded-lg border p-3">
+                                            <p className="text-xs font-semibold text-muted-foreground mb-2">Bid for current paper (#{editingPaperId})</p>
+                                            {bidForCurrentPaper ? (
+                                                <Badge className={`text-xs ${bidLabels[bidForCurrentPaper]?.color || ''}`}>
+                                                    {bidLabels[bidForCurrentPaper]?.label || bidForCurrentPaper}
+                                                </Badge>
+                                            ) : (
+                                                <span className="text-sm text-muted-foreground">No bid submitted</span>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* ── Full Profile ── */}
+                                    <div className="rounded-lg border bg-gray-50/50 p-4 space-y-4">
+                                        <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1 uppercase tracking-wide">
+                                            <User2 className="h-3.5 w-3.5" /> Reviewer Profile
+                                        </p>
+
+                                        {reviewerProfileLoading ? (
+                                            <div className="flex items-center justify-center py-6">
+                                                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                                                <span className="ml-2 text-sm text-muted-foreground">Loading profile…</span>
+                                            </div>
+                                        ) : p ? (
+                                            <div className="space-y-3">
+                                                {/* Personal */}
+                                                <div className="rounded-lg border bg-white p-3 space-y-2">
+                                                    <p className="text-xs font-semibold text-muted-foreground">Personal Information</p>
+                                                    {p.userType && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-muted-foreground w-20">Type:</span>
+                                                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">{p.userType}</span>
+                                                        </div>
+                                                    )}
+                                                    {p.jobTitle && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-muted-foreground w-20">Job Title:</span>
+                                                            <span className="text-sm">{p.jobTitle}</span>
+                                                        </div>
+                                                    )}
+                                                    {p.biography && (
+                                                        <div>
+                                                            <span className="text-xs text-muted-foreground">Biography:</span>
+                                                            <p className="text-sm mt-1 text-foreground leading-relaxed whitespace-pre-wrap">{p.biography}</p>
+                                                        </div>
+                                                    )}
+                                                    {!p.userType && !p.jobTitle && !p.biography && (
+                                                        <p className="text-xs text-muted-foreground italic">No personal info provided.</p>
+                                                    )}
+                                                </div>
+
+                                                {/* Affiliation */}
+                                                <div className="rounded-lg border bg-white p-3 space-y-2">
+                                                    <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                                                        <Building2 className="h-3 w-3" /> Affiliation
+                                                    </p>
+                                                    {p.institution && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-muted-foreground w-24 shrink-0">Institution:</span>
+                                                            <span className="text-sm font-medium">{p.institution}</span>
+                                                        </div>
+                                                    )}
+                                                    {p.department && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-muted-foreground w-24 shrink-0">Department:</span>
+                                                            <span className="text-sm">{p.department}</span>
+                                                        </div>
+                                                    )}
+                                                    {p.institutionCountry && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-muted-foreground w-24 shrink-0">Country:</span>
+                                                            <span className="text-sm">{p.institutionCountry}</span>
+                                                        </div>
+                                                    )}
+                                                    {p.institutionUrl && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-muted-foreground w-24 shrink-0">Website:</span>
+                                                            <a href={p.institutionUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline truncate">{p.institutionUrl}</a>
+                                                        </div>
+                                                    )}
+                                                    {p.secondaryInstitution && (
+                                                        <>
+                                                            <div className="border-t pt-2 mt-2" />
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-xs text-muted-foreground w-24 shrink-0">Secondary:</span>
+                                                                <span className="text-sm">{p.secondaryInstitution}{p.secondaryCountry ? ` (${p.secondaryCountry})` : ''}</span>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                    {!p.institution && !p.department && !p.secondaryInstitution && (
+                                                        <p className="text-xs text-muted-foreground italic">No affiliation provided.</p>
+                                                    )}
+                                                </div>
+
+                                                {/* Contact */}
+                                                <div className="rounded-lg border bg-white p-3 space-y-2">
+                                                    <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                                                        <Phone className="h-3 w-3" /> Contact
+                                                    </p>
+                                                    {p.phoneOffice && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-muted-foreground w-24 shrink-0">Office:</span>
+                                                            <span className="text-sm">{p.phoneOffice}</span>
+                                                        </div>
+                                                    )}
+                                                    {p.phoneMobile && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-muted-foreground w-24 shrink-0">Mobile:</span>
+                                                            <span className="text-sm">{p.phoneMobile}</span>
+                                                        </div>
+                                                    )}
+                                                    {p.websiteUrl && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-muted-foreground w-24 shrink-0">Website:</span>
+                                                            <a href={p.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline truncate">{p.websiteUrl}</a>
+                                                        </div>
+                                                    )}
+                                                    {!p.phoneOffice && !p.phoneMobile && !p.websiteUrl && (
+                                                        <p className="text-xs text-muted-foreground italic">No contact info provided.</p>
+                                                    )}
+                                                </div>
+
+                                                {/* Academic Profiles */}
+                                                <div className="rounded-lg border bg-white p-3 space-y-2">
+                                                    <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                                                        <GraduationCap className="h-3 w-3" /> Academic Profiles
+                                                    </p>
+                                                    {p.orcidId && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-muted-foreground w-32 shrink-0">ORCID:</span>
+                                                            <a href={`https://orcid.org/${p.orcidId}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">{p.orcidId}</a>
+                                                        </div>
+                                                    )}
+                                                    {p.googleScholarLink && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-muted-foreground w-32 shrink-0">Google Scholar:</span>
+                                                            <a href={p.googleScholarLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline truncate">View Profile</a>
+                                                        </div>
+                                                    )}
+                                                    {p.dblpId && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-muted-foreground w-32 shrink-0">DBLP:</span>
+                                                            <span className="text-sm">{p.dblpId}</span>
+                                                        </div>
+                                                    )}
+                                                    {p.semanticScholarId && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-muted-foreground w-32 shrink-0">Semantic Scholar:</span>
+                                                            <span className="text-sm">{p.semanticScholarId}</span>
+                                                        </div>
+                                                    )}
+                                                    {!p.orcidId && !p.googleScholarLink && !p.dblpId && !p.semanticScholarId && (
+                                                        <p className="text-xs text-muted-foreground italic">No academic profiles linked.</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="rounded-lg border bg-white p-4 space-y-3">
+                                                <div className="flex items-center gap-2 text-amber-600">
+                                                    <AlertTriangle className="h-4 w-4" />
+                                                    <span className="text-sm font-medium">Profile not set up</span>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">This reviewer has not created their profile yet. Basic information is shown above.</p>
+                                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                                    <div>
+                                                        <span className="text-xs text-muted-foreground">Name</span>
+                                                        <p className="font-medium">{rev.name}</p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-xs text-muted-foreground">Email</span>
+                                                        <p className="font-medium truncate">{rev.email}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Assigned papers */}
+                                    <div>
+                                        <p className="text-sm font-semibold mb-2">Assigned Papers ({revAssignments.length})</p>
+                                        {revAssignments.length === 0 ? (
+                                            <p className="text-sm text-muted-foreground">No papers assigned yet.</p>
+                                        ) : (
+                                            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                                                {revAssignments.map(a => {
+                                                    const paper = fullPapers.find(p => p.id === a.paperId)
+                                                    return (
+                                                        <div key={a.paperId} className="flex items-center justify-between px-3 py-2 rounded-lg border bg-white text-sm hover:bg-gray-50">
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="font-medium truncate">#{a.paperId} — {paper?.title || 'Unknown'}</p>
+                                                            </div>
+                                                            <Badge variant="outline" className="text-[10px] ml-2 shrink-0">
+                                                                {(a.relevanceScore * 100).toFixed(0)}%
+                                                            </Badge>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </>
+                        )
+                    })()}
+                </SheetContent>
+            </Sheet>
         </div>
     )
 }

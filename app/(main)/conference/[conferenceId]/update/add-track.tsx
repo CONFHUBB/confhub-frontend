@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/field"
 import { ExcelImport } from "@/components/excel-import"
 import { downloadTrackTemplate, previewTrackImport, importTracks } from "@/app/api/conference.api"
-import { Plus, Upload } from "lucide-react"
+import { Plus, FileSpreadsheet, UserPlus } from "lucide-react"
 
 interface AddTrackProps {
     initialData?: TrackData
@@ -23,10 +23,11 @@ interface AddTrackProps {
     onImportSuccess?: () => void
 }
 
+type AddTab = 'manual' | 'import'
+
 export function AddTrack({ initialData, conferenceId, onSubmit, onImportSuccess }: AddTrackProps) {
     const [errors, setErrors] = useState<Record<string, string>>({})
-    const [showForm, setShowForm] = useState(false)
-    const [showImport, setShowImport] = useState(false)
+    const [activeTab, setActiveTab] = useState<AddTab>('manual')
 
     const [formData, setFormData] = useState<TrackData>(
         initialData ?? {
@@ -61,99 +62,115 @@ export function AddTrack({ initialData, conferenceId, onSubmit, onImportSuccess 
         if (!validate()) return
         onSubmit(formData)
         setFormData({ name: "", description: "" })
-        setShowForm(false)
     }
 
     return (
-        <div className="space-y-4 border-t pt-6">
-            {/* Action buttons */}
-            <div className="flex items-center gap-3">
-                <Button
-                    type="button"
-                    variant={showForm ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => { setShowForm(!showForm); if (!showForm) setShowImport(false) }}
-                >
-                    <Plus className="mr-1.5 h-4 w-4" />
-                    {showForm ? "Cancel" : "Add Track Manually"}
-                </Button>
-                <Button
-                    type="button"
-                    variant={showImport ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => { setShowImport(!showImport); if (!showImport) setShowForm(false) }}
-                >
-                    <Upload className="mr-1.5 h-4 w-4" />
-                    {showImport ? "Cancel" : "Import from Excel"}
-                </Button>
+        <div className="rounded-xl border bg-card overflow-hidden">
+            {/* Section heading */}
+            <div className="px-6 pt-5 pb-3">
+                <h3 className="text-base font-semibold flex items-center gap-2">
+                    <Plus className="h-4 w-4 text-primary" />
+                    Add Tracks
+                </h3>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                    Add tracks manually or bulk import from an Excel file.
+                </p>
             </div>
 
-            {/* Manual Add Form */}
-            {showForm && (
-                <div className="rounded-lg border bg-white p-5 space-y-5">
-                    <h3 className="font-semibold text-gray-900">Add New Track</h3>
-                    <form onSubmit={handleSubmit}>
-                        <FieldSet>
-                            <FieldGroup>
-                                <div className="grid gap-6 sm:grid-cols-2">
-                                    <Field data-invalid={!!errors.name || undefined}>
-                                        <FieldLabel htmlFor="name" className="text-sm font-medium">
-                                            Track Name <span className="text-red-500">*</span>
+            {/* Tab buttons */}
+            <div className="flex gap-1 border-b pb-0 px-6">
+                <button
+                    onClick={() => setActiveTab('manual')}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                        activeTab === 'manual'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+                    }`}
+                >
+                    <UserPlus className="h-4 w-4" />
+                    Add Manually
+                </button>
+                <button
+                    onClick={() => setActiveTab('import')}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                        activeTab === 'import'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+                    }`}
+                >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Import Excel
+                </button>
+            </div>
+
+            {/* Tab content */}
+            <div className="p-6">
+                {activeTab === 'manual' && (
+                    <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                            Fill in the details below to create a new track.
+                        </p>
+                        <form onSubmit={handleSubmit}>
+                            <FieldSet>
+                                <FieldGroup>
+                                    <div className="grid gap-6 sm:grid-cols-2">
+                                        <Field data-invalid={!!errors.name || undefined}>
+                                            <FieldLabel htmlFor="name" className="text-sm font-medium">
+                                                Track Name <span className="text-red-500">*</span>
+                                            </FieldLabel>
+                                            <Input
+                                                id="name"
+                                                className="h-10"
+                                                placeholder="e.g. Main Research Track"
+                                                value={formData.name}
+                                                onChange={handleChange}
+                                            />
+                                            {errors.name && <FieldError>{errors.name}</FieldError>}
+                                        </Field>
+                                    </div>
+
+                                    <Field>
+                                        <FieldLabel htmlFor="description" className="text-sm font-medium">
+                                            Description
                                         </FieldLabel>
-                                        <Input
-                                            id="name"
-                                            className="h-10"
-                                            placeholder="e.g. Main Research Track"
-                                            value={formData.name}
+                                        <Textarea
+                                            id="description"
+                                            className="min-h-[80px]"
+                                            placeholder="Describe the track topics and scope..."
+                                            rows={3}
+                                            value={formData.description}
                                             onChange={handleChange}
                                         />
-                                        {errors.name && <FieldError>{errors.name}</FieldError>}
                                     </Field>
-                                </div>
+                                </FieldGroup>
+                            </FieldSet>
 
-                                <Field>
-                                    <FieldLabel htmlFor="description" className="text-sm font-medium">
-                                        Description
-                                    </FieldLabel>
-                                    <Textarea
-                                        id="description"
-                                        className="min-h-[80px]"
-                                        placeholder="Describe the track topics and scope..."
-                                        rows={3}
-                                        value={formData.description}
-                                        onChange={handleChange}
-                                    />
-                                </Field>
-                            </FieldGroup>
-                        </FieldSet>
+                            <div className="mt-4 flex justify-end">
+                                <Button type="submit" size="sm" className="px-6">
+                                    Save Track
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                )}
 
-                        <div className="mt-4 flex justify-end">
-                            <Button type="submit" size="sm" className="px-6">
-                                Save Track
-                            </Button>
-                        </div>
-                    </form>
-                </div>
-            )}
-
-            {/* Import from Excel */}
-            {showImport && (
-                <div className="rounded-lg border bg-white p-5 space-y-3">
-                    <h3 className="font-semibold text-gray-900">Import Tracks from Excel</h3>
-                    <p className="text-sm text-gray-500">
-                        Upload an Excel file to batch-create multiple tracks at once.
-                    </p>
-                    <ExcelImport
-                        entityName="Track"
-                        previewHeaders={["name", "description"]}
-                        onDownloadTemplate={() => downloadTrackTemplate(conferenceId)}
-                        onPreview={(file) => previewTrackImport(conferenceId, file)}
-                        onImport={(file) => importTracks(conferenceId, file)}
-                        onImportSuccess={() => onImportSuccess?.()}
-                        templateFilename="track_template.xlsx"
-                    />
-                </div>
-            )}
+                {activeTab === 'import' && (
+                    <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                            Upload an Excel file to batch-create multiple tracks at once.
+                        </p>
+                        <ExcelImport
+                            entityName="Track"
+                            previewHeaders={["name", "description"]}
+                            onDownloadTemplate={() => downloadTrackTemplate(conferenceId)}
+                            onPreview={(file) => previewTrackImport(conferenceId, file)}
+                            onImport={(file) => importTracks(conferenceId, file)}
+                            onImportSuccess={() => onImportSuccess?.()}
+                            templateFilename="track_template.xlsx"
+                        />
+                    </div>
+                )}
+            </div>
         </div>
     )
 }

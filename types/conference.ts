@@ -78,3 +78,15 @@ export interface ConferenceActivityDTO {
     isEnabled: boolean;
     deadline: string | null;
 }
+
+export interface ActivityAuditLogDTO {
+    id: number;
+    conferenceId: number;
+    activityType: string;
+    activityLabel: string;
+    action: string;        // "ENABLED" | "DISABLED" | "DEADLINE_CHANGED"
+    oldValue: string | null;
+    newValue: string | null;
+    performedBy: string;
+    createdAt: string;
+}
