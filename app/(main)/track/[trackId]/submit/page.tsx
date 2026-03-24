@@ -288,7 +288,7 @@ function StepUploadManuscript({
     return (
         <div className="space-y-6">
             {/* Info banner */}
-            <div className="p-4 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 text-sm text-blue-800 dark:text-blue-300 space-y-2">
+            <div className="p-4 rounded-lg border bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800 text-sm text-indigo-800 dark:text-indigo-300 space-y-2">
                 <p>
                     To convert other file formats, such as Microsoft Word, to PDF, you can use online services.
                     Examples include Adobe, PDFonline or FreePDFConvert.

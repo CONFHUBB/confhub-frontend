@@ -161,7 +161,7 @@ export function ConferenceFilterBar({ locations, areas, isStaff, filters, onFilt
             <div className="relative" ref={dateRef}>
                 <button
                     onClick={() => { setShowDatePicker(!showDatePicker); setShowFilterPanel(false) }}
-                    className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-full border transition-colors cursor-pointer ${filters.datePreset !== 'all' ? 'bg-[#34c6eb] text-white border-[#34c6eb]' : 'border-gray-300 text-gray-600 hover:border-[#34c6eb] hover:text-[#34c6eb]'}`}
+                    className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-full border transition-colors cursor-pointer ${filters.datePreset !== 'all' ? 'bg-[#6366f1] text-white border-[#6366f1]' : 'border-gray-300 text-gray-600 hover:border-[#6366f1] hover:text-[#6366f1]'}`}
                 >
                     <Calendar className="h-4 w-4" />
                     {datePresetLabel[filters.datePreset]}
@@ -180,7 +180,7 @@ export function ConferenceFilterBar({ locations, areas, isStaff, filters, onFilt
                                 <button
                                     key={preset}
                                     onClick={() => { onFiltersChange({ ...filters, datePreset: preset }); setShowDatePicker(false) }}
-                                    className={`px-4 py-1.5 text-sm rounded-full border transition-colors cursor-pointer ${filters.datePreset === preset ? 'bg-[#34c6eb] text-white border-[#34c6eb]' : 'border-gray-300 text-gray-700 hover:border-[#34c6eb] hover:text-[#34c6eb]'}`}
+                                    className={`px-4 py-1.5 text-sm rounded-full border transition-colors cursor-pointer ${filters.datePreset === preset ? 'bg-[#6366f1] text-white border-[#6366f1]' : 'border-gray-300 text-gray-700 hover:border-[#6366f1] hover:text-[#6366f1]'}`}
                                 >
                                     {datePresetLabel[preset]}
                                 </button>
@@ -226,13 +226,13 @@ export function ConferenceFilterBar({ locations, areas, isStaff, filters, onFilt
             <div className="relative" ref={filterRef}>
                 <button
                     onClick={() => { openFilterPanel(); setShowDatePicker(false) }}
-                    className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-full border transition-colors cursor-pointer ${activeFilterCount > 0 ? 'bg-[#34c6eb] text-white border-[#34c6eb]' : 'border-gray-300 text-gray-600 hover:border-[#34c6eb] hover:text-[#34c6eb]'}`}
+                    className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-full border transition-colors cursor-pointer ${activeFilterCount > 0 ? 'bg-[#6366f1] text-white border-[#6366f1]' : 'border-gray-300 text-gray-600 hover:border-[#6366f1] hover:text-[#6366f1]'}`}
                 >
                     <Filter className="h-4 w-4" />
                     Filters
                     {activeFilterCount > 0 && (
                         <>
-                            <span className="bg-[#34c6eb]/20 text-[#34c6eb] text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{activeFilterCount}</span>
+                            <span className="bg-[#6366f1]/20 text-[#6366f1] text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{activeFilterCount}</span>
                             <X className="h-3.5 w-3.5 ml-0.5" onClick={(e) => { e.stopPropagation(); onFiltersChange({ ...filters, location: 'all', area: 'all' }); setShowFilterPanel(false) }} />
                         </>
                     )}
@@ -246,13 +246,13 @@ export function ConferenceFilterBar({ locations, areas, isStaff, filters, onFilt
                                 <h4 className="text-sm font-semibold text-gray-800 mb-3">Location</h4>
                                 <div className="space-y-2">
                                     <label className="flex items-center gap-3 cursor-pointer group">
-                                        <input type="radio" name="location" checked={tempLocation === 'all'} onChange={() => setTempLocation('all')} className="w-4 h-4 accent-[#34c6eb]" />
-                                        <span className="text-sm text-gray-700 group-hover:text-[#34c6eb] transition-colors">All locations</span>
+                                        <input type="radio" name="location" checked={tempLocation === 'all'} onChange={() => setTempLocation('all')} className="w-4 h-4 accent-[#6366f1]" />
+                                        <span className="text-sm text-gray-700 group-hover:text-[#6366f1] transition-colors">All locations</span>
                                     </label>
                                     {locations.map(loc => (
                                         <label key={loc} className="flex items-center gap-3 cursor-pointer group">
-                                            <input type="radio" name="location" checked={tempLocation === loc} onChange={() => setTempLocation(loc)} className="w-4 h-4 accent-[#34c6eb]" />
-                                            <span className="text-sm text-gray-700 group-hover:text-[#34c6eb] transition-colors">{loc}</span>
+                                            <input type="radio" name="location" checked={tempLocation === loc} onChange={() => setTempLocation(loc)} className="w-4 h-4 accent-[#6366f1]" />
+                                            <span className="text-sm text-gray-700 group-hover:text-[#6366f1] transition-colors">{loc}</span>
                                         </label>
                                     ))}
                                 </div>
@@ -266,7 +266,7 @@ export function ConferenceFilterBar({ locations, areas, isStaff, filters, onFilt
                                 <div className="flex flex-wrap gap-2">
                                     <button
                                         onClick={() => setTempArea('all')}
-                                        className={`px-4 py-1.5 text-sm rounded-full border transition-colors cursor-pointer ${tempArea === 'all' ? 'bg-[#34c6eb] text-white border-[#34c6eb]' : 'border-gray-300 text-gray-700 hover:border-[#34c6eb] hover:text-[#34c6eb]'}`}
+                                        className={`px-4 py-1.5 text-sm rounded-full border transition-colors cursor-pointer ${tempArea === 'all' ? 'bg-[#6366f1] text-white border-[#6366f1]' : 'border-gray-300 text-gray-700 hover:border-[#6366f1] hover:text-[#6366f1]'}`}
                                     >
                                         All areas
                                     </button>
@@ -274,7 +274,7 @@ export function ConferenceFilterBar({ locations, areas, isStaff, filters, onFilt
                                         <button
                                             key={area}
                                             onClick={() => setTempArea(area)}
-                                            className={`px-4 py-1.5 text-sm rounded-full border transition-colors cursor-pointer ${tempArea === area ? 'bg-[#34c6eb] text-white border-[#34c6eb]' : 'border-gray-300 text-gray-700 hover:border-[#34c6eb] hover:text-[#34c6eb]'}`}
+                                            className={`px-4 py-1.5 text-sm rounded-full border transition-colors cursor-pointer ${tempArea === area ? 'bg-[#6366f1] text-white border-[#6366f1]' : 'border-gray-300 text-gray-700 hover:border-[#6366f1] hover:text-[#6366f1]'}`}
                                         >
                                             {area}
                                         </button>
@@ -298,7 +298,7 @@ export function ConferenceFilterBar({ locations, areas, isStaff, filters, onFilt
 
             {/* Staff badge */}
             {isStaff && (
-                <Badge variant="outline" className="text-xs gap-1 py-1 px-2.5 border-[#34c6eb]/40 text-[#34c6eb]">
+                <Badge variant="outline" className="text-xs gap-1 py-1 px-2.5 border-[#6366f1]/40 text-[#6366f1]">
                     <CheckCircle className="h-3 w-3" />
                     Staff
                 </Badge>

@@ -66,7 +66,11 @@ import {
     Calendar,
     User as UserIcon,
     FileSpreadsheet,
+    Download,
+    Filter,
+    CheckSquare,
 } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
 
 // ── Role constants ──────────────────────────────────────
 const ROLE_OPTIONS = [
@@ -450,6 +454,15 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
     // ── Add method tab ────────────────────────────────────
     const [memberTab, setMemberTab] = useState<'add-user' | 'import-excel'>('add-user')
 
+    // ── Filter & Search (client-side) ────────────────────
+    const [roleFilter, setRoleFilter] = useState<string>('all')
+    const [memberSearch, setMemberSearch] = useState('')
+
+    // ── Bulk selection ───────────────────────────────────
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+    const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
+    const [isBulkRemoving, setIsBulkRemoving] = useState(false)
+
     // ── Fetch members ───────────────────────────────────
     const fetchMembers = useCallback(
         async (page = 0) => {
@@ -541,6 +554,87 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
             }
         }
         return grouped
+    }
+
+    // ── Filtered members (client-side) ───────────────────
+    const filteredMembers = members.filter((m) => {
+        // Role filter
+        if (roleFilter !== 'all') {
+            const hasRole = m.roles.some(r => r.assignedRole === roleFilter)
+            if (!hasRole) return false
+        }
+        // Name/email search
+        if (memberSearch.trim()) {
+            const q = memberSearch.toLowerCase()
+            const nameMatch = m.user.fullName?.toLowerCase().includes(q)
+            const emailMatch = m.user.email?.toLowerCase().includes(q)
+            if (!nameMatch && !emailMatch) return false
+        }
+        return true
+    })
+
+    // ── CSV Export ───────────────────────────────────────
+    const handleExportCSV = () => {
+        const header = 'Name,Email,Country,Roles,Tracks,Status'
+        const rows = filteredMembers.map((m) => {
+            const roleGroups = formatRoles(m.roles)
+            const roles = [...roleGroups.keys()].map(r => ROLE_DISPLAY[r] ?? r).join('; ')
+            const trackList = [...roleGroups.values()].flat().join('; ')
+            const status = getAcceptanceStatus(m.roles)
+            return [
+                `"${m.user.fullName ?? ''}"`,
+                `"${m.user.email ?? ''}"`,
+                `"${m.user.country ?? ''}"`,
+                `"${roles}"`,
+                `"${trackList}"`,
+                `"${status}"`,
+            ].join(',')
+        })
+        const csv = [header, ...rows].join('\n')
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `conference-members-${conferenceId}.csv`
+        a.click()
+        URL.revokeObjectURL(url)
+        toast.success(`Exported ${filteredMembers.length} members to CSV`)
+    }
+
+    // ── Bulk select helpers ──────────────────────────────
+    const toggleSelect = (id: number) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            return next
+        })
+    }
+    const toggleSelectAll = () => {
+        if (selectedIds.size === filteredMembers.length) {
+            setSelectedIds(new Set())
+        } else {
+            setSelectedIds(new Set(filteredMembers.map(m => m.user.id)))
+        }
+    }
+
+    // ── Bulk remove ─────────────────────────────────────
+    const handleBulkRemove = async () => {
+        setIsBulkRemoving(true)
+        try {
+            const toRemove = members.filter(m => selectedIds.has(m.user.id))
+            const allRoleIds = toRemove.flatMap(m => m.roles.map(r => r.id))
+            await Promise.all(allRoleIds.map(id => deleteRoleAssignment(id)))
+            toast.success(`Removed ${toRemove.length} members successfully!`)
+            setSelectedIds(new Set())
+            fetchMembers(currentPage)
+        } catch (err) {
+            console.error('Bulk remove failed:', err)
+            toast.error('Failed to remove selected members.')
+        } finally {
+            setIsBulkRemoving(false)
+            setBulkConfirmOpen(false)
+        }
     }
 
     // ── Get acceptance status for member ─────────────────
@@ -660,12 +754,12 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
 
                                     {/* External invitation form */}
                                     {showExternalInvite && (
-                                        <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-4 space-y-3">
+                                        <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-4 space-y-3">
                                             <div className="flex items-center gap-2">
-                                                <Mail className="h-4 w-4 text-blue-600" />
-                                                <h4 className="text-sm font-semibold text-blue-800">Invite External User</h4>
+                                                <Mail className="h-4 w-4 text-indigo-600" />
+                                                <h4 className="text-sm font-semibold text-indigo-800">Invite External User</h4>
                                             </div>
-                                            <p className="text-xs text-blue-700">
+                                            <p className="text-xs text-indigo-700">
                                                 This person is not registered in the system. You can send them an email invitation to join the conference.
                                             </p>
 
@@ -730,7 +824,7 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
 
                                             <Button
                                                 size="sm"
-                                                className="gap-2 bg-blue-600 hover:bg-blue-700"
+                                                className="gap-2 bg-indigo-600 hover:bg-indigo-700"
                                                 disabled={
                                                     isSendingInvite ||
                                                     !externalName.trim() ||
@@ -849,7 +943,81 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                             </span>
                         )}
                     </h3>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 text-xs"
+                        onClick={handleExportCSV}
+                        disabled={isLoadingMembers || members.length === 0}
+                    >
+                        <Download className="h-3.5 w-3.5" />
+                        Export CSV
+                    </Button>
                 </div>
+
+                {/* Filter Toolbar */}
+                {!isLoadingMembers && members.length > 0 && (
+                    <div className="flex flex-col sm:flex-row gap-2">
+                        {/* Inline Search */}
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search by name or email..."
+                                className="pl-9 h-9 text-sm"
+                                value={memberSearch}
+                                onChange={(e) => setMemberSearch(e.target.value)}
+                            />
+                        </div>
+                        {/* Role Filter */}
+                        <Select value={roleFilter} onValueChange={setRoleFilter}>
+                            <SelectTrigger className="w-full sm:w-48 h-9 text-sm">
+                                <div className="flex items-center gap-2">
+                                    <Filter className="h-3.5 w-3.5" />
+                                    <SelectValue placeholder="Filter by role" />
+                                </div>
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Roles</SelectItem>
+                                <SelectItem value="CONFERENCE_CHAIR">Conference Chair</SelectItem>
+                                <SelectItem value="PROGRAM_CHAIR">Program Chair</SelectItem>
+                                <SelectItem value="REVIEWER">Reviewer</SelectItem>
+                                <SelectItem value="AUTHOR">Author</SelectItem>
+                                <SelectItem value="ATTENDEE">Attendee</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
+
+                {/* Bulk Actions Bar */}
+                {selectedIds.size > 0 && (
+                    <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="flex items-center gap-2">
+                            <CheckSquare className="h-4 w-4 text-indigo-600" />
+                            <span className="text-sm font-medium text-indigo-700">
+                                {selectedIds.size} member{selectedIds.size > 1 ? 's' : ''} selected
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs text-gray-600 hover:text-gray-800"
+                                onClick={() => setSelectedIds(new Set())}
+                            >
+                                Clear
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                className="text-xs gap-1.5"
+                                onClick={() => setBulkConfirmOpen(true)}
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Remove Selected
+                            </Button>
+                        </div>
+                    </div>
+                )}
 
                 {isLoadingMembers ? (
                     <div className="flex items-center justify-center py-12">
@@ -859,11 +1027,21 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                     <div className="text-center py-12 text-muted-foreground text-sm">
                         No members found. Use the search above to add users.
                     </div>
+                ) : filteredMembers.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                        No members match the current filter.
+                    </div>
                 ) : (
                     <div className="rounded-lg border overflow-hidden">
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-muted/30">
+                                    <TableHead className="w-10 text-center">
+                                        <Checkbox
+                                            checked={selectedIds.size === filteredMembers.length && filteredMembers.length > 0}
+                                            onCheckedChange={toggleSelectAll}
+                                        />
+                                    </TableHead>
                                     <TableHead className="w-12 text-center">#</TableHead>
                                     <TableHead>Name</TableHead>
                                     <TableHead>Role</TableHead>
@@ -872,14 +1050,21 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {members.map((member, idx) => {
+                                {filteredMembers.map((member, idx) => {
                                     const roleGroups = formatRoles(member.roles)
                                     const status = getAcceptanceStatus(member.roles)
                                     return (
-                                        <TableRow key={member.user.id}>
+                                        <TableRow key={member.user.id} className={selectedIds.has(member.user.id) ? 'bg-indigo-50/50' : ''}>
+                                            {/* Checkbox */}
+                                            <TableCell className="text-center">
+                                                <Checkbox
+                                                    checked={selectedIds.has(member.user.id)}
+                                                    onCheckedChange={() => toggleSelect(member.user.id)}
+                                                />
+                                            </TableCell>
                                             {/* # */}
                                             <TableCell className="text-center text-xs text-muted-foreground font-medium">
-                                                {currentPage * 20 + idx + 1}
+                                                {currentPage * 10 + idx + 1}
                                             </TableCell>
 
                                             {/* Name + Email */}
@@ -1183,6 +1368,33 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                 <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Removing...</>
                             ) : (
                                 'Remove'
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* ── Bulk Remove Confirmation ────────────── */}
+            <AlertDialog open={bulkConfirmOpen} onOpenChange={setBulkConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Remove {selectedIds.size} Members</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to remove <strong>{selectedIds.size}</strong> selected member{selectedIds.size > 1 ? 's' : ''} from this conference?
+                            This will remove all their assigned roles and cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isBulkRemoving}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleBulkRemove}
+                            disabled={isBulkRemoving}
+                            className="bg-red-600 hover:bg-red-700"
+                        >
+                            {isBulkRemoving ? (
+                                <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Removing...</>
+                            ) : (
+                                `Remove ${selectedIds.size} Members`
                             )}
                         </AlertDialogAction>
                     </AlertDialogFooter>

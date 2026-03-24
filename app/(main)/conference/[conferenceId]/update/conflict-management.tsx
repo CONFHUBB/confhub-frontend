@@ -251,7 +251,7 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                     {/* Domain Conflict Detection — toggleable */}
                     <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border">
                         <div className="flex items-center gap-3">
-                            <Globe className="h-5 w-5 text-blue-500" />
+                            <Globe className="h-5 w-5 text-indigo-500" />
                             <div>
                                 <p className="font-medium text-sm">Domain Conflict Detection</p>
                                 <p className="text-xs text-muted-foreground">

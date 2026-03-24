@@ -30,7 +30,7 @@ export function ReviewQuestionsPreview({ open, onClose, questions }: ReviewQuest
         if (tags.length === 0) return null
 
         return (
-            <p className="mt-2 text-xs italic text-blue-600 dark:text-blue-400">
+            <p className="mt-2 text-xs italic text-indigo-600 dark:text-indigo-400">
                 [{tags.join(" • ")}]
             </p>
         )

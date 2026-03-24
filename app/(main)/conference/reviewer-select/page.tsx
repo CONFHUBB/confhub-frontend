@@ -450,9 +450,9 @@ export default function ReviewerSelectPage() {
                             </p>
                         </div>
 
-                        <div className="flex items-start gap-2.5 rounded-lg bg-blue-50 border border-blue-100 p-3">
-                            <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
-                            <p className="text-xs text-blue-700">
+                        <div className="flex items-start gap-2.5 rounded-lg bg-indigo-50 border border-blue-100 p-3">
+                            <Info className="h-4 w-4 text-indigo-500 mt-0.5 shrink-0" />
+                            <p className="text-xs text-indigo-700">
                                 Your quota will be used during paper assignment to limit the number of papers assigned to you. You can update this later from your reviewer settings.
                             </p>
                         </div>

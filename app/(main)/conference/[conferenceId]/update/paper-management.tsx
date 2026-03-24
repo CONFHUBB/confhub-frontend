@@ -31,7 +31,7 @@ interface PaperManagementProps {
 // ── Status config ──
 const STATUS_CONFIG: Record<string, { label: string; color: string; dotColor: string }> = {
     DRAFT: { label: "Draft", color: "bg-gray-100 text-gray-700 border-gray-200", dotColor: "bg-gray-400" },
-    SUBMITTED: { label: "Submitted", color: "bg-blue-100 text-blue-700 border-blue-200", dotColor: "bg-blue-500" },
+    SUBMITTED: { label: "Submitted", color: "bg-indigo-100 text-indigo-700 border-indigo-200", dotColor: "bg-indigo-500" },
     UNDER_REVIEW: { label: "Under Review", color: "bg-amber-100 text-amber-700 border-amber-200", dotColor: "bg-amber-500" },
     ACCEPTED: { label: "Accepted", color: "bg-emerald-100 text-emerald-700 border-emerald-200", dotColor: "bg-emerald-500" },
     REJECTED: { label: "Rejected", color: "bg-red-100 text-red-700 border-red-200", dotColor: "bg-red-500" },
@@ -656,7 +656,7 @@ export function PaperManagement({ conferenceId }: PaperManagementProps) {
                                                     <div className="w-12 h-1.5 rounded-full bg-gray-200 overflow-hidden">
                                                         <div
                                                             className={`h-full rounded-full transition-all ${
-                                                                reviewPct === 100 ? "bg-green-500" : "bg-blue-400"
+                                                                reviewPct === 100 ? "bg-green-500" : "bg-indigo-400"
                                                             }`}
                                                             style={{ width: `${reviewPct}%` }}
                                                         />
@@ -670,7 +670,7 @@ export function PaperManagement({ conferenceId }: PaperManagementProps) {
                                             {paper.averageTotalScore !== null ? (
                                                 <span className={`font-mono text-xs font-semibold ${
                                                     paper.averageTotalScore >= 3.5 ? "text-emerald-600" :
-                                                    paper.averageTotalScore >= 2 ? "text-blue-600" : "text-red-600"
+                                                    paper.averageTotalScore >= 2 ? "text-indigo-600" : "text-red-600"
                                                 }`}>
                                                     {paper.averageTotalScore.toFixed(1)}
                                                 </span>

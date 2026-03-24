@@ -133,12 +133,12 @@ export function ConferenceTemplate({ initialTemplates, onSubmit }: ConferenceTem
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
             <form onSubmit={handleSubmit} className="flex flex-col min-w-0">
                 {/* Template Variables Reference */}
-                <div className="mb-8 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30">
-                    <div className="mb-3 flex items-center gap-2 text-sm font-medium text-blue-800 dark:text-blue-300">
+                <div className="mb-8 rounded-lg border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-950/30">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-medium text-indigo-800 dark:text-indigo-300">
                         <Info className="size-4" />
                         Available Template Variables
                     </div>
-                    <p className="mb-3 text-xs text-blue-700 dark:text-blue-400">
+                    <p className="mb-3 text-xs text-indigo-700 dark:text-indigo-400">
                         Use these variables in the Subject and Body fields. They will be replaced with actual values when sending emails.
                     </p>
                     <div className="grid gap-1.5 sm:grid-cols-2">
@@ -147,15 +147,15 @@ export function ConferenceTemplate({ initialTemplates, onSubmit }: ConferenceTem
                                 key={v.variable}
                                 type="button"
                                 onClick={() => copyVariable(v.variable)}
-                                className="group flex items-center justify-between rounded-md border border-blue-200 bg-white px-3 py-1.5 text-xs transition-colors hover:bg-blue-100 dark:border-blue-700 dark:bg-blue-900/40 dark:hover:bg-blue-800/60"
+                                className="group flex items-center justify-between rounded-md border border-indigo-200 bg-white px-3 py-1.5 text-xs transition-colors hover:bg-indigo-100 dark:border-blue-700 dark:bg-blue-900/40 dark:hover:bg-blue-800/60"
                             >
                                 <span>
-                                    <code className="mr-2 font-mono font-semibold text-blue-700 dark:text-blue-300">
+                                    <code className="mr-2 font-mono font-semibold text-indigo-700 dark:text-indigo-300">
                                         {v.variable}
                                     </code>
                                     <span className="text-muted-foreground">{v.description}</span>
                                 </span>
-                                <Copy className="size-3 text-blue-400 opacity-0 transition-opacity group-hover:opacity-100" />
+                                <Copy className="size-3 text-indigo-400 opacity-0 transition-opacity group-hover:opacity-100" />
                             </button>
                         ))}
                     </div>
@@ -350,8 +350,8 @@ export function ConferenceTemplate({ initialTemplates, onSubmit }: ConferenceTem
 
             {/* Email Preview Pane */}
             <div className="hidden xl:block sticky top-8 rounded-xl border bg-card shadow-sm overflow-hidden">
-                <div className="border-b bg-blue-50/50 px-5 py-4 dark:bg-blue-950/20">
-                    <h3 className="text-base flex items-center gap-2 font-semibold text-blue-800 dark:text-blue-300">
+                <div className="border-b bg-indigo-50/50 px-5 py-4 dark:bg-indigo-950/20">
+                    <h3 className="text-base flex items-center gap-2 font-semibold text-indigo-800 dark:text-indigo-300">
                         <Mail className="size-4" />
                         Email Preview (Live)
                     </h3>

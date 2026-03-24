@@ -69,7 +69,7 @@ const ACTIVITY_ICONS: Record<string, string> = {
 const ACTION_CONFIG: Record<string, { label: string; color: string; icon: typeof ToggleRight }> = {
     "ENABLED": { label: "Enabled", color: "text-emerald-700 bg-emerald-50 border-emerald-200", icon: ToggleRight },
     "DISABLED": { label: "Disabled", color: "text-red-700 bg-red-50 border-red-200", icon: ToggleLeft },
-    "DEADLINE_CHANGED": { label: "Deadline Changed", color: "text-blue-700 bg-blue-50 border-blue-200", icon: CalendarClock },
+    "DEADLINE_CHANGED": { label: "Deadline Changed", color: "text-indigo-700 bg-indigo-50 border-indigo-200", icon: CalendarClock },
 }
 
 export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineProps) {
@@ -229,11 +229,11 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
             </CardHeader>
             <CardContent className="px-0 pb-0">
                 {/* Workflow guidance banner */}
-                <div className="flex items-start gap-3 p-4 mb-4 rounded-lg bg-blue-50 border border-blue-200 text-sm">
-                    <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
-                    <div className="text-blue-800">
+                <div className="flex items-start gap-3 p-4 mb-4 rounded-lg bg-indigo-50 border border-indigo-200 text-sm">
+                    <Info className="h-5 w-5 text-indigo-600 mt-0.5 shrink-0" />
+                    <div className="text-indigo-800">
                         <p className="font-medium">Workflow Guide</p>
-                        <p className="mt-0.5 text-blue-700">
+                        <p className="mt-0.5 text-indigo-700">
                             Enable activities in order: <strong>Submission</strong> → <strong>Bidding</strong> → <strong>Review</strong> → <strong>Discussion</strong> → <strong>Notification</strong> → <strong>Camera-Ready</strong>. 
                             Set a deadline for each phase, then toggle the switch to activate.
                         </p>
@@ -354,7 +354,7 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="h-7 text-xs gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                                                className="h-7 text-xs gap-1.5 text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
                                                 onClick={() => onNavigate(quickAction.tab)}
                                             >
                                                 <ExternalLink className="h-3 w-3" />

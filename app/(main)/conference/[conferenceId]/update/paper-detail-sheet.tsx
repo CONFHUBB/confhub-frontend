@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import {
     Loader2, FileText, Users, Gavel, Shield, MessageSquare, Eye,
-    Check, X, ChevronDown, ChevronRight, Plus, Trash2, Send, Reply, UserPlus
+    Check, X, ChevronDown, ChevronRight, Plus, Trash2, Send, Reply, UserPlus, ExternalLink
 } from "lucide-react"
 import toast from "react-hot-toast"
 
@@ -22,6 +22,7 @@ import { createMetaReview, updateMetaReview } from "@/app/api/meta-review.api"
 import { manualAssign, removeAssignment, getCurrentAssignments, type AssignmentPreviewItem } from "@/app/api/assignment.api"
 import { getConferenceUsersWithRoles } from "@/app/api/conference-user-track.api"
 import { getReviewById, getAnswersByReview, getReviewQuestionsByTrack } from "@/app/api/review.api"
+import Link from "next/link"
 
 // Types
 import type { BiddingResponse } from "@/types/bidding"
@@ -56,7 +57,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
 
 const STATUS_COLORS: Record<string, string> = {
     DRAFT: "bg-gray-100 text-gray-700",
-    SUBMITTED: "bg-blue-100 text-blue-700",
+    SUBMITTED: "bg-indigo-100 text-indigo-700",
     UNDER_REVIEW: "bg-amber-100 text-amber-700",
     ACCEPTED: "bg-emerald-100 text-emerald-700",
     REJECTED: "bg-red-100 text-red-700",
@@ -118,7 +119,7 @@ export function PaperDetailSheet({
                     ) : (
                         <>
                             {activeTab === "info" && <InfoTab paper={enrichedPaper} paperId={paperId!} />}
-                            {activeTab === "reviews" && <ReviewsTab paperId={paperId!} paper={enrichedPaper} />}
+                            {activeTab === "reviews" && <ReviewsTab paperId={paperId!} paper={enrichedPaper} conferenceId={conferenceId} />}
                             {activeTab === "assignments" && (
                                 <AssignmentsTab paperId={paperId!} conferenceId={conferenceId} onChanged={onDataChanged} />
                             )}
@@ -173,13 +174,43 @@ function InfoTab({ paper, paperId }: { paper: EnrichedPaper; paperId: number }) 
     const BID_LABELS: Record<string, string> = { EAGER: "Eager", WILLING: "Willing", IN_A_PINCH: "In a pinch", NOT_WILLING: "Not willing" }
     const BID_COLORS: Record<string, string> = {
         EAGER: "bg-emerald-100 text-emerald-700",
-        WILLING: "bg-blue-100 text-blue-700",
+        WILLING: "bg-indigo-100 text-indigo-700",
         IN_A_PINCH: "bg-amber-100 text-amber-700",
         NOT_WILLING: "bg-red-100 text-red-700",
     }
 
     return (
         <div className="space-y-5">
+            {/* Review Progress — at top */}
+            <div className="rounded-lg border p-4 bg-indigo-50/30">
+                <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase">Review Progress</p>
+                    {paper.averageTotalScore !== null && (
+                        <Badge variant="outline" className="text-xs">
+                            Avg: {paper.averageTotalScore.toFixed(1)}
+                        </Badge>
+                    )}
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className={`text-sm font-semibold ${
+                        paper.completedReviewCount === paper.reviewCount && paper.reviewCount > 0
+                            ? "text-green-600" : "text-gray-700"
+                    }`}>
+                        {paper.completedReviewCount}/{paper.reviewCount} reviews completed
+                    </span>
+                </div>
+                {paper.reviewCount > 0 && (
+                    <div className="w-full h-2 rounded-full bg-gray-200 mt-2 overflow-hidden">
+                        <div
+                            className={`h-full rounded-full transition-all ${
+                                paper.completedReviewCount === paper.reviewCount ? "bg-green-500" : "bg-indigo-400"
+                            }`}
+                            style={{ width: `${(paper.completedReviewCount / paper.reviewCount) * 100}%` }}
+                        />
+                    </div>
+                )}
+            </div>
+
             {/* Paper Info */}
             <div className="space-y-3">
                 <div>
@@ -246,29 +277,6 @@ function InfoTab({ paper, paperId }: { paper: EnrichedPaper; paperId: number }) 
                     </div>
                 )}
             </div>
-
-            {/* Review Summary */}
-            <div className="border-t pt-4">
-                <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Review Progress</p>
-                <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium">{paper.completedReviewCount}/{paper.reviewCount} reviews completed</span>
-                    {paper.averageTotalScore !== null && (
-                        <Badge variant="outline" className="text-xs">
-                            Avg: {paper.averageTotalScore.toFixed(1)}
-                        </Badge>
-                    )}
-                </div>
-                {paper.reviewCount > 0 && (
-                    <div className="w-full h-2 rounded-full bg-gray-200 mt-2 overflow-hidden">
-                        <div
-                            className={`h-full rounded-full ${
-                                paper.completedReviewCount === paper.reviewCount ? "bg-green-500" : "bg-blue-400"
-                            }`}
-                            style={{ width: `${(paper.completedReviewCount / paper.reviewCount) * 100}%` }}
-                        />
-                    </div>
-                )}
-            </div>
         </div>
     )
 }
@@ -276,7 +284,7 @@ function InfoTab({ paper, paperId }: { paper: EnrichedPaper; paperId: number }) 
 // ═══════════════════════════════════════════════
 // TAB: Reviews
 // ═══════════════════════════════════════════════
-function ReviewsTab({ paperId, paper }: { paperId: number; paper: EnrichedPaper }) {
+function ReviewsTab({ paperId, paper, conferenceId }: { paperId: number; paper: EnrichedPaper; conferenceId: number }) {
     const [aggregate, setAggregate] = useState<ReviewAggregate | null>(null)
     const [loading, setLoading] = useState(true)
     const [expandedReviews, setExpandedReviews] = useState<Set<number>>(new Set())
@@ -316,7 +324,19 @@ function ReviewsTab({ paperId, paper }: { paperId: number; paper: EnrichedPaper 
 
     if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin" /></div>
     if (!aggregate || aggregate.reviewCount === 0) {
-        return <p className="text-sm text-muted-foreground py-8 text-center">No reviews yet for this paper.</p>
+        return (
+            <div className="space-y-4">
+                <p className="text-sm text-muted-foreground py-8 text-center">No reviews yet for this paper.</p>
+                <div className="border-t pt-4">
+                    <Link href={`/conference/${conferenceId}/update?tab=reviewer-assignment`}>
+                        <Button variant="outline" className="w-full gap-2 text-sm">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            Go to Reviewer Assignment
+                        </Button>
+                    </Link>
+                </div>
+            </div>
+        )
     }
 
     // We need to get actual review IDs - use assignments data
@@ -361,6 +381,19 @@ function ReviewsTab({ paperId, paper }: { paperId: number; paper: EnrichedPaper 
                     ))}
                 </div>
             )}
+
+            {/* Redirect to Review Management */}
+            <div className="border-t pt-4">
+                <p className="text-xs text-muted-foreground mb-2">
+                    Need to reassign reviewers or manage review settings?
+                </p>
+                <Link href={`/conference/${conferenceId}/update?tab=reviewer-assignment`}>
+                    <Button variant="outline" className="w-full gap-2 text-sm">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Manage in Reviewer Assignment
+                    </Button>
+                </Link>
+            </div>
         </div>
     )
 }

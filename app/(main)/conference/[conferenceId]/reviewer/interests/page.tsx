@@ -167,7 +167,7 @@ export default function ReviewerInterestsPage() {
                     isPrimary
                         ? 'bg-violet-50 ring-2 ring-violet-300'
                         : isSecondary
-                            ? 'bg-blue-50 ring-1 ring-blue-200'
+                            ? 'bg-indigo-50 ring-1 ring-indigo-200'
                             : 'hover:bg-gray-50'
                 }`}
             >
@@ -182,7 +182,7 @@ export default function ReviewerInterestsPage() {
                         </Badge>
                     )}
                     {isSecondary && (
-                        <Badge variant="outline" className="border-blue-400 text-blue-600 text-[10px] px-1.5 py-0">
+                        <Badge variant="outline" className="border-indigo-400 text-indigo-600 text-[10px] px-1.5 py-0">
                             SECONDARY
                         </Badge>
                     )}
@@ -212,8 +212,8 @@ export default function ReviewerInterestsPage() {
                             isPrimary
                                 ? 'bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed'
                                 : isSecondary
-                                    ? 'bg-blue-100 border-blue-400 text-blue-700 ring-1 ring-blue-300'
-                                    : 'bg-white border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-600'
+                                    ? 'bg-indigo-100 border-indigo-400 text-indigo-700 ring-1 ring-blue-300'
+                                    : 'bg-white border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600'
                         }`}
                     >
                         {isSecondary ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
@@ -247,7 +247,7 @@ export default function ReviewerInterestsPage() {
                     <Star className="h-4 w-4 fill-violet-500" />
                     Primary (1 only)
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium bg-blue-100 border-blue-300 text-blue-700">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium bg-indigo-100 border-indigo-300 text-indigo-700">
                     <CheckSquare className="h-4 w-4" />
                     Secondary (multiple)
                 </div>

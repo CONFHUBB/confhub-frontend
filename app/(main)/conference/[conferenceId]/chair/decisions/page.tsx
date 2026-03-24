@@ -16,7 +16,7 @@ import PaperDecisionDetail from '@/components/chair/paper-decision-detail'
 
 const STATUS_COLORS: Record<string, string> = {
     SUBMITTED: 'bg-gray-100 text-gray-700',
-    UNDER_REVIEW: 'bg-blue-100 text-blue-800',
+    UNDER_REVIEW: 'bg-indigo-100 text-indigo-800',
     ACCEPTED: 'bg-green-100 text-green-800',
     REJECTED: 'bg-red-100 text-red-800',
     REVISION: 'bg-amber-100 text-amber-800',
@@ -110,9 +110,9 @@ export default function ChairDecisionsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
             {/* Header */}
             <div className="space-y-3">
-                <Button variant="ghost" className="gap-2 -ml-2" onClick={() => router.push(`/conference/${conferenceId}`)}>
+                <Button variant="ghost" className="gap-2 -ml-2" onClick={() => router.push(`/conference/${conferenceId}/update`)}>
                     <ArrowLeft className="h-4 w-4" />
-                    Back to Conference
+                    Back to Conference Management
                 </Button>
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Chair Decision Console</h1>
@@ -140,8 +140,8 @@ export default function ChairDecisionsPage() {
                 <Card className="border-l-4 border-l-blue-400">
                     <CardContent className="p-4">
                         <div className="flex items-center gap-3">
-                            <div className="rounded-full bg-blue-100 p-2">
-                                <Clock className="h-4 w-4 text-blue-600" />
+                            <div className="rounded-full bg-indigo-100 p-2">
+                                <Clock className="h-4 w-4 text-indigo-600" />
                             </div>
                             <div>
                                 <p className="text-2xl font-bold">{counts.awaiting}</p>
@@ -234,44 +234,44 @@ export default function ChairDecisionsPage() {
                             <p>No papers found with the current filters.</p>
                         </div>
                     ) : (
-                        <div className="overflow-auto rounded-lg border">
+                        <div className="overflow-auto rounded-xl border bg-white">
                             <table className="w-full text-sm">
                                 <thead>
-                                    <tr className="border-b bg-gray-50">
-                                        <th className="px-4 py-3 text-left font-medium text-gray-600 w-16">#</th>
-                                        <th className="px-4 py-3 text-left font-medium text-gray-600">Paper Title</th>
-                                        <th className="px-4 py-3 text-center font-medium text-gray-600 w-24">Avg Score</th>
-                                        <th className="px-4 py-3 text-center font-medium text-gray-600 w-24">Reviews</th>
-                                        <th className="px-4 py-3 text-center font-medium text-gray-600 w-28">Status</th>
-                                        <th className="px-4 py-3 text-center font-medium text-gray-600 w-24">Decision</th>
-                                        <th className="px-4 py-3 text-right font-medium text-gray-600 w-28">Action</th>
+                                    <tr className="border-b bg-muted/30">
+                                        <th className="px-5 py-3.5 text-left font-medium text-xs uppercase tracking-wider text-muted-foreground w-16">#</th>
+                                        <th className="px-5 py-3.5 text-left font-medium text-xs uppercase tracking-wider text-muted-foreground">Paper Title</th>
+                                        <th className="px-5 py-3.5 text-center font-medium text-xs uppercase tracking-wider text-muted-foreground w-24">Avg Score</th>
+                                        <th className="px-5 py-3.5 text-center font-medium text-xs uppercase tracking-wider text-muted-foreground w-24">Reviews</th>
+                                        <th className="px-5 py-3.5 text-center font-medium text-xs uppercase tracking-wider text-muted-foreground w-28">Status</th>
+                                        <th className="px-5 py-3.5 text-center font-medium text-xs uppercase tracking-wider text-muted-foreground w-24">Decision</th>
+                                        <th className="px-5 py-3.5 text-right font-medium text-xs uppercase tracking-wider text-muted-foreground w-28">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody className="divide-y">
                                     {filteredAggregates.map((agg, i) => {
                                         const mr = metaReviewMap[agg.paperId]
                                         return (
-                                            <tr key={agg.paperId} className="border-b last:border-0 hover:bg-gray-50">
-                                                <td className="px-4 py-3 text-gray-400">{agg.paperId}</td>
-                                                <td className="px-4 py-3 font-medium max-w-md truncate">
+                                            <tr key={agg.paperId} className="hover:bg-indigo-50/30 transition-colors">
+                                                <td className="px-5 py-4 text-xs text-muted-foreground font-medium">{agg.paperId}</td>
+                                                <td className="px-5 py-4 font-medium max-w-md truncate">
                                                     {agg.paperTitle}
                                                 </td>
-                                                <td className="px-4 py-3 text-center font-mono">
+                                                <td className="px-5 py-4 text-center font-mono">
                                                     {agg.completedReviewCount > 0
                                                         ? Number(agg.averageTotalScore).toFixed(1)
                                                         : '—'}
                                                 </td>
-                                                <td className="px-4 py-3 text-center">
+                                                <td className="px-5 py-4 text-center">
                                                     <span className={agg.completedReviewCount === agg.reviewCount ? 'text-green-600 font-semibold' : 'text-amber-600'}>
                                                         {agg.completedReviewCount}/{agg.reviewCount}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3 text-center">
+                                                <td className="px-5 py-4 text-center">
                                                     <Badge className={STATUS_COLORS[agg.paperStatus] || 'bg-gray-100 text-gray-800'}>
                                                         {agg.paperStatus.replace('_', ' ')}
                                                     </Badge>
                                                 </td>
-                                                <td className="px-4 py-3 text-center">
+                                                <td className="px-5 py-4 text-center">
                                                     {mr ? (
                                                         <Badge className={
                                                             mr.finalDecision === 'APPROVE' ? 'bg-green-100 text-green-800' :
@@ -284,7 +284,7 @@ export default function ChairDecisionsPage() {
                                                         <span className="text-gray-400">—</span>
                                                     )}
                                                 </td>
-                                                <td className="px-4 py-3 text-right">
+                                                <td className="px-5 py-4 text-right">
                                                     <Button
                                                         size="sm"
                                                         variant={mr ? 'outline' : 'default'}

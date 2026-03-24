@@ -125,7 +125,7 @@ const TAB_GROUPS = [
         accentColor: "text-emerald-600",
         items: [
             { key: "features-activity-timeline", label: "Activity Timeline", completionKey: "set-timeline", lockWhenDone: false },
-            { key: "features-paper-management", label: "Paper Management", completionKey: "enable-submission", lockWhenDone: false },
+            { key: "features-paper-management", label: "Paper Management", completionKey: "", lockWhenDone: false },
         ]
     },
     {
@@ -603,7 +603,7 @@ export default function ConferenceUpdatePage() {
             <div className="flex-1 w-full max-w-[1700px] mx-auto flex flex-col p-4 md:p-8 overflow-hidden">
                 {/* Header Area */}
                 <div className="mb-8 shrink-0">
-                    <Link href={`/conference/${conferenceId}`}>
+                    <Link href="/conference/my-conference">
                         <Button variant="ghost" className="mb-4 -ml-2">
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Back to My Conferences

@@ -155,7 +155,7 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                     onClick={() => setFilter(filter === "uploaded" ? "all" : "uploaded")}
                     className={`rounded-lg border p-4 text-center transition-all hover:shadow-sm ${filter === "uploaded" ? "ring-2 ring-primary" : ""}`}
                 >
-                    <p className="text-2xl font-bold text-blue-600">{uploaded}</p>
+                    <p className="text-2xl font-bold text-indigo-600">{uploaded}</p>
                     <p className="text-xs text-muted-foreground">Uploaded</p>
                 </button>
                 <button
@@ -243,7 +243,7 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                                                 ✅ Published
                                             </Badge>
                                         ) : p.hasUploaded ? (
-                                            <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-[10px]">
+                                            <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200 text-[10px]">
                                                 <Upload className="h-3 w-3 mr-1" />
                                                 Uploaded
                                             </Badge>
@@ -331,14 +331,14 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                                         sheetPaper.isApproved
                                             ? "bg-emerald-50 border-emerald-200"
                                             : sheetPaper.hasUploaded
-                                            ? "bg-blue-50 border-blue-200"
+                                            ? "bg-indigo-50 border-indigo-200"
                                             : "bg-amber-50 border-amber-200"
                                     }`}>
                                         <FileCheck className={`h-6 w-6 mx-auto mb-1 ${
                                             sheetPaper.isApproved
                                                 ? "text-emerald-600"
                                                 : sheetPaper.hasUploaded
-                                                ? "text-blue-600"
+                                                ? "text-indigo-600"
                                                 : "text-amber-600"
                                         }`} />
                                         <p className="text-sm font-semibold">
@@ -370,7 +370,7 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <span className="text-xs text-muted-foreground font-mono w-5">{i + 1}.</span>
-                                                    <FileText className="h-5 w-5 text-blue-500" />
+                                                    <FileText className="h-5 w-5 text-indigo-500" />
                                                     <div>
                                                         <p className="text-sm font-medium">
                                                             Camera-Ready File #{f.id}
@@ -384,7 +384,7 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                                                     href={f.url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm"
+                                                    className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 text-sm"
                                                 >
                                                     <ExternalLink className="h-3.5 w-3.5" />
                                                     Open

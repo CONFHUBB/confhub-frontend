@@ -45,14 +45,14 @@ export function ChairOverview({ conferenceId }: ChairOverviewProps) {
         <div className="space-y-3">
             <h3 className="text-lg font-bold">Program Chair Overview</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="border-l-4 border-l-blue-500 bg-blue-50/30">
+                <Card className="border-l-4 border-l-blue-500 bg-indigo-50/30">
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-2xl font-bold">{submitted}</p>
                                 <p className="text-xs text-muted-foreground font-medium mt-0.5">Submitted Papers</p>
                             </div>
-                            <FileText className="h-6 w-6 text-blue-300" />
+                            <FileText className="h-6 w-6 text-indigo-300" />
                         </div>
                     </CardContent>
                 </Card>

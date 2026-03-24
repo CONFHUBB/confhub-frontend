@@ -27,7 +27,7 @@ interface ReviewQuestion {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-    ASSIGNED: "bg-blue-100 text-blue-800",
+    ASSIGNED: "bg-indigo-100 text-indigo-800",
     IN_PROGRESS: "bg-amber-100 text-amber-800",
     COMPLETED: "bg-green-100 text-green-800",
     DECLINED: "bg-red-100 text-red-800",
@@ -239,14 +239,14 @@ export function ReviewDetailDialog({ reviewId, open, onClose }: ReviewDetailDial
                                                                                 key={choice.id}
                                                                                 className={`flex items-center justify-between px-3 py-2 rounded-lg border text-sm ${
                                                                                     isSelected
-                                                                                        ? "bg-blue-50 border-blue-400 text-blue-800 ring-1 ring-blue-200"
+                                                                                        ? "bg-indigo-50 border-indigo-400 text-indigo-800 ring-1 ring-indigo-200"
                                                                                         : "bg-white border-gray-100 text-gray-400"
                                                                                 }`}
                                                                             >
                                                                                 <div className="flex items-center gap-2">
                                                                                     <div
                                                                                         className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
-                                                                                            isSelected ? "border-blue-500 bg-blue-500" : "border-gray-300"
+                                                                                            isSelected ? "border-indigo-500 bg-indigo-500" : "border-gray-300"
                                                                                         }`}
                                                                                     >
                                                                                         {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
@@ -281,7 +281,7 @@ export function ReviewDetailDialog({ reviewId, open, onClose }: ReviewDetailDial
                                         ? "bg-red-50 border-red-200 text-red-700"
                                         : review.status === "IN_PROGRESS"
                                             ? "bg-amber-50 border-amber-200 text-amber-700"
-                                            : "bg-blue-50 border-blue-200 text-blue-700"
+                                            : "bg-indigo-50 border-indigo-200 text-indigo-700"
                             }`}
                         >
                             {review.status === "COMPLETED"

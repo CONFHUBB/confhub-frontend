@@ -4,7 +4,7 @@ import * as React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
-import { Menu, X, Search, PlusCircle, LogOut } from 'lucide-react'
+import { Menu, X, Search, LogOut, ChevronDown } from 'lucide-react'
 import { useUserRoles } from '@/hooks/useUserConferenceRoles'
 import { getUserByEmail, getUserProfile } from '@/app/api/user.api'
 import { NotificationBell } from '@/components/notification-bell'
@@ -16,8 +16,20 @@ export function AppNavbar() {
     const [isMenuOpen, setIsMenuOpen] = React.useState(false)
     const [userName, setUserName] = React.useState('')
     const [avatarUrl, setAvatarUrl] = React.useState('')
+    const [userMenuOpen, setUserMenuOpen] = React.useState(false)
+    const userMenuRef = React.useRef<HTMLDivElement>(null)
 
-    // Fetch user profile data from JWT token
+    // Close user menu on click outside
+    React.useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+                setUserMenuOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClick)
+        return () => document.removeEventListener('mousedown', handleClick)
+    }, [])
+
     React.useEffect(() => {
         const fetchUserData = async () => {
             try {
@@ -26,21 +38,15 @@ export function AppNavbar() {
                 const payload = JSON.parse(atob(token.split('.')[1]))
                 const email = payload.sub
                 if (!email) return
-
                 const user = await getUserByEmail(email)
                 if (user?.fullName) setUserName(user.fullName)
-
                 if (user?.id) {
                     try {
                         const profile = await getUserProfile(user.id)
                         if (profile?.avatarUrl) setAvatarUrl(profile.avatarUrl)
-                    } catch {
-                        // Profile may not exist yet
-                    }
+                    } catch { }
                 }
-            } catch {
-                // Token may be invalid
-            }
+            } catch { }
         }
         fetchUserData()
     }, [])
@@ -49,32 +55,34 @@ export function AppNavbar() {
         ? userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
         : 'U'
 
-    const navLinks = React.useMemo(() => {
-        const links = [
-            { name: 'Home', path: '/' },
-            { name: 'Conferences', path: '/conference' },
-        ]
+    const navLinks = React.useMemo(() => [
+        { name: 'Home', path: '/', exact: true },
+        { name: 'Conferences', path: '/conference', exact: true },
+        { name: 'My Conferences', path: '/conference/my-conference', exact: false },
+        { name: 'Reviewer', path: '/conference/reviewer-select', exact: false },
+        { name: 'My Papers', path: '/paper', exact: false },
+    ], [])
 
-        // Show "My Conferences" if user is a chair of any conference
-        if (hasAnyRole('CONFERENCE_CHAIR') || hasAnyRole('PROGRAM_CHAIR')) {
-            links.push({ name: 'My Conferences', path: '/conference/my-conference' })
+    // Smart active detection: conference detail pages → highlight "My Conferences"
+    const getIsActive = (link: { path: string; exact: boolean }) => {
+        if (link.exact) return pathname === link.path
+        if (link.path === '/conference/my-conference') {
+            // Match /conference/my-conference OR /conference/[id] detail pages
+            if (pathname === '/conference/my-conference') return true
+            // Match /conference/<number>/... (conference detail pages)
+            if (/^\/conference\/\d+/.test(pathname)) return true
+            return false
         }
-
-        // Show "Reviewer Console" if user is a reviewer in any conference
-        if (hasAnyRole('REVIEWER')) {
-            links.push({ name: 'Reviewer', path: '/conference/reviewer-select' })
+        if (link.path === '/conference/reviewer-select') {
+            // Match /conference/reviewer-select OR /conference/[id]/reviewer/...
+            if (pathname.startsWith('/conference/reviewer-select')) return true
+            if (/^\/conference\/\d+\/reviewer/.test(pathname)) return true
+            return false
         }
+        return pathname.startsWith(link.path)
+    }
 
-        links.push({ name: 'My Papers', path: '/paper' })
-        links.push({ name: 'Profile', path: '/my-profile' })
-
-        return links
-    }, [hasAnyRole])
-
-    // Close menu when route changes
-    React.useEffect(() => {
-        setIsMenuOpen(false)
-    }, [pathname])
+    React.useEffect(() => { setIsMenuOpen(false) }, [pathname])
 
     const handleLogout = () => {
         localStorage.removeItem('accessToken')
@@ -82,170 +90,184 @@ export function AppNavbar() {
     }
 
     return (
-        <header className="sticky top-0 left-0 w-full z-50 flex flex-col">
-            {/* ── Top Tier: Logo + Search + Actions ── */}
-            <div className="bg-[#34c6eb] px-4 sm:px-8 md:px-16 lg:px-32 xl:px-80 h-21 flex items-center justify-between md:justify-around">
-                {/* Logo */}
-                <Link href="/" className="shrink-0 flex items-center">
-                    <Image
-                        src="/images/Logo2.webp"
-                        alt="ConfMS Logo"
-                        width={140}
-                        height={80}
-                        className="h-20 w-auto object-contain brightness-0 invert"
-                        priority
-                    />
-                </Link>
-
-                <div className="hidden md:flex flex-1 max-w-md mx-6">
-                    <div className="flex items-center w-full bg-white rounded-md h-12 overflow-hidden">
-                        <span className="pl-3 pr-2 text-gray-500">
-                            <Search className="h-6 w-6" />
-                        </span>
-                        <input
-                            type="text"
-                            placeholder="Search conferences, papers..."
-                            className="pl-2 flex-1 w-full h-full outline-none text-md text-gray-700 bg-transparent"
-                        />
-                        <button className="px-4 h-full bg-gray-50 text-gray-600 text-md font-semibold border-l hover:bg-gray-100 transition-colors tracking-wide">
-                            Search
-                        </button>
-                    </div>
-                </div>
-
-                {/* Right Actions (Desktop) */}
-                <div className="hidden md:flex items-center gap-4 shrink-0">
-                    {hasAnyRole('CONFERENCE_CHAIR') && (
-                        <Link
-                            href="/conference/create"
-                            className="flex items-center gap-1.5 text-md font-medium text-white bg-white/15 hover:bg-white/25 px-4 py-2 rounded-full border border-white/30 transition-colors"
-                        >
-                            Create Conference
-                        </Link>
-                    )}
-
-                    {/* Notification Bell */}
-                    <NotificationBell />
-
-                    <Link
-                        href="/my-profile"
-                        className="flex items-center gap-2 text-md font-medium text-white/90 hover:text-white rounded-full hover:bg-white/10 transition-colors px-2 py-1"
-                    >
-                        {avatarUrl ? (
-                            <img src={avatarUrl} alt={userName} className="h-8 w-8 rounded-full object-cover ring-2 ring-white/30" />
-                        ) : (
-                            <span className="flex items-center justify-center h-8 w-8 rounded-full bg-white/20 text-white text-xs font-bold ring-2 ring-white/30">
-                                {initials}
-                            </span>
-                        )}
-                        <span className="max-w-[120px] truncate">{userName || 'Profile'}</span>
-                    </Link>
-                    <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-1.5 text-md font-medium text-white/90 hover:text-white px-3 py-1.5 rounded hover:bg-white/10 transition-colors cursor-pointer"
-                    >
-                        <LogOut className="h-4 w-4" />
-                        Logout
-                    </button>
-                </div>
-
-                {/* Mobile Menu Toggle */}
-                <button
-                    className="md:hidden text-white p-1.5 rounded hover:bg-white/10 transition-colors"
-                    onClick={() => setIsMenuOpen(!isMenuOpen)}
-                >
-                    {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                </button>
-            </div>
-
-            {/* ── Bottom Tier: Navigation Links ── */}
-            <div className="bg-[#2A2D34]">
-                <div className="flex justify-center h-17 overflow-x-auto no-scrollbar">
-                    <div className="flex items-center gap-16 text-md font-medium">
-                        {navLinks.map((link, i) => {
-                            const isActive = pathname === link.path
-                            return (
-                                <Link
-                                    key={i}
-                                    href={link.path}
-                                    className={`relative py-3 whitespace-nowrap transition-colors ${isActive ? 'text-white' : 'text-gray-100 hover:text-gray-500'}`}
-                                >
-                                    {link.name}
-                                    {isActive && (
-                                        <span className="absolute bottom-0 left-0 w-full h-[2px] bg-indigo-400 rounded-full" />
-                                    )}
-                                </Link>
-                            )
-                        })}
-                    </div>
-                </div>
-            </div>
-
-            {/* ── Mobile Dropdown Menu ── */}
-            {isMenuOpen && (
-                <div className="md:hidden absolute top-full left-0 w-full bg-white shadow-xl border-t z-50">
-                    {/* Mobile Search */}
-                    <div className="p-3 border-b bg-gray-50">
-                        <div className="flex items-center w-full bg-white border rounded-md h-9 overflow-hidden">
-                            <span className="pl-3 pr-2 text-gray-400">
-                                <Search className="h-4 w-4" />
-                            </span>
-                            <input
-                                type="text"
-                                placeholder="Search conferences, papers..."
-                                className="flex-1 w-full h-full outline-none text-md text-gray-700"
+        <header className="sticky top-0 left-0 w-full z-50">
+            {/* Main navbar — dark indigo/navy for logo contrast */}
+            <div className="bg-gradient-to-r from-[#1e1b4b] via-[#272463] to-[#312e81] shadow-lg">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-center justify-between h-16">
+                        {/* Logo */}
+                        <Link href="/" className="shrink-0 flex items-center gap-2.5">
+                            <Image
+                                src="/images/Favicon-White.png"
+                                alt="ConfMS"
+                                width={36}
+                                height={36}
+                                className="h-9 w-auto object-contain"
+                                priority
                             />
-                        </div>
-                    </div>
+                            <Image
+                                src="/images/White.png"
+                                alt="ConfMS"
+                                width={110}
+                                height={40}
+                                className="h-7 w-auto object-contain hidden sm:block"
+                                priority
+                            />
+                        </Link>
 
-                    {/* Mobile Nav Links */}
-                    <div className="py-2">
+                        {/* Center: Nav Links (Desktop) */}
+                        <nav className="hidden lg:flex items-center gap-1">
+                            {navLinks.map((link, i) => {
+                                const isActive = getIsActive(link)
+                                return (
+                                    <Link
+                                        key={i}
+                                        href={link.path}
+                                        className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                            isActive
+                                                ? 'text-white bg-white/20'
+                                                : 'text-white/75 hover:text-white hover:bg-white/10'
+                                        }`}
+                                    >
+                                        {link.name}
+                                    </Link>
+                                )
+                            })}
+                        </nav>
+
+                        {/* Right: Actions (Desktop) */}
+                        <div className="hidden lg:flex items-center gap-2">
+                            {/* Search */}
+                            <Link
+                                href="/conference"
+                                className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                            >
+                                <Search className="h-5 w-5" />
+                            </Link>
+
+                            {/* Create Conference */}
+                            {hasAnyRole('CONFERENCE_CHAIR') && (
+                                <Link
+                                    href="/conference/create"
+                                    className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-white text-indigo-700 hover:bg-indigo-50 transition-colors shadow-sm"
+                                >
+                                    Create Conference
+                                </Link>
+                            )}
+
+                            {/* Notification */}
+                            <div className="[&_button]:text-white/80 [&_button]:hover:text-white [&_button]:hover:bg-white/10">
+                                <NotificationBell />
+                            </div>
+
+                            {/* User Menu */}
+                            <div ref={userMenuRef} className="relative">
+                                <button
+                                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                                >
+                                    {avatarUrl ? (
+                                        <img src={avatarUrl} alt={userName} className="h-8 w-8 rounded-full object-cover ring-2 ring-white/30" />
+                                    ) : (
+                                        <span className="flex items-center justify-center h-8 w-8 rounded-full bg-white/20 text-white text-xs font-bold ring-2 ring-white/30">
+                                            {initials}
+                                        </span>
+                                    )}
+                                    <span className="text-sm font-medium max-w-[100px] truncate hidden xl:block text-white/90">
+                                        {userName || 'Profile'}
+                                    </span>
+                                    <ChevronDown className={`h-3.5 w-3.5 text-white/60 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {/* Dropdown */}
+                                {userMenuOpen && (
+                                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="px-4 py-2.5 border-b border-gray-100">
+                                            <p className="text-sm font-semibold text-gray-900 truncate">{userName || 'User'}</p>
+                                            <p className="text-xs text-gray-500 mt-0.5">Manage your account</p>
+                                        </div>
+                                        <Link
+                                            href="/my-profile"
+                                            onClick={() => setUserMenuOpen(false)}
+                                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                        >
+                                            My Profile
+                                        </Link>
+                                        <Link
+                                            href="/paper"
+                                            onClick={() => setUserMenuOpen(false)}
+                                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                        >
+                                            My Papers
+                                        </Link>
+                                        <div className="border-t border-gray-100 mt-1 pt-1">
+                                            <button
+                                                onClick={() => { setUserMenuOpen(false); handleLogout() }}
+                                                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                            >
+                                                <LogOut className="h-4 w-4" />
+                                                Log out
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Mobile: Menu Toggle */}
+                        <button
+                            className="lg:hidden p-2 rounded-lg text-white hover:bg-white/10 transition-colors"
+                            onClick={() => setIsMenuOpen(!isMenuOpen)}
+                        >
+                            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Mobile Menu */}
+            {isMenuOpen && (
+                <div className="lg:hidden bg-white border-t shadow-xl">
+                    <div className="max-w-7xl mx-auto px-4 py-3 space-y-1">
                         {navLinks.map((link, i) => {
-                            const isActive = pathname === link.path
+                            const isActive = getIsActive(link)
                             return (
                                 <Link
                                     key={i}
                                     href={link.path}
-                                    className={`block px-4 py-3 text-md font-medium transition-colors ${isActive ? 'text-indigo-600 bg-indigo-50 border-l-2 border-indigo-600' : 'text-gray-700 hover:bg-gray-50'}`}
+                                    className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                                        isActive
+                                            ? 'text-indigo-600 bg-indigo-50'
+                                            : 'text-gray-700 hover:bg-gray-50'
+                                    }`}
                                 >
                                     {link.name}
                                 </Link>
                             )
                         })}
-                    </div>
-
-                    {/* Mobile Actions */}
-                    <div className="border-t p-3 space-y-2">
-                        {/* Mobile User Info */}
-                        <Link href="/my-profile" className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-gray-50 transition-colors">
-                            {avatarUrl ? (
-                                <img src={avatarUrl} alt={userName} className="h-9 w-9 rounded-full object-cover ring-2 ring-gray-200" />
-                            ) : (
-                                <span className="flex items-center justify-center h-9 w-9 rounded-full bg-indigo-100 text-indigo-600 text-sm font-bold">
-                                    {initials}
-                                </span>
-                            )}
-                            <div className="flex-1 min-w-0">
-                                <p className="text-md font-medium text-gray-900 truncate">{userName || 'Profile'}</p>
-                                <p className="text-xs text-gray-500">View profile</p>
-                            </div>
-                        </Link>
-                        {hasAnyRole('CONFERENCE_CHAIR') && (
-                            <Link
-                                href="/conference/create"
-                                className="flex items-center gap-2 px-4 py-2.5 text-md font-medium text-indigo-600 rounded-full border border-indigo-200 hover:bg-indigo-50 transition-colors"
-                            >
-                                <PlusCircle className="h-4 w-4" />
-                                Create Conference
-                            </Link>
-                        )}
-                        <button
-                            onClick={handleLogout}
-                            className="flex items-center gap-2 w-full px-3 py-2.5 text-md font-medium text-red-600 rounded-md hover:bg-red-50 transition-colors cursor-pointer"
+                        <Link
+                            href="/my-profile"
+                            className="block px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                         >
-                            <LogOut className="h-4 w-4" />
-                            Logout
-                        </button>
+                            Profile
+                        </Link>
+                        <div className="border-t pt-2 mt-2">
+                            {hasAnyRole('CONFERENCE_CHAIR') && (
+                                <Link
+                                    href="/conference/create"
+                                    className="block px-4 py-2.5 rounded-lg text-sm font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
+                                >
+                                    Create Conference
+                                </Link>
+                            )}
+                            <button
+                                onClick={handleLogout}
+                                className="flex items-center gap-2 w-full px-4 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                            >
+                                <LogOut className="h-4 w-4" />
+                                Log out
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

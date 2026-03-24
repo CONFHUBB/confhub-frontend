@@ -286,7 +286,7 @@ export default function EditPaperPage() {
                         paper.status === 'ACCEPTED' ? 'bg-green-600 text-white' :
                         paper.status === 'REJECTED' ? 'bg-red-600 text-white' :
                         paper.status === 'PUBLISHED' ? 'bg-emerald-600 text-white' :
-                        paper.status === 'CAMERA_READY' ? 'bg-blue-600 text-white' :
+                        paper.status === 'CAMERA_READY' ? 'bg-indigo-600 text-white' :
                         paper.status === 'WITHDRAWN' ? 'bg-gray-500 text-white' :
                         paper.status === 'DRAFT' ? 'bg-amber-500 text-white' :
                         paper.status === 'UNDER_REVIEW' ? 'bg-purple-600 text-white' :
@@ -318,9 +318,9 @@ export default function EditPaperPage() {
             )}
 
             {paper.status === 'WITHDRAWN' && (
-                <div className="flex items-center gap-3 p-4 rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800">
-                    <RotateCcw className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />
-                    <p className="text-sm text-blue-800 dark:text-blue-300 flex-1">
+                <div className="flex items-center gap-3 p-4 rounded-lg border border-indigo-200 bg-indigo-50 dark:bg-indigo-950/20 dark:border-indigo-800">
+                    <RotateCcw className="h-5 w-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    <p className="text-sm text-indigo-800 dark:text-indigo-300 flex-1">
                         This paper has been withdrawn. You can restore it to resubmit.
                     </p>
                     <Button

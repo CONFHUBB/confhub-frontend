@@ -657,7 +657,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <Card>
                         <CardContent className="p-4 text-center">
-                            <FileText className="h-5 w-5 mx-auto mb-1 text-blue-500" />
+                            <FileText className="h-5 w-5 mx-auto mb-1 text-indigo-500" />
                             <p className="text-2xl font-bold">{currentData.totalPapers}</p>
                             <p className="text-xs text-muted-foreground">Papers</p>
                         </CardContent>
@@ -692,7 +692,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                     <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
                             <CardTitle className="text-lg flex items-center gap-2">
-                                <FileText className="h-5 w-5 text-blue-600" />
+                                <FileText className="h-5 w-5 text-indigo-600" />
                                 Submitted Papers
                             </CardTitle>
                             <div className="relative w-72">
@@ -720,7 +720,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                             <span className="flex items-center justify-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Eager</span>
                                         </th>
                                         <th className="text-center px-3 py-3 font-semibold text-muted-foreground w-16">
-                                            <span className="flex items-center justify-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" /> Willing</span>
+                                            <span className="flex items-center justify-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-500" /> Willing</span>
                                         </th>
                                         <th className="text-center px-3 py-3 font-semibold text-muted-foreground w-16">
                                             <span className="flex items-center justify-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" /> Pinch</span>
@@ -777,7 +777,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                 <Fragment key={paper.id}>
                                                     <tr
                                                         className={`transition-colors cursor-pointer ${
-                                                            isExpanded ? "bg-blue-50/40" : "hover:bg-muted/30"
+                                                            isExpanded ? "bg-indigo-50/40" : "hover:bg-muted/30"
                                                         }`}
                                                         onClick={() => toggleExpandPaper(paper.id)}
                                                     >
@@ -810,7 +810,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                         </td>
                                                         <td className="px-3 py-3 text-center">
                                                             {(allPaperBidSummary[paper.id]?.willing || 0) > 0 ? (
-                                                                <span className="font-semibold text-xs text-blue-600">{allPaperBidSummary[paper.id].willing}</span>
+                                                                <span className="font-semibold text-xs text-indigo-600">{allPaperBidSummary[paper.id].willing}</span>
                                                             ) : <span className="text-muted-foreground text-xs">0</span>}
                                                         </td>
                                                         <td className="px-3 py-3 text-center">
@@ -838,7 +838,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                         return <span className="text-muted-foreground text-xs">—</span>
                                                                     }
                                                                     const score = agg.averageTotalScore
-                                                                    const color = score >= 3.5 ? "text-emerald-600" : score >= 2 ? "text-blue-600" : "text-red-600"
+                                                                    const color = score >= 3.5 ? "text-emerald-600" : score >= 2 ? "text-indigo-600" : "text-red-600"
                                                                     return (
                                                                         <span className={`font-mono text-xs font-semibold ${color}`}>
                                                                             {score.toFixed(2)}
@@ -875,7 +875,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                     {isExpanded && (
                                                         <tr>
                                                             <td colSpan={showAggregateColumns ? 12 : 11} className="p-0">
-                                                                <div className="bg-blue-50/30 border-t border-b border-blue-200 px-6 py-4">
+                                                                <div className="bg-indigo-50/30 border-t border-b border-indigo-200 px-6 py-4">
                                                                     {expandedLoading ? (
                                                                         <div className="flex items-center justify-center py-6">
                                                                             <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -921,7 +921,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                                                     <div className="flex items-center gap-1 shrink-0">
                                                                                                         <Button
                                                                                                             variant="ghost" size="sm"
-                                                                                                            className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
+                                                                                                            className="h-6 w-6 p-0 text-indigo-500 hover:text-indigo-700"
                                                                                                             onClick={() => setReviewerInfoId(a.reviewerId)}
                                                                                                             title="View reviewer profile"
                                                                                                         >
@@ -965,14 +965,14 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                                         {suggestedReviewers.map(r => {
                                                                                             const bidLabels: Record<string, { label: string; color: string }> = {
                                                                                                 EAGER: { label: 'Eager', color: 'text-emerald-600' },
-                                                                                                WILLING: { label: 'Willing', color: 'text-blue-600' },
+                                                                                                WILLING: { label: 'Willing', color: 'text-indigo-600' },
                                                                                                 IN_A_PINCH: { label: 'In a pinch', color: 'text-amber-600' },
                                                                                                 NOT_WILLING: { label: 'Not willing', color: 'text-red-600' },
                                                                                             }
                                                                                             const bidInfo = r.bid ? bidLabels[r.bid] : null
                                                                                             const totalAssign = assignmentCountPerReviewer[r.id] || 0
                                                                                             return (
-                                                                                                <div key={r.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white border text-sm hover:border-blue-300 transition-colors">
+                                                                                                <div key={r.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white border text-sm hover:border-indigo-300 transition-colors">
                                                                                                     <div className="flex items-center gap-2 min-w-0">
                                                                                                         <div className="w-6 h-6 rounded-full bg-gray-100 border flex items-center justify-center text-[10px] font-bold text-gray-600 shrink-0">
                                                                                                             {r.name?.charAt(0)?.toUpperCase() || '?'}
@@ -989,7 +989,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                                                     <div className="flex items-center gap-1 shrink-0">
                                                                                                         <Button
                                                                                                             variant="ghost" size="sm"
-                                                                                                            className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
+                                                                                                            className="h-6 w-6 p-0 text-indigo-500 hover:text-indigo-700"
                                                                                                             onClick={() => setReviewerInfoId(r.id)}
                                                                                                             title="View profile"
                                                                                                         >
@@ -1048,10 +1048,10 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
             {viewMode === "edit-paper" && editingPaper && (
                 <div className="space-y-4">
                     {/* Paper info banner */}
-                    <Card className="border-blue-200 bg-blue-50/30">
+                    <Card className="border-indigo-200 bg-indigo-50/30">
                         <CardContent className="p-4">
                             <div className="flex items-start gap-3">
-                                <FileText className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                                <FileText className="h-5 w-5 text-indigo-600 mt-0.5 shrink-0" />
                                 <div className="min-w-0">
                                     <h3 className="font-semibold text-sm">
                                         Paper #{editingPaper.id}: {editingPaper.title}
@@ -1133,7 +1133,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
-                                                                    className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                                                                    className="h-6 w-6 p-0 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"
                                                                     onClick={() => setReviewerInfoId(reviewer.id)}
                                                                     title="View reviewer info"
                                                                 >
@@ -1153,7 +1153,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                 if (!bid) return <span className="text-muted-foreground text-xs">—</span>
                                                                 const colors: Record<string, string> = {
                                                                     EAGER: "bg-emerald-100 text-emerald-700 border-emerald-300",
-                                                                    WILLING: "bg-blue-100 text-blue-700 border-blue-300",
+                                                                    WILLING: "bg-indigo-100 text-indigo-700 border-indigo-300",
                                                                     IN_A_PINCH: "bg-amber-100 text-amber-700 border-amber-300",
                                                                     NOT_WILLING: "bg-red-100 text-red-700 border-red-300",
                                                                 }
@@ -1189,7 +1189,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                             {relevance !== null ? (
                                                                 <span className={`font-mono text-xs font-semibold ${
                                                                     relevance >= 0.7 ? "text-emerald-600" :
-                                                                    relevance >= 0.4 ? "text-blue-600" : "text-gray-500"
+                                                                    relevance >= 0.4 ? "text-indigo-600" : "text-gray-500"
                                                                 }`}>
                                                                     {(relevance * 100).toFixed(0)}%
                                                                 </span>
@@ -1211,7 +1211,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                     const statusColors: Record<string, string> = {
                                                                         ASSIGNED: 'bg-emerald-100 text-emerald-700 border-emerald-300',
                                                                         IN_PROGRESS: 'bg-amber-100 text-amber-700 border-amber-300',
-                                                                        COMPLETED: 'bg-blue-100 text-blue-700 border-blue-300',
+                                                                        COMPLETED: 'bg-indigo-100 text-indigo-700 border-indigo-300',
                                                                         DECLINED: 'bg-red-100 text-red-700 border-red-300',
                                                                     }
                                                                     return (
@@ -1236,7 +1236,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                         <Button
                                                                             variant="ghost"
                                                                             size="sm"
-                                                                            className="h-8 w-8 p-0 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                                                                            className="h-8 w-8 p-0 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50"
                                                                             onClick={() => setViewingReviewId(reviewStatusMap[reviewer.id].reviewId)}
                                                                             title="View review details"
                                                                         >
@@ -1295,10 +1295,10 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
 
             {/* ═══════════ AUTO-ASSIGN CONFIG ═══════════ */}
             {viewMode === "auto-assign" && (
-                <Card className="border-blue-200 bg-blue-50/30">
+                <Card className="border-indigo-200 bg-indigo-50/30">
                     <CardHeader className="pb-3">
                         <CardTitle className="text-lg flex items-center gap-2">
-                            <Wand2 className="h-5 w-5 text-blue-600" />
+                            <Wand2 className="h-5 w-5 text-indigo-600" />
                             Auto-Assign Configuration
                         </CardTitle>
                         <CardDescription>
@@ -1501,8 +1501,8 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                         <p className="text-lg font-bold">{detailReviewers.length}</p>
                                         <p className="text-[10px] text-muted-foreground">Total Assigned</p>
                                     </div>
-                                    <div className="rounded-lg border p-3 text-center bg-blue-50 border-blue-200">
-                                        <p className="text-lg font-bold text-blue-600">
+                                    <div className="rounded-lg border p-3 text-center bg-indigo-50 border-indigo-200">
+                                        <p className="text-lg font-bold text-indigo-600">
                                             {detailReviewers.filter(r => r.status === 'COMPLETED').length}
                                         </p>
                                         <p className="text-[10px] text-muted-foreground">Completed</p>
@@ -1556,7 +1556,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                         {r.totalScore !== null && (
                                                             <span className={`text-sm font-mono font-semibold ${
                                                                 r.totalScore >= 3.5 ? 'text-emerald-600' :
-                                                                r.totalScore >= 2 ? 'text-blue-600' : 'text-red-600'
+                                                                r.totalScore >= 2 ? 'text-indigo-600' : 'text-red-600'
                                                             }`}>
                                                                 {r.totalScore.toFixed(1)}
                                                             </span>
@@ -1565,7 +1565,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                className="h-7 w-7 p-0 text-blue-500 hover:text-blue-700"
+                                                                className="h-7 w-7 p-0 text-indigo-500 hover:text-indigo-700"
                                                                 onClick={() => setViewingReviewId(r.reviewId!)}
                                                                 title="View review"
                                                             >
@@ -1628,7 +1628,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                 <div className="grid grid-cols-4 gap-2">
                                     {[
                                         { label: 'Eager', value: bidSheetBids.filter(b => b.bidValue === 'EAGER').length, color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
-                                        { label: 'Willing', value: bidSheetBids.filter(b => b.bidValue === 'WILLING').length, color: 'bg-blue-50 border-blue-200 text-blue-700' },
+                                        { label: 'Willing', value: bidSheetBids.filter(b => b.bidValue === 'WILLING').length, color: 'bg-indigo-50 border-indigo-200 text-indigo-700' },
                                         { label: 'In a pinch', value: bidSheetBids.filter(b => b.bidValue === 'IN_A_PINCH').length, color: 'bg-amber-50 border-amber-200 text-amber-700' },
                                         { label: 'Not willing', value: bidSheetBids.filter(b => b.bidValue === 'NOT_WILLING').length, color: 'bg-red-50 border-red-200 text-red-700' },
                                     ].map(item => (
@@ -1644,7 +1644,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                     if (bidsOfType.length === 0) return null
                                     const config: Record<string, { label: string; dot: string }> = {
                                         EAGER: { label: 'Eager', dot: 'bg-emerald-500' },
-                                        WILLING: { label: 'Willing', dot: 'bg-blue-500' },
+                                        WILLING: { label: 'Willing', dot: 'bg-indigo-500' },
                                         IN_A_PINCH: { label: 'In a pinch', dot: 'bg-amber-500' },
                                         NOT_WILLING: { label: 'Not willing', dot: 'bg-red-500' },
                                     }
@@ -1687,7 +1687,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                         const bidForCurrentPaper = editingPaperId ? bidMapForPaper[rev.id] : null
                         const bidLabels: Record<string, { label: string; color: string }> = {
                             EAGER: { label: 'Eager', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
-                            WILLING: { label: 'Willing', color: 'bg-blue-100 text-blue-700 border-blue-300' },
+                            WILLING: { label: 'Willing', color: 'bg-indigo-100 text-indigo-700 border-indigo-300' },
                             IN_A_PINCH: { label: 'In a pinch', color: 'bg-amber-100 text-amber-700 border-amber-300' },
                             NOT_WILLING: { label: 'Not willing', color: 'bg-red-100 text-red-700 border-red-300' },
                         }
@@ -1808,7 +1808,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                     {p.institutionUrl && (
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-xs text-muted-foreground w-24 shrink-0">Website:</span>
-                                                            <a href={p.institutionUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline truncate">{p.institutionUrl}</a>
+                                                            <a href={p.institutionUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline truncate">{p.institutionUrl}</a>
                                                         </div>
                                                     )}
                                                     {p.secondaryInstitution && (
@@ -1845,7 +1845,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                     {p.websiteUrl && (
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-xs text-muted-foreground w-24 shrink-0">Website:</span>
-                                                            <a href={p.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline truncate">{p.websiteUrl}</a>
+                                                            <a href={p.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline truncate">{p.websiteUrl}</a>
                                                         </div>
                                                     )}
                                                     {!p.phoneOffice && !p.phoneMobile && !p.websiteUrl && (
@@ -1861,13 +1861,13 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                     {p.orcidId && (
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-xs text-muted-foreground w-32 shrink-0">ORCID:</span>
-                                                            <a href={`https://orcid.org/${p.orcidId}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">{p.orcidId}</a>
+                                                            <a href={`https://orcid.org/${p.orcidId}`} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline">{p.orcidId}</a>
                                                         </div>
                                                     )}
                                                     {p.googleScholarLink && (
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-xs text-muted-foreground w-32 shrink-0">Google Scholar:</span>
-                                                            <a href={p.googleScholarLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline truncate">View Profile</a>
+                                                            <a href={p.googleScholarLink} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline truncate">View Profile</a>
                                                         </div>
                                                     )}
                                                     {p.dblpId && (
