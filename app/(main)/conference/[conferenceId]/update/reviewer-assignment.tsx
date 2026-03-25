@@ -40,6 +40,7 @@ import {
     Search, Trash2, Plus, BarChart3, Settings2, UserPlus, ArrowLeft, Edit, Eye, MoreHorizontal, Gavel, User2,
     ChevronDown, ChevronRight, Building2, Phone, GraduationCap
 } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import toast from "react-hot-toast"
 import { ReviewDetailDialog } from "./review-detail-dialog"
 
@@ -696,9 +697,9 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                 Submitted Papers
                             </CardTitle>
                             <div className="relative w-72">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                    className="pl-10 h-9"
+                                    className="pl-9 h-9 text-sm"
                                     placeholder="Search papers..."
                                     value={paperSearchQuery}
                                     onChange={e => setPaperSearchQuery(e.target.value)}
@@ -708,9 +709,9 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                     </CardHeader>
                     <CardContent className="p-0">
                         <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b bg-muted/40">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-muted/30">
                                         <th className="text-left px-4 py-3 font-semibold text-muted-foreground w-12">#</th>
                                         <th className="text-left px-4 py-3 font-semibold text-muted-foreground min-w-[200px]">Title</th>
                                         <th className="text-left px-4 py-3 font-semibold text-muted-foreground min-w-[150px]">Authors</th>
@@ -733,15 +734,15 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                             <th className="text-center px-4 py-3 font-semibold text-muted-foreground w-24">Avg Score</th>
                                         )}
                                         <th className="text-center px-4 py-3 font-semibold text-muted-foreground w-24">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y">
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
                                     {filteredPapers.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={showAggregateColumns ? 12 : 11} className="text-center py-8 text-muted-foreground">
+                                        <TableRow>
+                                            <TableCell colSpan={showAggregateColumns ? 12 : 11} className="text-center py-8 text-muted-foreground">
                                                 {paperSearchQuery ? "No papers match your search." : "No papers submitted yet."}
-                                            </td>
-                                        </tr>
+                                            </TableCell>
+                                        </TableRow>
                                     ) : (
                                         filteredPapers.map((paper) => {
                                             const revCount = reviewerCountPerPaper[paper.id] || 0
@@ -1037,8 +1038,8 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                             )
                                         })
                                     )}
-                                </tbody>
-                            </table>
+                                </TableBody>
+                            </Table>
                         </div>
                     </CardContent>
                 </Card>
@@ -1700,7 +1701,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                         {p?.avatarUrl ? (
                                             <img src={p.avatarUrl} alt={rev.name} className="w-12 h-12 rounded-full object-cover ring-2 ring-primary/20" />
                                         ) : (
-                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg">
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg">
                                                 {rev.name?.charAt(0)?.toUpperCase() || '?'}
                                             </div>
                                         )}

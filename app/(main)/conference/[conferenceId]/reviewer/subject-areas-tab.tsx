@@ -110,7 +110,7 @@ export function SubjectAreasTab({ conferenceId, reviewerId, onSaved }: SubjectAr
             }`}>
                 <div className="flex items-center gap-2 min-w-0">
                     {isChild && <span className="text-gray-300 ml-4">└</span>}
-                    <span className={`text-sm font-medium ${isPrimary ? 'text-violet-900' : isSecondary ? 'text-blue-900' : 'text-gray-700'}`}>{area.name}</span>
+                    <span className={`text-sm font-medium ${isPrimary ? 'text-violet-900' : isSecondary ? 'text-indigo-900' : 'text-gray-700'}`}>{area.name}</span>
                     {isPrimary && <Badge className="bg-violet-600 text-white text-[10px] px-1.5 py-0"><Star className="h-3 w-3 mr-0.5 fill-current" /> PRIMARY</Badge>}
                     {isSecondary && <Badge variant="outline" className="border-indigo-400 text-indigo-600 text-[10px] px-1.5 py-0">SECONDARY</Badge>}
                 </div>

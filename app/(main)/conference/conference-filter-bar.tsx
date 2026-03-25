@@ -156,7 +156,7 @@ export function ConferenceFilterBar({ locations, areas, isStaff, filters, onFilt
     }
 
     return (
-        <div className="flex items-center mt-7 gap-3">
+        <div className="flex items-center gap-3">
             {/* ── Date dropdown ── */}
             <div className="relative" ref={dateRef}>
                 <button

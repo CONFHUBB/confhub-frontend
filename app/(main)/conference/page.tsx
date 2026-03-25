@@ -132,7 +132,7 @@ export default function ConferencesPage() {
                     <div className="relative w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
-                            className="pl-10 h-9 text-sm"
+                            className="pl-10 h-10 text-sm"
                             placeholder="Search conferences..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}

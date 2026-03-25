@@ -13,14 +13,30 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
     Loader2, Search, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
-    MoreHorizontal, Eye, UserPlus, Gavel, Shield, Download
+    MoreHorizontal, Eye, UserPlus, Gavel, Shield, Download, Filter, Check
 } from "lucide-react"
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem,
     DropdownMenuTrigger, DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu"
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import toast from "react-hot-toast"
 import { PaperDetailSheet } from "./paper-detail-sheet"
 
@@ -242,6 +258,8 @@ export function PaperManagement({ conferenceId }: PaperManagementProps) {
     }, [enrichedPapers])
 
     // ── Filter + Sort ──
+    const activeFilterCount = filterTrack !== "all" ? 1 : 0
+
     const filteredPapers = useMemo(() => {
         let result = enrichedPapers
 
@@ -464,12 +482,12 @@ export function PaperManagement({ conferenceId }: PaperManagementProps) {
             </div>
 
             {/* ── Toolbar ── */}
-            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div className="flex flex-col sm:flex-row gap-2">
                 {/* Search */}
-                <div className="relative flex-1 w-full sm:max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        className="pl-10 h-9"
+                        className="pl-9 h-9 text-sm"
                         placeholder="Search by title, ID, or author..."
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
@@ -479,14 +497,51 @@ export function PaperManagement({ conferenceId }: PaperManagementProps) {
                 {/* Filters */}
                 <div className="flex gap-2 flex-wrap">
                     {trackNames.length > 1 && (
-                        <select
-                            className="h-9 rounded-md border px-3 text-sm bg-white"
-                            value={filterTrack}
-                            onChange={e => setFilterTrack(e.target.value)}
-                        >
-                            <option value="all">All Tracks</option>
-                            {trackNames.map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="h-9 gap-2 text-sm px-3">
+                                    <Filter className="h-4 w-4 text-muted-foreground" />
+                                    Tracks
+                                    {activeFilterCount > 0 && (
+                                        <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs font-normal">
+                                            {activeFilterCount}
+                                        </Badge>
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-0" align="end">
+                                <div className="p-4 space-y-4">
+                                    <div className="space-y-2">
+                                        <h4 className="font-medium text-sm">Track</h4>
+                                        <div className="grid gap-1">
+                                            {[{ value: "all", label: "All Tracks" }, ...trackNames.map(t => ({ value: t, label: t }))].map(opt => (
+                                                <div
+                                                    key={opt.value}
+                                                    className="flex items-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-muted"
+                                                    onClick={() => { setFilterTrack(opt.value); setCurrentPage(0); }}
+                                                >
+                                                    <span className={filterTrack === opt.value ? "font-medium" : ""}>
+                                                        {opt.label}
+                                                    </span>
+                                                    {filterTrack === opt.value && <Check className="h-4 w-4" />}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                                {activeFilterCount > 0 && (
+                                    <div className="p-3 border-t bg-muted/50">
+                                        <Button
+                                            variant="ghost"
+                                            className="w-full text-xs h-8"
+                                            onClick={() => { setFilterTrack("all"); setCurrentPage(0); }}
+                                        >
+                                            Clear filters
+                                        </Button>
+                                    </div>
+                                )}
+                            </PopoverContent>
+                        </Popover>
                     )}
 
                     {/* Bulk Actions */}
@@ -546,213 +601,149 @@ export function PaperManagement({ conferenceId }: PaperManagementProps) {
                     <p>{searchQuery || filterStatus !== "all" ? "No papers match your filters." : "No papers submitted yet."}</p>
                 </div>
             ) : (
-                <div className="overflow-auto rounded-lg border bg-white">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b bg-gray-50/80">
-                                <th className="px-3 py-3 w-10">
-                                    <Checkbox
-                                        checked={allOnPageSelected}
-                                        onCheckedChange={toggleSelectAll}
-                                    />
-                                </th>
-                                <th
-                                    className="px-3 py-3 text-left font-medium text-gray-600 w-14 cursor-pointer group"
-                                    onClick={() => handleSort("id")}
+            <div className="rounded-lg border overflow-hidden">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-muted/30">
+                            <TableHead className="w-10 text-center">
+                                <Checkbox
+                                    checked={allOnPageSelected}
+                                    onCheckedChange={toggleSelectAll}
+                                />
+                            </TableHead>
+                            <TableHead className="w-12 text-center text-xs cursor-pointer group" onClick={() => handleSort("id")}>
+                                <span className="flex items-center justify-center gap-1"># <SortIcon columnKey="id" /></span>
+                            </TableHead>
+                            <TableHead className="min-w-[200px] cursor-pointer group" onClick={() => handleSort("title")}>
+                                <span className="flex items-center gap-1">Title <SortIcon columnKey="title" /></span>
+                            </TableHead>
+                            <TableHead className="min-w-[140px] cursor-pointer group" onClick={() => handleSort("authors")}>
+                                <span className="flex items-center gap-1">Authors <SortIcon columnKey="authors" /></span>
+                            </TableHead>
+                            <TableHead className="w-28">Track</TableHead>
+                            <TableHead className="w-32 text-center cursor-pointer group" onClick={() => handleSort("reviewProgress")}>
+                                <span className="flex items-center justify-center gap-1">Reviews <SortIcon columnKey="reviewProgress" /></span>
+                            </TableHead>
+                            <TableHead className="w-20 text-center cursor-pointer group" onClick={() => handleSort("avgScore")}>
+                                <span className="flex items-center justify-center gap-1">Score <SortIcon columnKey="avgScore" /></span>
+                            </TableHead>
+                            <TableHead className="w-24 text-center">
+                                <span className="flex items-center justify-center gap-1"><Shield className="h-3 w-3" /> Conflicts</span>
+                            </TableHead>
+                            <TableHead className="w-28 text-center cursor-pointer group" onClick={() => handleSort("status")}>
+                                <span className="flex items-center justify-center gap-1">Status <SortIcon columnKey="status" /></span>
+                            </TableHead>
+                            <TableHead className="w-20 text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {paginatedPapers.map((paper) => {
+                            const isSelected = selectedIds.has(paper.id)
+                            const reviewPct = paper.reviewCount > 0
+                                ? Math.round((paper.completedReviewCount / paper.reviewCount) * 100)
+                                : 0
+
+                            return (
+                                <TableRow
+                                    key={paper.id}
+                                    className={`cursor-pointer ${ isSelected ? "bg-primary/5" : ""}`}
+                                    onClick={() => openSheet(paper.id)}
                                 >
-                                    <span className="flex items-center gap-1"># <SortIcon columnKey="id" /></span>
-                                </th>
-                                <th
-                                    className="px-3 py-3 text-left font-medium text-gray-600 min-w-[200px] cursor-pointer group"
-                                    onClick={() => handleSort("title")}
-                                >
-                                    <span className="flex items-center gap-1">Title <SortIcon columnKey="title" /></span>
-                                </th>
-                                <th
-                                    className="px-3 py-3 text-left font-medium text-gray-600 min-w-[140px] cursor-pointer group"
-                                    onClick={() => handleSort("authors")}
-                                >
-                                    <span className="flex items-center gap-1">Authors <SortIcon columnKey="authors" /></span>
-                                </th>
-                                <th className="px-3 py-3 text-left font-medium text-gray-600 w-28">Track</th>
-                                <th
-                                    className="px-3 py-3 text-center font-medium text-gray-600 w-32 cursor-pointer group"
-                                    onClick={() => handleSort("reviewProgress")}
-                                >
-                                    <span className="flex items-center justify-center gap-1">Reviews <SortIcon columnKey="reviewProgress" /></span>
-                                </th>
-                                <th
-                                    className="px-3 py-3 text-center font-medium text-gray-600 w-20 cursor-pointer group"
-                                    onClick={() => handleSort("avgScore")}
-                                >
-                                    <span className="flex items-center justify-center gap-1">Score <SortIcon columnKey="avgScore" /></span>
-                                </th>
-                                <th className="px-3 py-3 text-center font-medium text-gray-600 w-24">
-                                    <span className="flex items-center justify-center gap-1">
-                                        <Shield className="h-3 w-3" /> Conflicts
-                                    </span>
-                                </th>
-                                <th
-                                    className="px-3 py-3 text-center font-medium text-gray-600 w-28 cursor-pointer group"
-                                    onClick={() => handleSort("status")}
-                                >
-                                    <span className="flex items-center justify-center gap-1">Status <SortIcon columnKey="status" /></span>
-                                </th>
-                                <th className="px-3 py-3 text-right font-medium text-gray-600 w-20">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {paginatedPapers.map((paper) => {
-                                const isSelected = selectedIds.has(paper.id)
-                                const reviewPct = paper.reviewCount > 0
-                                    ? Math.round((paper.completedReviewCount / paper.reviewCount) * 100)
-                                    : 0
-
-                                return (
-                                    <tr
-                                        key={paper.id}
-                                        className={`border-b last:border-0 transition-colors cursor-pointer ${
-                                            isSelected ? "bg-primary/5" : "hover:bg-gray-50"
-                                        }`}
-                                        onClick={() => openSheet(paper.id)}
-                                    >
-                                        {/* Checkbox */}
-                                        <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
-                                            <Checkbox
-                                                checked={isSelected}
-                                                onCheckedChange={() => toggleSelect(paper.id)}
-                                            />
-                                        </td>
-
-                                        {/* ID */}
-                                        <td className="px-3 py-3 text-gray-400 font-mono text-xs">{paper.id}</td>
-
-                                        {/* Title */}
-                                        <td className="px-3 py-3">
-                                            <p className="font-medium line-clamp-1 text-gray-900">{paper.title}</p>
-                                        </td>
-
-                                        {/* Authors */}
-                                        <td className="px-3 py-3">
-                                            <p className="text-xs text-muted-foreground line-clamp-1">{paper.authors}</p>
-                                        </td>
-
-                                        {/* Track */}
-                                        <td className="px-3 py-3">
-                                            <span className="text-xs text-muted-foreground">{paper.trackName}</span>
-                                        </td>
-
-                                        {/* Review Progress */}
-                                        <td className="px-3 py-3">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <span className={`text-xs font-mono ${
-                                                    paper.completedReviewCount === paper.reviewCount && paper.reviewCount > 0
-                                                        ? "text-green-600 font-semibold"
-                                                        : "text-muted-foreground"
-                                                }`}>
-                                                    {paper.completedReviewCount}/{paper.reviewCount}
-                                                </span>
-                                                {paper.reviewCount > 0 && (
-                                                    <div className="w-12 h-1.5 rounded-full bg-gray-200 overflow-hidden">
-                                                        <div
-                                                            className={`h-full rounded-full transition-all ${
-                                                                reviewPct === 100 ? "bg-green-500" : "bg-indigo-400"
-                                                            }`}
-                                                            style={{ width: `${reviewPct}%` }}
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </td>
-
-                                        {/* Avg Score */}
-                                        <td className="px-3 py-3 text-center">
-                                            {paper.averageTotalScore !== null ? (
-                                                <span className={`font-mono text-xs font-semibold ${
-                                                    paper.averageTotalScore >= 3.5 ? "text-emerald-600" :
-                                                    paper.averageTotalScore >= 2 ? "text-indigo-600" : "text-red-600"
-                                                }`}>
-                                                    {paper.averageTotalScore.toFixed(1)}
-                                                </span>
-                                            ) : (
-                                                <span className="text-muted-foreground text-xs">—</span>
+                                    <TableCell className="text-center" onClick={e => e.stopPropagation()}>
+                                        <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(paper.id)} />
+                                    </TableCell>
+                                    <TableCell className="text-center text-xs text-muted-foreground font-medium font-mono">
+                                        {paper.id}
+                                    </TableCell>
+                                    <TableCell>
+                                        <p className="font-medium line-clamp-1 text-sm">{paper.title}</p>
+                                    </TableCell>
+                                    <TableCell>
+                                        <p className="text-xs text-muted-foreground line-clamp-1">{paper.authors}</p>
+                                    </TableCell>
+                                    <TableCell className="text-xs text-muted-foreground">{paper.trackName}</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center justify-center gap-2">
+                                            <span className={`text-xs font-mono ${
+                                                paper.completedReviewCount === paper.reviewCount && paper.reviewCount > 0
+                                                    ? "text-green-600 font-semibold" : "text-muted-foreground"
+                                            }`}>
+                                                {paper.completedReviewCount}/{paper.reviewCount}
+                                            </span>
+                                            {paper.reviewCount > 0 && (
+                                                <div className="w-12 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                                                    <div className={`h-full rounded-full transition-all ${reviewPct === 100 ? "bg-green-500" : "bg-indigo-400"}`}
+                                                        style={{ width: `${reviewPct}%` }} />
+                                                </div>
                                             )}
-                                        </td>
-
-                                        {/* Conflicts */}
-                                        <td className="px-3 py-3 text-center">
-                                            {paper.conflictCount > 0 ? (
-                                                <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">
-                                                    {paper.conflictCount}
-                                                </Badge>
-                                            ) : (
-                                                <span className="text-muted-foreground text-xs">0</span>
-                                            )}
-                                        </td>
-
-                                        {/* Status */}
-                                        <td className="px-3 py-3 text-center">
-                                            <Badge className={`text-[10px] ${STATUS_CONFIG[paper.status]?.color || ""}`}>
-                                                {STATUS_CONFIG[paper.status]?.label || paper.status}
-                                            </Badge>
-                                        </td>
-
-                                        {/* Actions */}
-                                        <td className="px-3 py-3 text-right" onClick={e => e.stopPropagation()}>
-                                            <div className="flex items-center justify-end gap-1">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => openSheet(paper.id, "info")}>
-                                                        <Eye className="h-3.5 w-3.5 mr-2" /> View Details
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => openSheet(paper.id, "assignments")}>
-                                                        <UserPlus className="h-3.5 w-3.5 mr-2" /> Assignments
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => openSheet(paper.id, "decision")}>
-                                                        <Gavel className="h-3.5 w-3.5 mr-2" /> Decision
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => openSheet(paper.id, "conflicts")}>
-                                                        <Shield className="h-3.5 w-3.5 mr-2" /> Conflicts
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
-                </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        {paper.averageTotalScore !== null ? (
+                                            <span className={`font-mono text-xs font-semibold ${
+                                                paper.averageTotalScore >= 3.5 ? "text-emerald-600" :
+                                                paper.averageTotalScore >= 2 ? "text-indigo-600" : "text-red-600"
+                                            }`}>{paper.averageTotalScore.toFixed(1)}</span>
+                                        ) : (
+                                            <span className="text-muted-foreground text-xs">—</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        {paper.conflictCount > 0 ? (
+                                            <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">{paper.conflictCount}</Badge>
+                                        ) : (
+                                            <span className="text-muted-foreground text-xs">0</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        <Badge className={`text-[10px] ${STATUS_CONFIG[paper.status]?.color || ""}`}>
+                                            {STATUS_CONFIG[paper.status]?.label || paper.status}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right" onClick={e => e.stopPropagation()}>
+                                        <div className="flex items-center justify-end gap-1">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => openSheet(paper.id, "info")}>
+                                                    <Eye className="h-3.5 w-3.5 mr-2" /> View Details
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => openSheet(paper.id, "assignments")}>
+                                                    <UserPlus className="h-3.5 w-3.5 mr-2" /> Assignments
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => openSheet(paper.id, "decision")}>
+                                                    <Gavel className="h-3.5 w-3.5 mr-2" /> Decision
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => openSheet(paper.id, "conflicts")}>
+                                                    <Shield className="h-3.5 w-3.5 mr-2" /> Conflicts
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            )
+                        })}
+                    </TableBody>
+                </Table>
+            </div>
             )}
 
             {/* ── Pagination ── */}
             {totalPages > 1 && (
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>
-                        Showing {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, filteredPapers.length)} of {filteredPapers.length} papers
-                    </span>
-                    <div className="flex items-center gap-1">
-                        <Button
-                            variant="outline" size="sm"
-                            disabled={currentPage === 0}
-                            onClick={() => setCurrentPage(p => p - 1)}
-                        >
+                <div className="flex items-center justify-between pt-4 border-t">
+                    <p className="text-xs text-muted-foreground">
+                        Page {currentPage + 1} of {totalPages} · {filteredPapers.length} papers
+                    </p>
+                    <div className="flex gap-1">
+                        <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
                             <ChevronLeft className="h-4 w-4" />
                         </Button>
-                        <span className="px-3 font-medium">
-                            {currentPage + 1} / {totalPages}
-                        </span>
-                        <Button
-                            variant="outline" size="sm"
-                            disabled={currentPage >= totalPages - 1}
-                            onClick={() => setCurrentPage(p => p + 1)}
-                        >
+                        <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>

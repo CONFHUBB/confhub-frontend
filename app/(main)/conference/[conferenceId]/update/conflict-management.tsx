@@ -10,8 +10,13 @@ import { CONFLICT_TYPE_LABELS } from "@/types/conflict"
 import type { TrackResponse } from "@/types/track"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { Loader2, Plus, Trash2, AlertTriangle, Shield, Lock, Globe, UserX, Settings2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Loader2, Plus, Trash2, AlertTriangle, Shield, Lock, Globe, UserX, Settings2, ChevronLeft, ChevronRight, Search, Filter, Download, Check } from "lucide-react"
 import { Select } from "antd"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Select as ShadSelect, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import toast from "react-hot-toast"
 
 interface ConflictManagementProps {
@@ -58,6 +63,8 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
     const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
     const [selectedConflictType, setSelectedConflictType] = useState<ConflictType>("PERSONAL")
     const [currentPage, setCurrentPage] = useState(0)
+    const [conflictSearch, setConflictSearch] = useState("")
+    const [conflictTypeFilter, setConflictTypeFilter] = useState("all")
     const PAGE_SIZE = 10
 
     const fetchAll = async () => {
@@ -206,6 +213,24 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
         value,
         label,
     }))
+
+    // Filtered conflicts for search/filter toolbar
+    const filteredConflicts = conflicts.filter(c => {
+        if (conflictTypeFilter !== 'all' && c.conflictType !== conflictTypeFilter) return false
+        if (conflictSearch.trim()) {
+            const q = conflictSearch.toLowerCase()
+            const paperMatch = c.paper?.title?.toLowerCase().includes(q)
+            const userMatch = c.user?.email?.toLowerCase().includes(q) ||
+                `${c.user?.firstName} ${c.user?.lastName}`.toLowerCase().includes(q)
+            if (!paperMatch && !userMatch) return false
+        }
+        return true
+    })
+    const conflictsTotalPages = Math.max(1, Math.ceil(filteredConflicts.length / PAGE_SIZE))
+    const paginatedConflicts = filteredConflicts.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
+
+    // Derived state
+    const activeFilterCount = conflictTypeFilter !== 'all' ? 1 : 0
 
     return (
         <div className="space-y-6">
@@ -394,26 +419,106 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                 </div>
             ) : (
                 <>
-                <div className="border rounded-lg overflow-hidden">
-                    <table className="w-full text-sm">
-                        <thead className="bg-muted/50 border-b">
-                            <tr>
-                                <th className="text-left px-4 py-3 font-semibold w-12">#</th>
-                                <th className="text-left px-4 py-3 font-semibold">Paper</th>
-                                <th className="text-left px-4 py-3 font-semibold">User</th>
-                                <th className="text-left px-4 py-3 font-semibold">Type</th>
-                                <th className="text-right px-4 py-3 font-semibold">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                            {conflicts.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE).map((conflict, idx) => (
-                                <tr key={conflict.id} className="hover:bg-muted/30 transition-colors">
-                                    <td className="px-4 py-3 text-gray-400 text-xs font-medium">{currentPage * PAGE_SIZE + idx + 1}</td>
-                                    <td className="px-4 py-3">
+                {/* Toolbar */}
+                <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search by paper title or user email..."
+                            className="pl-9 h-9 text-sm"
+                            value={conflictSearch}
+                            onChange={(e) => { setConflictSearch(e.target.value); setCurrentPage(0) }}
+                        />
+                    </div>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="h-9 gap-2 text-sm px-3">
+                                <Filter className="h-4 w-4 text-muted-foreground" />
+                                Filters
+                                {activeFilterCount > 0 && (
+                                    <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs font-normal">
+                                        {activeFilterCount}
+                                    </Badge>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-0" align="end">
+                            <div className="p-4 space-y-4">
+                                <div className="space-y-2">
+                                    <h4 className="font-medium text-sm">Conflict Type</h4>
+                                    <div className="grid gap-1">
+                                        {[{ value: "all", label: "All Types" }, ...Object.entries(CONFLICT_TYPE_LABELS).map(([k, v]) => ({ value: k, label: v }))].map(opt => (
+                                            <div
+                                                key={opt.value}
+                                                className="flex items-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-muted"
+                                                onClick={() => { setConflictTypeFilter(opt.value); setCurrentPage(0); }}
+                                            >
+                                                <span className={conflictTypeFilter === opt.value ? "font-medium" : ""}>
+                                                    {opt.label}
+                                                </span>
+                                                {conflictTypeFilter === opt.value && <Check className="h-4 w-4" />}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            {activeFilterCount > 0 && (
+                                <div className="p-3 border-t bg-muted/50">
+                                    <Button
+                                        variant="ghost"
+                                        className="w-full text-xs h-8"
+                                        onClick={() => { setConflictTypeFilter("all"); setCurrentPage(0); }}
+                                    >
+                                        Clear filters
+                                    </Button>
+                                </div>
+                            )}
+                        </PopoverContent>
+                    </Popover>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 text-xs h-9"
+                        disabled={conflicts.length === 0}
+                        onClick={() => {
+                            const headers = ['Paper ID', 'Paper Title', 'User', 'Email', 'Type']
+                            const rows = conflicts.map(c => [
+                                c.paper?.id, `"${c.paper?.title ?? ''}"`,
+                                `"${c.user?.firstName ?? ''} ${c.user?.lastName ?? ''}"`,
+                                c.user?.email, c.conflictType,
+                            ])
+                            const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
+                            const blob = new Blob([csv], { type: 'text/csv' })
+                            const url = URL.createObjectURL(blob)
+                            const a = document.createElement('a')
+                            a.href = url; a.download = `conflicts-conf-${conferenceId}.csv`; a.click()
+                            URL.revokeObjectURL(url)
+                        }}
+                    >
+                        <Download className="h-3.5 w-3.5" />
+                        Export CSV
+                    </Button>
+                </div>
+                <div className="rounded-lg border overflow-hidden">
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-muted/30">
+                                <TableHead className="w-12">#</TableHead>
+                                <TableHead>Paper</TableHead>
+                                <TableHead>User</TableHead>
+                                <TableHead>Type</TableHead>
+                                <TableHead className="text-right">Action</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {paginatedConflicts.map((conflict, idx) => (
+                                <TableRow key={conflict.id}>
+                                    <TableCell className="text-muted-foreground text-xs font-medium">{currentPage * PAGE_SIZE + idx + 1}</TableCell>
+                                    <TableCell>
                                         <span className="font-medium">#{conflict.paper?.id}</span>{" "}
                                         <span className="text-muted-foreground">{conflict.paper?.title}</span>
-                                    </td>
-                                    <td className="px-4 py-3">
+                                    </TableCell>
+                                    <TableCell>
                                         <div>
                                             <span className="font-medium">
                                                 {conflict.user?.firstName} {conflict.user?.lastName}
@@ -422,13 +527,13 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                                                 {conflict.user?.email}
                                             </span>
                                         </div>
-                                    </td>
-                                    <td className="px-4 py-3">
+                                    </TableCell>
+                                    <TableCell>
                                         <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
                                             {CONFLICT_TYPE_LABELS[conflict.conflictType] || conflict.conflictType}
                                         </span>
-                                    </td>
-                                    <td className="px-4 py-3 text-right">
+                                    </TableCell>
+                                    <TableCell className="text-right">
                                         <Button
                                             size="sm"
                                             variant="ghost"
@@ -437,23 +542,22 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
-                                    </td>
-                                </tr>
+                                    </TableCell>
+                                </TableRow>
                             ))}
-                        </tbody>
-                    </table>
+                        </TableBody>
+                    </Table>
                 </div>
-                {Math.ceil(conflicts.length / PAGE_SIZE) > 1 && (
+                {conflictsTotalPages > 1 && (
                     <div className="flex items-center justify-between pt-3">
                         <p className="text-xs text-muted-foreground">
-                            Showing {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, conflicts.length)} of {conflicts.length}
+                            Page {currentPage + 1} of {conflictsTotalPages} · {filteredConflicts.length} conflicts
                         </p>
                         <div className="flex items-center gap-1">
                             <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
-                            <span className="text-xs text-muted-foreground px-2">{currentPage + 1} / {Math.ceil(conflicts.length / PAGE_SIZE)}</span>
-                            <Button variant="outline" size="sm" disabled={currentPage >= Math.ceil(conflicts.length / PAGE_SIZE) - 1} onClick={() => setCurrentPage(p => p + 1)}>
+                            <Button variant="outline" size="sm" disabled={currentPage >= conflictsTotalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
                         </div>

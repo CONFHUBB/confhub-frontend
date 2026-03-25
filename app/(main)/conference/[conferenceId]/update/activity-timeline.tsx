@@ -4,12 +4,14 @@ import { useEffect, useState } from "react"
 import { getConferenceActivities, updateConferenceActivities, getActivityAuditLogs } from "@/app/api/conference.api"
 import type { ConferenceActivityDTO, ActivityAuditLogDTO } from "@/types/conference"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Loader2, Calendar, Info, ExternalLink, ChevronDown, ChevronUp, Clock, User, ArrowRight, ToggleLeft, ToggleRight, CalendarClock } from "lucide-react"
+import { Loader2, Calendar, Info, ExternalLink, ChevronDown, ChevronUp, Clock, User, ArrowRight, ToggleLeft, ToggleRight, CalendarClock, Settings, History, Search, Filter, ChevronLeft, ChevronRight, Download, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { HelpTooltip } from "@/components/help-tooltip"
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import toast from "react-hot-toast"
 
 interface ActivityTimelineProps {
@@ -77,8 +79,16 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [auditLogs, setAuditLogs] = useState<ActivityAuditLogDTO[]>([])
-    const [auditLogsOpen, setAuditLogsOpen] = useState(false)
+    const [activeTab, setActiveTab] = useState<'config' | 'log'>('config')
     const [auditLoading, setAuditLoading] = useState(false)
+
+    // Log table state
+    const [logSearch, setLogSearch] = useState('')
+    const [logActionFilter, setLogActionFilter] = useState('ALL')
+    const [logPage, setLogPage] = useState(1)
+
+    // Derived state
+    const activeFilterCount = logActionFilter !== 'ALL' ? 1 : 0
 
     useEffect(() => {
         const fetchActivities = async () => {
@@ -112,7 +122,7 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
 
     // Fetch audit logs when section is opened
     useEffect(() => {
-        if (!auditLogsOpen) return
+        if (activeTab !== 'log') return
         const fetchAuditLogs = async () => {
             try {
                 setAuditLoading(true)
@@ -125,7 +135,7 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
             }
         }
         fetchAuditLogs()
-    }, [auditLogsOpen, conferenceId])
+    }, [activeTab, conferenceId])
 
     const handleToggle = (id: number, checked: boolean) => {
         setActivities(prev => 
@@ -145,7 +155,7 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
     const handleDateChange = (id: number, value: string) => {
         setActivities(prev => 
             prev.map(activity => 
-                activity.id === id ? { ...activity, deadline: value } : activity
+                activity.id === id ? { ...activity, deadline: value || null } : activity
             )
         )
     }
@@ -156,7 +166,7 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
             await updateConferenceActivities(conferenceId, activities)
             toast.success("Activity timeline updated successfully!")
             // Refresh audit logs if panel is open
-            if (auditLogsOpen) {
+            if (activeTab === 'log') {
                 const data = await getActivityAuditLogs(conferenceId)
                 setAuditLogs(data)
             }
@@ -202,6 +212,20 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
         )
     }
 
+    // Process logs for table
+    const filteredLogs = auditLogs.filter(log => {
+        if (logActionFilter !== 'ALL' && log.action !== logActionFilter) return false
+        if (logSearch.trim()) {
+            const q = logSearch.toLowerCase()
+            return log.performedBy.toLowerCase().includes(q) || log.activityLabel.toLowerCase().includes(q)
+        }
+        return true
+    })
+    
+    const logsPerPage = 10
+    const totalPages = Math.max(1, Math.ceil(filteredLogs.length / logsPerPage))
+    const paginatedLogs = filteredLogs.slice((logPage - 1) * logsPerPage, logPage * logsPerPage)
+
     return (
         <Card className="border-none shadow-none">
             <CardHeader className="px-0 pt-0">
@@ -227,7 +251,36 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
                     Configure deadlines and enable/disable features for each phase of the conference.
                 </CardDescription>
             </CardHeader>
+            
+            {/* Horizontal Tabs */}
+            <div className="flex gap-1 border-b mb-6 mt-2">
+                <button
+                    onClick={() => setActiveTab('config')}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                        activeTab === 'config'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+                    }`}
+                >
+                    <Settings className="h-4 w-4" />
+                    Configuration
+                </button>
+                <button
+                    onClick={() => setActiveTab('log')}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                        activeTab === 'log'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+                    }`}
+                >
+                    <History className="h-4 w-4" />
+                    System Logs
+                </button>
+            </div>
+
             <CardContent className="px-0 pb-0">
+                {activeTab === 'config' ? (
+                <>
                 {/* Workflow guidance banner */}
                 <div className="flex items-start gap-3 p-4 mb-4 rounded-lg bg-indigo-50 border border-indigo-200 text-sm">
                     <Info className="h-5 w-5 text-indigo-600 mt-0.5 shrink-0" />
@@ -382,82 +435,210 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
                     </Button>
                 </div>
 
-                {/* ── Audit Logs Section ── */}
-                <div className="rounded-lg border">
-                    <button
-                        onClick={() => setAuditLogsOpen(!auditLogsOpen)}
-                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
-                    >
-                        <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-indigo-600" />
-                            <span className="text-sm font-semibold">Change History</span>
-                            {auditLogs.length > 0 && (
-                                <Badge variant="outline" className="text-[10px]">{auditLogs.length}</Badge>
+                </>
+                ) : (
+                /* ── System Logs Section ── */
+                <div className="mx-6 mb-8 mt-2 rounded-xl border bg-card p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-base font-semibold flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-primary" />
+                            Activity History
+                            {!auditLoading && (
+                                <span className="text-xs font-normal text-muted-foreground">
+                                    ({auditLogs.length})
+                                </span>
                             )}
-                        </div>
-                        {auditLogsOpen ? (
-                            <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        )}
-                    </button>
+                        </h3>
+                    </div>
 
-                    {auditLogsOpen && (
-                        <div className="border-t px-4 py-3">
-                            {auditLoading ? (
-                                <div className="flex items-center justify-center py-6">
-                                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    {/* Toolbar */}
+                    <div className="flex flex-col sm:flex-row gap-2">
+                        {/* Search */}
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search by user or activity..."
+                                className="pl-9 h-9 text-sm"
+                                value={logSearch}
+                                onChange={(e) => { setLogSearch(e.target.value); setLogPage(1) }}
+                            />
+                        </div>
+                        {/* Action Filter */}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="h-9 gap-2 text-sm px-3">
+                                    <Filter className="h-4 w-4 text-muted-foreground" />
+                                    Filters
+                                    {activeFilterCount > 0 && (
+                                        <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs font-normal">
+                                            {activeFilterCount}
+                                        </Badge>
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-0" align="end">
+                                <div className="p-4 space-y-4">
+                                    <div className="space-y-2">
+                                        <h4 className="font-medium text-sm">Action Type</h4>
+                                        <div className="grid gap-1">
+                                            {['ALL', 'ENABLED', 'DISABLED', 'DEADLINE_CHANGED'].map(status => (
+                                                <div
+                                                    key={status}
+                                                    className="flex items-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-muted"
+                                                    onClick={() => { setLogActionFilter(status); setLogPage(1) }}
+                                                >
+                                                    <span className={logActionFilter === status ? 'font-medium' : ''}>
+                                                        {status === 'ALL' ? 'All Actions' : ACTION_CONFIG[status as keyof typeof ACTION_CONFIG]?.label}
+                                                    </span>
+                                                    {logActionFilter === status && <Check className="h-4 w-4" />}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
-                            ) : auditLogs.length === 0 ? (
-                                <div className="text-center py-6 text-sm text-muted-foreground">
-                                    <Clock className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                                    <p>No changes recorded yet.</p>
-                                    <p className="text-xs mt-1">Changes will appear here after saving activity updates.</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-2 max-h-80 overflow-y-auto">
-                                    {auditLogs.map((log) => {
-                                        const config = ACTION_CONFIG[log.action] || ACTION_CONFIG["ENABLED"]
-                                        const IconComp = config.icon
-                                        return (
-                                            <div
-                                                key={log.id}
-                                                className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border text-sm ${config.color}`}
-                                            >
-                                                <IconComp className="h-4 w-4 mt-0.5 shrink-0" />
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="font-medium">
-                                                            {ACTIVITY_ICONS[log.activityType] || ''} {log.activityLabel}
-                                                        </span>
-                                                        <Badge variant="outline" className={`text-[10px] ${config.color}`}>
+                                {activeFilterCount > 0 && (
+                                    <div className="p-3 border-t bg-muted/50">
+                                        <Button
+                                            variant="ghost"
+                                            className="w-full text-xs h-8"
+                                            onClick={() => { setLogActionFilter('ALL'); setLogPage(1); }}
+                                        >
+                                            Clear filters
+                                        </Button>
+                                    </div>
+                                )}
+                            </PopoverContent>
+                        </Popover>
+                        {/* Export Button */}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2 text-xs h-9"
+                            disabled={auditLoading || paginatedLogs.length === 0}
+                            onClick={() => {
+                                const headers = ['Time', 'Activity Phase', 'Action', 'Updates', 'User']
+                                const rows = filteredLogs.map(log => [
+                                    formatAuditDate(log.createdAt),
+                                    `${ACTIVITY_ICONS[log.activityType] || ''} ${log.activityLabel}`,
+                                    ACTION_CONFIG[log.action]?.label || ACTION_CONFIG["ENABLED"].label,
+                                    log.action === "DEADLINE_CHANGED" ? `${formatDeadlineValue(log.oldValue)} -> ${formatDeadlineValue(log.newValue)}` : '',
+                                    log.performedBy
+                                ])
+                                const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
+                                const blob = new Blob([csv], { type: 'text/csv' })
+                                const url = URL.createObjectURL(blob)
+                                const a = document.createElement('a')
+                                a.href = url
+                                a.download = `audit-logs-${conferenceId}.csv`
+                                a.click()
+                                URL.revokeObjectURL(url)
+                            }}
+                        >
+                            <Download className="h-3.5 w-3.5" />
+                            Export CSV
+                        </Button>
+                    </div>
+
+                    {/* Table View */}
+                    {auditLoading ? (
+                        <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+                    ) : paginatedLogs.length === 0 ? (
+                        <div className="text-center py-12 text-muted-foreground bg-muted/10 rounded-xl border border-dashed text-sm">
+                            <Clock className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                            <p className="font-medium text-foreground">No logs found</p>
+                            <p className="mt-1">Try adjusting your search or filters.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div className="rounded-lg border overflow-hidden">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-muted/30">
+                                            <TableHead className="w-12 text-center">#</TableHead>
+                                            <TableHead>Time</TableHead>
+                                            <TableHead>Activity Phase</TableHead>
+                                            <TableHead className="w-32">Action</TableHead>
+                                            <TableHead>Updates</TableHead>
+                                            <TableHead>User</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {paginatedLogs.map((log, idx) => {
+                                            const config = ACTION_CONFIG[log.action] || ACTION_CONFIG["ENABLED"]
+                                            const IconComp = config.icon
+                                            return (
+                                                <TableRow key={log.id}>
+                                                    <TableCell className="text-center text-xs text-muted-foreground font-medium">
+                                                        {(logPage - 1) * logsPerPage + idx + 1}
+                                                    </TableCell>
+                                                    <TableCell className="font-medium text-muted-foreground whitespace-nowrap">
+                                                        {formatAuditDate(log.createdAt)}
+                                                    </TableCell>
+                                                    <TableCell className="font-medium text-foreground whitespace-nowrap">
+                                                        {ACTIVITY_ICONS[log.activityType] || ''} {log.activityLabel}
+                                                    </TableCell>
+                                                    <TableCell className="whitespace-nowrap">
+                                                        <Badge variant="outline" className={`font-medium ${config.color.split(' ').filter(c => !c.startsWith('bg-')).join(' ')} ${config.color.split(' ').find(c => c.startsWith('bg-'))} bg-opacity-10 text-opacity-100 border-transparent`}>
+                                                            <IconComp className="w-3 h-3 mr-1" />
                                                             {config.label}
                                                         </Badge>
-                                                    </div>
-                                                    {log.action === "DEADLINE_CHANGED" && (
-                                                        <p className="text-xs mt-0.5 opacity-80">
-                                                            {formatDeadlineValue(log.oldValue)} → {formatDeadlineValue(log.newValue)}
-                                                        </p>
-                                                    )}
-                                                    <div className="flex items-center gap-3 mt-1 text-xs opacity-70">
-                                                        <span className="flex items-center gap-1">
-                                                            <User className="h-3 w-3" />
-                                                            {log.performedBy}
-                                                        </span>
-                                                        <span className="flex items-center gap-1">
-                                                            <Clock className="h-3 w-3" />
-                                                            {formatAuditDate(log.createdAt)}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
+                                                    </TableCell>
+                                                    <TableCell className="min-w-[200px]">
+                                                        {log.action === "DEADLINE_CHANGED" ? (
+                                                            <div className="flex items-center gap-2 text-xs">
+                                                                <span className="line-through opacity-70 bg-muted px-1.5 py-0.5 rounded">{formatDeadlineValue(log.oldValue)}</span>
+                                                                <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                                                                <span className="font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded shadow-sm border border-primary/20">{formatDeadlineValue(log.newValue)}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-muted-foreground italic text-xs">—</span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="whitespace-nowrap">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0 text-xs font-bold">
+                                                                {(log.performedBy ?? "?")[0]?.toUpperCase()}
+                                                            </div>
+                                                            <span className="text-sm font-medium">{log.performedBy}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </div>
+
+                            {/* Pagination */}
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-between pt-4 border-t">
+                                    <p className="text-xs text-muted-foreground">
+                                        Page {logPage} of {totalPages} · {filteredLogs.length} events
+                                    </p>
+                                    <div className="flex gap-1">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={logPage === 1}
+                                            onClick={() => setLogPage(p => Math.max(1, p - 1))}
+                                        >
+                                            <ChevronLeft className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={logPage === totalPages}
+                                            onClick={() => setLogPage(p => Math.min(totalPages, p + 1))}
+                                        >
+                                            <ChevronRight className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </div>
                             )}
                         </div>
                     )}
                 </div>
+                )}
             </CardContent>
         </Card>
     )

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
     Calendar, MapPin, ExternalLink, Loader2, ArrowLeft, Settings,
-    Globe, Phone, FileText, Clock, Send
+    Globe, Phone, FileText, Clock, Send, Ticket
 } from 'lucide-react'
 import Link from 'next/link'
 import { isActivityOpen } from '@/lib/activity'
@@ -262,7 +262,7 @@ export default function ConferenceDetailsPage() {
         
 
                     {canManageConference && (
-                        <div className="flex gap-3 pt-2">
+                        <div className="flex gap-3 pt-2 flex-wrap">
                             <Link href={`/conference/${conferenceId}/update`}>
                                 <Button variant="outline" className="gap-2">
                                     <Settings className="h-4 w-4" />
@@ -271,6 +271,27 @@ export default function ConferenceDetailsPage() {
                             </Link>
                         </div>
                     )}
+                    {/* Registration CTAs — visible to all authenticated users */}
+                    <div className="flex gap-3 pt-2 flex-wrap">
+                        <Link href={`/conference/${conferenceId}/register`}>
+                            <Button className="gap-2">
+                                <Ticket className="h-4 w-4" />
+                                Register to Attend
+                            </Button>
+                        </Link>
+                        <Link href={`/conference/${conferenceId}/my-ticket`}>
+                            <Button variant="outline" className="gap-2">
+                                <FileText className="h-4 w-4" />
+                                My Ticket
+                            </Button>
+                        </Link>
+                        <Link href={`/conference/${conferenceId}/program`}>
+                            <Button variant="outline" className="gap-2">
+                                <Calendar className="h-4 w-4" />
+                                View Program
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
 
                 <div className="lg:col-span-3 pt-9">
