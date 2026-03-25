@@ -11,8 +11,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2, ArrowLeft, FileText, Check, X, AlertTriangle, Save, Eye, ExternalLink, FileDown } from 'lucide-react'
+import { FieldError } from '@/components/ui/field'
+import { Loader2, ArrowLeft, FileText, Check, X, AlertTriangle, Save, Eye, ExternalLink, FileDown, MessageSquare } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { PaperDiscussion } from '@/components/paper-discussion'
 
 interface ReviewQuestion {
     id: number
@@ -43,12 +45,26 @@ export default function ReviewPaperPage() {
     const [questions, setQuestions] = useState<ReviewQuestion[]>([])
     const [answers, setAnswers] = useState<Map<number, { value: string; choiceId: number | null }>>(new Map())
     const [savedAnswers, setSavedAnswers] = useState<ReviewAnswerResponse[]>([])
+    const [questionErrors, setQuestionErrors] = useState<Map<number, string>>(new Map())
     const [loading, setLoading] = useState(true)
     const [savingQuestion, setSavingQuestion] = useState<number | null>(null)
     const [submitting, setSubmitting] = useState(false)
     const [activityClosed, setActivityClosed] = useState<string | null>(null)
     const [paperFiles, setPaperFiles] = useState<PaperFileResponse[]>([])
     const [showPdfPreview, setShowPdfPreview] = useState(true)
+    const [showDiscussion, setShowDiscussion] = useState(false)
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+
+    // Get userId from JWT
+    useEffect(() => {
+        try {
+            const token = localStorage.getItem('accessToken')
+            if (token) {
+                const payload = JSON.parse(atob(token.split('.')[1]))
+                setCurrentUserId(payload.userId || payload.id)
+            }
+        } catch { /* ignore */ }
+    }, [])
 
     const fetchData = useCallback(async () => {
         try {
@@ -122,11 +138,28 @@ export default function ReviewPaperPage() {
             next.set(questionId, { value, choiceId })
             return next
         })
+        setQuestionErrors(prev => {
+            if (!prev.has(questionId)) return prev
+            const next = new Map(prev)
+            next.delete(questionId)
+            return next
+        })
     }
 
     const handleSaveAnswer = async (questionId: number) => {
         const answer = answers.get(questionId)
         if (!answer) return
+
+        const q = questions.find(question => question.id === questionId)
+        if (q?.isRequired && q.type === 'COMMENT' && (!answer.value || !answer.value.trim())) {
+            setQuestionErrors(prev => {
+                const next = new Map(prev)
+                next.set(questionId, 'This field is required')
+                return next
+            })
+            return
+        }
+
         setSavingQuestion(questionId)
         try {
             const dto: ReviewAnswerRequest = {
@@ -170,6 +203,11 @@ export default function ReviewPaperPage() {
         })
 
         if (unanswered.length > 0) {
+            setQuestionErrors(prev => {
+                const next = new Map(prev)
+                unanswered.forEach(q => next.set(q.id, 'This field is required'))
+                return next
+            })
             toast.error(`Please answer ${unanswered.length} required question(s)!`)
             return
         }
@@ -424,20 +462,26 @@ export default function ReviewPaperPage() {
 
                                     {/* Answer input */}
                                     {question.type === 'COMMENT' && (
-                                        <Textarea
-                                            placeholder="Enter your comment..."
-                                            rows={4}
-                                            value={answer?.value || ''}
-                                            onChange={e => handleAnswerChange(question.id, e.target.value)}
-                                            disabled={isReadOnly}
-                                            maxLength={question.maxLength || undefined}
-                                            className="text-sm"
-                                        />
+                                        <div className="space-y-1">
+                                            <Textarea
+                                                placeholder="Enter your comment..."
+                                                rows={4}
+                                                value={answer?.value || ''}
+                                                onChange={e => handleAnswerChange(question.id, e.target.value)}
+                                                disabled={isReadOnly}
+                                                maxLength={question.maxLength || undefined}
+                                                className="text-sm"
+                                            />
+                                            {questionErrors.has(question.id) && (
+                                                <FieldError>{questionErrors.get(question.id)}</FieldError>
+                                            )}
+                                        </div>
                                     )}
 
                                     {question.type === 'AGREEMENT' && (
-                                        <div className="flex gap-3">
-                                            {['Yes', 'No'].map(val => (
+                                        <div className="space-y-1">
+                                            <div className="flex gap-3">
+                                                {['Yes', 'No'].map(val => (
                                                 <button
                                                     key={val}
                                                     type="button"
@@ -455,6 +499,10 @@ export default function ReviewPaperPage() {
                                                     {val === 'Yes' ? 'Agree' : 'Disagree'}
                                                 </button>
                                             ))}
+                                            </div>
+                                            {questionErrors.has(question.id) && (
+                                                <FieldError>{questionErrors.get(question.id)}</FieldError>
+                                            )}
                                         </div>
                                     )}
 
@@ -490,6 +538,9 @@ export default function ReviewPaperPage() {
                                                     </button>
                                                 )
                                             })}
+                                            {questionErrors.has(question.id) && (
+                                                <FieldError>{questionErrors.get(question.id)}</FieldError>
+                                            )}
                                         </div>
                                     )}
                                 </CardContent>
@@ -540,6 +591,33 @@ export default function ReviewPaperPage() {
                     )}
                 </div>
             )}
+
+            {/* Discussion Section */}
+            <Card>
+                <CardHeader className="pb-3">
+                    <button
+                        onClick={() => setShowDiscussion(!showDiscussion)}
+                        className="flex items-center justify-between w-full"
+                    >
+                        <CardTitle className="text-base flex items-center gap-2">
+                            <MessageSquare className="h-4 w-4 text-indigo-500" />
+                            Discussion
+                        </CardTitle>
+                        <Badge variant="outline" className="text-xs">
+                            {showDiscussion ? 'Thu gọn' : 'Mở rộng'}
+                        </Badge>
+                    </button>
+                </CardHeader>
+                {showDiscussion && currentUserId && review.paper?.id && (
+                    <CardContent>
+                        <PaperDiscussion
+                            paperId={review.paper.id}
+                            currentUserId={currentUserId}
+                            anonymize={true}
+                        />
+                    </CardContent>
+                )}
+            </Card>
         </div>
     )
 }

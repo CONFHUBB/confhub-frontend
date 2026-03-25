@@ -14,6 +14,7 @@ import {
     FieldLegend,
     FieldSet,
 } from "@/components/ui/field"
+import { V, validate as validateField } from "@/lib/validation"
 import { ArrowLeft, Copy, FileText, Info, Mail, Plus, Trash2, Type } from "lucide-react"
 import toast from "react-hot-toast"
 import { Textarea } from "@/components/ui/textarea"
@@ -89,12 +90,14 @@ export function ConferenceTemplate({ initialTemplates, onSubmit }: ConferenceTem
     const validate = () => {
         const newErrors: Record<string, string> = {}
         templates.forEach((t) => {
-            if (!t.templateType.trim())
-                newErrors[`templateType_${t.id}`] = "Template type is required."
-            if (!t.subject.trim())
-                newErrors[`subject_${t.id}`] = "Subject is required."
-            if (!t.body.trim())
-                newErrors[`body_${t.id}`] = "Body is required."
+            const typeErr = validateField(t.templateType, V.required, (v) => V.maxLen(v, 50))
+            if (typeErr) newErrors[`templateType_${t.id}`] = typeErr
+
+            const subjErr = validateField(t.subject, V.required, (v) => V.maxLen(v, 200))
+            if (subjErr) newErrors[`subject_${t.id}`] = subjErr
+
+            const bodyErr = validateField(t.body, V.required, (v) => V.maxLen(v, 5000))
+            if (bodyErr) newErrors[`body_${t.id}`] = bodyErr
         })
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0

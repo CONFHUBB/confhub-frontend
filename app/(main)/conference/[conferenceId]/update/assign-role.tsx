@@ -18,6 +18,7 @@ import {
     FieldLegend,
     FieldSet,
 } from "@/components/ui/field"
+import { V } from "@/lib/validation"
 import { ArrowLeft, Mail, Plus, Shield, Trash2, UserIcon } from "lucide-react"
 
 interface AssignRoleProps {
@@ -118,8 +119,9 @@ export function AssignRole({ initialAssignments, onSubmit }: AssignRoleProps) {
             if (a.isExternal) {
                 if (!a.externalEmail.trim()) {
                     newErrors[`externalEmail_${a.id}`] = "Email is required."
-                } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.externalEmail)) {
-                    newErrors[`externalEmail_${a.id}`] = "Please enter a valid email."
+                } else {
+                    const emailErr = V.email(a.externalEmail)
+                    if (emailErr) newErrors[`externalEmail_${a.id}`] = emailErr
                 }
             } else {
                 if (!a.userId) newErrors[`userId_${a.id}`] = "Please select a user."

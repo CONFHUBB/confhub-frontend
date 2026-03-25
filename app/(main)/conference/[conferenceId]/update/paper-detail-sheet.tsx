@@ -18,6 +18,7 @@ import { getAggregateByPaper, type ReviewAggregate } from "@/app/api/review-aggr
 import { getBidsByPaper } from "@/app/api/bidding.api"
 import { getConflictsByPaper, createPaperConflict, deletePaperConflict } from "@/app/api/conflict.api"
 import { getDiscussionByPaper, getReplies, createDiscussionPost } from "@/app/api/discussion.api"
+import { PaperDiscussion } from "@/components/paper-discussion"
 import { createMetaReview, updateMetaReview } from "@/app/api/meta-review.api"
 import { manualAssign, removeAssignment, getCurrentAssignments, type AssignmentPreviewItem } from "@/app/api/assignment.api"
 import { getConferenceUsersWithRoles } from "@/app/api/conference-user-track.api"
@@ -136,8 +137,13 @@ export function PaperDetailSheet({
                             {activeTab === "conflicts" && (
                                 <ConflictsTab paperId={paperId!} conferenceId={conferenceId} />
                             )}
-                            {activeTab === "discussion" && (
-                                <DiscussionTab paperId={paperId!} />
+                            {activeTab === "discussion" && userId && (
+                                <PaperDiscussion
+                                    paperId={paperId!}
+                                    currentUserId={userId}
+                                    isChair={true}
+                                    anonymize={false}
+                                />
                             )}
                         </>
                     )}
@@ -712,172 +718,5 @@ function ConflictsTab({ paperId, conferenceId }: { paperId: number; conferenceId
 }
 
 // ═══════════════════════════════════════════════
-// TAB: Discussion
-// ═══════════════════════════════════════════════
-function DiscussionTab({ paperId }: { paperId: number }) {
-    const [posts, setPosts] = useState<DiscussionPost[]>([])
-    const [loading, setLoading] = useState(true)
-    const [repliesMap, setRepliesMap] = useState<Record<number, DiscussionPost[]>>({})
-    const [expandedPosts, setExpandedPosts] = useState<Set<number>>(new Set())
-    const [newContent, setNewContent] = useState("")
-    const [submitting, setSubmitting] = useState(false)
-    const [replyingTo, setReplyingTo] = useState<number | null>(null)
-    const [replyContent, setReplyContent] = useState("")
-
-    useEffect(() => {
-        const fetch = async () => {
-            setLoading(true)
-            const data = await getDiscussionByPaper(paperId).catch(() => [])
-            setPosts(data || [])
-            setLoading(false)
-        }
-        fetch()
-    }, [paperId])
-
-    const handlePost = async () => {
-        if (!newContent.trim()) return
-        try {
-            setSubmitting(true)
-            const userStr = localStorage.getItem("user")
-            const user = userStr ? JSON.parse(userStr) : null
-            const userId = user?.id || user?.userId
-            if (!userId) { toast.error("Please login"); return }
-            await createDiscussionPost({
-                paperId, userId, content: newContent,
-                isVisibleToAuthor: false, isDiscussionPost: true,
-            })
-            toast.success("Post created")
-            setNewContent("")
-            const data = await getDiscussionByPaper(paperId).catch(() => [])
-            setPosts(data || [])
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || "Failed to post")
-        } finally {
-            setSubmitting(false)
-        }
-    }
-
-    const handleReply = async (parentId: number) => {
-        if (!replyContent.trim()) return
-        try {
-            const userStr = localStorage.getItem("user")
-            const user = userStr ? JSON.parse(userStr) : null
-            const userId = user?.id || user?.userId
-            if (!userId) { toast.error("Please login"); return }
-            await createDiscussionPost({
-                paperId, userId, content: replyContent,
-                isVisibleToAuthor: false, parentCommentId: parentId, isDiscussionPost: true,
-            })
-            toast.success("Reply posted")
-            setReplyContent("")
-            setReplyingTo(null)
-            const replies = await getReplies(parentId).catch(() => [])
-            setRepliesMap(prev => ({ ...prev, [parentId]: replies }))
-            setExpandedPosts(prev => new Set(prev).add(parentId))
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || "Failed to reply")
-        }
-    }
-
-    const loadReplies = async (postId: number) => {
-        if (expandedPosts.has(postId)) {
-            setExpandedPosts(prev => { const n = new Set(prev); n.delete(postId); return n })
-            return
-        }
-        const replies = await getReplies(postId).catch(() => [])
-        setRepliesMap(prev => ({ ...prev, [postId]: replies }))
-        setExpandedPosts(prev => new Set(prev).add(postId))
-    }
-
-    if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin" /></div>
-
-    const formatDate = (d: string) => new Date(d).toLocaleString("vi-VN", {
-        day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit"
-    })
-
-    return (
-        <div className="space-y-4">
-            {/* New post */}
-            <div className="space-y-2">
-                <Textarea
-                    placeholder="Write a discussion post..."
-                    value={newContent}
-                    onChange={e => setNewContent(e.target.value)}
-                    className="min-h-[60px] text-sm"
-                />
-                <Button size="sm" onClick={handlePost} disabled={submitting || !newContent.trim()}>
-                    {submitting && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
-                    <Send className="h-3 w-3 mr-1" /> Post
-                </Button>
-            </div>
-
-            {/* Posts */}
-            {posts.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">No discussion posts yet.</p>
-            ) : (
-                <div className="space-y-3">
-                    {posts.map(post => (
-                        <div key={post.id} className="rounded-lg border p-3 space-y-2">
-                            <div className="flex items-start justify-between">
-                                <div>
-                                    {post.title && <p className="font-semibold text-sm">{post.title}</p>}
-                                    <p className="text-[10px] text-muted-foreground">
-                                        {post.userFirstName} {post.userLastName} · {formatDate(post.createdAt)}
-                                    </p>
-                                </div>
-                            </div>
-                            <p className="text-sm whitespace-pre-wrap">{post.content}</p>
-
-                            <div className="flex items-center gap-3 pt-1 border-t">
-                                <button
-                                    className="text-[10px] text-muted-foreground flex items-center gap-1 hover:text-foreground"
-                                    onClick={() => loadReplies(post.id)}
-                                >
-                                    {expandedPosts.has(post.id) ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                                    Replies
-                                </button>
-                                <button
-                                    className="text-[10px] text-muted-foreground flex items-center gap-1 hover:text-foreground"
-                                    onClick={() => setReplyingTo(replyingTo === post.id ? null : post.id)}
-                                >
-                                    <Reply className="h-3 w-3" /> Reply
-                                </button>
-                            </div>
-
-                            {replyingTo === post.id && (
-                                <div className="flex gap-2 pl-3 border-l-2">
-                                    <Textarea
-                                        value={replyContent}
-                                        onChange={e => setReplyContent(e.target.value)}
-                                        placeholder="Reply..."
-                                        className="min-h-[40px] text-xs"
-                                    />
-                                    <Button size="sm" onClick={() => handleReply(post.id)} disabled={!replyContent.trim()}>
-                                        <Send className="h-3 w-3" />
-                                    </Button>
-                                </div>
-                            )}
-
-                            {expandedPosts.has(post.id) && repliesMap[post.id] && (
-                                <div className="pl-3 border-l-2 space-y-2">
-                                    {repliesMap[post.id].length === 0 ? (
-                                        <p className="text-[10px] text-muted-foreground">No replies</p>
-                                    ) : (
-                                        repliesMap[post.id].map(reply => (
-                                            <div key={reply.id} className="rounded border p-2 bg-muted/10">
-                                                <p className="text-[10px] text-muted-foreground mb-0.5">
-                                                    {reply.userFirstName} {reply.userLastName} · {formatDate(reply.createdAt)}
-                                                </p>
-                                                <p className="text-xs whitespace-pre-wrap">{reply.content}</p>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    )
-}
+// TAB: Discussion — now uses shared PaperDiscussion component
+// See: components/paper-discussion.tsx

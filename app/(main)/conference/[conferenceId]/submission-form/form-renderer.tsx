@@ -22,8 +22,11 @@ export interface FormRendererProps {
 
 const generateSchema = (fields: DynamicField[]) => {
     const schemaShape: Record<string, any> = {
-        title: z.string().min(1, { message: "Title is required" }),
-        abstractField: z.string().min(1, { message: "Abstract is required" }),
+        title: z.string().min(1, { message: "Title is required" }).max(150, { message: "Maximum 150 characters" }),
+        abstractField: z.string().min(1, { message: "Abstract is required" }).refine((val) => {
+            const wordCount = val.trim().split(/\s+/).filter(w => w.length > 0).length
+            return wordCount >= 20 && wordCount <= 250
+        }, { message: "Abstract must be between 20 and 250 words" }),
     }
 
     fields.forEach((field) => {
@@ -89,6 +92,10 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false }:
             setKeywordError("This keyword already exists")
             return
         }
+        if (keywords.length >= 4) {
+            setKeywordError("Maximum 4 keywords allowed")
+            return
+        }
         setKeywords((prev) => [...prev, trimmed])
         setKeywordInput("")
         setKeywordError("")
@@ -108,6 +115,10 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false }:
     const handleSubmit = (data: FormData) => {
         if (keywords.length === 0) {
             setKeywordError("At least one keyword is required")
+            return
+        }
+        if (keywords.length > 4) {
+            setKeywordError("Maximum 4 keywords allowed")
             return
         }
         setKeywordError("")

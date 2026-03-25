@@ -24,6 +24,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { FieldError } from '@/components/ui/field'
+import { V } from '@/lib/validation'
 import { Loader2, ArrowLeft, Upload, FileUp, FileText, Trash2, Save, ExternalLink, UserPlus, Layers, X, AlertTriangle, RotateCcw, Eye, EyeOff } from 'lucide-react'
 import { Select as AntdSelect } from 'antd'
 import toast from 'react-hot-toast'
@@ -57,6 +59,7 @@ export default function EditPaperPage() {
     })
     const [keywords, setKeywords] = useState<string[]>([])
     const [keywordInput, setKeywordInput] = useState('')
+    const [errors, setErrors] = useState<{ title?: string; abstractField?: string; keywords?: string }>({})
 
     const fetchUsers = async () => {
         try {
@@ -133,9 +136,25 @@ export default function EditPaperPage() {
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target
         setFormData(prev => ({ ...prev, [name]: value }))
+        if (errors[name as keyof typeof errors]) {
+            setErrors(prev => ({ ...prev, [name]: undefined }))
+        }
     }
 
     const handleSavePaper = async () => {
+        const newErrors: any = {}
+        const titleErr = V.required(formData.title) || V.maxLen(formData.title, 150)
+        if (titleErr) newErrors.title = titleErr
+        const abstractErr = V.required(formData.abstractField) || V.wordCount(formData.abstractField, 20, 250)
+        if (abstractErr) newErrors.abstractField = abstractErr
+        const keywordErr = keywords.length === 0 ? 'Please add at least one keyword' : keywords.some(k => k.length > 50) ? 'Keywords cannot be longer than 50 characters' : null
+        if (keywordErr) newErrors.keywords = keywordErr
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors)
+            return
+        }
+
         try {
             setSaving(true)
             await updatePaper(paperId, {
@@ -352,6 +371,7 @@ export default function EditPaperPage() {
                                 onChange={handleInputChange}
                                 placeholder="Paper Title"
                             />
+                            <FieldError>{errors.title}</FieldError>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="abstractField">Abstract</Label>
@@ -363,6 +383,7 @@ export default function EditPaperPage() {
                                 placeholder="Paper Abstract"
                                 rows={5}
                             />
+                            <FieldError>{errors.abstractField}</FieldError>
                         </div>
                         <div className="space-y-3">
                             <Label>Keywords</Label>
@@ -390,9 +411,14 @@ export default function EditPaperPage() {
                                         if (e.key === 'Enter') {
                                             e.preventDefault()
                                             const trimmed = keywordInput.trim()
+                                            if (trimmed && trimmed.length > 50) {
+                                                setErrors(prev => ({ ...prev, keywords: 'Keyword is too long (max 50 chars)' }))
+                                                return
+                                            }
                                             if (trimmed && !keywords.includes(trimmed)) {
                                                 setKeywords(prev => [...prev, trimmed])
                                                 setKeywordInput('')
+                                                setErrors(prev => ({ ...prev, keywords: undefined }))
                                             }
                                         }
                                     }}
@@ -404,9 +430,14 @@ export default function EditPaperPage() {
                                     variant="outline"
                                     onClick={() => {
                                         const trimmed = keywordInput.trim()
+                                        if (trimmed && trimmed.length > 50) {
+                                            setErrors(prev => ({ ...prev, keywords: 'Keyword is too long (max 50 chars)' }))
+                                            return
+                                        }
                                         if (trimmed && !keywords.includes(trimmed)) {
                                             setKeywords(prev => [...prev, trimmed])
                                             setKeywordInput('')
+                                            setErrors(prev => ({ ...prev, keywords: undefined }))
                                         }
                                     }}
                                     className="shrink-0"
@@ -415,6 +446,7 @@ export default function EditPaperPage() {
                                 </Button>
                             </div>
                             <p className="text-xs text-muted-foreground">Press Enter or click Add to add each keyword.</p>
+                            <FieldError>{errors.keywords}</FieldError>
                         </div>
 
                         {subjectAreas.length > 0 && (

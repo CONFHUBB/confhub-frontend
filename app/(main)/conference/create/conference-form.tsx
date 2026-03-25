@@ -19,6 +19,7 @@ import { AREA_OPTIONS, SOCIETY_SPONSOR_OPTIONS } from "@/lib/constants/conferenc
 import { uploadBannerImage } from "@/app/api/conference.api"
 import toast from "react-hot-toast"
 import { Upload, Loader2 } from "lucide-react"
+import { V } from "@/lib/validation"
 
 interface ConferenceFormProps {
     initialData: ConferenceData | null
@@ -119,8 +120,13 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
         if (formData.province.length > SHORT_MAX) newErrors.province = `Province must be ${SHORT_MAX} characters or less.`
 
         if (formData.contactInformation.length > SHORT_MAX) newErrors.contactInformation = `Contact info must be ${SHORT_MAX} characters or less.`
+        if (formData.contactInformation && V.phone(formData.contactInformation)) newErrors.contactInformation = 'Invalid phone format. Use digits, +, -, spaces (7–20 chars).'
         if (formData.description.length > LONG_MAX) newErrors.description = `Description must be ${LONG_MAX} characters or less.`
         if (formData.chairEmails.length > LONG_MAX) newErrors.chairEmails = `Chair emails must be ${LONG_MAX} characters or less.`
+        if (formData.chairEmails && !newErrors.chairEmails) {
+            const emailErr = V.emailList(formData.chairEmails)
+            if (emailErr) newErrors.chairEmails = emailErr
+        }
 
         // societySponsor is joined with ", " before sending – check combined length
         const sponsorJoined = formData.societySponsor.join(", ")
@@ -144,7 +150,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
                     {/* ── Section: Basic Conference Information ── */}
                     <section>
                         <div className="mb-5 border-b pb-2">
-                            <h3 className="text-lg font-semibold text-primary">Basic conference information</h3>
+                            <h3 className="text-lg font-semibold text-indigo-700">Basic conference information</h3>
                         </div>
                         <FieldSet>
                             <FieldGroup>
@@ -248,7 +254,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
                     {/* ── Section: Location ── */}
                     <section>
                         <div className="mb-5 border-b pb-2">
-                            <h3 className="text-lg font-semibold text-primary">Location</h3>
+                            <h3 className="text-lg font-semibold text-indigo-700">Location</h3>
                         </div>
                         <FieldSet>
                             <FieldGroup>
@@ -302,7 +308,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
                     {/* ── Section: Web page ── */}
                     <section>
                         <div className="mb-5 border-b pb-2">
-                            <h3 className="text-lg font-semibold text-primary">Web page</h3>
+                            <h3 className="text-lg font-semibold text-indigo-700">Web page</h3>
                         </div>
                         <FieldSet>
                             <FieldGroup>
@@ -387,7 +393,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
                     {/* ── Section: Contact information ── */}
                     <section>
                         <div className="mb-5 border-b pb-2">
-                            <h3 className="text-lg font-semibold text-primary">Contact information</h3>
+                            <h3 className="text-lg font-semibold text-indigo-700">Contact information</h3>
                         </div>
                         <FieldSet>
                             <FieldGroup>
@@ -411,7 +417,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
                     {/* ── Section: Dates ── */}
                     <section>
                         <div className="mb-5 border-b pb-2">
-                            <h3 className="text-lg font-semibold text-primary">Dates</h3>
+                            <h3 className="text-lg font-semibold text-indigo-700">Dates</h3>
                         </div>
                         <FieldSet>
                             <FieldGroup>
@@ -456,7 +462,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
                     {/* ── Section: Chair email addresses ── */}
                     <section>
                         <div className="mb-5 border-b pb-2">
-                            <h3 className="text-lg font-semibold text-primary">Chair email addresses</h3>
+                            <h3 className="text-lg font-semibold text-indigo-700">Chair email addresses</h3>
                         </div>
                         <FieldSet>
                             <FieldGroup>

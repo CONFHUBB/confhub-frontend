@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Loader2, MessageSquare, Send, Trash2, Reply, ChevronDown, ChevronRight } from "lucide-react"
 import { Select } from "antd"
 import toast from "react-hot-toast"
+import { V } from "@/lib/validation"
 
 interface DiscussionPanelProps {
     conferenceId: number
@@ -94,6 +95,11 @@ export function DiscussionPanel({ conferenceId }: DiscussionPanelProps) {
     }
 
     const handleNewPost = async () => {
+        const titleErr = V.maxLen(newTitle, 200)
+        if (titleErr) {
+            toast.error(`Title: ${titleErr}`)
+            return
+        }
         if (!selectedPaperId || !newContent.trim()) return
         setIsSubmitting(true)
         try {

@@ -64,13 +64,14 @@ export function AppNavbar() {
     ], [])
 
     // Smart active detection: conference detail pages → highlight "My Conferences"
+    // Only ONE tab should be active at a time
     const getIsActive = (link: { path: string; exact: boolean }) => {
         if (link.exact) return pathname === link.path
         if (link.path === '/conference/my-conference') {
             // Match /conference/my-conference OR /conference/[id] detail pages
+            // BUT exclude reviewer-specific pages (those belong to "Reviewer" tab)
             if (pathname === '/conference/my-conference') return true
-            // Match /conference/<number>/... (conference detail pages)
-            if (/^\/conference\/\d+/.test(pathname)) return true
+            if (/^\/conference\/\d+/.test(pathname) && !/\/reviewer/.test(pathname)) return true
             return false
         }
         if (link.path === '/conference/reviewer-select') {

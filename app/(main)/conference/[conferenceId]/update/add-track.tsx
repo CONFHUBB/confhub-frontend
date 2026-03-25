@@ -12,6 +12,7 @@ import {
     FieldLabel,
     FieldSet,
 } from "@/components/ui/field"
+import { V, validate as validateField } from "@/lib/validation"
 import { ExcelImport } from "@/components/excel-import"
 import { downloadTrackTemplate, previewTrackImport, importTracks } from "@/app/api/conference.api"
 import { Plus, FileSpreadsheet, UserPlus } from "lucide-react"
@@ -52,7 +53,12 @@ export function AddTrack({ initialData, conferenceId, onSubmit, onImportSuccess 
 
     const validate = () => {
         const newErrors: Record<string, string> = {}
-        if (!formData.name.trim()) newErrors.name = "Track name is required."
+        const nameErr = validateField(formData.name, V.required, (v) => V.maxLen(v, 200))
+        if (nameErr) newErrors.name = nameErr
+        
+        const descErr = V.maxLen(formData.description, 2000)
+        if (descErr) newErrors.description = descErr
+        
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
     }
@@ -141,6 +147,7 @@ export function AddTrack({ initialData, conferenceId, onSubmit, onImportSuccess 
                                             value={formData.description}
                                             onChange={handleChange}
                                         />
+                                        {errors.description && <FieldError>{errors.description}</FieldError>}
                                     </Field>
                                 </FieldGroup>
                             </FieldSet>

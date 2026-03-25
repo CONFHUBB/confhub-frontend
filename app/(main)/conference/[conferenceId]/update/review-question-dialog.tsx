@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Select } from "antd"
 import { X, Plus, Trash2, Loader2, GripVertical } from "lucide-react"
+import toast from "react-hot-toast"
+import { V } from "@/lib/validation"
 
 interface ReviewQuestionDialogProps {
     open: boolean
@@ -71,6 +73,26 @@ export function ReviewQuestionDialog({ open, onClose, onSave, initialData, isSav
     }
 
     const handleSave = () => {
+        const textErr = V.maxLen(formData.text, 500)
+        if (textErr) {
+            toast.error(`Question Text: ${textErr}`)
+            return
+        }
+        const noteErr = V.maxLen(formData.note || "", 200)
+        if (noteErr) {
+            toast.error(`Helper Note: ${noteErr}`)
+            return
+        }
+        if (isOptions && formData.choices && formData.choices.length > 0) {
+            for (let i = 0; i < formData.choices.length; i++) {
+                const choiceErr = V.maxLen(formData.choices[i].text, 100)
+                if (choiceErr) {
+                    toast.error(`Choice ${i + 1}: ${choiceErr}`)
+                    return
+                }
+            }
+        }
+        
         const payload = { ...formData }
         // Clean up unneeded fields based on type
         if (payload.type !== "COMMENT") payload.maxLength = undefined
