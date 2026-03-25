@@ -166,7 +166,7 @@ export function ReviewDetailDialog({ reviewId, open, onClose }: ReviewDetailDial
                             </p>
                             <div className="w-full h-1.5 rounded-full bg-gray-200 overflow-hidden">
                                 <div
-                                    className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-300"
+                                    className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-emerald-500 transition-all duration-300"
                                     style={{ width: `${questions.length > 0 ? (answeredCount / questions.length) * 100 : 0}%` }}
                                 />
                             </div>

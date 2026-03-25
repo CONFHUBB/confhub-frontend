@@ -16,9 +16,11 @@ import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
     Loader2, Search, Download, Eye, Users, ChevronLeft, ChevronRight, 
-    Zap, ThumbsUp, Minus, ThumbsDown, FileSpreadsheet,
-    Building2, Mail, Globe, GraduationCap, Phone, User2
+    Zap, ThumbsUp, Minus, ThumbsDown, FileSpreadsheet, Filter,
+    Building2, Mail, Globe, GraduationCap, Phone, User2, Check
 } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import toast from "react-hot-toast"
 import * as XLSX from "xlsx"
 
@@ -56,6 +58,9 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
     const [searchQuery, setSearchQuery] = useState("")
     const [filterBid, setFilterBid] = useState<"all" | "has_bids" | "no_bids">("all")
     const [currentPage, setCurrentPage] = useState(0)
+
+    // Derived state
+    const activeFilterCount = filterBid !== "all" ? 1 : 0
 
     // Detail sheet
     const [detailReviewerId, setDetailReviewerId] = useState<number | null>(null)
@@ -300,173 +305,178 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
             </div>
 
             {/* Toolbar */}
-            <Card>
-                <CardHeader className="pb-3">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <Users className="h-5 w-5 text-indigo-600" />
-                            Quản lý Reviewer
-                            <Badge variant="outline" className="text-xs ml-1">{filteredRows.length}</Badge>
-                        </CardTitle>
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <div className="relative w-60">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                <Input
-                                    className="pl-10 h-9 text-sm"
-                                    placeholder="Tìm theo tên, email..."
-                                    value={searchQuery}
-                                    onChange={e => setSearchQuery(e.target.value)}
-                                />
-                            </div>
-                            <select
-                                className="h-9 rounded-md border px-3 text-sm bg-white"
-                                value={filterBid}
-                                onChange={e => setFilterBid(e.target.value as any)}
-                            >
-                                <option value="all">Tất cả</option>
-                                <option value="has_bids">Đã đặt bid</option>
-                                <option value="no_bids">Chưa đặt bid</option>
-                            </select>
-                            <Button variant="outline" size="sm" className="gap-1.5 h-9" onClick={handleExportExcel}>
-                                <FileSpreadsheet className="h-4 w-4" />
-                                Xuất Excel
-                            </Button>
-                        </div>
+            <div className="flex flex-col sm:flex-row gap-2 items-center">
+                <div className="text-base font-semibold flex items-center gap-2 shrink-0">
+                    <Users className="h-5 w-5 text-indigo-600" />
+                    Reviewer Bidding
+                    <Badge variant="outline" className="text-xs ml-1">{filteredRows.length}</Badge>
+                </div>
+                <div className="flex-1" />
+                <div className="flex items-center gap-2 flex-wrap">
+                    <div className="relative flex-1 min-w-52">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            className="pl-9 h-9 text-sm"
+                            placeholder="Search by name, email..."
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
                     </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b bg-muted/30">
-                                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">First Name</th>
-                                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Last Name</th>
-                                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[180px]">Email</th>
-                                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Institution</th>
-                                    <th className="text-center px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quota</th>
-                                    <th className="text-center px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Assigned</th>
-                                    <th className="text-center px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">% Done</th>
-                                    <th className="text-center px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bids</th>
-                                    <th className="text-center px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Conflicts</th>
-                                    <th className="text-center px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-24">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="h-9 gap-2 text-sm px-3">
+                                    <Filter className="h-4 w-4 text-muted-foreground" />
+                                    Filters
+                                    {activeFilterCount > 0 && (
+                                        <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs font-normal">
+                                            {activeFilterCount}
+                                        </Badge>
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-0" align="end">
+                                <div className="p-4 space-y-4">
+                                    <div className="space-y-2">
+                                        <h4 className="font-medium text-sm">Bid Status</h4>
+                                        <div className="grid gap-1">
+                                            {[
+                                                { value: "all", label: "All Statuses" },
+                                                { value: "has_bids", label: "Has Bids" },
+                                                { value: "no_bids", label: "No Bids" }
+                                            ].map(opt => (
+                                                <div
+                                                    key={opt.value}
+                                                    className="flex items-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-muted"
+                                                    onClick={() => { setFilterBid(opt.value as any); setCurrentPage(0); }}
+                                                >
+                                                    <span className={filterBid === opt.value ? "font-medium" : ""}>
+                                                        {opt.label}
+                                                    </span>
+                                                    {filterBid === opt.value && <Check className="h-4 w-4" />}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                                {activeFilterCount > 0 && (
+                                    <div className="p-3 border-t bg-muted/50">
+                                        <Button
+                                            variant="ghost"
+                                            className="w-full text-xs h-8"
+                                            onClick={() => { setFilterBid("all"); setCurrentPage(0); }}
+                                        >
+                                            Clear filters
+                                        </Button>
+                                    </div>
+                                )}
+                            </PopoverContent>
+                        </Popover>
+                    <Button variant="outline" size="sm" className="gap-2 text-xs h-9" onClick={handleExportExcel}>
+                        <FileSpreadsheet className="h-3.5 w-3.5" />
+                        Export Excel
+                    </Button>
+                </div>
+            </div>
+            <div className="rounded-lg border overflow-hidden">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-muted/30">
+                                    <TableHead className="w-12 text-center">#</TableHead>
+                                    <TableHead>First Name</TableHead>
+                                    <TableHead>Last Name</TableHead>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Institution</TableHead>
+                                    <TableHead className="text-center">Quota</TableHead>
+                                    <TableHead className="text-center">Assigned</TableHead>
+                                    <TableHead className="text-center">% Done</TableHead>
+                                    <TableHead className="text-center">Bids</TableHead>
+                                    <TableHead className="text-center">Conflicts</TableHead>
+                                    <TableHead className="w-24 text-center">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
                                 {paginatedRows.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={10} className="text-center py-12 text-muted-foreground">
+                                    <TableRow>
+                                        <TableCell colSpan={11} className="text-center py-12 text-muted-foreground">
                                             {searchQuery || filterBid !== "all"
-                                                ? "Không tìm thấy reviewer phù hợp."
-                                                : "Chưa có reviewer nào trong conference này."}
-                                        </td>
-                                    </tr>
+                                                ? "No reviewers match your filters."
+                                                : "No reviewers in this conference yet."}
+                                        </TableCell>
+                                    </TableRow>
                                 ) : (
-                                    paginatedRows.map(row => (
-                                        <tr key={row.id} className="hover:bg-indigo-50/30 transition-colors">
-                                            <td className="px-5 py-4 font-medium">{row.firstName}</td>
-                                            <td className="px-5 py-4 font-medium">{row.lastName}</td>
-                                            <td className="px-5 py-4 text-muted-foreground text-xs">{row.email}</td>
-                                            <td className="px-5 py-4 text-xs text-muted-foreground">{row.institution || "—"}</td>
-                                            <td className="px-5 py-4 text-center">
+                                    paginatedRows.map((row, idx) => (
+                                        <TableRow key={row.id}>
+                                            <TableCell className="text-center text-xs text-muted-foreground font-medium">
+                                                {currentPage * PAGE_SIZE + idx + 1}
+                                            </TableCell>
+                                            <TableCell className="font-medium text-sm">{row.firstName}</TableCell>
+                                            <TableCell className="font-medium text-sm">{row.lastName}</TableCell>
+                                            <TableCell className="text-muted-foreground text-xs">{row.email}</TableCell>
+                                            <TableCell className="text-xs text-muted-foreground">{row.institution || "—"}</TableCell>
+                                            <TableCell className="text-center">
                                                 {row.quota !== null ? (
                                                     <span className="font-semibold">{row.quota}</span>
                                                 ) : (
                                                     <span className="text-xs text-muted-foreground">Not Set</span>
                                                 )}
-                                            </td>
-                                            <td className="px-5 py-4 text-center">
+                                            </TableCell>
+                                            <TableCell className="text-center">
                                                 <span className={`font-semibold ${row.assigned > 0 ? "text-indigo-600" : ""}`}>
                                                     {row.assigned}
                                                 </span>
-                                            </td>
-                                            <td className="px-5 py-4 text-center">
+                                            </TableCell>
+                                            <TableCell className="text-center">
                                                 {row.assigned > 0 ? (
                                                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                                                        row.percentCompleted === 100
-                                                            ? "bg-emerald-100 text-emerald-700"
-                                                            : row.percentCompleted > 0
-                                                                ? "bg-amber-100 text-amber-700"
-                                                                : "bg-gray-100 text-gray-500"
+                                                        row.percentCompleted === 100 ? "bg-emerald-100 text-emerald-700"
+                                                        : row.percentCompleted > 0 ? "bg-amber-100 text-amber-700"
+                                                        : "bg-gray-100 text-gray-500"
                                                     }`}>
                                                         {row.percentCompleted}%
                                                     </span>
                                                 ) : (
                                                     <span className="text-xs text-muted-foreground">—</span>
                                                 )}
-                                            </td>
-                                            <td className="px-5 py-4 text-center">
+                                            </TableCell>
+                                            <TableCell className="text-center">
                                                 <span className={`font-semibold ${
                                                     row.totalBids > 0 ? "text-emerald-600" : "text-muted-foreground"
-                                                }`}>
-                                                    {row.totalBids}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-4 text-center">
+                                                }`}>{row.totalBids}</span>
+                                            </TableCell>
+                                            <TableCell className="text-center">
                                                 <span className={row.conflictCount > 0 ? "text-amber-600 font-semibold" : "text-muted-foreground"}>
                                                     {row.conflictCount}
                                                 </span>
-                                            </td>
-                                            <td className="px-5 py-4 text-center">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                                                    onClick={() => openDetail(row.id)}
-                                                >
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openDetail(row.id)}>
                                                     <Eye className="h-4 w-4" />
                                                 </Button>
-                                            </td>
-                                        </tr>
+                                            </TableCell>
+                                        </TableRow>
                                     ))
                                 )}
-                            </tbody>
-                        </table>
+                            </TableBody>
+                        </Table>
                     </div>
 
                     {/* Pagination */}
-                    {filteredRows.length > PAGE_SIZE && (
-                        <div className="flex items-center justify-between px-5 py-3 border-t bg-muted/10">
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between px-5 py-3 border-t">
                             <p className="text-xs text-muted-foreground">
-                                Hiển thị {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, filteredRows.length)} / {filteredRows.length} reviewers
+                                Page {currentPage + 1} of {totalPages} · {filteredRows.length} reviewers
                             </p>
                             <div className="flex items-center gap-1">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    disabled={currentPage === 0}
-                                    onClick={() => setCurrentPage(p => p - 1)}
-                                >
+                                <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
                                     <ChevronLeft className="h-4 w-4" />
                                 </Button>
-                                {Array.from({ length: totalPages }, (_, i) => (
-                                    <Button
-                                        key={i}
-                                        variant={currentPage === i ? "default" : "outline"}
-                                        size="sm"
-                                        className="h-8 w-8 p-0 text-xs"
-                                        onClick={() => setCurrentPage(i)}
-                                    >
-                                        {i + 1}
-                                    </Button>
-                                )).slice(
-                                    Math.max(0, currentPage - 2),
-                                    Math.min(totalPages, currentPage + 3)
-                                )}
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    disabled={currentPage >= totalPages - 1}
-                                    onClick={() => setCurrentPage(p => p + 1)}
-                                >
+                                <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
                                     <ChevronRight className="h-4 w-4" />
                                 </Button>
                             </div>
                         </div>
                     )}
-                </CardContent>
-            </Card>
+
 
             {/* Detail Sheet */}
             <Sheet open={detailReviewerId !== null} onOpenChange={v => !v && setDetailReviewerId(null)}>
@@ -625,7 +635,7 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                                                 )}
                                                 {detailProfile.googleScholarLink && (
                                                     <a href={detailProfile.googleScholarLink} target="_blank" rel="noopener noreferrer"
-                                                       className="text-xs px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors">
+                                                       className="text-xs px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors">
                                                         Google Scholar
                                                     </a>
                                                 )}

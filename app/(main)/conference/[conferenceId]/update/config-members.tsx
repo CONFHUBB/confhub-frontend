@@ -69,8 +69,10 @@ import {
     Download,
     Filter,
     CheckSquare,
+    Check
 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { V } from "@/lib/validation"
 
 // ── Role constants ──────────────────────────────────────
@@ -581,6 +583,9 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
         return true
     })
 
+    // Derived state
+    const activeFilterCount = roleFilter !== 'all' ? 1 : 0
+
     // ── CSV Export ───────────────────────────────────────
     const handleExportCSV = () => {
         const header = 'Name,Email,Country,Roles,Tracks,Status'
@@ -981,23 +986,58 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                 onChange={(e) => setMemberSearch(e.target.value)}
                             />
                         </div>
-                        {/* Role Filter */}
-                        <Select value={roleFilter} onValueChange={setRoleFilter}>
-                            <SelectTrigger className="w-full sm:w-48 h-9 text-sm">
-                                <div className="flex items-center gap-2">
-                                    <Filter className="h-3.5 w-3.5" />
-                                    <SelectValue placeholder="Filter by role" />
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="h-9 gap-2 text-sm px-3">
+                                    <Filter className="h-4 w-4 text-muted-foreground" />
+                                    Filter Roles
+                                    {activeFilterCount > 0 && (
+                                        <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs font-normal">
+                                            {activeFilterCount}
+                                        </Badge>
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-0" align="end">
+                                <div className="p-4 space-y-4">
+                                    <div className="space-y-2">
+                                        <h4 className="font-medium text-sm">Role</h4>
+                                        <div className="grid gap-1">
+                                            {[
+                                                { value: "all", label: "All Roles" },
+                                                { value: "CONFERENCE_CHAIR", label: "Conference Chair" },
+                                                { value: "PROGRAM_CHAIR", label: "Program Chair" },
+                                                { value: "REVIEWER", label: "Reviewer" },
+                                                { value: "AUTHOR", label: "Author" },
+                                                { value: "ATTENDEE", label: "Attendee" }
+                                            ].map(opt => (
+                                                <div
+                                                    key={opt.value}
+                                                    className="flex items-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-muted"
+                                                    onClick={() => { setRoleFilter(opt.value); setCurrentPage(0); }}
+                                                >
+                                                    <span className={roleFilter === opt.value ? "font-medium" : ""}>
+                                                        {opt.label}
+                                                    </span>
+                                                    {roleFilter === opt.value && <Check className="h-4 w-4" />}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Roles</SelectItem>
-                                <SelectItem value="CONFERENCE_CHAIR">Conference Chair</SelectItem>
-                                <SelectItem value="PROGRAM_CHAIR">Program Chair</SelectItem>
-                                <SelectItem value="REVIEWER">Reviewer</SelectItem>
-                                <SelectItem value="AUTHOR">Author</SelectItem>
-                                <SelectItem value="ATTENDEE">Attendee</SelectItem>
-                            </SelectContent>
-                        </Select>
+                                {activeFilterCount > 0 && (
+                                    <div className="p-3 border-t bg-muted/50">
+                                        <Button
+                                            variant="ghost"
+                                            className="w-full text-xs h-8"
+                                            onClick={() => { setRoleFilter("all"); setCurrentPage(0); }}
+                                        >
+                                            Clear filters
+                                        </Button>
+                                    </div>
+                                )}
+                            </PopoverContent>
+                        </Popover>
                     </div>
                 )}
 

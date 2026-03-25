@@ -9,8 +9,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
-    Loader2, Search, FileText, Eye, CheckCircle, ExternalLink, FileCheck, Upload, ChevronLeft, ChevronRight
+    Loader2, Search, FileText, Eye, CheckCircle, ExternalLink, FileCheck, Upload, ChevronLeft, ChevronRight, Filter, Check
 } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import toast from "react-hot-toast"
 
 interface CameraReadyManagementProps {
@@ -38,6 +40,9 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
     const [approving, setApproving] = useState<number | null>(null)
     const [currentPage, setCurrentPage] = useState(0)
     const PAGE_SIZE = 10
+
+    // Derived state
+    const activeFilterCount = filter !== "all" ? 1 : 0
 
     const fetchData = useCallback(async () => {
         try {
@@ -175,26 +180,66 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
             </div>
 
             {/* Toolbar */}
-            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                <div className="relative flex-1 w-full sm:max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        className="pl-10 h-9"
+                        className="pl-9 h-9 text-sm"
                         placeholder="Search by title or paper ID..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                     />
                 </div>
-                <select
-                    className="h-9 rounded-md border px-3 text-sm bg-white"
-                    value={filter}
-                    onChange={e => setFilter(e.target.value as CRFilter)}
-                >
-                    <option value="all">All Eligible</option>
-                    <option value="uploaded">Uploaded</option>
-                    <option value="approved">Approved</option>
-                    <option value="pending">Pending</option>
-                </select>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="outline" className="h-9 gap-2 text-sm px-3">
+                            <Filter className="h-4 w-4 text-muted-foreground" />
+                            Filters
+                            {activeFilterCount > 0 && (
+                                <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs font-normal">
+                                    {activeFilterCount}
+                                </Badge>
+                            )}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-0" align="end">
+                        <div className="p-4 space-y-4">
+                            <div className="space-y-2">
+                                <h4 className="font-medium text-sm">Status</h4>
+                                <div className="grid gap-1">
+                                    {[
+                                        { value: "all", label: "All Eligible" },
+                                        { value: "uploaded", label: "Uploaded" },
+                                        { value: "approved", label: "Approved" },
+                                        { value: "pending", label: "Pending" }
+                                    ].map(opt => (
+                                        <div
+                                            key={opt.value}
+                                            className="flex items-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-muted"
+                                            onClick={() => { setFilter(opt.value as any); setCurrentPage(0); }}
+                                        >
+                                            <span className={filter === opt.value ? "font-medium" : ""}>
+                                                {opt.label}
+                                            </span>
+                                            {filter === opt.value && <Check className="h-4 w-4" />}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        {activeFilterCount > 0 && (
+                            <div className="p-3 border-t bg-muted/50">
+                                <Button
+                                    variant="ghost"
+                                    className="w-full text-xs h-8"
+                                    onClick={() => { setFilter("all"); setCurrentPage(0); }}
+                                >
+                                    Clear filters
+                                </Button>
+                            </div>
+                        )}
+                    </PopoverContent>
+                </Popover>
             </div>
 
             {/* Table */}
@@ -205,30 +250,27 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                 </div>
             ) : (
                 <>
-                <div className="overflow-auto rounded-lg border bg-white">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b bg-gray-50/80">
-                                <th className="px-3 py-3 text-left font-medium text-gray-600 w-12">STT</th>
-                                <th className="px-3 py-3 text-left font-medium text-gray-600 w-14">ID</th>
-                                <th className="px-3 py-3 text-left font-medium text-gray-600 min-w-[200px]">Title</th>
-                                <th className="px-3 py-3 text-left font-medium text-gray-600 w-28">Track</th>
-                                <th className="px-3 py-3 text-center font-medium text-gray-600 w-24">Status</th>
-                                <th className="px-3 py-3 text-center font-medium text-gray-600 w-28">Camera-Ready</th>
-                                <th className="px-3 py-3 text-center font-medium text-gray-600 w-24">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+                <div className="rounded-lg border overflow-hidden">
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-muted/30">
+                                <TableHead className="w-12">#</TableHead>
+                                <TableHead className="w-14">ID</TableHead>
+                                <TableHead className="min-w-[200px]">Title</TableHead>
+                                <TableHead className="w-28">Track</TableHead>
+                                <TableHead className="w-24 text-center">Status</TableHead>
+                                <TableHead className="w-28 text-center">Camera-Ready</TableHead>
+                                <TableHead className="w-24 text-center">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
                             {paginatedData.map((p, idx) => (
-                                <tr
-                                    key={p.paperId}
-                                    className="border-b last:border-0 hover:bg-gray-50 transition-colors"
-                                >
-                                    <td className="px-3 py-3 text-gray-400 text-xs font-medium">{currentPage * PAGE_SIZE + idx + 1}</td>
-                                    <td className="px-3 py-3 text-gray-400 font-mono text-xs">{p.paperId}</td>
-                                    <td className="px-3 py-3 font-medium line-clamp-1">{p.paperTitle}</td>
-                                    <td className="px-3 py-3 text-xs text-muted-foreground">{p.trackName}</td>
-                                    <td className="px-3 py-3 text-center">
+                                <TableRow key={p.paperId}>
+                                    <TableCell className="text-muted-foreground text-xs font-medium">{currentPage * PAGE_SIZE + idx + 1}</TableCell>
+                                    <TableCell className="text-muted-foreground font-mono text-xs">{p.paperId}</TableCell>
+                                    <TableCell className="font-medium line-clamp-1 text-sm">{p.paperTitle}</TableCell>
+                                    <TableCell className="text-xs text-muted-foreground">{p.trackName}</TableCell>
+                                    <TableCell className="text-center">
                                         <Badge className={
                                             p.isApproved
                                                 ? "bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]"
@@ -236,8 +278,8 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                                         }>
                                             {p.paperStatus}
                                         </Badge>
-                                    </td>
-                                    <td className="px-3 py-3 text-center">
+                                    </TableCell>
+                                    <TableCell className="text-center">
                                         {p.isApproved ? (
                                             <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]">
                                                 ✅ Published
@@ -250,8 +292,8 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                                         ) : (
                                             <span className="text-muted-foreground text-xs">Not yet</span>
                                         )}
-                                    </td>
-                                    <td className="px-3 py-3 text-center">
+                                    </TableCell>
+                                    <TableCell className="text-center">
                                         <div className="flex items-center justify-center gap-1">
                                             <Button
                                                 variant="outline"
@@ -277,22 +319,21 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                                                 </Button>
                                             )}
                                         </div>
-                                    </td>
-                                </tr>
+                                    </TableCell>
+                                </TableRow>
                             ))}
-                        </tbody>
-                    </table>
+                        </TableBody>
+                    </Table>
                 </div>
                 {totalPages > 1 && (
                     <div className="flex items-center justify-between pt-3">
                         <p className="text-xs text-muted-foreground">
-                            Showing {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
+                            Page {currentPage + 1} of {totalPages} · {filtered.length} papers
                         </p>
                         <div className="flex items-center gap-1">
                             <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
-                            <span className="text-xs text-muted-foreground px-2">{currentPage + 1} / {totalPages}</span>
                             <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
                                 <ChevronRight className="h-4 w-4" />
                             </Button>

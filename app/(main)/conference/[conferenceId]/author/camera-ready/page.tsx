@@ -117,7 +117,7 @@ export default function CameraReadyPage() {
                         const isPublished = p.paperStatus === 'PUBLISHED'
 
                         return (
-                            <Card key={p.paperId} className={`border-l-4 ${isPublished ? 'border-l-emerald-500' : hasUploaded ? 'border-l-blue-500' : 'border-l-amber-500'}`}>
+                            <Card key={p.paperId} className={`border-l-4 ${isPublished ? 'border-l-emerald-500' : hasUploaded ? 'border-l-indigo-500' : 'border-l-amber-500'}`}>
                                 <CardContent className="p-5">
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="flex-1 min-w-0">

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import {
     Settings, FileText, Calendar, ClipboardList, Lock, ChevronRight, ChevronDown,
     ArrowLeft, Shield, Users, LayoutDashboard, Loader2, CheckCircle2, Circle,
-    Search, Award, Eye
+    Search, Award, Eye, Ticket
 } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -36,6 +36,11 @@ import { ReviewSettings as ReviewSettingsComponent } from './review-settings'
 import { ConflictManagement } from './conflict-management'
 import { CameraReadyManagement } from './camera-ready-management'
 import { ChairDashboard } from './chair-dashboard'
+import TicketTypesConfig from './ticket-types'
+import AttendeesManagement from './attendees-management'
+import ProgramBuilder from './program-builder'
+import { CheckInInline } from './checkin-inline'
+import { PaymentHistoryView } from './payment-history-view'
 
 import { AuthorNotificationWizard } from './author-notification-wizard'
 
@@ -69,6 +74,11 @@ type SettingsTab =
     | 'forms-submission'
     | 'forms-review'
     | 'features-activity-timeline'
+    | 'features-program-builder'
+    | 'reg-ticket-types'
+    | 'reg-attendees'
+    | 'reg-checkin'
+    | 'reg-payment-history'
 
 // Workflow status type
 type WorkflowStatus = Record<string, boolean>
@@ -90,6 +100,7 @@ const TAB_GROUPS = [
             { key: "general-detail", label: "Conference Detail", completionKey: "edit-details", lockWhenDone: true },
             { key: "features-tracks", label: "Tracks", completionKey: "manage-tracks", lockWhenDone: true },
             { key: "features-subject-areas", label: "Subject Areas", completionKey: "add-subject-areas", lockWhenDone: true },
+            { key: "reg-ticket-types", label: "Ticket Types & Fees", completionKey: "", lockWhenDone: false },
         ]
     },
     {
@@ -142,6 +153,24 @@ const TAB_GROUPS = [
         accentColor: "text-purple-600",
         items: [
             { key: "features-camera-ready", label: "Camera-Ready", completionKey: "camera-ready", lockWhenDone: false },
+        ]
+    },
+    {
+        title: "Registration Phase",
+        icon: <Ticket className="h-4 w-4" />,
+        accentColor: "text-rose-600",
+        items: [
+            { key: "reg-attendees", label: "Attendees", completionKey: "", lockWhenDone: false },
+            { key: "reg-payment-history", label: "Payment History", completionKey: "", lockWhenDone: false },
+        ]
+    },
+    {
+        title: "Event Execution",
+        icon: <Calendar className="h-4 w-4" />,
+        accentColor: "text-indigo-600",
+        items: [
+            { key: "features-program-builder", label: "Program Builder", completionKey: "", lockWhenDone: false },
+            { key: "reg-checkin", label: "Check-in Scanner", completionKey: "", lockWhenDone: false },
         ]
     }
 ]
@@ -254,13 +283,7 @@ export default function ConferenceUpdatePage() {
             const isEnabled = (type: string) => getActivity(type)?.isEnabled === true
             const hasDeadline = (type: string) => !!getActivity(type)?.deadline
 
-            let hasSubmissionForm = false
-            if (formConfig && formConfig.definitionJson) {
-                try {
-                    const parsed = JSON.parse(formConfig.definitionJson)
-                    hasSubmissionForm = parsed.fields && parsed.fields.length > 0
-                } catch { hasSubmissionForm = false }
-            }
+            const hasSubmissionForm = !!formConfig;
 
             const hasMembers = (membersData as any).totalElements > 1
             const hasReviewerAssignments = papers.some((p: any) =>
@@ -495,7 +518,7 @@ export default function ConferenceUpdatePage() {
                 )
 
             case 'dashboard':
-                return <ChairDashboard conferenceId={conferenceId} />
+                return <ChairDashboard conferenceId={conferenceId} onNavigate={(tab) => setActiveTab(tab as any)} />
 
             case 'features-tracks':
                 return (
@@ -513,7 +536,7 @@ export default function ConferenceUpdatePage() {
                 return (
                     <div className="space-y-8">
                         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
-                            <h2 className="text-xl font-bold mb-4">Config Subject Areas</h2>
+                            <h2 className="text-xl font-bold mb-2">Config Subject Areas</h2>
                             <p className="text-sm text-muted-foreground">Manage primary and secondary subject areas for tracks.</p>
                         </div>
                         <SubjectAreaManager conferenceId={conferenceId} />
@@ -538,21 +561,17 @@ export default function ConferenceUpdatePage() {
                 )
 
             case 'features-conflict-settings':
-                return (
-                    <div className="space-y-6">
-                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
-                            <h2 className="text-xl font-bold mb-2">Conflict Settings</h2>
-                            <p className="text-sm text-muted-foreground">Configure domain conflicts, manual conflicts, and author self-configuration.</p>
-                        </div>
-                        <ConflictManagement conferenceId={conferenceId} />
-                    </div>
-                )
+                return <ConflictManagement conferenceId={conferenceId} />
 
             case 'features-review-management':
                 return <ReviewManagement conferenceId={conferenceId} />
 
             case 'features-camera-ready':
                 return <CameraReadyManagement conferenceId={conferenceId} />
+
+            case 'features-program-builder':
+                return <ProgramBuilder conferenceId={conferenceId} />
+
             case 'forms-mail':
                 return <EmailManagementInline conferenceId={conferenceId} />
 
@@ -560,7 +579,7 @@ export default function ConferenceUpdatePage() {
                 return (
                     <div className="space-y-8">
                         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
-                            <h2 className="text-xl font-bold mb-4">Config Submission Form</h2>
+                            <h2 className="text-xl font-bold mb-2">Config Submission Form</h2>
                             <p className="text-sm text-muted-foreground">Design the fields authors must fill out when submitting papers.</p>
                         </div>
                         <FormBuilder
@@ -575,7 +594,7 @@ export default function ConferenceUpdatePage() {
                 return (
                     <div className="space-y-8">
                         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
-                            <h2 className="text-xl font-bold mb-4">Config Review Form</h2>
+                            <h2 className="text-xl font-bold mb-2">Config Review Form</h2>
                             <p className="text-sm text-muted-foreground">Configure the questions reviewers must answer for each track.</p>
                         </div>
                         <ReviewQuestionsList conferenceId={conferenceId} />
@@ -583,13 +602,42 @@ export default function ConferenceUpdatePage() {
                 )
 
             case 'features-activity-timeline':
+                return <ActivityTimeline conferenceId={conferenceId} onNavigate={(tab) => setActiveTab(tab as any)} />
+
+            case 'reg-ticket-types':
+                return <TicketTypesConfig conferenceId={conferenceId} />
+
+            case 'reg-attendees':
                 return (
-                    <div className="space-y-8">
+                    <div className="space-y-6">
                         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
-                            <h2 className="text-xl font-bold mb-4">Activity Timeline</h2>
-                            <p className="text-sm text-muted-foreground">Manage timelines and toggle module availability for this conference.</p>
+                            <h2 className="text-xl font-bold mb-2">Attendees</h2>
+                            <p className="text-sm text-muted-foreground">View and manage all registered attendees.</p>
                         </div>
-                        <ActivityTimeline conferenceId={conferenceId} onNavigate={(tab) => setActiveTab(tab as any)} />
+                        <AttendeesManagement conferenceId={conferenceId} />
+                    </div>
+                )
+
+            case 'reg-checkin':
+                return (
+                    <div className="space-y-6">
+                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
+                            <h2 className="text-xl font-bold mb-2">Check-In Scanner</h2>
+                            <p className="text-sm text-muted-foreground">Scan QR codes or enter registration numbers to check in attendees on-site.</p>
+                        </div>
+                        {/* Inline check-in component */}
+                        <CheckInInline conferenceId={conferenceId} />
+                    </div>
+                )
+
+            case 'reg-payment-history':
+                return (
+                    <div className="space-y-6">
+                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
+                            <h2 className="text-xl font-bold mb-2">Payment History</h2>
+                            <p className="text-sm text-muted-foreground">Full audit trail of all VNPay callbacks for this conference.</p>
+                        </div>
+                        <PaymentHistoryView conferenceId={conferenceId} />
                     </div>
                 )
 
@@ -622,203 +670,52 @@ export default function ConferenceUpdatePage() {
                     {/* Sidebar Navigation */}
                     <div className="md:w-72 shrink-0 bg-muted/5 border-r flex flex-col h-full overflow-hidden">
                         <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                            {/* Workflow Progress */}
-                            {(() => {
-                                const trackableItems = TAB_GROUPS.flatMap(g => g.items).filter(i => i.completionKey)
-                                const doneCount = trackableItems.filter(i => workflowStatus[i.completionKey]).length
-                                const totalCount = trackableItems.length
-                                const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
-                                return (
-                                    <div className="mb-5 px-1">
-                                        <div className="flex items-center justify-between mb-1.5">
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Workflow</span>
-                                            <span className={`text-[10px] font-bold ${pct === 100 ? 'text-emerald-600' : 'text-muted-foreground'}`}>{doneCount}/{totalCount}</span>
+                            <nav className="space-y-1">
+                                {TAB_GROUPS.map((group) => {
+                                    const isExpanded = expandedGroups.includes(group.title)
+                                    const isGroupActive = group.items.some(i => activeTab === i.key)
+                                    return (
+                                        <div key={group.title}>
+                                            <button
+                                                onClick={() => setExpandedGroups(prev =>
+                                                    isExpanded ? prev.filter(t => t !== group.title) : [...prev, group.title]
+                                                )}
+                                                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-sm font-bold transition-colors
+                                                    ${isGroupActive ? 'text-primary' : 'text-foreground hover:text-primary'}`}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <span className={group.accentColor}>{group.icon}</span>
+                                                    <span className="uppercase tracking-wider text-xs">{group.title}</span>
+                                                </div>
+                                                {isExpanded ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
+                                            </button>
+                                            {isExpanded && (
+                                                <div className="flex flex-col space-y-0.5 mt-0.5 pl-3 border-l ml-4 border-border/50">
+                                                    {group.items.map(item => {
+                                                        const isActive = activeTab === item.key
+                                                        return (
+                                                            <button
+                                                                key={item.key}
+                                                                onClick={() => setActiveTab(item.key as SettingsTab)}
+                                                                className={`w-full text-left px-2.5 py-1.5 rounded-md text-sm transition-colors
+                                                                    ${isActive
+                                                                        ? 'bg-primary/10 text-primary font-semibold'
+                                                                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                                                    }`}
+                                                            >
+                                                                {item.label}
+                                                            </button>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
-                                            <div
-                                                className={`h-full rounded-full transition-all duration-700 ${pct === 100 ? 'bg-emerald-500' : 'bg-primary'}`}
-                                                style={{ width: `${pct}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                )
-                            })()}
-
-                            <nav>
-                                {(() => {
-                                    // Compute step completion: find the last consecutively completed step
-                                    const steppedGroups = TAB_GROUPS.filter(g => g.title !== 'Overview')
-                                    const groupCompletionMap = steppedGroups.map(group => {
-                                        const trackable = group.items.filter(i => i.completionKey)
-                                        return trackable.length > 0 ? trackable.every(i => workflowStatus[i.completionKey]) : false
-                                    })
-                                    // Find last consecutive completed step index
-                                    let lastCompletedStep = -1
-                                    for (let i = 0; i < groupCompletionMap.length; i++) {
-                                        if (groupCompletionMap[i]) lastCompletedStep = i
-                                        else break
-                                    }
-
-                                    let stepNumber = 0
-
-                                    return TAB_GROUPS.map((group, groupIdx) => {
-                                        const isExpanded = expandedGroups.includes(group.title)
-                                        const trackable = group.items.filter(i => i.completionKey)
-                                        const groupDone = trackable.length > 0 && trackable.every(i => workflowStatus[i.completionKey])
-                                        const isOverview = group.title === 'Overview'
-
-                                        // Step number (skip Overview)
-                                        if (!isOverview) stepNumber++
-                                        const currentStep = stepNumber
-                                        const isLastGroup = groupIdx === TAB_GROUPS.length - 1
-
-                                        // Is any item in this group currently active?
-                                        const isGroupActive = group.items.some(i => activeTab === i.key)
-
-                                        // Progress line color: green if this step is completed
-                                        const lineCompleted = !isOverview && currentStep <= lastCompletedStep + 1
-
-                                        if (isOverview) {
-                                            // Overview: render without step number, keep original style
-                                            return (
-                                                <div key={group.title} className="mb-4">
-                                                    <button
-                                                        onClick={() => setExpandedGroups(prev =>
-                                                            isExpanded ? prev.filter(t => t !== group.title) : [...prev, group.title]
-                                                        )}
-                                                        className="w-full flex items-center justify-between px-2 py-2 text-sm font-bold text-foreground hover:text-primary transition-colors"
-                                                    >
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={group.accentColor}>{group.icon}</span>
-                                                            <span className="uppercase tracking-wider text-xs">{group.title}</span>
-                                                        </div>
-                                                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                                    </button>
-                                                    {isExpanded && (
-                                                        <div className="flex flex-col space-y-0.5 mt-1 pl-2 border-l ml-3 border-border/50">
-                                                            {group.items.map(item => {
-                                                                const isActive = activeTab === item.key
-                                                                return (
-                                                                    <button
-                                                                        key={item.key}
-                                                                        onClick={() => setActiveTab(item.key as SettingsTab)}
-                                                                        className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-left text-sm transition-colors
-                                                                            ${isActive
-                                                                                ? 'bg-primary/10 text-primary font-semibold'
-                                                                                : 'text-muted-foreground/60 hover:bg-muted hover:text-foreground'
-                                                                            }`}
-                                                                    >
-                                                                        <span className="truncate">{item.label}</span>
-                                                                    </button>
-                                                                )
-                                                            })}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )
-                                        }
-
-                                        // Stepped groups
-                                        const isGroupLocked = group.items.every(i => i.completionKey ? stepAccessMap[i.key] === 'locked' : false)
-                                        return (
-                                            <div key={group.title} className="relative flex">
-                                                {/* Left: Step number circle + vertical line */}
-                                                <div className="flex flex-col items-center mr-3 shrink-0" style={{ width: '28px' }}>
-                                                    {/* Step circle */}
-                                                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 shrink-0 transition-all duration-300 ${
-                                                        groupDone
-                                                            ? 'bg-emerald-500 border-emerald-500 text-white'
-                                                            : isGroupLocked
-                                                                ? 'bg-muted border-muted-foreground/15 text-muted-foreground/30'
-                                                                : isGroupActive
-                                                                    ? 'bg-primary border-primary text-white'
-                                                                    : 'bg-background border-muted-foreground/30 text-muted-foreground'
-                                                    }`}>
-                                                        {groupDone ? (
-                                                            <CheckCircle2 className="h-4 w-4" />
-                                                        ) : isGroupLocked ? (
-                                                            <Lock className="h-3 w-3" />
-                                                        ) : (
-                                                            currentStep
-                                                        )}
-                                                    </div>
-                                                    {/* Vertical line */}
-                                                    {!isLastGroup && (
-                                                        <div className={`w-0.5 flex-1 mt-1 rounded-full transition-all duration-500 ${
-                                                            lineCompleted ? 'bg-emerald-400' : 'bg-muted-foreground/15'
-                                                        }`} />
-                                                    )}
-                                                </div>
-
-                                                {/* Right: Group content */}
-                                                <div className="flex-1 pb-5 min-w-0">
-                                                    <button
-                                                        onClick={() => setExpandedGroups(prev =>
-                                                            isExpanded ? prev.filter(t => t !== group.title) : [...prev, group.title]
-                                                        )}
-                                                        className="w-full flex items-center justify-between py-1 text-sm font-bold text-foreground hover:text-primary transition-colors"
-                                                    >
-                                                        <div className="flex items-center gap-1.5 min-w-0">
-                                                            <span className="uppercase tracking-wider text-xs truncate">{group.title}</span>
-                                                            {trackable.length > 0 && (
-                                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
-                                                                    groupDone
-                                                                        ? 'bg-emerald-100 text-emerald-700'
-                                                                        : 'bg-muted text-muted-foreground'
-                                                                }`}>{trackable.filter(i => workflowStatus[i.completionKey]).length}/{trackable.length}</span>
-                                                            )}
-                                                        </div>
-                                                        {isExpanded ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
-                                                    </button>
-
-                                                    {isExpanded && (
-                                                        <div className="flex flex-col space-y-0.5 mt-1">
-                                                            {group.items.map(item => {
-                                                                const isDone = item.completionKey ? workflowStatus[item.completionKey] : false
-                                                                const isActive = activeTab === item.key
-                                                                const access = item.completionKey ? stepAccessMap[item.key] : 'active'
-                                                                const isLocked = access === 'locked'
-                                                                return (
-                                                                    <button
-                                                                        key={item.key}
-                                                                        onClick={() => !isLocked && setActiveTab(item.key as SettingsTab)}
-                                                                        disabled={isLocked}
-                                                                        title={isLocked ? 'Complete previous steps first' : isDone ? 'Completed (view only)' : undefined}
-                                                                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-left text-sm transition-colors
-                                                                            ${isLocked
-                                                                                ? 'text-muted-foreground/30 cursor-not-allowed'
-                                                                                : isActive
-                                                                                    ? 'bg-primary/10 text-primary font-semibold'
-                                                                                    : isDone
-                                                                                        ? 'text-foreground hover:bg-muted'
-                                                                                        : 'text-muted-foreground/60 hover:bg-muted hover:text-foreground'
-                                                                            }`}
-                                                                    >
-                                                                        {isLocked ? (
-                                                                            <Lock className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />
-                                                                        ) : item.completionKey ? (
-                                                                            isDone ? (
-                                                                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                                                                            ) : (
-                                                                                <Circle className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />
-                                                                            )
-                                                                        ) : null}
-                                                                        <span className={`truncate ${isLocked ? '' : isDone ? 'font-medium' : ''}`}>
-                                                                            {item.label}
-                                                                        </span>
-                                                                    </button>
-                                                                )
-                                                            })}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )
-                                    })
-                                })()}
+                                    )
+                                })}
                             </nav>
                         </div>
                     </div>
+
 
                     {/* Main Content Area - Scrollable */}
                     <div className="flex-1 min-w-0 bg-background overflow-hidden flex flex-col h-full">
