@@ -20,6 +20,7 @@ import toast from "react-hot-toast"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { V } from "@/lib/validation"
 import { ExcelImport } from "@/components/excel-import"
 import { downloadSubjectAreaTemplate, previewSubjectAreaImport, importSubjectAreas } from "@/app/api/conference.api"
 import {
@@ -99,6 +100,16 @@ export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
     const handleAddSingle = async () => {
         if (!newName.trim()) {
             setNameError('Subject Area name is required.')
+            return
+        }
+        const nameErr = V.maxLen(newName, 200)
+        if (nameErr) {
+            setNameError(nameErr)
+            return
+        }
+        const descErr = V.maxLen(newDesc, 2000)
+        if (descErr) {
+            toast.error(descErr)
             return
         }
         if (!selectedTrackId) return

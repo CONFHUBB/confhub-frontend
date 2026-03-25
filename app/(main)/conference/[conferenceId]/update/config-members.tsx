@@ -71,6 +71,7 @@ import {
     CheckSquare,
 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
+import { V } from "@/lib/validation"
 
 // ── Role constants ──────────────────────────────────────
 const ROLE_OPTIONS = [
@@ -514,6 +515,13 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
         const email = searchEmail.trim()
         if (!email) return
 
+        const emailErr = V.email(email)
+        if (emailErr) {
+            setSearchError(emailErr)
+            setShowExternalInvite(false)
+            return
+        }
+
         setIsSearching(true)
         setSearchResult(null)
         setSearchError(null)
@@ -831,6 +839,11 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                                     (TRACK_BOUND_ROLES.includes(externalRole) && !externalTrackId)
                                                 }
                                                 onClick={async () => {
+                                                    const nameErr = V.maxLen(externalName.trim(), 100)
+                                                    if (nameErr) {
+                                                        toast.error(`Recipient Name: ${nameErr}`)
+                                                        return
+                                                    }
                                                     if (TRACK_BOUND_ROLES.includes(externalRole) && !externalTrackId) {
                                                         toast.error("Please select a track for this role.")
                                                         return

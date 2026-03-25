@@ -1,25 +1,27 @@
 "use client"
 
 import { useState } from "react"
-import { Gavel as GavelIcon, Bell } from "lucide-react"
+import { Gavel as GavelIcon, Bell, Users } from "lucide-react"
 
 // Sub-tab components
 import { ReviewerAssignment } from "./reviewer-assignment"
 import { AuthorNotificationWizard } from "./author-notification-wizard"
+import { BiddingManagement } from "./bidding-management"
 
 interface ReviewManagementProps {
     conferenceId: number
 }
 
-type SubTab = "bidding-assignment" | "aggregates"
+type SubTab = "manage-reviewers" | "bidding-assignment" | "aggregates"
 
 const SUB_TABS: { key: SubTab; label: string; icon: React.ReactNode }[] = [
+    { key: "manage-reviewers", label: "Manage Reviewers", icon: <Users className="h-4 w-4" /> },
     { key: "bidding-assignment", label: "Bidding & Assignment", icon: <GavelIcon className="h-4 w-4" /> },
     { key: "aggregates", label: "Assessment & Notification", icon: <Bell className="h-4 w-4" /> },
 ]
 
 export function ReviewManagement({ conferenceId }: ReviewManagementProps) {
-    const [activeTab, setActiveTab] = useState<SubTab>("bidding-assignment")
+    const [activeTab, setActiveTab] = useState<SubTab>("manage-reviewers")
 
     return (
         <div className="space-y-6">
@@ -27,7 +29,7 @@ export function ReviewManagement({ conferenceId }: ReviewManagementProps) {
             <div>
                 <h2 className="text-xl font-bold mb-1">Review Management</h2>
                 <p className="text-sm text-muted-foreground">
-                    Manage bidding, assign reviewers, and handle assessment notifications.
+                    Manage reviewers, bidding, assign reviewers, and handle assessment notifications.
                 </p>
             </div>
 
@@ -51,6 +53,9 @@ export function ReviewManagement({ conferenceId }: ReviewManagementProps) {
 
             {/* Tab Content */}
             <div>
+                {activeTab === "manage-reviewers" && (
+                    <BiddingManagement conferenceId={conferenceId} />
+                )}
                 {activeTab === "bidding-assignment" && (
                     <ReviewerAssignment conferenceId={conferenceId} />
                 )}

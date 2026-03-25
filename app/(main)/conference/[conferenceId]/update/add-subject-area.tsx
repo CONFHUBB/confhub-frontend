@@ -15,6 +15,7 @@ import {
     FieldLegend,
     FieldSet,
 } from "@/components/ui/field"
+import { V, validate as validateField } from "@/lib/validation"
 import { FileText, Plus, Trash2, Type, Layers } from "lucide-react"
 
 interface AddSubjectAreaProps {
@@ -68,8 +69,11 @@ export function AddSubjectArea({ initialSubjectAreas, onSubmit }: AddSubjectArea
     const validate = () => {
         const newErrors: Record<string, string> = {}
         subjectAreas.forEach((sa) => {
-            if (!sa.name.trim())
-                newErrors[`name_${sa.id}`] = "Subject Area name is required."
+            const nameErr = validateField(sa.name, V.required, (v) => V.maxLen(v, 200))
+            if (nameErr) newErrors[`name_${sa.id}`] = nameErr
+            
+            const descErr = V.maxLen(sa.description, 2000)
+            if (descErr) newErrors[`description_${sa.id}`] = descErr
         })
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
@@ -183,7 +187,7 @@ export function AddSubjectArea({ initialSubjectAreas, onSubmit }: AddSubjectArea
                                 </Field>
 
                                 {/* Description */}
-                                <Field>
+                                <Field data-invalid={!!errors[`description_${sa.id}`] || undefined}>
                                     <FieldLabel className="text-base font-semibold">
                                         <FileText className="size-4" />
                                         Description
@@ -204,6 +208,11 @@ export function AddSubjectArea({ initialSubjectAreas, onSubmit }: AddSubjectArea
                                     <FieldDescription>
                                         A brief description of what this covers.
                                     </FieldDescription>
+                                    {errors[`description_${sa.id}`] && (
+                                        <FieldError>
+                                            {errors[`description_${sa.id}`]}
+                                        </FieldError>
+                                    )}
                                 </Field>
                             </FieldGroup>
                         </div>

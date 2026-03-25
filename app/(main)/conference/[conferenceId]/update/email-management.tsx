@@ -23,6 +23,7 @@ import {
     Clock, CheckCircle2, XCircle, AlertCircle
 } from "lucide-react"
 import toast from "react-hot-toast"
+import { V } from "@/lib/validation"
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
     pending: { label: "Pending", color: "bg-amber-100 text-amber-800", icon: <Clock className="h-3.5 w-3.5" /> },
@@ -111,6 +112,16 @@ export function EmailManagementInline({ conferenceId }: EmailManagementInlinePro
     }
 
     const handleSendBulkEmail = async () => {
+        const subjErr = V.maxLen(bulkSubject, 200)
+        if (subjErr) {
+            toast.error(`Subject: ${subjErr}`)
+            return
+        }
+        const bodyErr = V.maxLen(bulkBody, 5000)
+        if (bodyErr) {
+            toast.error(`Body: ${bodyErr}`)
+            return
+        }
         if (!bulkSubject.trim() || !bulkBody.trim()) {
             toast.error("Please fill in both subject and body")
             return

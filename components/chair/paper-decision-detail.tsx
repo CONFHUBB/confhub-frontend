@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, ChevronDown, ChevronUp, MessageSquare, User } from 'lucide-react'
+import { V } from '@/lib/validation'
 
 interface Props {
     paperId: number
@@ -90,6 +91,11 @@ export default function PaperDecisionDetail({ paperId, conferenceId, userId, exi
     }
 
     const handleSave = async () => {
+        const reasonErr = V.minLen(reason.trim(), 10)
+        if (reasonErr) {
+            alert(`Decision Reason: ${reasonErr}`)
+            return
+        }
         if (!reason.trim()) return
         try {
             setSaving(true)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,6 +13,7 @@ import { activateAccount } from "@/app/api/account.api"
 import { createOrUpdateUserProfile } from "@/app/api/user.api"
 import type { UserProfileRequest } from "@/types/user"
 import toast from "react-hot-toast"
+import { V, validate } from "@/lib/validation"
 
 const USER_TYPES = [
     { value: "academia", label: "Academia" },
@@ -25,6 +26,14 @@ const USER_TYPES = [
 type Step = "activate" | "profile" | "done"
 
 export default function ActivatePage() {
+    return (
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+            <ActivateContent />
+        </Suspense>
+    )
+}
+
+function ActivateContent() {
     const searchParams = useSearchParams()
     const router = useRouter()
     const emailParam = searchParams.get("email") || ""
@@ -51,16 +60,25 @@ export default function ActivatePage() {
     const [department, setDepartment] = useState("")
     const [institutionCountry, setInstitutionCountry] = useState("")
 
+    // Validation errors
+    const [errors, setErrors] = useState<Record<string, string>>({})
+    const clearErr = (field: string) => setErrors(p => { const n = {...p}; delete n[field]; return n })
+
     const handleActivate = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (newPassword !== confirmPassword) {
-            toast.error("Passwords do not match")
-            return
+        const errs: Record<string, string> = {}
+        const fnErr = validate(firstName, V.required, (v) => V.maxLen(v, 50))
+        if (fnErr) errs.firstName = fnErr
+        const lnErr = validate(lastName, V.required, (v) => V.maxLen(v, 50))
+        if (lnErr) errs.lastName = lnErr
+        const pwErr = validate(newPassword, V.required, V.password)
+        if (pwErr) errs.newPassword = pwErr
+        if (!errs.newPassword) {
+            const mErr = V.matchField(newPassword, confirmPassword)
+            if (mErr) errs.confirmPassword = mErr
         }
-        if (newPassword.length < 6) {
-            toast.error("Password must be at least 6 characters")
-            return
-        }
+        if (Object.keys(errs).length > 0) { setErrors(errs); return }
+        setErrors({})
 
         setIsLoading(true)
         try {
@@ -89,6 +107,15 @@ export default function ActivatePage() {
     const handleProfileSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!userId) return
+        const errs: Record<string, string> = {}
+        const jtErr = V.maxLen(jobTitle, 100)
+        if (jtErr) errs.jobTitle = jtErr
+        const instErr = V.maxLen(institution, 200)
+        if (instErr) errs.institution = instErr
+        const deptErr = V.maxLen(department, 200)
+        if (deptErr) errs.department = deptErr
+        if (Object.keys(errs).length > 0) { setErrors(errs); return }
+        setErrors({})
 
         setIsLoading(true)
         try {
@@ -189,9 +216,10 @@ export default function ActivatePage() {
                                             id="firstName"
                                             placeholder="John"
                                             value={firstName}
-                                            onChange={(e) => setFirstName(e.target.value)}
+                                            onChange={(e) => { setFirstName(e.target.value); clearErr('firstName') }}
                                             required
                                         />
+                                        {errors.firstName && <p className="text-xs text-red-500 mt-1">{errors.firstName}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="lastName">Last Name</Label>
@@ -199,9 +227,10 @@ export default function ActivatePage() {
                                             id="lastName"
                                             placeholder="Doe"
                                             value={lastName}
-                                            onChange={(e) => setLastName(e.target.value)}
+                                            onChange={(e) => { setLastName(e.target.value); clearErr('lastName') }}
                                             required
                                         />
+                                        {errors.lastName && <p className="text-xs text-red-500 mt-1">{errors.lastName}</p>}
                                     </div>
                                 </div>
 
@@ -212,10 +241,11 @@ export default function ActivatePage() {
                                         type="password"
                                         placeholder="At least 6 characters"
                                         value={newPassword}
-                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        onChange={(e) => { setNewPassword(e.target.value); clearErr('newPassword') }}
                                         minLength={6}
                                         required
                                     />
+                                    {errors.newPassword && <p className="text-xs text-red-500 mt-1">{errors.newPassword}</p>}
                                 </div>
 
                                 <div className="space-y-2">
@@ -225,9 +255,10 @@ export default function ActivatePage() {
                                         type="password"
                                         placeholder="Re-enter your password"
                                         value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        onChange={(e) => { setConfirmPassword(e.target.value); clearErr('confirmPassword') }}
                                         required
                                     />
+                                    {errors.confirmPassword && <p className="text-xs text-red-500 mt-1">{errors.confirmPassword}</p>}
                                 </div>
 
                                 <Button type="submit" className="w-full" disabled={isLoading}>
@@ -275,8 +306,9 @@ export default function ActivatePage() {
                                             id="profileJobTitle"
                                             placeholder="e.g. Professor"
                                             value={jobTitle}
-                                            onChange={(e) => setJobTitle(e.target.value)}
+                                            onChange={(e) => { setJobTitle(e.target.value); clearErr('jobTitle') }}
                                         />
+                                        {errors.jobTitle && <p className="text-xs text-red-500 mt-1">{errors.jobTitle}</p>}
                                     </div>
                                 </div>
 
@@ -286,8 +318,9 @@ export default function ActivatePage() {
                                         id="profileInstitution"
                                         placeholder="e.g. FPT University"
                                         value={institution}
-                                        onChange={(e) => setInstitution(e.target.value)}
+                                        onChange={(e) => { setInstitution(e.target.value); clearErr('institution') }}
                                     />
+                                    {errors.institution && <p className="text-xs text-red-500 mt-1">{errors.institution}</p>}
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
@@ -297,8 +330,9 @@ export default function ActivatePage() {
                                             id="profileDepartment"
                                             placeholder="e.g. Computer Science"
                                             value={department}
-                                            onChange={(e) => setDepartment(e.target.value)}
+                                            onChange={(e) => { setDepartment(e.target.value); clearErr('department') }}
                                         />
+                                        {errors.department && <p className="text-xs text-red-500 mt-1">{errors.department}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Country</Label>

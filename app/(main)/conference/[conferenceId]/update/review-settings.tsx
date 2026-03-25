@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch"
 import { Loader2, Copy, Save } from "lucide-react"
 import toast from "react-hot-toast"
 import { Select } from "antd"
+import { V } from "@/lib/validation"
 
 interface ReviewSettingsProps {
     conferenceId: number
@@ -87,6 +88,12 @@ export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
     }, [selectedTrackId])
 
     const handleSave = async () => {
+        const instrErr = V.maxLen(settings.reviewerInstructions || "", 5000)
+        if (instrErr) {
+            toast.error(`Instructions: ${instrErr}`)
+            return
+        }
+
         if (!selectedTrackId) return
         setIsSaving(true)
         try {

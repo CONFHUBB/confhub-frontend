@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
 import { cn } from "@/lib/utils"
+import { V, validate } from "@/lib/validation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -23,10 +24,18 @@ export function LoginForm({
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const router = useRouter()
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const errs: Record<string, string> = {}
+    const emailErr = validate(email, V.required, V.email)
+    if (emailErr) errs.email = emailErr
+    const passErr = validate(password, V.required, (v) => V.minLen(v, 6))
+    if (passErr) errs.password = passErr
+    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    setErrors({})
 
     setIsLoading(true)
     try {
@@ -62,10 +71,10 @@ export function LoginForm({
                   id="email"
                   type="email"
                   placeholder="m@example.com"
-                  required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); setErrors(p => { const n = {...p}; delete n.email; return n }) }}
                 />
+                {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
               </Field>
               <Field>
                 <div className="flex items-center">
@@ -80,10 +89,10 @@ export function LoginForm({
                 <Input
                   id="password"
                   type="password"
-                  required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); setErrors(p => { const n = {...p}; delete n.password; return n }) }}
                 />
+                {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
               </Field>
               <Field>
                 <Button type="submit" disabled={isLoading}>

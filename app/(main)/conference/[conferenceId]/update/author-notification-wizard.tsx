@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Loader2, BarChart3, Bell, Send, ChevronDown, ChevronRight } from "lucide-react"
 import { Select } from "antd"
 import toast from "react-hot-toast"
+import { V } from "@/lib/validation"
 
 interface AuthorNotificationWizardProps {
     conferenceId: number
@@ -50,6 +51,14 @@ export function AuthorNotificationWizard({ conferenceId }: AuthorNotificationWiz
     }, [conferenceId])
 
     const handleSend = async () => {
+        const statuses = ["ACCEPTED", "REJECTED", "REVISION"]
+        for (const s of statuses) {
+            const err = V.minLen(messagePerStatus[s] || "", 10)
+            if (err) {
+                toast.error(`Message for ${s}: ${err}`)
+                return
+            }
+        }
         setIsSending(true)
         try {
             const request: AuthorNotificationRequest = {
