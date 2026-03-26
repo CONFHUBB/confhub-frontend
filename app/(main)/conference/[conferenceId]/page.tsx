@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
     Calendar, MapPin, ExternalLink, Loader2, ArrowLeft, Settings,
-    Globe, Phone, FileText, Clock, Send, Ticket
+    Globe, Phone, FileText, Clock, Send, Ticket, BookOpen
 } from 'lucide-react'
 import Link from 'next/link'
 import { isActivityOpen } from '@/lib/activity'
@@ -273,16 +273,16 @@ export default function ConferenceDetailsPage() {
                     )}
                     {/* Registration CTAs — visible to all authenticated users */}
                     <div className="flex gap-3 pt-2 flex-wrap">
-                        <Link href={`/conference/${conferenceId}/register`}>
-                            <Button className="gap-2">
-                                <Ticket className="h-4 w-4" />
-                                Register to Attend
+                        <Link href={`/conference/${conferenceId}/author`}>
+                            <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700">
+                                <BookOpen className="h-4 w-4" />
+                                Author Workspace
                             </Button>
                         </Link>
-                        <Link href={`/conference/${conferenceId}/my-ticket`}>
+                        <Link href={`/conference/${conferenceId}/register`}>
                             <Button variant="outline" className="gap-2">
-                                <FileText className="h-4 w-4" />
-                                My Ticket
+                                <Ticket className="h-4 w-4" />
+                                Register to Attend
                             </Button>
                         </Link>
                         <Link href={`/conference/${conferenceId}/program`}>

@@ -9,10 +9,11 @@ export interface CameraReadyFile {
     isRevision: boolean
 }
 
-export const uploadCameraReady = async (conferenceId: number, paperId: number, file: File): Promise<CameraReadyFile> => {
+export const uploadCameraReady = async (conferenceId: number, paperId: number, userId: number, file: File): Promise<CameraReadyFile> => {
     const formData = new FormData()
     formData.append('conferenceId', conferenceId.toString())
     formData.append('paperId', paperId.toString())
+    formData.append('userId', userId.toString())
     formData.append('file', file)
 
     const response = await http.post<CameraReadyFile>('/paper-file/upload-camera-ready', formData, {
