@@ -4,7 +4,12 @@ import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useState } from "react"
-import { DynamicField, DynamicFieldType, FormDefinition } from "@/types/submission-form"
+import {
+    DynamicField,
+    FormDefinition,
+    QuestionType,
+    DEFAULT_FIXED_FIELDS,
+} from "@/types/submission-form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -20,8 +25,9 @@ export interface FormRendererProps {
     isSubmitting?: boolean
 }
 
+// ─── Schema generation ────────────────────────────────────────────────────────
 const generateSchema = (fields: DynamicField[]) => {
-    const schemaShape: Record<string, any> = {
+    const shape: Record<string, any> = {
         title: z.string().min(1, { message: "Title is required" }).max(150, { message: "Maximum 150 characters" }),
         abstractField: z.string().min(1, { message: "Abstract is required" }).refine((val) => {
             const wordCount = val.trim().split(/\s+/).filter(w => w.length > 0).length
@@ -30,44 +36,55 @@ const generateSchema = (fields: DynamicField[]) => {
     }
 
     fields.forEach((field) => {
-        if (field.type === DynamicFieldType.CHECKBOX) {
-            if (field.required) {
-                schemaShape[field.id] = z.boolean().refine((val) => val === true, {
-                    message: "This field is required",
-                })
-            } else {
-                schemaShape[field.id] = z.boolean().optional()
-            }
-        } else {
-            let fieldSchema = z.string()
-            if (field.required) {
-                fieldSchema = fieldSchema.min(1, { message: "This field is required" })
-            } else {
-                fieldSchema = fieldSchema.optional() as any
-            }
-            schemaShape[field.id] = fieldSchema
+        const isChoice = field.type === QuestionType.OPTIONS || field.type === QuestionType.OPTIONS_WITH_VALUE
+        switch (field.type) {
+            case QuestionType.AGREEMENT:
+            case QuestionType.CHECKBOX:
+                shape[field.id] = field.required
+                    ? z.boolean().refine(v => v === true, { message: "This field is required" })
+                    : z.boolean().optional()
+                break
+            case QuestionType.COMMENT:
+            case QuestionType.TEXT:
+            case QuestionType.TEXTAREA:
+                shape[field.id] = field.required
+                    ? z.string().min(1, { message: "This field is required" })
+                          .max(field.maxLength ?? 5000, { message: `Maximum ${field.maxLength ?? 5000} characters` })
+                    : z.string().optional()
+                break
+            case QuestionType.OPTIONS:
+            case QuestionType.OPTIONS_WITH_VALUE:
+            case QuestionType.SELECT:
+            default:
+                shape[field.id] = field.required
+                    ? z.string().min(1, { message: "Please select an option" })
+                    : z.string().optional()
         }
     })
-
-    return z.object(schemaShape)
+    return z.object(shape)
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
 export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false }: FormRendererProps) {
     const [keywords, setKeywords] = useState<string[]>([])
     const [keywordInput, setKeywordInput] = useState("")
     const [keywordError, setKeywordError] = useState("")
 
-    let fields: DynamicField[] = []
-
+    // Parse form definition
+    let formDef: FormDefinition = { fields: [] }
     try {
-        if (definitionJson) {
-            const parsed = JSON.parse(definitionJson) as FormDefinition
-            fields = parsed.fields || []
-        }
-    } catch (err) {
-        console.error("Failed to parse form definition:", err)
+        if (definitionJson) formDef = JSON.parse(definitionJson) as FormDefinition
+    } catch {
+        // fallback to empty
     }
 
+    const fields = formDef.fields ?? []
+    const fixed = formDef.fixedFields ?? DEFAULT_FIXED_FIELDS
+    const kwMin = fixed.keywords.minCount ?? 1
+    const kwMax = fixed.keywords.maxCount ?? 10
+    const kwRequired = fixed.keywords.required
+
+    // Build schema + form
     const schema = generateSchema(fields)
     type FormData = z.infer<typeof schema>
 
@@ -76,49 +93,45 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false }:
         defaultValues: {
             title: "",
             abstractField: "",
-            ...fields.reduce((acc, field) => {
-                acc[field.id] = field.type === DynamicFieldType.CHECKBOX ? false : ""
+            ...fields.reduce((acc, f) => {
+                acc[f.id] = (f.type === QuestionType.AGREEMENT || f.type === QuestionType.CHECKBOX)
+                    ? false : ""
                 return acc
-            }, {} as any)
+            }, {} as any),
         }
     })
 
     const { formState: { errors } } = form
 
+    // ── Keywords helpers ──
     const addKeyword = () => {
         const trimmed = keywordInput.trim()
         if (!trimmed) return
-        if (keywords.includes(trimmed)) {
-            setKeywordError("This keyword already exists")
-            return
-        }
-        if (keywords.length >= 4) {
-            setKeywordError("Maximum 4 keywords allowed")
-            return
-        }
-        setKeywords((prev) => [...prev, trimmed])
+        if (keywords.includes(trimmed)) { setKeywordError("This keyword already exists"); return }
+        if (keywords.length >= kwMax) { setKeywordError(`Maximum ${kwMax} keywords allowed`); return }
+        setKeywords(p => [...p, trimmed])
         setKeywordInput("")
         setKeywordError("")
     }
 
-    const removeKeyword = (index: number) => {
-        setKeywords((prev) => prev.filter((_, i) => i !== index))
-    }
+    const removeKeyword = (i: number) => setKeywords(p => p.filter((_, idx) => idx !== i))
 
     const handleKeywordKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === "Enter") {
-            e.preventDefault()
-            addKeyword()
-        }
+        if (e.key === "Enter") { e.preventDefault(); addKeyword() }
     }
 
+    // ── Submit ──
     const handleSubmit = (data: FormData) => {
-        if (keywords.length === 0) {
+        if (kwRequired && keywords.length === 0) {
             setKeywordError("At least one keyword is required")
             return
         }
-        if (keywords.length > 4) {
-            setKeywordError("Maximum 4 keywords allowed")
+        if (keywords.length < kwMin) {
+            setKeywordError(`Minimum ${kwMin} keyword${kwMin > 1 ? 's' : ''} required`)
+            return
+        }
+        if (keywords.length > kwMax) {
+            setKeywordError(`Maximum ${kwMax} keywords allowed`)
             return
         }
         setKeywordError("")
@@ -130,23 +143,22 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false }:
         }
 
         const extraAnswers: Record<string, any> = {}
-        fields.forEach((field) => {
-            extraAnswers[field.id] = data[field.id]
-        })
+        fields.forEach(f => { extraAnswers[f.id] = (data as any)[f.id] })
 
         onSubmit(fixedData, JSON.stringify(extraAnswers))
     }
 
     return (
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            {/* Title */}
+
+            {/* ── Title ── */}
             <div className="space-y-2">
                 <Label htmlFor="title">Title <span className="text-destructive">*</span></Label>
                 <Input id="title" {...form.register("title")} placeholder="Title of paper (up to 150 characters)" />
                 {errors.title && <p className="text-sm text-destructive">{errors.title.message as string}</p>}
             </div>
 
-            {/* Abstract */}
+            {/* ── Abstract ── */}
             <div className="space-y-2">
                 <Label htmlFor="abstractField">Abstract <span className="text-destructive">*</span></Label>
                 <Textarea
@@ -158,9 +170,15 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false }:
                 {errors.abstractField && <p className="text-sm text-destructive">{errors.abstractField.message as string}</p>}
             </div>
 
-            {/* Keywords — Tag Input */}
+            {/* ── Keywords — Tag Input ── */}
             <div className="space-y-3">
-                <Label>Keywords <span className="text-destructive">*</span></Label>
+                <Label>
+                    Keywords{" "}
+                    {kwRequired && <span className="text-destructive">*</span>}
+                    <span className="ml-2 text-xs text-muted-foreground font-normal">
+                        {kwMin > 0 ? `${kwMin}–` : "Up to "}{kwMax}
+                    </span>
+                </Label>
                 {keywords.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                         {keywords.map((kw, i) => (
@@ -180,82 +198,102 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false }:
                 <div className="flex gap-2">
                     <Input
                         value={keywordInput}
-                        onChange={(e) => { setKeywordInput(e.target.value); setKeywordError("") }}
+                        onChange={e => { setKeywordInput(e.target.value); setKeywordError("") }}
                         onKeyDown={handleKeywordKeyDown}
                         placeholder="Type a keyword and press Enter"
                         className="flex-1"
+                        disabled={keywords.length >= kwMax}
                     />
-                    <Button type="button" variant="outline" onClick={addKeyword} className="shrink-0">
+                    <Button type="button" variant="outline" onClick={addKeyword} className="shrink-0" disabled={keywords.length >= kwMax}>
                         Add
                     </Button>
                 </div>
                 {keywordError && <p className="text-sm text-destructive">{keywordError}</p>}
-                <p className="text-xs text-muted-foreground">Press Enter or click Add to add each keyword.</p>
+                <p className="text-xs text-muted-foreground">
+                    {keywords.length}/{kwMax} keywords added. Press Enter or click Add.
+                </p>
             </div>
 
-            {/* Dynamic Fields - rendered linearly after fixed fields */}
-            {fields.map((field) => (
+            {/* ── Custom questions ── */}
+            {fields.map(field => (
                 <div key={field.id} className="space-y-2">
-                    {field.type === DynamicFieldType.TEXT && (
-                        <>
-                            <Label htmlFor={field.id}>{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
-                            <Input id={field.id} {...form.register(field.id)} placeholder={`Enter ${field.label.toLowerCase()}`} />
-                        </>
+                    <Label htmlFor={field.id}>
+                        {field.title || field.label}
+                        {field.required && <span className="text-destructive"> *</span>}
+                    </Label>
+                    {field.label && field.title && field.label !== field.title && (
+                        <p className="text-sm text-muted-foreground -mt-1">{field.label}</p>
                     )}
 
-                    {field.type === DynamicFieldType.TEXTAREA && (
-                        <>
-                            <Label htmlFor={field.id}>{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
-                            <Textarea id={field.id} {...form.register(field.id)} placeholder={`Enter ${field.label.toLowerCase()}`} className="min-h-[100px]" />
-                        </>
+                    {/* COMMENT / TEXT / TEXTAREA */}
+                    {(field.type === QuestionType.COMMENT || field.type === QuestionType.TEXT) && (
+                        <Input
+                            id={field.id}
+                            {...form.register(field.id)}
+                            placeholder={`Enter ${(field.title || field.label).toLowerCase()}`}
+                        />
+                    )}
+                    {field.type === QuestionType.TEXTAREA && (
+                        <Textarea
+                            id={field.id}
+                            {...form.register(field.id)}
+                            placeholder={`Enter ${(field.title || field.label).toLowerCase()}`}
+                            className="min-h-[100px]"
+                            maxLength={field.maxLength}
+                        />
                     )}
 
-                    {field.type === DynamicFieldType.CHECKBOX && (
-                        <div className="flex items-center space-x-2 pt-2">
+                    {/* AGREEMENT / CHECKBOX */}
+                    {(field.type === QuestionType.AGREEMENT || field.type === QuestionType.CHECKBOX) && (
+                        <div className="flex items-center space-x-2 pt-1">
                             <Controller
                                 name={field.id}
                                 control={form.control}
                                 render={({ field: { value, onChange } }: any) => (
-                                    <Checkbox
-                                        id={field.id}
-                                        checked={!!value}
-                                        onCheckedChange={onChange}
-                                    />
+                                    <Checkbox id={field.id} checked={!!value} onCheckedChange={onChange} />
                                 )}
                             />
-                            <Label htmlFor={field.id} className="cursor-pointer text-sm font-medium leading-none">
-                                {field.label} {field.required && <span className="text-destructive">*</span>}
+                            <Label htmlFor={field.id} className="cursor-pointer text-sm font-normal leading-snug">
+                                {field.label || "I agree"}
                             </Label>
                         </div>
                     )}
 
-                    {field.type === DynamicFieldType.SELECT && (
-                        <>
-                            <Label htmlFor={field.id}>{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
-                            <Controller
-                                name={field.id}
-                                control={form.control}
-                                render={({ field: { value, onChange } }: any) => (
-                                    <Select value={value as string} onValueChange={onChange}>
-                                        <SelectTrigger id={field.id}>
-                                            <SelectValue placeholder="Select an option" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {field.options?.map((opt) => (
-                                                <SelectItem key={opt.id} value={opt.value}>{opt.label}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                )}
-                            />
-                        </>
+                    {/* OPTIONS / OPTIONS_WITH_VALUE / SELECT */}
+                    {(field.type === QuestionType.OPTIONS ||
+                      field.type === QuestionType.OPTIONS_WITH_VALUE ||
+                      field.type === QuestionType.SELECT) && (
+                        <Controller
+                            name={field.id}
+                            control={form.control}
+                            render={({ field: { value, onChange } }: any) => (
+                                <Select value={value as string} onValueChange={onChange}>
+                                    <SelectTrigger id={field.id}>
+                                        <SelectValue placeholder="Select an option" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {/* Render from choices (new) or options (legacy) */}
+                                        {(field.choices ?? field.options ?? []).map((opt: any) => (
+                                            <SelectItem key={opt.id} value={opt.id}>
+                                                {opt.label}
+                                                {opt.numericValue != null && (
+                                                    <span className="ml-2 text-muted-foreground text-xs">({opt.numericValue})</span>
+                                                )}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        />
                     )}
 
-                    {errors[field.id] && <p className="text-sm text-destructive">{errors[field.id]?.message as string}</p>}
+                    {errors[field.id] && (
+                        <p className="text-sm text-destructive">{errors[field.id]?.message as string}</p>
+                    )}
                 </div>
             ))}
 
-            {/* Submit */}
+            {/* ── Submit ── */}
             <div className="flex justify-end pt-4">
                 <Button type="submit" size="lg" disabled={isSubmitting} className="gap-2">
                     {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}

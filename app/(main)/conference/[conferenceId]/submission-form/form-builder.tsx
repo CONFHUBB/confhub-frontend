@@ -1,245 +1,378 @@
 "use client"
 
 import { useState } from "react"
-import { useFieldArray, useForm } from "react-hook-form"
-import { Plus, Trash2, GripVertical, Settings } from "lucide-react"
+import { Plus, Trash2, GripVertical, Settings, Lock, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DynamicFieldType, DynamicField, FormDefinition } from "@/types/submission-form"
+import { Badge } from "@/components/ui/badge"
+import {
+    QuestionType,
+    DynamicField,
+    FixedFields,
+    FormDefinition,
+    DEFAULT_FIXED_FIELDS,
+    QuestionChoice,
+} from "@/types/submission-form"
+import { Textarea } from "@/components/ui/textarea"
 
-// Define default fixed fields that cannot be removed
-const FIXED_FIELDS = [
-    { id: "fixed-title", label: "Title", type: "text", required: true },
-    { id: "fixed-abstract", label: "Abstract", type: "textarea", required: true },
-    { id: "fixed-keywords", label: "Keywords (Up to 4)", type: "text", required: true }
-]
+// ─── Fixed field definitions ──────────────────────────────────────────────────
+const FIXED_FIELD_META = [
+    {
+        id: "title",
+        label: "Paper Title",
+        description: "Single-line text, max 150 characters",
+        alwaysRequired: true,
+    },
+    {
+        id: "abstract",
+        label: "Abstract",
+        description: "Plain text, 20–250 words",
+        alwaysRequired: true,
+    },
+    {
+        id: "keywords",
+        label: "Keywords",
+        description: "Comma-separated tags; author adds one at a time",
+        alwaysRequired: false,
+        configurable: true, // can toggle required + set maxCount
+    },
+    {
+        id: "subjectAreas",
+        label: "Subject Areas",
+        description: "Primary + secondary, from conference-defined list",
+        alwaysRequired: true,
+    },
+] as const
 
+// ─── Props ────────────────────────────────────────────────────────────────────
 interface FormBuilderProps {
-    initialFields?: DynamicField[]
+    initialDefinition?: FormDefinition
     onSave: (definitionJson: string) => void
     isSaving?: boolean
 }
 
-export function FormBuilder({ initialFields = [], onSave, isSaving = false }: FormBuilderProps) {
-    const [fields, setFields] = useState<DynamicField[]>(initialFields)
+// ─── Component ────────────────────────────────────────────────────────────────
+export function FormBuilder({ initialDefinition, onSave, isSaving = false }: FormBuilderProps) {
+    const [fixedFields, setFixedFields] = useState<FixedFields>(
+        initialDefinition?.fixedFields ?? DEFAULT_FIXED_FIELDS
+    )
+    const [fields, setFields] = useState<DynamicField[]>(initialDefinition?.fields ?? [])
 
-    const addField = () => {
-        const newField: DynamicField = {
-            id: `field_${Date.now()}`,
-            type: DynamicFieldType.TEXT,
-            label: "New Field",
+    // ── Fixed field helpers ──
+    const updateFixed = (key: keyof FixedFields, patch: Partial<FixedFields[typeof key]>) => {
+        setFixedFields(prev => ({ ...prev, [key]: { ...prev[key], ...patch } }))
+    }
+
+    // ── Custom question helpers ──
+    const addQuestion = () => {
+        const newQ: DynamicField = {
+            id: `q_${Date.now()}`,
+            type: QuestionType.COMMENT,
+            title: "New Question",
+            label: "",
             required: false,
+            visibleToReviewers: true,
+            displayOrder: fields.length + 1,
         }
-        setFields([...fields, newField])
+        setFields(prev => [...prev, newQ])
     }
 
-    const removeField = (id: string) => {
-        setFields(fields.filter((f) => f.id !== id))
-    }
+    const removeQuestion = (id: string) => setFields(prev => prev.filter(f => f.id !== id))
 
-    const updateField = (id: string, updates: Partial<DynamicField>) => {
-        setFields(fields.map((f) => (f.id === id ? { ...f, ...updates } : f)))
-    }
+    const updateQuestion = (id: string, patch: Partial<DynamicField>) =>
+        setFields(prev => prev.map(f => f.id === id ? { ...f, ...patch } : f))
 
-    const addOption = (fieldId: string) => {
-        const field = fields.find((f) => f.id === fieldId)
-        if (!field) return
-
-        const newOption = {
-            id: `opt_${Date.now()}`,
-            value: `Option ${field.options?.length ? field.options.length + 1 : 1}`,
-            label: `Option ${field.options?.length ? field.options.length + 1 : 1}`
+    const addChoice = (qId: string) => {
+        const q = fields.find(f => f.id === qId)
+        if (!q) return
+        const newChoice: QuestionChoice = {
+            id: `ch_${Date.now()}`,
+            label: `Choice ${(q.choices?.length ?? 0) + 1}`,
         }
+        updateQuestion(qId, { choices: [...(q.choices ?? []), newChoice] })
+    }
 
-        updateField(fieldId, {
-            options: [...(field.options || []), newOption]
+    const updateChoice = (qId: string, choiceId: string, patch: Partial<QuestionChoice>) => {
+        const q = fields.find(f => f.id === qId)
+        if (!q) return
+        updateQuestion(qId, {
+            choices: q.choices?.map(c => c.id === choiceId ? { ...c, ...patch } : c)
         })
     }
 
-    const updateOption = (fieldId: string, optionId: string, updates: Partial<{ label: string, value: string }>) => {
-        const field = fields.find((f) => f.id === fieldId)
-        if (!field || !field.options) return
-
-        updateField(fieldId, {
-            options: field.options.map((opt) => opt.id === optionId ? { ...opt, ...updates } : opt)
-        })
+    const removeChoice = (qId: string, choiceId: string) => {
+        const q = fields.find(f => f.id === qId)
+        if (!q) return
+        updateQuestion(qId, { choices: q.choices?.filter(c => c.id !== choiceId) })
     }
 
-    const removeOption = (fieldId: string, optionId: string) => {
-        const field = fields.find((f) => f.id === fieldId)
-        if (!field || !field.options) return
-
-        updateField(fieldId, {
-            options: field.options.filter((opt) => opt.id !== optionId)
-        })
-    }
-
+    // ── Save ──
     const handleSave = () => {
-        const formDefinition: FormDefinition = { fields }
-        const definitionJson = JSON.stringify(formDefinition)
-        onSave(definitionJson)
+        const def: FormDefinition = { fixedFields, fields }
+        onSave(JSON.stringify(def))
     }
+
+    const isChoiceType = (t: QuestionType) =>
+        t === QuestionType.OPTIONS || t === QuestionType.OPTIONS_WITH_VALUE
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-xl font-bold tracking-tight">Submission Form Builder</h2>
-                    <p className="text-sm text-muted-foreground">
-                        Configure the form that authors will fill out when submitting a paper.
-                    </p>
-                </div>
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex justify-end mb-4">
                 <Button onClick={handleSave} disabled={isSaving}>
                     {isSaving ? "Saving..." : "Save Configuration"}
                 </Button>
             </div>
-
             <div className="grid gap-6 md:grid-cols-3">
-                {/* Form Preview / Editor */}
                 <div className="md:col-span-2 space-y-4">
+
+                    {/* ── Fixed Fields ── */}
                     <Card className="border-dashed bg-muted/30">
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                <Lock className="h-3.5 w-3.5" />
                                 Standard Fields (Fixed)
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            {FIXED_FIELDS.map((field) => (
-                                <div key={field.id} className="flex items-center gap-3 p-3 rounded-md bg-background border opacity-70">
-                                    <GripVertical className="h-4 w-4 text-muted-foreground/50" />
-                                    <div className="flex-1">
-                                        <Label className="text-sm font-medium">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
-                                        <p className="text-xs text-muted-foreground capitalize">{field.type} input</p>
+                        <CardContent className="space-y-2">
+                            {FIXED_FIELD_META.map(meta => {
+                                const cfg = fixedFields[meta.id as keyof FixedFields]
+                                return (
+                                    <div key={meta.id} className="flex items-start gap-3 p-3 rounded-md bg-background border">
+                                        <GripVertical className="h-4 w-4 text-muted-foreground/40 mt-1 shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="font-medium text-sm">{meta.label}</span>
+                                                {cfg.required && (
+                                                    <Badge variant="outline" className="text-[10px] text-destructive border-destructive/40">
+                                                        Required
+                                                    </Badge>
+                                                )}
+                                                {meta.alwaysRequired && (
+                                                    <Badge variant="secondary" className="text-[10px]">Always on</Badge>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-muted-foreground mt-0.5">{meta.description}</p>
+
+                                            {/* Keywords configurable options */}
+                                            {'configurable' in meta && meta.configurable && (
+                                                <div className="mt-3 flex flex-wrap items-center gap-4 text-xs">
+                                                    <label className="flex items-center gap-2 cursor-pointer">
+                                                        <Switch
+                                                            checked={cfg.required}
+                                                            onCheckedChange={v => updateFixed("keywords", { required: v })}
+                                                        />
+                                                        <span>Required</span>
+                                                    </label>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-muted-foreground shrink-0">Min:</span>
+                                                        <Input
+                                                            type="number"
+                                                            min={0}
+                                                            max={fixedFields.keywords.maxCount ?? 10}
+                                                            value={fixedFields.keywords.minCount ?? 1}
+                                                            onChange={e => updateFixed("keywords", { minCount: +e.target.value })}
+                                                            className="h-7 w-16 text-xs"
+                                                        />
+                                                        <span className="text-muted-foreground shrink-0">Max:</span>
+                                                        <Input
+                                                            type="number"
+                                                            min={fixedFields.keywords.minCount ?? 1}
+                                                            max={20}
+                                                            value={fixedFields.keywords.maxCount ?? 10}
+                                                            onChange={e => updateFixed("keywords", { maxCount: +e.target.value })}
+                                                            className="h-7 w-16 text-xs"
+                                                        />
+                                                        <span className="text-muted-foreground">keywords</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <Settings className="h-4 w-4 text-muted-foreground/30 mt-1 shrink-0" />
                                     </div>
-                                    <Settings className="h-4 w-4 text-muted-foreground/50" />
-                                </div>
-                            ))}
+                                )
+                            })}
                         </CardContent>
                     </Card>
 
+                    {/* ── Custom Questions ── */}
                     <Card>
                         <CardHeader className="pb-3 flex flex-row items-center justify-between">
                             <CardTitle className="text-sm font-medium uppercase tracking-wider">
-                                Custom Fields ({fields.length})
+                                Custom Questions ({fields.length})
                             </CardTitle>
-                            <Button size="sm" variant="outline" onClick={addField} className="h-8 gap-1">
+                            <Button size="sm" variant="outline" onClick={addQuestion} className="h-8 gap-1">
                                 <Plus className="h-3.5 w-3.5" />
-                                Add Field
+                                Add Question
                             </Button>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {fields.length === 0 ? (
                                 <div className="text-center py-8 text-sm text-muted-foreground rounded-md border border-dashed">
-                                    No custom fields added yet. Click "Add Field" to create forms.
+                                    No custom questions yet. Click <strong>Add Question</strong> to get started.
                                 </div>
                             ) : (
-                                fields.map((field, index) => (
-                                    <div key={field.id} className="group relative flex flex-col gap-4 rounded-lg border bg-card p-4 shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20 hover:border-primary/50">
-
-                                        <div className="flex items-start gap-4">
-                                            <div className="mt-2.5 cursor-move opacity-50 transition-opacity group-hover:opacity-100">
-                                                <GripVertical className="h-4 w-4" />
-                                            </div>
-
-                                            <div className="grid flex-1 gap-4">
-                                                <div className="grid sm:grid-cols-2 gap-4">
-                                                    {/* Field Label */}
-                                                    <div className="space-y-1.5">
-                                                        <Label htmlFor={`label-${field.id}`} className="text-xs font-semibold text-muted-foreground">Field Label</Label>
-                                                        <Input
-                                                            id={`label-${field.id}`}
-                                                            value={field.label}
-                                                            onChange={(e) => updateField(field.id, { label: e.target.value })}
-                                                            placeholder="e.g. Github Repository URL"
-                                                            className="h-9"
-                                                        />
-                                                    </div>
-
-                                                    {/* Field Type */}
-                                                    <div className="space-y-1.5">
-                                                        <Label htmlFor={`type-${field.id}`} className="text-xs font-semibold text-muted-foreground">Input Type</Label>
-                                                        <Select
-                                                            value={field.type}
-                                                            onValueChange={(val: DynamicFieldType) => {
-                                                                updateField(field.id, {
-                                                                    type: val,
-                                                                    options: val === DynamicFieldType.SELECT ? (field.options || [{ id: `opt_${Date.now()}`, value: "Option 1", label: "Option 1" }]) : undefined
-                                                                })
-                                                            }}
-                                                        >
-                                                            <SelectTrigger id={`type-${field.id}`} className="h-9">
-                                                                <SelectValue placeholder="Select type" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value={DynamicFieldType.TEXT}>Short Text</SelectItem>
-                                                                <SelectItem value={DynamicFieldType.TEXTAREA}>Long Text (Textarea)</SelectItem>
-                                                                <SelectItem value={DynamicFieldType.CHECKBOX}>Checkbox</SelectItem>
-                                                                <SelectItem value={DynamicFieldType.SELECT}>Dropdown Select</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
+                                fields.map((q, idx) => (
+                                    <div
+                                        key={q.id}
+                                        className="group relative flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm hover:border-primary/50 transition-colors"
+                                    >
+                                        {/* Row: index + type selector */}
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs text-muted-foreground font-mono w-5 shrink-0">
+                                                Q{idx + 1}
+                                            </span>
+                                            <div className="flex-1 grid sm:grid-cols-2 gap-3">
+                                                {/* Title (short name) */}
+                                                <div className="space-y-1">
+                                                    <Label className="text-xs text-muted-foreground">Question Title</Label>
+                                                    <Input
+                                                        value={q.title}
+                                                        onChange={e => updateQuestion(q.id, { title: e.target.value })}
+                                                        placeholder="e.g. Student paper?"
+                                                        className="h-8 text-sm"
+                                                    />
                                                 </div>
-
-                                                {/* Options handling for Select type */}
-                                                {field.type === DynamicFieldType.SELECT && (
-                                                    <div className="rounded-md bg-muted/50 p-3 space-y-3 border">
-                                                        <div className="flex items-center justify-between">
-                                                            <Label className="text-xs font-semibold">Dropdown Options</Label>
-                                                            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => addOption(field.id)}>
-                                                                <Plus className="h-3 w-3 mr-1" /> Add Option
-                                                            </Button>
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            {field.options?.map((opt, optIdx) => (
-                                                                <div key={opt.id} className="flex items-center gap-2">
-                                                                    <Input
-                                                                        value={opt.label}
-                                                                        onChange={(e) => updateOption(field.id, opt.id, { label: e.target.value, value: e.target.value })}
-                                                                        className="h-8 text-sm"
-                                                                        placeholder={`Option ${optIdx + 1}`}
-                                                                    />
-                                                                    <Button
-                                                                        size="icon"
-                                                                        variant="ghost"
-                                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-                                                                        onClick={() => removeOption(field.id, opt.id)}
-                                                                        disabled={(field.options?.length || 0) <= 1}
-                                                                    >
-                                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                                    </Button>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-                                                    <div className="flex items-center space-x-2">
-                                                        <Checkbox
-                                                            id={`req-${field.id}`}
-                                                            checked={field.required}
-                                                            onCheckedChange={(checked) => updateField(field.id, { required: !!checked })}
-                                                        />
-                                                        <Label htmlFor={`req-${field.id}`} className="text-sm font-medium cursor-pointer">
-                                                            Required field
-                                                        </Label>
-                                                    </div>
-
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 px-2"
-                                                        onClick={() => removeField(field.id)}
+                                                {/* Type */}
+                                                <div className="space-y-1">
+                                                    <Label className="text-xs text-muted-foreground">Type</Label>
+                                                    <Select
+                                                        value={q.type}
+                                                        onValueChange={v => updateQuestion(q.id, {
+                                                            type: v as QuestionType,
+                                                            choices: isChoiceType(v as QuestionType)
+                                                                ? (q.choices?.length ? q.choices : [
+                                                                    { id: `ch_${Date.now()}`, label: "Option 1" },
+                                                                    { id: `ch_${Date.now() + 1}`, label: "Option 2" },
+                                                                ])
+                                                                : undefined,
+                                                        })}
                                                     >
-                                                        <Trash2 className="h-3.5 w-3.5 mr-1" />
-                                                        Remove
+                                                        <SelectTrigger className="h-8 text-sm">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value={QuestionType.COMMENT}>💬 Comment (Text)</SelectItem>
+                                                            <SelectItem value={QuestionType.AGREEMENT}>☑ Agreement (Checkbox)</SelectItem>
+                                                            <SelectItem value={QuestionType.OPTIONS}>🔘 Options (Radio/Dropdown)</SelectItem>
+                                                            <SelectItem value={QuestionType.OPTIONS_WITH_VALUE}>🔢 Options with Value</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Question body text */}
+                                        <div className="space-y-1 pl-8">
+                                            <Label className="text-xs text-muted-foreground">Question text shown to author</Label>
+                                            <Textarea
+                                                value={q.label}
+                                                onChange={e => updateQuestion(q.id, { label: e.target.value })}
+                                                placeholder="e.g. Is the primary author a registered student?"
+                                                className="min-h-[60px] text-sm resize-none"
+                                            />
+                                        </div>
+
+                                        {/* COMMENT: maxLength */}
+                                        {q.type === QuestionType.COMMENT && (
+                                            <div className="pl-8 flex items-center gap-2 text-xs">
+                                                <span className="text-muted-foreground">Max length:</span>
+                                                <Input
+                                                    type="number"
+                                                    min={50}
+                                                    max={5000}
+                                                    value={q.maxLength ?? 500}
+                                                    onChange={e => updateQuestion(q.id, { maxLength: +e.target.value })}
+                                                    className="h-7 w-20"
+                                                />
+                                                <span className="text-muted-foreground">characters</span>
+                                            </div>
+                                        )}
+
+                                        {/* OPTIONS / OPTIONS_WITH_VALUE: choices */}
+                                        {isChoiceType(q.type) && (
+                                            <div className="pl-8 space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <Label className="text-xs text-muted-foreground">Choices</Label>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="h-6 px-2 text-xs"
+                                                        onClick={() => addChoice(q.id)}
+                                                    >
+                                                        <Plus className="h-3 w-3 mr-1" /> Add Choice
                                                     </Button>
                                                 </div>
+                                                {q.choices?.map((choice, ci) => (
+                                                    <div key={choice.id} className="flex items-center gap-2">
+                                                        <span className="text-xs text-muted-foreground w-4">{ci + 1}.</span>
+                                                        <Input
+                                                            value={choice.label}
+                                                            onChange={e => updateChoice(q.id, choice.id, { label: e.target.value })}
+                                                            placeholder={`Choice ${ci + 1}`}
+                                                            className="h-7 text-sm flex-1"
+                                                        />
+                                                        {q.type === QuestionType.OPTIONS_WITH_VALUE && (
+                                                            <Input
+                                                                type="number"
+                                                                value={choice.numericValue ?? ""}
+                                                                onChange={e => updateChoice(q.id, choice.id, {
+                                                                    numericValue: e.target.value ? +e.target.value : null
+                                                                })}
+                                                                placeholder="Value"
+                                                                className="h-7 w-16 text-sm"
+                                                            />
+                                                        )}
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
+                                                            onClick={() => removeChoice(q.id, choice.id)}
+                                                            disabled={(q.choices?.length ?? 0) <= 1}
+                                                        >
+                                                            <Trash2 className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                ))}
                                             </div>
+                                        )}
+
+                                        {/* Footer: Required + Visibility + Delete */}
+                                        <div className="pl-8 flex items-center justify-between gap-4 pt-1 border-t border-dashed mt-1">
+                                            <div className="flex items-center gap-4 flex-wrap">
+                                                <label className="flex items-center gap-1.5 cursor-pointer text-xs">
+                                                    <Checkbox
+                                                        checked={q.required}
+                                                        onCheckedChange={v => updateQuestion(q.id, { required: !!v })}
+                                                    />
+                                                    Required
+                                                </label>
+                                                <label className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground">
+                                                    {q.visibleToReviewers ? (
+                                                        <Eye className="h-3.5 w-3.5" />
+                                                    ) : (
+                                                        <EyeOff className="h-3.5 w-3.5" />
+                                                    )}
+                                                    <Checkbox
+                                                        checked={!!q.visibleToReviewers}
+                                                        onCheckedChange={v => updateQuestion(q.id, { visibleToReviewers: !!v })}
+                                                    />
+                                                    Visible to reviewers
+                                                </label>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-destructive hover:bg-destructive/10 h-7 px-2 text-xs"
+                                                onClick={() => removeQuestion(q.id)}
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                                Remove
+                                            </Button>
                                         </div>
                                     </div>
                                 ))
@@ -247,35 +380,40 @@ export function FormBuilder({ initialFields = [], onSave, isSaving = false }: Fo
                         </CardContent>
                         {fields.length > 0 && (
                             <CardFooter className="bg-muted/30 border-t px-6 py-4">
-                                <Button variant="outline" onClick={addField} className="w-full border-dashed">
-                                    <Plus className="h-4 w-4 mr-2" /> Add Another Field
+                                <Button variant="outline" onClick={addQuestion} className="w-full border-dashed">
+                                    <Plus className="h-4 w-4 mr-2" /> Add Another Question
                                 </Button>
                             </CardFooter>
                         )}
                     </Card>
                 </div>
 
-                {/* Cheat Sheet / Instructions Sidebar */}
+                {/* Sidebar */}
                 <div className="space-y-4 hidden md:block">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="text-md">How it works</CardTitle>
+                            <CardTitle className="text-md">Question Types</CardTitle>
                         </CardHeader>
-                        <CardContent className="text-sm text-muted-foreground space-y-4">
-                            <p>
-                                The <strong>Standard Fields</strong> (Title, Abstract, and Keywords) are required for all papers and cannot be removed.
-                            </p>
-                            <p>
-                                Add <strong>Custom Fields</strong> to collect specific information from authors, such as:
-                            </p>
-                            <ul className="list-disc pl-4 space-y-2">
-                                <li><strong>Short Text:</strong> Links (e.g., Github, Dataset) or short specific answers.</li>
-                                <li><strong>Checkbox:</strong> Agreement to track-specific terms or conditions.</li>
-                                <li><strong>Dropdown:</strong> Categorization (e.g., "Full Paper" vs "Short Paper").</li>
-                            </ul>
-                            <p className="text-xs mt-4 pt-4 border-t opacity-70">
-                                Data from custom fields will be stored securely and viewable by reviewers.
-                            </p>
+                        <CardContent className="text-sm text-muted-foreground space-y-3">
+                            <div>
+                                <p className="font-medium text-foreground">💬 Comment</p>
+                                <p className="text-xs">Free-text textarea. Set a max character limit.</p>
+                            </div>
+                            <div>
+                                <p className="font-medium text-foreground">☑ Agreement</p>
+                                <p className="text-xs">Author checks a box to agree (e.g., ethical declaration).</p>
+                            </div>
+                            <div>
+                                <p className="font-medium text-foreground">🔘 Options</p>
+                                <p className="text-xs">Radio / multi-choice / dropdown. Good for categories.</p>
+                            </div>
+                            <div>
+                                <p className="font-medium text-foreground">🔢 Options with Value</p>
+                                <p className="text-xs">Each choice has a numeric score — aids chair decision-making.</p>
+                            </div>
+                            <div className="pt-3 border-t text-xs">
+                                <span className="font-medium text-foreground">Visible to reviewers</span> — uncheck to make the answer private (Chair-only).
+                            </div>
                         </CardContent>
                     </Card>
                 </div>

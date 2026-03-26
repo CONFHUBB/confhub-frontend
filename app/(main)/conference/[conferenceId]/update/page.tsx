@@ -8,16 +8,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import {
     Settings, FileText, Calendar, ClipboardList, Lock, ChevronRight, ChevronDown,
-    ArrowLeft, Shield, Users, LayoutDashboard, Loader2, CheckCircle2, Circle,
-    Search, Award, Eye, Ticket
+    ArrowLeft, Users, LayoutDashboard, Loader2, CheckCircle2, Circle,
+    Eye, Ticket
 } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { FormBuilder } from '../submission-form/form-builder'
-import { saveConferenceSubmissionForm, getConferenceSubmissionForm } from '@/app/api/submission-form.api'
+import { SubmissionFormManager } from '../submission-form/submission-form-manager'
 import { getTracksByConference, getSubjectAreasByTrack, getTrackReviewSettings } from '@/app/api/track.api'
 import { getConferenceMembers } from '@/app/api/user.api'
 import { getPapersByConference } from '@/app/api/paper.api'
+import { saveConferenceSubmissionForm, getConferenceSubmissionForm } from '@/app/api/submission-form.api'
 import { getReviewQuestionsByTrack } from '@/app/api/review.api'
 
 import { AddTrack } from './add-track'
@@ -93,18 +93,18 @@ const TAB_GROUPS = [
         ]
     },
     {
-        title: "Conference Setup",
+        title: "General Settings",
         icon: <Settings className="h-4 w-4" />,
         accentColor: "text-indigo-600",
         items: [
-            { key: "general-detail", label: "Conference Detail", completionKey: "edit-details", lockWhenDone: true },
+            { key: "general-detail", label: "Conference Details", completionKey: "edit-details", lockWhenDone: true },
             { key: "features-tracks", label: "Tracks", completionKey: "manage-tracks", lockWhenDone: true },
             { key: "features-subject-areas", label: "Subject Areas", completionKey: "add-subject-areas", lockWhenDone: true },
-            { key: "reg-ticket-types", label: "Ticket Types & Fees", completionKey: "", lockWhenDone: false },
+            { key: "reg-ticket-types", label: "Tickets & Fees", completionKey: "", lockWhenDone: false },
         ]
     },
     {
-        title: "Administer Users",
+        title: "User Management",
         icon: <Users className="h-4 w-4" />,
         accentColor: "text-sky-600",
         items: [
@@ -112,65 +112,44 @@ const TAB_GROUPS = [
         ]
     },
     {
-        title: "Review Settings",
-        icon: <Shield className="h-4 w-4" />,
-        accentColor: "text-orange-600",
-        items: [
-            { key: "features-review-settings", label: "Review Config", completionKey: "config-review-settings", lockWhenDone: false },
-            { key: "features-conflict-settings", label: "Conflict Config", completionKey: "config-conflict-settings", lockWhenDone: false },
-        ]
-    },
-    {
-        title: "Configure Forms",
+        title: "Forms & Templates",
         icon: <ClipboardList className="h-4 w-4" />,
         accentColor: "text-teal-600",
         items: [
             { key: "forms-submission", label: "Submission Form", completionKey: "config-submission-form", lockWhenDone: true },
             { key: "forms-review", label: "Review Form", completionKey: "config-review-form", lockWhenDone: true },
             { key: "forms-mail", label: "Email Templates", completionKey: "", lockWhenDone: false },
+            { key: "features-review-settings", label: "Review Settings", completionKey: "config-review-settings", lockWhenDone: false },
+            { key: "features-conflict-settings", label: "Conflict Settings", completionKey: "config-conflict-settings", lockWhenDone: false },
         ]
     },
     {
-        title: "Enable Submission",
+        title: "Paper & Review",
         icon: <FileText className="h-4 w-4" />,
         accentColor: "text-emerald-600",
         items: [
-            { key: "features-activity-timeline", label: "Activity Timeline", completionKey: "set-timeline", lockWhenDone: false },
-            { key: "features-paper-management", label: "Paper Management", completionKey: "", lockWhenDone: false },
-        ]
-    },
-    {
-        title: "Review Process",
-        icon: <Search className="h-4 w-4" />,
-        accentColor: "text-amber-600",
-        items: [
-            { key: "features-review-management", label: "Review Management", completionKey: "assign-reviewers", lockWhenDone: false },
-        ]
-    },
-    {
-        title: "Final Phase",
-        icon: <Award className="h-4 w-4" />,
-        accentColor: "text-purple-600",
-        items: [
+            { key: "features-activity-timeline", label: "Timeline", completionKey: "set-timeline", lockWhenDone: false },
+            { key: "features-paper-management", label: "Papers", completionKey: "", lockWhenDone: false },
+            { key: "features-review-management", label: "Reviews", completionKey: "assign-reviewers", lockWhenDone: false },
             { key: "features-camera-ready", label: "Camera-Ready", completionKey: "camera-ready", lockWhenDone: false },
         ]
     },
     {
-        title: "Registration Phase",
+        title: "Registration",
         icon: <Ticket className="h-4 w-4" />,
         accentColor: "text-rose-600",
         items: [
             { key: "reg-attendees", label: "Attendees", completionKey: "", lockWhenDone: false },
-            { key: "reg-payment-history", label: "Payment History", completionKey: "", lockWhenDone: false },
+            { key: "reg-payment-history", label: "Payments", completionKey: "", lockWhenDone: false },
         ]
     },
     {
-        title: "Event Execution",
+        title: "Event",
         icon: <Calendar className="h-4 w-4" />,
         accentColor: "text-indigo-600",
         items: [
-            { key: "features-program-builder", label: "Program Builder", completionKey: "", lockWhenDone: false },
-            { key: "reg-checkin", label: "Check-in Scanner", completionKey: "", lockWhenDone: false },
+            { key: "features-program-builder", label: "Program", completionKey: "", lockWhenDone: false },
+            { key: "reg-checkin", label: "Check-in", completionKey: "", lockWhenDone: false },
         ]
     }
 ]
@@ -184,10 +163,10 @@ export default function ConferenceUpdatePage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<SettingsTab>('dashboard')
-    const [expandedGroups, setExpandedGroups] = useState<string[]>(['Overview', 'Conference Setup', 'Administer Users', 'Review Settings', 'Configure Forms', 'Enable Submission', 'Review Process', 'Final Phase'])
+    const [expandedGroups, setExpandedGroups] = useState<string[]>(['Overview', 'General Settings', 'User Management', 'Forms & Templates', 'Paper & Review'])
     const [isUpdatingGeneral, setIsUpdatingGeneral] = useState(false)
 
-    // Form Builder state
+    // Submission Form Manager state
     const [savedFields, setSavedFields] = useState<DynamicField[]>([])
     const [isSavingForm, setIsSavingForm] = useState(false)
     const [trackRefreshKey, setTrackRefreshKey] = useState(0)
@@ -319,22 +298,10 @@ export default function ConferenceUpdatePage() {
         const fetchData = async () => {
             try {
                 setLoading(true)
-                const [conferenceData, formConfig] = await Promise.all([
-                    getConference(conferenceId),
-                    getConferenceSubmissionForm(conferenceId).catch(() => null)
+                const [conferenceData] = await Promise.all([
+                    getConference(conferenceId)
                 ])
                 setConference(conferenceData)
-
-                if (formConfig && formConfig.definitionJson) {
-                    try {
-                        const parsed = JSON.parse(formConfig.definitionJson) as FormDefinition
-                        if (parsed.fields) {
-                            setSavedFields(parsed.fields)
-                        }
-                    } catch (e) {
-                        console.error("Failed to parse form definition", e)
-                    }
-                }
             } catch (err: any) {
                 if (err.response?.status === 401 || err.response?.status === 403) {
                     setError('You must be logged in to manage this conference.')
@@ -354,23 +321,6 @@ export default function ConferenceUpdatePage() {
             fetchData()
         }
     }, [conferenceId, router])
-
-    const handleSaveFormConfig = async (definitionJson: string) => {
-        try {
-            setIsSavingForm(true)
-            await saveConferenceSubmissionForm({
-                conferenceId,
-                definitionJson
-            })
-            toast.success("Submission form configuration saved successfully!")
-            refreshWorkflow()
-        } catch (err) {
-            console.error("Failed to save form config:", err)
-            toast.error("Failed to save form configuration. Please try again.")
-        } finally {
-            setIsSavingForm(false)
-        }
-    }
 
     const handleSaveTrack = async (data: TrackData) => {
         try {
@@ -582,10 +532,9 @@ export default function ConferenceUpdatePage() {
                             <h2 className="text-xl font-bold mb-2">Config Submission Form</h2>
                             <p className="text-sm text-muted-foreground">Design the fields authors must fill out when submitting papers.</p>
                         </div>
-                        <FormBuilder
-                            initialFields={savedFields}
-                            onSave={handleSaveFormConfig}
-                            isSaving={isSavingForm}
+                        <SubmissionFormManager 
+                            conferenceId={conferenceId} 
+                            onConfigChanged={() => refreshWorkflow()} 
                         />
                     </div>
                 )
@@ -721,27 +670,7 @@ export default function ConferenceUpdatePage() {
                     <div className="flex-1 min-w-0 bg-background overflow-hidden flex flex-col h-full">
                         <div className="flex-1 overflow-y-auto custom-scrollbar">
                             <div className="max-w-8xl mx-auto p-8 md:p-12 pb-24">
-                                {/* Read-only banner for completed config steps only */}
-                                {(() => {
-                                    const currentItem = TAB_GROUPS.flatMap(g => g.items).find(i => i.key === activeTab)
-                                    const isCompletedConfig = currentItem?.lockWhenDone && stepAccessMap[activeTab] === 'completed'
-                                    return (
-                                        <>
-                                            {isCompletedConfig && (
-                                                <div className="mb-6 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-                                                    <Eye className="h-5 w-5 text-emerald-600 shrink-0" />
-                                                    <div>
-                                                        <p className="text-sm font-medium text-emerald-800">View Only</p>
-                                                        <p className="text-xs text-emerald-600">This step has been completed. Configuration is locked to maintain workflow integrity.</p>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            <div className={isCompletedConfig ? 'pointer-events-none opacity-60 select-none' : ''}>
-                                                {renderTabContent()}
-                                            </div>
-                                        </>
-                                    )
-                                })()}
+                                {renderTabContent()}
                             </div>
                         </div>
                     </div>
