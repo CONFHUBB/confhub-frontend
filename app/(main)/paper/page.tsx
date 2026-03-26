@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { getPapersByAuthor } from '@/app/api/paper.api'
 import { getUserByEmail } from '@/app/api/user.api'
@@ -11,9 +11,11 @@ import type { PaperResponse, PaperStatus } from '@/types/paper'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import {
     Loader2, Edit, FileText, Send, Search, CheckCircle2, XCircle, Ban,
-    Camera, Globe, AlertTriangle, Calendar, Tag, Layers, BarChart3, Star, Upload
+    Camera, Globe, AlertTriangle, Calendar, Tag, Layers, BarChart3, Star, Upload,
+    ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter, X
 } from 'lucide-react'
 
 // ── Status Configuration ──
@@ -85,12 +87,17 @@ const STATUS_CONFIG: Record<PaperStatus, {
 // Statuses that need user action
 const ACTION_STATUSES: PaperStatus[] = ['DRAFT', 'CAMERA_READY']
 
+// All possible statuses for filter
+const ALL_STATUSES: PaperStatus[] = ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'ACCEPTED', 'REJECTED', 'WITHDRAWN', 'CAMERA_READY', 'PUBLISHED']
+
 // Decision config
 const DECISION_STYLE: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
     APPROVE: { label: 'Accepted', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <CheckCircle2 className="h-3 w-3" /> },
     REJECT: { label: 'Rejected', color: 'bg-red-100 text-red-700 border-red-200', icon: <XCircle className="h-3 w-3" /> },
     REVISION: { label: 'Revision Required', color: 'bg-amber-100 text-amber-700 border-amber-200', icon: <AlertTriangle className="h-3 w-3" /> },
 }
+
+const ITEMS_PER_PAGE = 10
 
 interface ReviewInfo {
     aggregate: ReviewAggregate | null
@@ -112,7 +119,6 @@ function StatusBadge({ status }: { status: PaperStatus }) {
 function PaperCard({ paper, reviewInfo, onEdit }: { paper: PaperResponse; reviewInfo?: ReviewInfo; onEdit: () => void }) {
     const router = useRouter()
     const needsAction = ACTION_STATUSES.includes(paper.status)
-    const statusConfig = STATUS_CONFIG[paper.status]
     const agg = reviewInfo?.aggregate
     const meta = reviewInfo?.metaReview
     const decision = meta?.finalDecision ? DECISION_STYLE[meta.finalDecision] : null
@@ -161,6 +167,10 @@ function PaperCard({ paper, reviewInfo, onEdit }: { paper: PaperResponse; review
                                 <Calendar className="h-3.5 w-3.5" />
                                 Submitted {new Date(paper.submissionTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                             </span>
+                            <span className="inline-flex items-center gap-1 text-muted-foreground/70">
+                                <Globe className="h-3.5 w-3.5" />
+                                {paper.track.conference.acronym}
+                            </span>
                         </div>
 
                         {/* Review Results — visible when reviews exist */}
@@ -203,7 +213,7 @@ function PaperCard({ paper, reviewInfo, onEdit }: { paper: PaperResponse; review
                         )}
                     </div>
 
-                    {/* Right side: Edit + Camera-ready buttons */}
+                    {/* Right side: Edit + Workspace buttons */}
                     <div className="flex flex-col gap-2 shrink-0">
                         <Button
                             variant="outline"
@@ -214,19 +224,100 @@ function PaperCard({ paper, reviewInfo, onEdit }: { paper: PaperResponse; review
                             <Edit className="h-3.5 w-3.5" />
                             Edit
                         </Button>
-                        {isAccepted && (
-                            <Button
-                                size="sm"
-                                className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
-                                onClick={() => router.push(`/conference/${paper.track.conference.id}/author/camera-ready`)}
-                            >
-                                <Upload className="h-3.5 w-3.5" />
-                                Camera-Ready
-                            </Button>
-                        )}
+                        <Button
+                            size="sm"
+                            className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
+                            onClick={() => router.push(`/conference/${paper.track.conference.id}/author`)}
+                        >
+                            <Upload className="h-3.5 w-3.5" />
+                            Workspace
+                        </Button>
                     </div>
                 </div>
             </div>
+        </div>
+    )
+}
+
+// ── Pagination Component ──
+function Pagination({ currentPage, totalPages, onPageChange }: {
+    currentPage: number
+    totalPages: number
+    onPageChange: (page: number) => void
+}) {
+    if (totalPages <= 1) return null
+
+    const getVisiblePages = () => {
+        const pages: (number | 'ellipsis')[] = []
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i)
+        } else {
+            pages.push(1)
+            if (currentPage > 3) pages.push('ellipsis')
+            const start = Math.max(2, currentPage - 1)
+            const end = Math.min(totalPages - 1, currentPage + 1)
+            for (let i = start; i <= end; i++) pages.push(i)
+            if (currentPage < totalPages - 2) pages.push('ellipsis')
+            pages.push(totalPages)
+        }
+        return pages
+    }
+
+    return (
+        <div className="flex items-center justify-center gap-1.5 pt-6">
+            <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                disabled={currentPage === 1}
+                onClick={() => onPageChange(1)}
+            >
+                <ChevronsLeft className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                disabled={currentPage === 1}
+                onClick={() => onPageChange(currentPage - 1)}
+            >
+                <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
+
+            {getVisiblePages().map((page, i) =>
+                page === 'ellipsis' ? (
+                    <span key={`e${i}`} className="px-1.5 text-xs text-muted-foreground">…</span>
+                ) : (
+                    <Button
+                        key={page}
+                        variant={currentPage === page ? 'default' : 'outline'}
+                        size="sm"
+                        className={`h-8 w-8 p-0 text-xs font-medium ${currentPage === page ? '' : ''}`}
+                        onClick={() => onPageChange(page)}
+                    >
+                        {page}
+                    </Button>
+                )
+            )}
+
+            <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                disabled={currentPage === totalPages}
+                onClick={() => onPageChange(currentPage + 1)}
+            >
+                <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                disabled={currentPage === totalPages}
+                onClick={() => onPageChange(totalPages)}
+            >
+                <ChevronsRight className="h-3.5 w-3.5" />
+            </Button>
         </div>
     )
 }
@@ -238,6 +329,13 @@ export default function UserSubmissionsPage() {
     const [reviewInfoMap, setReviewInfoMap] = useState<Record<number, ReviewInfo>>({})
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+
+    // Search, filter & pagination state
+    const [searchQuery, setSearchQuery] = useState('')
+    const [statusFilter, setStatusFilter] = useState<PaperStatus | 'ALL'>('ALL')
+    const [conferenceFilter, setConferenceFilter] = useState<number | 'ALL'>('ALL')
+    const [currentPage, setCurrentPage] = useState(1)
+    const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title'>('newest')
 
     useEffect(() => {
         fetchPapers()
@@ -300,6 +398,67 @@ export default function UserSubmissionsPage() {
         }
     }
 
+    // ── Unique conferences for filter dropdown ──
+    const conferences = useMemo(() => {
+        const map = new Map<number, string>()
+        papers.forEach(p => {
+            const conf = p.track.conference
+            if (!map.has(conf.id)) map.set(conf.id, `${conf.acronym} – ${conf.name}`)
+        })
+        return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]))
+    }, [papers])
+
+    // ── Filtered + sorted papers ──
+    const filteredPapers = useMemo(() => {
+        let result = [...papers]
+
+        // Search filter
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase()
+            result = result.filter(p =>
+                p.title.toLowerCase().includes(q) ||
+                (p.abstractField && p.abstractField.toLowerCase().includes(q)) ||
+                (p.keywords && p.keywords.some(kw => kw.toLowerCase().includes(q))) ||
+                p.track.name.toLowerCase().includes(q)
+            )
+        }
+
+        // Status filter
+        if (statusFilter !== 'ALL') {
+            result = result.filter(p => p.status === statusFilter)
+        }
+
+        // Conference filter
+        if (conferenceFilter !== 'ALL') {
+            result = result.filter(p => p.track.conference.id === conferenceFilter)
+        }
+
+        // Sort
+        switch (sortBy) {
+            case 'newest':
+                result.sort((a, b) => new Date(b.submissionTime).getTime() - new Date(a.submissionTime).getTime())
+                break
+            case 'oldest':
+                result.sort((a, b) => new Date(a.submissionTime).getTime() - new Date(b.submissionTime).getTime())
+                break
+            case 'title':
+                result.sort((a, b) => a.title.localeCompare(b.title))
+                break
+        }
+
+        return result
+    }, [papers, searchQuery, statusFilter, conferenceFilter, sortBy])
+
+    // ── Pagination ──
+    const totalPages = Math.ceil(filteredPapers.length / ITEMS_PER_PAGE)
+    const paginatedPapers = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE
+        return filteredPapers.slice(start, start + ITEMS_PER_PAGE)
+    }, [filteredPapers, currentPage])
+
+    // Reset page when filters change
+    useEffect(() => { setCurrentPage(1) }, [searchQuery, statusFilter, conferenceFilter, sortBy])
+
     // ── Compute stats ──
     const stats = {
         total: papers.length,
@@ -308,25 +467,18 @@ export default function UserSubmissionsPage() {
         needsAction: papers.filter(p => ACTION_STATUSES.includes(p.status)).length,
     }
 
-    // ── Group papers by conference ──
-    const groupedPapers = papers.reduce<Record<number, {
-        conferenceName: string
-        conferenceAcronym: string
-        submissionDeadline: string
-        papers: PaperResponse[]
-    }>>((acc, paper) => {
-        const conf = paper.track.conference
-        if (!acc[conf.id]) {
-            acc[conf.id] = {
-                conferenceName: conf.name,
-                conferenceAcronym: conf.acronym,
-                submissionDeadline: conf.endDate,
-                papers: [],
-            }
-        }
-        acc[conf.id].papers.push(paper)
-        return acc
-    }, {})
+    // Active filter count
+    const activeFilterCount = [
+        statusFilter !== 'ALL' ? 1 : 0,
+        conferenceFilter !== 'ALL' ? 1 : 0,
+    ].reduce((a, b) => a + b, 0)
+
+    const clearFilters = () => {
+        setSearchQuery('')
+        setStatusFilter('ALL')
+        setConferenceFilter('ALL')
+        setSortBy('newest')
+    }
 
     if (loading) {
         return (
@@ -350,7 +502,7 @@ export default function UserSubmissionsPage() {
     }
 
     return (
-        <div className="container mx-auto py-8 px-4 max-w-5xl space-y-8">
+        <div className="container mx-auto py-8 px-4 max-w-5xl space-y-6">
             {/* Page Header */}
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">My Papers</h1>
@@ -389,6 +541,103 @@ export default function UserSubmissionsPage() {
                 </div>
             )}
 
+            {/* Search + Filters */}
+            {papers.length > 0 && (
+                <div className="space-y-3">
+                    {/* Search Bar */}
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            id="paper-search"
+                            placeholder="Search by title, abstract, keywords, or track..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-10"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Filter Row */}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Filter className="h-3.5 w-3.5" />
+                            <span className="font-medium">Filters:</span>
+                        </div>
+
+                        {/* Status Filter */}
+                        <select
+                            id="status-filter"
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value as PaperStatus | 'ALL')}
+                            className="h-8 px-2.5 text-xs border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
+                        >
+                            <option value="ALL">All Statuses</option>
+                            {ALL_STATUSES.map(s => (
+                                <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
+                            ))}
+                        </select>
+
+                        {/* Conference Filter */}
+                        <select
+                            id="conference-filter"
+                            value={conferenceFilter}
+                            onChange={(e) => setConferenceFilter(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+                            className="h-8 px-2.5 text-xs border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer max-w-[220px] truncate"
+                        >
+                            <option value="ALL">All Conferences</option>
+                            {conferences.map(([id, name]) => (
+                                <option key={id} value={id}>{name}</option>
+                            ))}
+                        </select>
+
+                        {/* Sort */}
+                        <select
+                            id="sort-by"
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest' | 'title')}
+                            className="h-8 px-2.5 text-xs border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
+                        >
+                            <option value="newest">Newest First</option>
+                            <option value="oldest">Oldest First</option>
+                            <option value="title">Title A–Z</option>
+                        </select>
+
+                        {/* Clear Filters */}
+                        {(activeFilterCount > 0 || searchQuery) && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                                onClick={clearFilters}
+                            >
+                                <X className="h-3 w-3" />
+                                Clear
+                                {activeFilterCount > 0 && (
+                                    <Badge className="h-4 w-4 p-0 flex items-center justify-center text-[9px] rounded-full">
+                                        {activeFilterCount}
+                                    </Badge>
+                                )}
+                            </Button>
+                        )}
+
+                        {/* Results count */}
+                        <span className="ml-auto text-xs text-muted-foreground">
+                            {filteredPapers.length === papers.length
+                                ? `${papers.length} paper${papers.length !== 1 ? 's' : ''}`
+                                : `${filteredPapers.length} of ${papers.length} papers`
+                            }
+                        </span>
+                    </div>
+                </div>
+            )}
+
             {/* Empty State */}
             {papers.length === 0 ? (
                 <Card className="border-dashed">
@@ -400,45 +649,44 @@ export default function UserSubmissionsPage() {
                         </p>
                     </CardContent>
                 </Card>
+            ) : filteredPapers.length === 0 ? (
+                <Card className="border-dashed">
+                    <CardContent className="py-12 text-center">
+                        <Search className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                        <h3 className="text-base font-semibold text-foreground mb-1">No papers match your filters</h3>
+                        <p className="text-sm text-muted-foreground mb-3">
+                            Try adjusting your search or filter criteria.
+                        </p>
+                        <Button variant="outline" size="sm" onClick={clearFilters} className="gap-1.5">
+                            <X className="h-3.5 w-3.5" />
+                            Clear all filters
+                        </Button>
+                    </CardContent>
+                </Card>
             ) : (
-                <div className="space-y-8">
-                    {Object.entries(groupedPapers).map(([confId, group]) => (
-                        <div key={confId} className="space-y-4">
-                            {/* Conference Group Header */}
-                            <div className="flex items-center justify-between gap-4 pb-2 border-b">
-                                <div className="flex items-center gap-2 min-w-0">
-                                    <div className="h-8 w-1 bg-primary rounded-full shrink-0" />
-                                    <div className="min-w-0">
-                                        <h2 className="text-base font-semibold truncate">
-                                            {group.conferenceName}
-                                        </h2>
-                                        <p className="text-xs text-muted-foreground">
-                                            {group.conferenceAcronym} · {group.papers.length} paper{group.papers.length !== 1 ? 's' : ''}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-                                    <Calendar className="h-3.5 w-3.5" />
-                                    <span>Deadline:</span>
-                                    <span className={`font-semibold ${new Date(group.submissionDeadline) < new Date() ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
-                                        {new Date(group.submissionDeadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Paper Cards */}
-                            <div className="space-y-3">
-                                {group.papers.map((paper) => (
-                                    <PaperCard
-                                        key={paper.id}
-                                        paper={paper}
-                                        reviewInfo={reviewInfoMap[paper.id]}
-                                        onEdit={() => router.push(`/paper/${paper.id}`)}
-                                    />
-                                ))}
-                            </div>
-                        </div>
+                <div className="space-y-3">
+                    {paginatedPapers.map((paper) => (
+                        <PaperCard
+                            key={paper.id}
+                            paper={paper}
+                            reviewInfo={reviewInfoMap[paper.id]}
+                            onEdit={() => router.push(`/paper/${paper.id}`)}
+                        />
                     ))}
+
+                    {/* Pagination */}
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={setCurrentPage}
+                    />
+
+                    {/* Page info */}
+                    {totalPages > 1 && (
+                        <p className="text-center text-xs text-muted-foreground">
+                            Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredPapers.length)} of {filteredPapers.length} papers
+                        </p>
+                    )}
                 </div>
             )}
         </div>

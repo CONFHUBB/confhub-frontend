@@ -163,7 +163,7 @@ export default function ConferenceUpdatePage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<SettingsTab>('dashboard')
-    const [expandedGroups, setExpandedGroups] = useState<string[]>(['Overview', 'General Settings', 'User Management', 'Forms & Templates', 'Paper & Review'])
+    const [expandedGroups, setExpandedGroups] = useState<string[]>(['Overview', 'General Settings', 'User Management', 'Forms & Templates', 'Paper & Review', 'Registration', 'Event'])
     const [isUpdatingGeneral, setIsUpdatingGeneral] = useState(false)
 
     // Submission Form Manager state

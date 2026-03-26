@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { getMyTicket, TicketResponse } from '@/app/api/registration.api'
+import { getUserByEmail } from '@/app/api/user.api'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, CheckCircle2, XCircle, Clock, Download, ExternalLink } from 'lucide-react'
@@ -41,7 +42,6 @@ function MyTicketContent() {
   const searchParams = useSearchParams()
   const conferenceId = Number(params.conferenceId)
   const statusParam = searchParams.get('status')
-  const userId = Number(searchParams.get('userId') || 0)
 
   const [ticket, setTicket] = useState<TicketResponse | null>(null)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
@@ -64,18 +64,29 @@ function MyTicketContent() {
   }
 
   useEffect(() => {
-    if (!userId) return
-    getMyTicket(conferenceId, userId)
-      .then(async (t) => {
+    const init = async () => {
+      try {
+        // Get userId from JWT token (VNPay callback doesn't pass userId in URL)
+        const token = localStorage.getItem('accessToken')
+        if (!token) { setError('Please log in first.'); setLoading(false); return }
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        const user = await getUserByEmail(payload.sub)
+        if (!user?.id) { setError('User not found.'); setLoading(false); return }
+
+        const t = await getMyTicket(conferenceId, user.id)
         setTicket(t)
         if (t.qrCode) {
           const url = await QRCode.toDataURL(t.qrCode, { width: 200, margin: 2 })
           setQrDataUrl(url)
         }
-      })
-      .catch(() => setError('No registration found for this conference.'))
-      .finally(() => setLoading(false))
-  }, [conferenceId, userId])
+      } catch {
+        setError('No registration found for this conference.')
+      } finally {
+        setLoading(false)
+      }
+    }
+    init()
+  }, [conferenceId])
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>

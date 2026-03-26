@@ -8,7 +8,7 @@ import {
     Loader2, FileText, Users, BarChart3, CheckCircle2,
     Clock, AlertTriangle, Eye, UserCheck, ChevronRight,
     Settings, Send, Search, Award, Calendar, Zap, XCircle,
-    ArrowRight, ChevronDown, ChevronUp
+    ArrowRight, ChevronDown, ChevronUp, Gavel, MessageSquare, Ticket, PartyPopper
 } from 'lucide-react'
 import { getPapersByConference } from '@/app/api/paper.api'
 import { getAggregatesByConference } from '@/app/api/review-aggregate.api'
@@ -17,6 +17,7 @@ import { getTracksByConference, getSubjectAreasByTrack } from '@/app/api/track.a
 import { getConferenceSubmissionForm } from '@/app/api/submission-form.api'
 import { getConferenceMembers } from '@/app/api/user.api'
 import { getReviewQuestionsByTrack } from '@/app/api/review.api'
+import { getTicketTypes } from '@/app/api/registration.api'
 import type { ConferenceActivityDTO } from '@/types/conference'
 
 interface PaperSummary {
@@ -37,20 +38,37 @@ interface PhaseData {
     hasTracks: boolean
     hasSubjectAreas: boolean
     hasMembers: boolean
+    hasTickets: boolean
     hasSubmissionForm: boolean
     hasReviewForm: boolean
+    // Submission
     submissionEnabled: boolean
     submissionDeadlineSet: boolean
     submissionDeadlinePassed: boolean
     hasPapers: boolean
+    // Bidding
+    biddingEnabled: boolean
+    biddingDeadlineSet: boolean
     reviewersAssigned: boolean
+    // Review
     reviewEnabled: boolean
     reviewDeadlineSet: boolean
+    allReviewsCompleted: boolean
+    // Discussion
+    discussionEnabled: boolean
+    discussionDeadlineSet: boolean
+    // Decision
     papersHaveDecisions: boolean
     authorNotificationEnabled: boolean
     cameraReadyEnabled: boolean
     cameraReadyDeadlineSet: boolean
+    // Registration
+    registrationEnabled: boolean
+    registrationDeadlineSet: boolean
     hasCameraReadySubmissions: boolean
+    hasAttendees: boolean
+    // Event
+    eventDayEnabled: boolean
     hasProgram: boolean
 }
 
@@ -61,9 +79,11 @@ const ACTIVITY_LABELS: Record<string, string> = {
     REVIEW_DISCUSSION: 'Review Discussion',
     AUTHOR_NOTIFICATION: 'Author Notification',
     CAMERA_READY_SUBMISSION: 'Camera-Ready Submission',
+    REGISTRATION: 'Registration',
+    EVENT_DAY: 'Event Day',
 }
 
-// ─── Phase definitions ────────────────────────────────────────────────────────
+// ─── Phase definitions (9 phases) ─────────────────────────────────────────────
 const PHASES = [
     {
         id: 'setup',
@@ -71,12 +91,6 @@ const PHASES = [
         icon: Settings,
         color: 'indigo',
         activityKeys: [] as string[],
-        actions: [
-            { label: 'Conference Details', tab: 'general-detail' },
-            { label: 'Manage Tracks', tab: 'features-tracks' },
-            { label: 'Members & Roles', tab: 'features-members' },
-            { label: 'Ticket Types', tab: 'reg-ticket-types' },
-        ],
         nextPhaseTab: 'features-activity-timeline',
         nextPhaseHint: 'Go to Activity Timeline and enable Paper Submission to start the Submission phase.',
     },
@@ -85,26 +99,36 @@ const PHASES = [
         label: 'Submission',
         icon: Send,
         color: 'sky',
-        activityKeys: ['PAPER_SUBMISSION', 'REVIEWER_BIDDING'],
-        actions: [
-            { label: 'Activity Timeline', tab: 'features-activity-timeline' },
-            { label: 'Paper Management', tab: 'features-paper-management' },
-        ],
+        activityKeys: ['PAPER_SUBMISSION'],
         nextPhaseTab: 'features-activity-timeline',
-        nextPhaseHint: 'Enable Review Submission activity to begin the Review phase.',
+        nextPhaseHint: 'Enable Reviewer Bidding to start the Bidding phase.',
+    },
+    {
+        id: 'bidding',
+        label: 'Bidding',
+        icon: Gavel,
+        color: 'teal',
+        activityKeys: ['REVIEWER_BIDDING'],
+        nextPhaseTab: 'features-activity-timeline',
+        nextPhaseHint: 'Assign reviewers and enable Review Submission activity.',
     },
     {
         id: 'review',
         label: 'Review',
         icon: Search,
         color: 'amber',
-        activityKeys: ['REVIEW_SUBMISSION', 'REVIEW_DISCUSSION'],
-        actions: [
-            { label: 'Review Management', tab: 'features-review-management' },
-            { label: 'Activity Timeline', tab: 'features-activity-timeline' },
-        ],
-        nextPhaseTab: 'features-paper-management',
-        nextPhaseHint: 'Make accept/reject decisions on papers and enable Author Notification.',
+        activityKeys: ['REVIEW_SUBMISSION'],
+        nextPhaseTab: 'features-activity-timeline',
+        nextPhaseHint: 'Enable Discussion activity for reviewers to deliberate.',
+    },
+    {
+        id: 'discussion',
+        label: 'Discussion',
+        icon: MessageSquare,
+        color: 'orange',
+        activityKeys: ['REVIEW_DISCUSSION'],
+        nextPhaseTab: 'features-activity-timeline',
+        nextPhaseHint: 'Go to Activity Timeline and enable Author Notification to start the Decision phase.',
     },
     {
         id: 'decision',
@@ -112,25 +136,33 @@ const PHASES = [
         icon: Award,
         color: 'purple',
         activityKeys: ['AUTHOR_NOTIFICATION'],
-        actions: [
-            { label: 'Paper Management', tab: 'features-paper-management' },
-            { label: 'Send Notifications', tab: 'forms-mail' },
-            { label: 'Camera-Ready', tab: 'features-camera-ready' },
-        ],
-        nextPhaseTab: 'features-program-builder',
-        nextPhaseHint: 'Enable Camera-Ready submissions and build the event program.',
+        nextPhaseTab: 'features-activity-timeline',
+        nextPhaseHint: 'Enable Camera-Ready Submission to collect final papers.',
     },
     {
-        id: 'execution',
-        label: 'Execution',
-        icon: Calendar,
-        color: 'emerald',
+        id: 'camera-ready',
+        label: 'Camera-Ready',
+        icon: FileText,
+        color: 'cyan',
         activityKeys: ['CAMERA_READY_SUBMISSION'],
-        actions: [
-            { label: 'Program Builder', tab: 'features-program-builder' },
-            { label: 'Attendees', tab: 'reg-attendees' },
-            { label: 'Check-in', tab: 'reg-checkin' },
-        ],
+        nextPhaseTab: 'features-activity-timeline',
+        nextPhaseHint: 'Enable Registration activity to open attendee registration.',
+    },
+    {
+        id: 'registration',
+        label: 'Registration',
+        icon: Ticket,
+        color: 'rose',
+        activityKeys: ['REGISTRATION'],
+        nextPhaseTab: 'features-activity-timeline',
+        nextPhaseHint: 'Enable Event Day activity when you are ready for the live event.',
+    },
+    {
+        id: 'event',
+        label: 'Event Day',
+        icon: PartyPopper,
+        color: 'emerald',
+        activityKeys: ['EVENT_DAY'],
         nextPhaseTab: '',
         nextPhaseHint: '',
     },
@@ -144,6 +176,7 @@ function getPhaseChecklist(phaseId: string, pd: PhaseData): { label: string; met
                 { label: 'At least 1 track created', met: pd.hasTracks, tab: 'features-tracks', blocking: true },
                 { label: 'Subject areas defined', met: pd.hasSubjectAreas, tab: 'features-subject-areas', blocking: true },
                 { label: 'Members & roles assigned', met: pd.hasMembers, tab: 'features-members', blocking: true },
+                { label: 'Tickets & fees configured', met: pd.hasTickets, tab: 'reg-ticket-types', blocking: true },
                 { label: 'Submission form configured', met: pd.hasSubmissionForm, tab: 'forms-submission', blocking: true },
                 { label: 'Review form configured', met: pd.hasReviewForm, tab: 'forms-review', blocking: true },
             ]
@@ -154,22 +187,43 @@ function getPhaseChecklist(phaseId: string, pd: PhaseData): { label: string; met
                 { label: 'At least 1 paper submitted', met: pd.hasPapers, tab: 'features-paper-management', blocking: true },
                 { label: 'Submission deadline has passed', met: pd.submissionDeadlinePassed, tab: 'features-activity-timeline', blocking: false },
             ]
+        case 'bidding':
+            return [
+                { label: 'Reviewer Bidding activity enabled', met: pd.biddingEnabled, tab: 'features-activity-timeline', blocking: true },
+                { label: 'Bidding deadline set', met: pd.biddingDeadlineSet, tab: 'features-activity-timeline', blocking: true },
+                { label: 'Reviewers assigned to papers', met: pd.reviewersAssigned, tab: 'features-review-management', blocking: true },
+            ]
         case 'review':
             return [
-                { label: 'Reviewers assigned to papers', met: pd.reviewersAssigned, tab: 'features-review-management', blocking: true },
                 { label: 'Review Submission activity enabled', met: pd.reviewEnabled, tab: 'features-activity-timeline', blocking: true },
                 { label: 'Review deadline set', met: pd.reviewDeadlineSet, tab: 'features-activity-timeline', blocking: true },
+                { label: 'All reviews completed', met: pd.allReviewsCompleted, tab: 'features-review-management', blocking: false },
+            ]
+        case 'discussion':
+            return [
+                { label: 'Discussion activity enabled', met: pd.discussionEnabled, tab: 'features-activity-timeline', blocking: true },
+                { label: 'Discussion deadline set', met: pd.discussionDeadlineSet, tab: 'features-activity-timeline', blocking: false },
             ]
         case 'decision':
             return [
                 { label: 'Decisions made on papers (Accept/Reject)', met: pd.papersHaveDecisions, tab: 'features-paper-management', blocking: true },
                 { label: 'Author Notification activity enabled', met: pd.authorNotificationEnabled, tab: 'features-activity-timeline', blocking: true },
-                { label: 'Camera-Ready Submission enabled', met: pd.cameraReadyEnabled, tab: 'features-camera-ready', blocking: true },
-                { label: 'Camera-Ready deadline set', met: pd.cameraReadyDeadlineSet, tab: 'features-activity-timeline', blocking: false },
             ]
-        case 'execution':
+        case 'camera-ready':
             return [
+                { label: 'Camera-Ready Submission enabled', met: pd.cameraReadyEnabled, tab: 'features-activity-timeline', blocking: true },
+                { label: 'Camera-Ready deadline set', met: pd.cameraReadyDeadlineSet, tab: 'features-activity-timeline', blocking: true },
                 { label: 'Camera-Ready submissions received', met: pd.hasCameraReadySubmissions, tab: 'features-camera-ready', blocking: false },
+            ]
+        case 'registration':
+            return [
+                { label: 'Registration activity enabled', met: pd.registrationEnabled, tab: 'features-activity-timeline', blocking: true },
+                { label: 'Registration deadline set', met: pd.registrationDeadlineSet, tab: 'features-activity-timeline', blocking: false },
+                { label: 'At least 1 attendee registered', met: pd.hasAttendees, tab: 'reg-attendees', blocking: false },
+            ]
+        case 'event':
+            return [
+                { label: 'Event Day activity enabled', met: pd.eventDayEnabled, tab: 'features-activity-timeline', blocking: false },
                 { label: 'Program / sessions built', met: pd.hasProgram, tab: 'features-program-builder', blocking: false },
             ]
         default:
@@ -177,20 +231,50 @@ function getPhaseChecklist(phaseId: string, pd: PhaseData): { label: string; met
     }
 }
 
-const COLOR_MAP: Record<string, { bg: string; text: string; border: string; light: string; dot: string; btn: string }> = {
-    indigo: { bg: 'bg-indigo-600', text: 'text-indigo-700', border: 'border-indigo-300', light: 'bg-indigo-50', dot: 'bg-indigo-500', btn: 'bg-indigo-600 hover:bg-indigo-700 text-white' },
-    sky:    { bg: 'bg-sky-500',    text: 'text-sky-700',    border: 'border-sky-300',    light: 'bg-sky-50',    dot: 'bg-sky-500',    btn: 'bg-sky-500 hover:bg-sky-600 text-white' },
-    amber:  { bg: 'bg-amber-500',  text: 'text-amber-700',  border: 'border-amber-300',  light: 'bg-amber-50',  dot: 'bg-amber-500',  btn: 'bg-amber-500 hover:bg-amber-600 text-white' },
-    purple: { bg: 'bg-purple-600', text: 'text-purple-700', border: 'border-purple-300', light: 'bg-purple-50', dot: 'bg-purple-500', btn: 'bg-purple-600 hover:bg-purple-700 text-white' },
-    emerald:{ bg: 'bg-emerald-600',text: 'text-emerald-700',border: 'border-emerald-300',light: 'bg-emerald-50',dot: 'bg-emerald-500',btn: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
+// Human-readable action label for each sidebar tab key
+const TAB_ACTION_LABELS: Record<string, string> = {
+    'general-detail': 'Conference Details',
+    'features-tracks': 'Manage Tracks',
+    'features-subject-areas': 'Subject Areas',
+    'features-members': 'Members & Roles',
+    'forms-submission': 'Submission Form',
+    'forms-review': 'Review Form',
+    'features-activity-timeline': 'Timeline',
+    'features-paper-management': 'Papers',
+    'features-review-management': 'Review Mgmt',
+    'features-camera-ready': 'Camera-Ready',
+    'features-program-builder': 'Program',
+    'forms-mail': 'Email Templates',
+    'reg-ticket-types': 'Ticket Types',
+    'reg-attendees': 'Attendees',
+    'reg-checkin': 'Check-in',
 }
 
+const COLOR_MAP: Record<string, { bg: string; text: string; border: string; light: string; dot: string; btn: string }> = {
+    indigo:  { bg: 'bg-indigo-600',  text: 'text-indigo-700',  border: 'border-indigo-300',  light: 'bg-indigo-50',  dot: 'bg-indigo-500',  btn: 'bg-indigo-600 hover:bg-indigo-700 text-white' },
+    sky:     { bg: 'bg-sky-500',     text: 'text-sky-700',     border: 'border-sky-300',     light: 'bg-sky-50',     dot: 'bg-sky-500',     btn: 'bg-sky-500 hover:bg-sky-600 text-white' },
+    teal:    { bg: 'bg-teal-500',    text: 'text-teal-700',    border: 'border-teal-300',    light: 'bg-teal-50',    dot: 'bg-teal-500',    btn: 'bg-teal-500 hover:bg-teal-600 text-white' },
+    amber:   { bg: 'bg-amber-500',   text: 'text-amber-700',   border: 'border-amber-300',   light: 'bg-amber-50',   dot: 'bg-amber-500',   btn: 'bg-amber-500 hover:bg-amber-600 text-white' },
+    orange:  { bg: 'bg-orange-500',  text: 'text-orange-700',  border: 'border-orange-300',  light: 'bg-orange-50',  dot: 'bg-orange-500',  btn: 'bg-orange-500 hover:bg-orange-600 text-white' },
+    purple:  { bg: 'bg-purple-600',  text: 'text-purple-700',  border: 'border-purple-300',  light: 'bg-purple-50',  dot: 'bg-purple-500',  btn: 'bg-purple-600 hover:bg-purple-700 text-white' },
+    cyan:    { bg: 'bg-cyan-500',    text: 'text-cyan-700',    border: 'border-cyan-300',    light: 'bg-cyan-50',    dot: 'bg-cyan-500',    btn: 'bg-cyan-500 hover:bg-cyan-600 text-white' },
+    rose:    { bg: 'bg-rose-500',    text: 'text-rose-700',    border: 'border-rose-300',    light: 'bg-rose-50',    dot: 'bg-rose-500',    btn: 'bg-rose-500 hover:bg-rose-600 text-white' },
+    emerald: { bg: 'bg-emerald-600', text: 'text-emerald-700', border: 'border-emerald-300', light: 'bg-emerald-50', dot: 'bg-emerald-500', btn: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
+}
+
+// Detect active phase by scanning from the last phase backward
 function detectActivePhaseIndex(activities: ConferenceActivityDTO[]): number {
     const enabled = new Set(activities.filter(a => a.isEnabled).map(a => a.activityType))
-    for (let i = PHASES.length - 1; i >= 1; i--) {
-        if (PHASES[i].activityKeys.some(k => enabled.has(k))) return i
-    }
-    return 0
+    // Scan from last phase backward
+    if (enabled.has('EVENT_DAY'))              return 8  // Event Day
+    if (enabled.has('REGISTRATION'))           return 7  // Registration
+    if (enabled.has('CAMERA_READY_SUBMISSION'))return 6  // Camera-Ready
+    if (enabled.has('AUTHOR_NOTIFICATION'))    return 5  // Decision
+    if (enabled.has('REVIEW_DISCUSSION'))      return 4  // Discussion
+    if (enabled.has('REVIEW_SUBMISSION'))      return 3  // Review
+    if (enabled.has('REVIEWER_BIDDING'))       return 2  // Bidding
+    if (enabled.has('PAPER_SUBMISSION'))       return 1  // Submission
+    return 0 // Setup
 }
 
 // ─── Phase Status Card ────────────────────────────────────────────────────────
@@ -322,16 +406,6 @@ function PhaseStatusCard({
                             )}
                         </div>
                     </div>
-                    <div className="flex flex-wrap gap-2 shrink-0">
-                        {activePhase.actions.map(action => (
-                            <Button key={action.tab} variant="outline" size="sm"
-                                className={`text-xs rounded-lg border ${c.border} ${c.text} bg-white font-semibold`}
-                                onClick={() => onNavigate?.(action.tab)}>
-                                {action.label}
-                                <ChevronRight className="w-3 h-3 ml-1" />
-                            </Button>
-                        ))}
-                    </div>
                 </div>
             </div>
 
@@ -360,10 +434,10 @@ function PhaseStatusCard({
                 {checklistOpen && (
                     <div className="px-6 pb-5 space-y-2">
                         {checklist.map((item, i) => (
-                            <button
+                            <div
                                 key={i}
                                 onClick={() => onNavigate?.(item.tab)}
-                                className="w-full flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors text-left group"
+                                className="w-full flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors text-left group cursor-pointer"
                             >
                                 {item.met ? (
                                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
@@ -391,8 +465,21 @@ function PhaseStatusCard({
                                         Optional
                                     </Badge>
                                 )}
-                                <ChevronRight className="w-3 h-3 text-gray-300 group-hover:text-gray-500 shrink-0" />
-                            </button>
+                                {/* Inline action button — always visible */}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className={`text-[11px] h-6 px-2.5 rounded-md shrink-0 font-semibold border ${
+                                        item.met
+                                            ? 'border-gray-200 text-gray-500 bg-white hover:bg-gray-50'
+                                            : `${c.border} ${c.text} bg-white hover:${c.light}`
+                                    }`}
+                                    onClick={(e) => { e.stopPropagation(); onNavigate?.(item.tab) }}
+                                >
+                                    {TAB_ACTION_LABELS[item.tab] || 'Configure'}
+                                    <ChevronRight className="w-3 h-3 ml-0.5" />
+                                </Button>
+                            </div>
                         ))}
 
                         {/* Next Phase button */}
@@ -416,16 +503,8 @@ function PhaseStatusCard({
                                 ) : (
                                     <div className="space-y-2">
                                         <p className="text-xs text-amber-600 font-medium">
-                                            ⚠ Complete required items to unlock next phase:
+                                            ⚠ Complete all required items above to unlock next phase
                                         </p>
-                                        <ul className="text-xs text-gray-500 space-y-1 pl-2">
-                                            {unmetBlocking.map((item, i) => (
-                                                <li key={i} className="flex items-center gap-1.5">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                                                    {item.label}
-                                                </li>
-                                            ))}
-                                        </ul>
                                         <Button
                                             size="sm"
                                             disabled
@@ -460,20 +539,30 @@ export function ChairDashboard({ conferenceId, onNavigate }: ChairDashboardProps
         hasTracks: false,
         hasSubjectAreas: false,
         hasMembers: false,
+        hasTickets: false,
         hasSubmissionForm: false,
         hasReviewForm: false,
         submissionEnabled: false,
         submissionDeadlineSet: false,
         submissionDeadlinePassed: false,
         hasPapers: false,
+        biddingEnabled: false,
+        biddingDeadlineSet: false,
         reviewersAssigned: false,
         reviewEnabled: false,
         reviewDeadlineSet: false,
+        allReviewsCompleted: false,
+        discussionEnabled: false,
+        discussionDeadlineSet: false,
         papersHaveDecisions: false,
         authorNotificationEnabled: false,
         cameraReadyEnabled: false,
         cameraReadyDeadlineSet: false,
+        registrationEnabled: false,
+        registrationDeadlineSet: false,
         hasCameraReadySubmissions: false,
+        hasAttendees: false,
+        eventDayEnabled: false,
         hasProgram: false,
     })
     const [loading, setLoading] = useState(true)
@@ -483,13 +572,14 @@ export function ChairDashboard({ conferenceId, onNavigate }: ChairDashboardProps
             setLoading(true)
             const now = new Date()
 
-            const [papersData, aggregatesData, activitiesData, tracksData, formConfig, membersData] = await Promise.all([
+            const [papersData, aggregatesData, activitiesData, tracksData, formConfig, membersData, ticketTypes] = await Promise.all([
                 getPapersByConference(conferenceId).catch(() => []),
                 getAggregatesByConference(conferenceId).catch(() => []),
                 getConferenceActivities(conferenceId).catch(() => []),
                 getTracksByConference(conferenceId).catch(() => []),
                 getConferenceSubmissionForm(conferenceId).catch(() => null),
                 getConferenceMembers(conferenceId, 0).catch(() => ({ totalElements: 0 })),
+                getTicketTypes(conferenceId, false).catch(() => []),
             ])
 
             // Review questions & subject areas — check first track
@@ -549,26 +639,49 @@ export function ChairDashboard({ conferenceId, onNavigate }: ChairDashboardProps
                 p.status === 'PUBLISHED' || p.cameraReadyFileUrl
             )
 
+            // Reviews completion check
+            const totalAssigned = merged.reduce((s, p) => s + p.reviewCount, 0)
+            const totalCompleted = merged.reduce((s, p) => s + p.completedReviewCount, 0)
+            const allReviewsCompleted = totalAssigned > 0 && totalCompleted >= totalAssigned
+
+            // Attendees check
+            let hasAttendees = false
+            try {
+                const { getAttendees } = await import('@/app/api/registration.api')
+                const attendees = await getAttendees(conferenceId)
+                hasAttendees = Array.isArray(attendees) && attendees.length > 0
+            } catch { hasAttendees = false }
+
             setPapers(merged)
             setActivities(activitiesData)
             setPhaseData({
                 hasTracks: tracksData.length > 0,
                 hasSubjectAreas,
                 hasMembers: (membersData as any).totalElements > 1,
+                hasTickets: Array.isArray(ticketTypes) && ticketTypes.length > 0,
                 hasSubmissionForm,
                 hasReviewForm,
                 submissionEnabled: isEnabled('PAPER_SUBMISSION'),
                 submissionDeadlineSet: hasDeadline('PAPER_SUBMISSION'),
                 submissionDeadlinePassed: deadlinePassed('PAPER_SUBMISSION'),
                 hasPapers,
+                biddingEnabled: isEnabled('REVIEWER_BIDDING'),
+                biddingDeadlineSet: hasDeadline('REVIEWER_BIDDING'),
                 reviewersAssigned,
                 reviewEnabled: isEnabled('REVIEW_SUBMISSION'),
                 reviewDeadlineSet: hasDeadline('REVIEW_SUBMISSION'),
+                allReviewsCompleted,
+                discussionEnabled: isEnabled('REVIEW_DISCUSSION'),
+                discussionDeadlineSet: hasDeadline('REVIEW_DISCUSSION'),
                 papersHaveDecisions,
                 authorNotificationEnabled: isEnabled('AUTHOR_NOTIFICATION'),
                 cameraReadyEnabled: isEnabled('CAMERA_READY_SUBMISSION'),
                 cameraReadyDeadlineSet: hasDeadline('CAMERA_READY_SUBMISSION'),
+                registrationEnabled: isEnabled('REGISTRATION'),
+                registrationDeadlineSet: hasDeadline('REGISTRATION'),
                 hasCameraReadySubmissions,
+                hasAttendees,
+                eventDayEnabled: isEnabled('EVENT_DAY'),
                 hasProgram: false, // TODO: fetch from program API when available
             })
         } catch (err) {

@@ -4,7 +4,7 @@ import * as React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
-import { Menu, X, Search, LogOut, ChevronDown } from 'lucide-react'
+import { Menu, X, Search, LogOut, ChevronDown, User, FileText, Ticket, CreditCard } from 'lucide-react'
 import { useUserRoles } from '@/hooks/useUserConferenceRoles'
 import { getUserByEmail, getUserProfile } from '@/app/api/user.api'
 import { NotificationBell } from '@/components/notification-bell'
@@ -190,15 +190,33 @@ export function AppNavbar() {
                                         <Link
                                             href="/my-profile"
                                             onClick={() => setUserMenuOpen(false)}
-                                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
                                         >
+                                            <User className="h-4 w-4 text-gray-400" />
                                             My Profile
                                         </Link>
                                         <Link
-                                            href="/paper"
+                                            href="/my-profile/tickets"
                                             onClick={() => setUserMenuOpen(false)}
-                                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
                                         >
+                                            <Ticket className="h-4 w-4 text-gray-400" />
+                                            My Tickets
+                                        </Link>
+                                        <Link
+                                            href="/my-profile/payments"
+                                            onClick={() => setUserMenuOpen(false)}
+                                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                                        >
+                                            <CreditCard className="h-4 w-4 text-gray-400" />
+                                            Payment History
+                                        </Link>
+                                        <Link
+                                            href="/my-profile/papers"
+                                            onClick={() => setUserMenuOpen(false)}
+                                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                                        >
+                                            <FileText className="h-4 w-4 text-gray-400" />
                                             My Papers
                                         </Link>
                                         <div className="border-t border-gray-100 mt-1 pt-1">
