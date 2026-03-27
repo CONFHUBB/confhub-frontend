@@ -19,19 +19,9 @@ export default function CreateConferencePage() {
         const token = localStorage.getItem('accessToken')
         if (!token) {
             router.push('/auth/login')
-            return
-        }
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]))
-            const roles = payload.roles || []
-            if (!roles.includes('ADMIN')) {
-                toast.error('Only administrators can create conferences.')
-                router.push('/dashboard')
-            }
-        } catch (e) {
-            router.push('/dashboard')
         }
     }, [router])
+
 
     const handleConferenceSubmit = async (data: ConferenceData) => {
         setIsSubmitting(true)
