@@ -425,7 +425,7 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
     const [showExternalInvite, setShowExternalInvite] = useState(false)
     const [externalRole, setExternalRole] = useState("REVIEWER")
     const [externalName, setExternalName] = useState("")
-    const [externalTrackId, setExternalTrackId] = useState<string>("")
+    const [externalTrackIds, setExternalTrackIds] = useState<string[]>([])
     const [isSendingInvite, setIsSendingInvite] = useState(false)
     const [conference, setConference] = useState<ConferenceResponse | null>(null)
 
@@ -704,22 +704,20 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                 <div className="flex gap-1 border-b pb-0 px-6">
                     <button
                         onClick={() => setMemberTab('add-user')}
-                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                            memberTab === 'add-user'
+                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${memberTab === 'add-user'
                                 ? 'border-primary text-primary'
                                 : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
-                        }`}
+                            }`}
                     >
                         <UserPlus className="h-4 w-4" />
                         Add User
                     </button>
                     <button
                         onClick={() => setMemberTab('import-excel')}
-                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                            memberTab === 'import-excel'
+                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${memberTab === 'import-excel'
                                 ? 'border-primary text-primary'
                                 : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
-                        }`}
+                            }`}
                     >
                         <FileSpreadsheet className="h-4 w-4" />
                         Import Excel
@@ -787,7 +785,7 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                                 </div>
                                                 <div className="space-y-1">
                                                     <label className="text-xs font-medium text-gray-700">Role</label>
-                                                    <Select value={externalRole} onValueChange={(v) => { setExternalRole(v); setExternalTrackId(""); }}>
+                                                    <Select value={externalRole} onValueChange={(v) => { setExternalRole(v); setExternalTrackIds([]); }}>
                                                         <SelectTrigger className="h-9">
                                                             <SelectValue />
                                                         </SelectTrigger>
@@ -802,29 +800,43 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                                 </div>
                                             </div>
 
-                                            {/* Track selector for track-bound roles */}
+                                            {/* Track selector for track-bound roles (multi-select) */}
                                             {TRACK_BOUND_ROLES.includes(externalRole) && (
                                                 <div className="space-y-1">
                                                     <label className="text-xs font-medium text-gray-700">
-                                                        Track <span className="text-red-500">*</span>
+                                                        Tracks <span className="text-red-500">*</span>
+                                                        {externalTrackIds.length > 0 && (
+                                                            <span className="ml-1 text-indigo-600">({externalTrackIds.length} selected)</span>
+                                                        )}
                                                     </label>
                                                     {tracks.length === 0 ? (
                                                         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                                                             No tracks available. Please create tracks first in Config Tracks.
                                                         </p>
                                                     ) : (
-                                                        <Select value={externalTrackId} onValueChange={setExternalTrackId}>
-                                                            <SelectTrigger className="h-9">
-                                                                <SelectValue placeholder="Select a track..." />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {tracks.map((t) => (
-                                                                    <SelectItem key={t.id} value={String(t.id)}>
-                                                                        {t.name}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
+                                                        <div className="rounded-md border bg-white max-h-40 overflow-y-auto">
+                                                            {tracks.map((t) => {
+                                                                const isChecked = externalTrackIds.includes(String(t.id))
+                                                                return (
+                                                                    <label
+                                                                        key={t.id}
+                                                                        className="flex items-center gap-2.5 px-3 py-2 text-sm cursor-pointer hover:bg-indigo-50/50 transition-colors border-b last:border-b-0"
+                                                                    >
+                                                                        <Checkbox
+                                                                            checked={isChecked}
+                                                                            onCheckedChange={(checked) => {
+                                                                                setExternalTrackIds(prev =>
+                                                                                    checked
+                                                                                        ? [...prev, String(t.id)]
+                                                                                        : prev.filter(id => id !== String(t.id))
+                                                                                )
+                                                                            }}
+                                                                        />
+                                                                        <span>{t.name}</span>
+                                                                    </label>
+                                                                )
+                                                            })}
+                                                        </div>
                                                     )}
                                                 </div>
                                             )}
@@ -840,7 +852,7 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                                 disabled={
                                                     isSendingInvite ||
                                                     !externalName.trim() ||
-                                                    (TRACK_BOUND_ROLES.includes(externalRole) && !externalTrackId)
+                                                    (TRACK_BOUND_ROLES.includes(externalRole) && externalTrackIds.length === 0)
                                                 }
                                                 onClick={async () => {
                                                     const nameErr = V.maxLen(externalName.trim(), 100)
@@ -848,15 +860,22 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                                         toast.error(`Recipient Name: ${nameErr}`)
                                                         return
                                                     }
-                                                    if (TRACK_BOUND_ROLES.includes(externalRole) && !externalTrackId) {
-                                                        toast.error("Please select a track for this role.")
+                                                    if (TRACK_BOUND_ROLES.includes(externalRole) && externalTrackIds.length === 0) {
+                                                        toast.error("Please select at least one track for this role.")
                                                         return
                                                     }
                                                     setIsSendingInvite(true)
                                                     try {
-                                                        const selectedTrack = tracks.find(t => String(t.id) === externalTrackId)
                                                         const roleLabel = ROLE_DISPLAY[externalRole] || externalRole
-                                                        const trackLabel = selectedTrack ? ` — ${selectedTrack.name}` : ""
+
+                                                        // Gather selected track names
+                                                        const selectedTracks = TRACK_BOUND_ROLES.includes(externalRole)
+                                                            ? externalTrackIds.map(id => tracks.find(t => String(t.id) === id)).filter(Boolean)
+                                                            : []
+                                                        const trackNames = selectedTracks.map(t => t!.name)
+                                                        const trackLabel = trackNames.length > 0
+                                                            ? ` — ${trackNames.join(', ')}`
+                                                            : ""
 
                                                         const formData = new FormData()
                                                         formData.append('to', searchEmail.trim())
@@ -865,8 +884,8 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                                         formData.append('conferenceName', conference?.name || '')
                                                         formData.append('conferenceId', String(conferenceId))
                                                         formData.append('role', roleLabel)
-                                                        if (selectedTrack) {
-                                                            formData.append('trackName', selectedTrack.name)
+                                                        if (trackNames.length > 0) {
+                                                            formData.append('trackName', trackNames.join(', '))
                                                         }
                                                         formData.append('invitationToken', 'external-' + Date.now())
 
@@ -876,7 +895,7 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                                         setSearchError(null)
                                                         setSearchEmail("")
                                                         setExternalName("")
-                                                        setExternalTrackId("")
+                                                        setExternalTrackIds([])
                                                     } catch (err) {
                                                         console.error('Failed to send invitation:', err)
                                                         toast.error('Failed to send invitation email. Please try again.')
@@ -1052,135 +1071,135 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                 ) : (
                     <div className="rounded-lg border overflow-hidden">
                         <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="bg-muted/30">
-                                    <TableHead className="w-10 text-center">
-                                        <Checkbox
-                                            checked={selectedIds.size === filteredMembers.length && filteredMembers.length > 0}
-                                            onCheckedChange={toggleSelectAll}
-                                        />
-                                    </TableHead>
-                                    <TableHead className="w-12 text-center">#</TableHead>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Role</TableHead>
-                                    <TableHead className="w-28 text-center">Status</TableHead>
-                                    <TableHead className="w-32 text-center">Action</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredMembers.map((member, idx) => {
-                                    const roleGroups = formatRoles(member.roles)
-                                    const status = getAcceptanceStatus(member.roles)
-                                    return (
-                                        <TableRow key={member.user.id} className={selectedIds.has(member.user.id) ? 'bg-indigo-50/50' : ''}>
-                                            {/* Checkbox */}
-                                            <TableCell className="text-center">
-                                                <Checkbox
-                                                    checked={selectedIds.has(member.user.id)}
-                                                    onCheckedChange={() => toggleSelect(member.user.id)}
-                                                />
-                                            </TableCell>
-                                            {/* # */}
-                                            <TableCell className="text-center text-xs text-muted-foreground font-medium">
-                                                {currentPage * 10 + idx + 1}
-                                            </TableCell>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-muted/30">
+                                        <TableHead className="w-10 text-center">
+                                            <Checkbox
+                                                checked={selectedIds.size === filteredMembers.length && filteredMembers.length > 0}
+                                                onCheckedChange={toggleSelectAll}
+                                            />
+                                        </TableHead>
+                                        <TableHead className="w-12 text-center">#</TableHead>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Role</TableHead>
+                                        <TableHead className="w-28 text-center">Status</TableHead>
+                                        <TableHead className="w-32 text-center">Action</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredMembers.map((member, idx) => {
+                                        const roleGroups = formatRoles(member.roles)
+                                        const status = getAcceptanceStatus(member.roles)
+                                        return (
+                                            <TableRow key={member.user.id} className={selectedIds.has(member.user.id) ? 'bg-indigo-50/50' : ''}>
+                                                {/* Checkbox */}
+                                                <TableCell className="text-center">
+                                                    <Checkbox
+                                                        checked={selectedIds.has(member.user.id)}
+                                                        onCheckedChange={() => toggleSelect(member.user.id)}
+                                                    />
+                                                </TableCell>
+                                                {/* # */}
+                                                <TableCell className="text-center text-xs text-muted-foreground font-medium">
+                                                    {currentPage * 10 + idx + 1}
+                                                </TableCell>
 
-                                            {/* Name + Email */}
-                                            <TableCell>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0 text-xs font-bold text-primary">
-                                                        {(member.user.fullName ?? "?")[0]?.toUpperCase()}
+                                                {/* Name + Email */}
+                                                <TableCell>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0 text-xs font-bold text-primary">
+                                                            {(member.user.fullName ?? "?")[0]?.toUpperCase()}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="font-medium text-sm truncate" title={member.user.fullName ?? ""}>{member.user.fullName}</p>
+                                                            <p className="text-xs text-muted-foreground truncate" title={member.user.email}>{member.user.email}</p>
+                                                        </div>
                                                     </div>
-                                                    <div className="min-w-0">
-                                                        <p className="font-medium text-sm truncate" title={member.user.fullName ?? ""}>{member.user.fullName}</p>
-                                                        <p className="text-xs text-muted-foreground truncate" title={member.user.email}>{member.user.email}</p>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
+                                                </TableCell>
 
-                                            {/* Roles */}
-                                            <TableCell>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {[...roleGroups.entries()].map(([role, trackNames]) => (
-                                                        <Badge
-                                                            key={role}
-                                                            variant="outline"
-                                                            className={`text-[10px] py-0.5 ${ROLE_COLORS[role] ?? ""}`}
+                                                {/* Roles */}
+                                                <TableCell>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {[...roleGroups.entries()].map(([role, trackNames]) => (
+                                                            <Badge
+                                                                key={role}
+                                                                variant="outline"
+                                                                className={`text-[10px] py-0.5 ${ROLE_COLORS[role] ?? ""}`}
+                                                            >
+                                                                {ROLE_DISPLAY[role] ?? role}
+                                                                {trackNames.length > 0 && (
+                                                                    <span className="opacity-60 ml-1">
+                                                                        ({trackNames.length > 1 ? `${trackNames.length} tracks` : trackNames[0]})
+                                                                    </span>
+                                                                )}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                </TableCell>
+
+                                                {/* Status */}
+                                                <TableCell className="text-center">
+                                                    {status === 'accepted' && (
+                                                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Accepted
+                                                        </span>
+                                                    )}
+                                                    {status === 'pending' && (
+                                                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Pending
+                                                        </span>
+                                                    )}
+                                                    {status === 'declined' && (
+                                                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Declined
+                                                        </span>
+                                                    )}
+                                                </TableCell>
+
+                                                {/* Actions */}
+                                                <TableCell className="text-center">
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                                                            title="View Details"
+                                                            onClick={() => {
+                                                                setDetailMember(member)
+                                                                setDetailOpen(true)
+                                                            }}
                                                         >
-                                                            {ROLE_DISPLAY[role] ?? role}
-                                                            {trackNames.length > 0 && (
-                                                                <span className="opacity-60 ml-1">
-                                                                    ({trackNames.length > 1 ? `${trackNames.length} tracks` : trackNames[0]})
-                                                                </span>
-                                                            )}
-                                                        </Badge>
-                                                    ))}
-                                                </div>
-                                            </TableCell>
-
-                                            {/* Status */}
-                                            <TableCell className="text-center">
-                                                {status === 'accepted' && (
-                                                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Accepted
-                                                    </span>
-                                                )}
-                                                {status === 'pending' && (
-                                                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Pending
-                                                    </span>
-                                                )}
-                                                {status === 'declined' && (
-                                                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Declined
-                                                    </span>
-                                                )}
-                                            </TableCell>
-
-                                            {/* Actions */}
-                                            <TableCell className="text-center">
-                                                <div className="flex items-center justify-center gap-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                                                        title="View Details"
-                                                        onClick={() => {
-                                                            setDetailMember(member)
-                                                            setDetailOpen(true)
-                                                        }}
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                                                        title="Manage Roles"
-                                                        onClick={() => openManageRoles(member.user, member.roles)}
-                                                    >
-                                                        <Settings2 className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600"
-                                                        title="Remove Member"
-                                                        onClick={() => {
-                                                            setMemberToRemove(member)
-                                                            setRemoveConfirmOpen(true)
-                                                        }}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    )
-                                })}
-                            </TableBody>
-                        </Table>
+                                                            <Eye className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                                                            title="Manage Roles"
+                                                            onClick={() => openManageRoles(member.user, member.roles)}
+                                                        >
+                                                            <Settings2 className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600"
+                                                            title="Remove Member"
+                                                            onClick={() => {
+                                                                setMemberToRemove(member)
+                                                                setRemoveConfirmOpen(true)
+                                                            }}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    })}
+                                </TableBody>
+                            </Table>
                         </div>
                     </div>
                 )}
@@ -1314,11 +1333,10 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                         .map((role) => (
                                             <div key={role.id} className="px-4 py-2.5 flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${
-                                                        role.isAccepted === true ? 'bg-green-500'
-                                                        : role.isAccepted === false ? 'bg-red-500'
-                                                        : 'bg-amber-500'
-                                                    }`} />
+                                                    <div className={`w-1.5 h-1.5 rounded-full ${role.isAccepted === true ? 'bg-green-500'
+                                                            : role.isAccepted === false ? 'bg-red-500'
+                                                                : 'bg-amber-500'
+                                                        }`} />
                                                     <span className="text-sm font-medium">
                                                         {ROLE_DISPLAY[role.assignedRole] ?? role.assignedRole}
                                                     </span>
