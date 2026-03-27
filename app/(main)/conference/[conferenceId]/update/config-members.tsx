@@ -68,11 +68,10 @@ import {
     FileSpreadsheet,
     Download,
     Filter,
-    CheckSquare,
-    Check
+    CheckSquare
 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { FilterPanel } from "@/components/ui/filter-panel"
 import { V } from "@/lib/validation"
 
 // ── Role constants ──────────────────────────────────────
@@ -986,58 +985,24 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                 onChange={(e) => setMemberSearch(e.target.value)}
                             />
                         </div>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="h-9 gap-2 text-sm px-3">
-                                    <Filter className="h-4 w-4 text-muted-foreground" />
-                                    Filter Roles
-                                    {activeFilterCount > 0 && (
-                                        <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs font-normal">
-                                            {activeFilterCount}
-                                        </Badge>
-                                    )}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 p-0" align="end">
-                                <div className="p-4 space-y-4">
-                                    <div className="space-y-2">
-                                        <h4 className="font-medium text-sm">Role</h4>
-                                        <div className="grid gap-1">
-                                            {[
-                                                { value: "all", label: "All Roles" },
-                                                { value: "CONFERENCE_CHAIR", label: "Conference Chair" },
-                                                { value: "PROGRAM_CHAIR", label: "Program Chair" },
-                                                { value: "REVIEWER", label: "Reviewer" },
-                                                { value: "AUTHOR", label: "Author" },
-                                                { value: "ATTENDEE", label: "Attendee" }
-                                            ].map(opt => (
-                                                <div
-                                                    key={opt.value}
-                                                    className="flex items-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-muted"
-                                                    onClick={() => { setRoleFilter(opt.value); setCurrentPage(0); }}
-                                                >
-                                                    <span className={roleFilter === opt.value ? "font-medium" : ""}>
-                                                        {opt.label}
-                                                    </span>
-                                                    {roleFilter === opt.value && <Check className="h-4 w-4" />}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                                {activeFilterCount > 0 && (
-                                    <div className="p-3 border-t bg-muted/50">
-                                        <Button
-                                            variant="ghost"
-                                            className="w-full text-xs h-8"
-                                            onClick={() => { setRoleFilter("all"); setCurrentPage(0); }}
-                                        >
-                                            Clear filters
-                                        </Button>
-                                    </div>
-                                )}
-                            </PopoverContent>
-                        </Popover>
+                        <FilterPanel
+                            groups={[
+                                {
+                                    label: 'Role',
+                                    type: 'radio',
+                                    options: [
+                                        { value: 'all', label: 'All Roles' },
+                                        { value: 'CONFERENCE_CHAIR', label: 'Conference Chair' },
+                                        { value: 'PROGRAM_CHAIR', label: 'Program Chair' },
+                                        { value: 'REVIEWER', label: 'Reviewer' },
+                                        { value: 'AUTHOR', label: 'Author' },
+                                        { value: 'ATTENDEE', label: 'Attendee' },
+                                    ],
+                                    value: roleFilter,
+                                    onChange: (v) => { setRoleFilter(v); setCurrentPage(0) },
+                                },
+                            ]}
+                        />
                     </div>
                 )}
 
@@ -1086,6 +1051,7 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                     </div>
                 ) : (
                     <div className="rounded-lg border overflow-hidden">
+                        <div className="overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-muted/30">
@@ -1127,8 +1093,8 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                                         {(member.user.fullName ?? "?")[0]?.toUpperCase()}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="font-medium text-sm truncate">{member.user.fullName}</p>
-                                                        <p className="text-xs text-muted-foreground truncate">{member.user.email}</p>
+                                                        <p className="font-medium text-sm truncate" title={member.user.fullName ?? ""}>{member.user.fullName}</p>
+                                                        <p className="text-xs text-muted-foreground truncate" title={member.user.email}>{member.user.email}</p>
                                                     </div>
                                                 </div>
                                             </TableCell>
@@ -1215,23 +1181,24 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                 })}
                             </TableBody>
                         </Table>
+                        </div>
                     </div>
                 )}
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                    <div className="flex items-center justify-between pt-4 border-t">
-                        <p className="text-xs text-muted-foreground">
+                    <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
+                        <div className="text-sm text-muted-foreground">
                             Page {currentPage + 1} of {totalPages} · {totalElements} members
-                        </p>
-                        <div className="flex gap-1">
+                        </div>
+                        <div className="flex gap-2">
                             <Button
                                 variant="outline"
                                 size="sm"
                                 disabled={currentPage === 0}
                                 onClick={() => fetchMembers(currentPage - 1)}
                             >
-                                <ChevronLeft className="h-4 w-4" />
+                                <ChevronLeft className="h-4 w-4 mr-1" /> Previous
                             </Button>
                             <Button
                                 variant="outline"
@@ -1239,7 +1206,7 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                 disabled={currentPage >= totalPages - 1}
                                 onClick={() => fetchMembers(currentPage + 1)}
                             >
-                                <ChevronRight className="h-4 w-4" />
+                                Next <ChevronRight className="h-4 w-4 ml-1" />
                             </Button>
                         </div>
                     </div>

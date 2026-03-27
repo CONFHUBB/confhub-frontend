@@ -10,13 +10,13 @@ import { CONFLICT_TYPE_LABELS } from "@/types/conflict"
 import type { TrackResponse } from "@/types/track"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { Loader2, Plus, Trash2, AlertTriangle, Shield, Lock, Globe, UserX, Settings2, ChevronLeft, ChevronRight, Search, Filter, Download, Check } from "lucide-react"
+import { Loader2, Plus, Trash2, AlertTriangle, Shield, Lock, Globe, UserX, Settings2, ChevronLeft, ChevronRight, Search, Filter, Download } from "lucide-react"
 import { Select } from "antd"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select as ShadSelect, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { FilterPanel } from "@/components/ui/filter-panel"
 import toast from "react-hot-toast"
 
 interface ConflictManagementProps {
@@ -430,51 +430,20 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                             onChange={(e) => { setConflictSearch(e.target.value); setCurrentPage(0) }}
                         />
                     </div>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" className="h-9 gap-2 text-sm px-3">
-                                <Filter className="h-4 w-4 text-muted-foreground" />
-                                Filters
-                                {activeFilterCount > 0 && (
-                                    <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs font-normal">
-                                        {activeFilterCount}
-                                    </Badge>
-                                )}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-64 p-0" align="end">
-                            <div className="p-4 space-y-4">
-                                <div className="space-y-2">
-                                    <h4 className="font-medium text-sm">Conflict Type</h4>
-                                    <div className="grid gap-1">
-                                        {[{ value: "all", label: "All Types" }, ...Object.entries(CONFLICT_TYPE_LABELS).map(([k, v]) => ({ value: k, label: v }))].map(opt => (
-                                            <div
-                                                key={opt.value}
-                                                className="flex items-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-muted"
-                                                onClick={() => { setConflictTypeFilter(opt.value); setCurrentPage(0); }}
-                                            >
-                                                <span className={conflictTypeFilter === opt.value ? "font-medium" : ""}>
-                                                    {opt.label}
-                                                </span>
-                                                {conflictTypeFilter === opt.value && <Check className="h-4 w-4" />}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                            {activeFilterCount > 0 && (
-                                <div className="p-3 border-t bg-muted/50">
-                                    <Button
-                                        variant="ghost"
-                                        className="w-full text-xs h-8"
-                                        onClick={() => { setConflictTypeFilter("all"); setCurrentPage(0); }}
-                                    >
-                                        Clear filters
-                                    </Button>
-                                </div>
-                            )}
-                        </PopoverContent>
-                    </Popover>
+                    <FilterPanel
+                        groups={[
+                            {
+                                label: 'Conflict Type',
+                                type: 'radio',
+                                options: [
+                                    { value: 'all', label: 'All Types' },
+                                    ...Object.entries(CONFLICT_TYPE_LABELS).map(([k, v]) => ({ value: k, label: v })),
+                                ],
+                                value: conflictTypeFilter,
+                                onChange: (v) => { setConflictTypeFilter(v); setCurrentPage(0) },
+                            },
+                        ]}
+                    />
                     <Button
                         variant="outline"
                         size="sm"
@@ -500,12 +469,13 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                     </Button>
                 </div>
                 <div className="rounded-lg border overflow-hidden">
+                    <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-muted/30">
                                 <TableHead className="w-12">#</TableHead>
-                                <TableHead>Paper</TableHead>
-                                <TableHead>User</TableHead>
+                                <TableHead className="min-w-[180px] max-w-[260px]">Paper</TableHead>
+                                <TableHead className="min-w-[140px]">User</TableHead>
                                 <TableHead>Type</TableHead>
                                 <TableHead className="text-right">Action</TableHead>
                             </TableRow>
@@ -514,19 +484,12 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                             {paginatedConflicts.map((conflict, idx) => (
                                 <TableRow key={conflict.id}>
                                     <TableCell className="text-muted-foreground text-xs font-medium">{currentPage * PAGE_SIZE + idx + 1}</TableCell>
-                                    <TableCell>
-                                        <span className="font-medium">#{conflict.paper?.id}</span>{" "}
-                                        <span className="text-muted-foreground">{conflict.paper?.title}</span>
+                                    <TableCell className="max-w-[260px]">
+                                        <p className="font-medium text-xs truncate" title={`#${conflict.paper?.id} ${conflict.paper?.title}`}>#{conflict.paper?.id} {conflict.paper?.title}</p>
                                     </TableCell>
-                                    <TableCell>
-                                        <div>
-                                            <span className="font-medium">
-                                                {conflict.user?.firstName} {conflict.user?.lastName}
-                                            </span>
-                                            <span className="text-muted-foreground text-xs block">
-                                                {conflict.user?.email}
-                                            </span>
-                                        </div>
+                                    <TableCell className="max-w-[160px]">
+                                        <p className="font-medium text-sm truncate" title={`${conflict.user?.firstName} ${conflict.user?.lastName}`}>{conflict.user?.firstName} {conflict.user?.lastName}</p>
+                                        <p className="text-muted-foreground text-xs truncate" title={conflict.user?.email}>{conflict.user?.email}</p>
                                     </TableCell>
                                     <TableCell>
                                         <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
@@ -547,18 +510,19 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                             ))}
                         </TableBody>
                     </Table>
+                    </div>
                 </div>
                 {conflictsTotalPages > 1 && (
-                    <div className="flex items-center justify-between pt-3">
-                        <p className="text-xs text-muted-foreground">
+                    <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
+                        <div className="text-sm text-muted-foreground">
                             Page {currentPage + 1} of {conflictsTotalPages} · {filteredConflicts.length} conflicts
-                        </p>
-                        <div className="flex items-center gap-1">
+                        </div>
+                        <div className="flex gap-2">
                             <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
-                                <ChevronLeft className="h-4 w-4" />
+                                <ChevronLeft className="h-4 w-4 mr-1" /> Previous
                             </Button>
                             <Button variant="outline" size="sm" disabled={currentPage >= conflictsTotalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
-                                <ChevronRight className="h-4 w-4" />
+                                Next <ChevronRight className="h-4 w-4 ml-1" />
                             </Button>
                         </div>
                     </div>

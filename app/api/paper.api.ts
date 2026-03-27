@@ -127,12 +127,38 @@ export const restorePaper = async (paperId: number): Promise<PaperResponse> => {
     return response.data
 }
 
-export const getPapersByConference = async (conferenceId: number): Promise<PaperResponse[]> => {
-    const response = await http.get<PaperResponse[]>(`/paper/conference/${conferenceId}`)
+export const getPapersByConference = async (
+    conferenceId: number,
+    trackIds?: number[]
+): Promise<PaperResponse[]> => {
+    const params: Record<string, any> = {}
+    if (trackIds && trackIds.length > 0) {
+        params.trackIds = trackIds.join(',')
+    }
+    const response = await http.get<PaperResponse[]>(`/paper/conference/${conferenceId}`, { params })
     return response.data
 }
 
 export const updatePaperStatus = async (paperId: number, status: string): Promise<PaperResponse> => {
     const response = await http.put<PaperResponse>(`/paper/status/${paperId}`, { status })
+    return response.data
+}
+
+/**
+ * Secure download list for reviewers.
+ * Only returns files if the caller (identified via JWT) is assigned to review this paper.
+ * Throws 400 Bad Request if not assigned.
+ */
+export const getReviewerPaperFiles = async (paperId: number): Promise<PaperFileResponse[]> => {
+    const response = await http.get<PaperFileResponse[]>(`/paper-file/paper/${paperId}/reviewer-files`)
+    return Array.isArray(response.data) ? response.data : []
+}
+
+/**
+ * Task 3: Trigger async batch decision notification emails for all paper authors in a conference.
+ * Returns immediately with a count message; emails sent in background.
+ */
+export const batchNotifyDecisions = async (conferenceId: number): Promise<string> => {
+    const response = await http.post<string>(`/paper/conference/${conferenceId}/batch-notify`)
     return response.data
 }

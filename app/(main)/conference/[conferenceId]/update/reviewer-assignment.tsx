@@ -38,7 +38,7 @@ import {
 import {
     Loader2, Users, FileText, Wand2, Check, X, AlertTriangle,
     Search, Trash2, Plus, BarChart3, Settings2, UserPlus, ArrowLeft, Edit, Eye, MoreHorizontal, Gavel, User2,
-    ChevronDown, ChevronRight, Building2, Phone, GraduationCap
+    ChevronDown, ChevronLeft, ChevronRight, Building2, Phone, GraduationCap
 } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import toast from "react-hot-toast"
@@ -138,6 +138,11 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
     }
     const [detailPaperId, setDetailPaperId] = useState<number | null>(null)
     const [detailReviewers, setDetailReviewers] = useState<DetailReviewerInfo[]>([])
+
+    // ── Pagination ──
+    const PAGE_SIZE = 10
+    const [currentPage, setCurrentPage] = useState(0)
+
     const [detailLoading, setDetailLoading] = useState(false)
 
     // ── Fetch assignments ──
@@ -317,7 +322,6 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
         })
         return map
     }, [allConflicts])
-
     // ── Filtered papers for table ──
     const filteredPapers = useMemo(() => {
         if (!paperSearchQuery.trim()) return fullPapers
@@ -329,6 +333,13 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
             (subjectAreaMap[p.primarySubjectAreaId] || "").toLowerCase().includes(q)
         )
     }, [fullPapers, paperSearchQuery, paperAuthors, subjectAreaMap])
+
+    useEffect(() => {
+        setCurrentPage(0)
+    }, [paperSearchQuery])
+
+    const totalPages = Math.ceil(filteredPapers.length / PAGE_SIZE)
+    const paginatedPapers = filteredPapers.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
 
     // ── Edit paper: assignments and reviewers for the selected paper ──
     const editingPaper = useMemo(() => fullPapers.find(p => p.id === editingPaperId), [fullPapers, editingPaperId])
@@ -744,7 +755,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        filteredPapers.map((paper) => {
+                                        paginatedPapers.map((paper, idx) => {
                                             const revCount = reviewerCountPerPaper[paper.id] || 0
                                             const conflictCount = conflictCountPerPaper[paper.id] || 0
                                             const saName = subjectAreaMap[paper.primarySubjectAreaId] || "—"
@@ -785,7 +796,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                         <td className="px-4 py-3 font-mono text-muted-foreground">
                                                             <div className="flex items-center gap-1">
                                                                 {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                                                                {paper.id}
+                                                                {currentPage * PAGE_SIZE + idx + 1}
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-3">
@@ -1041,6 +1052,21 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                 </TableBody>
                             </Table>
                         </div>
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
+                                <div className="text-sm text-muted-foreground">
+                                    Page {currentPage + 1} of {totalPages} · {filteredPapers.length} papers
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
+                                        <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+                                    </Button>
+                                    <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
+                                        Next <ChevronRight className="h-4 w-4 ml-1" />
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             )}

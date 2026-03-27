@@ -14,8 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
-import { Loader2, Plus, Pencil, Trash2, Ticket, Download, ToggleRight, ToggleLeft, Search, Filter, ChevronLeft, ChevronRight, Check } from 'lucide-react'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Loader2, Plus, Pencil, Trash2, Ticket, Download, ToggleRight, ToggleLeft, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
+import { FilterPanel } from '@/components/ui/filter-panel'
 import { formatDate } from '@/lib/utils'
 
 const PAGE_SIZE = 10
@@ -215,73 +215,31 @@ export default function TicketTypesConfig({ conferenceId }: Props) {
             onChange={e => { setSearch(e.target.value); setCurrentPage(0); }}
           />
         </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="h-9 gap-2 text-sm px-3">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              Filters
-              {activeFilterCount > 0 && (
-                <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs font-normal">
-                  {activeFilterCount}
-                </Badge>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80 p-0" align="end">
-            <div className="p-4 space-y-4">
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Category</h4>
-                <div className="grid gap-1">
-                  <div
-                    className="flexItems-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-muted"
-                    onClick={() => { setCategoryFilter('all'); setCurrentPage(0); }}
-                  >
-                    <span className={categoryFilter === 'all' ? 'font-medium' : ''}>All Categories</span>
-                    {categoryFilter === 'all' && <Check className="h-4 w-4" />}
-                  </div>
-                  {CATEGORIES.map(c => (
-                    <div
-                      key={c.value}
-                      className="flex items-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-muted"
-                      onClick={() => { setCategoryFilter(c.value); setCurrentPage(0); }}
-                    >
-                      <span className={categoryFilter === c.value ? 'font-medium' : ''}>{c.label}</span>
-                      {categoryFilter === c.value && <Check className="h-4 w-4" />}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2 pt-2 border-t">
-                <h4 className="font-medium text-sm">Status</h4>
-                <div className="grid gap-1">
-                  {['all', 'ACTIVE', 'INACTIVE'].map(status => (
-                    <div
-                      key={status}
-                      className="flex items-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-muted"
-                      onClick={() => { setStatusFilter(status); setCurrentPage(0); }}
-                    >
-                      <span className={statusFilter === status ? 'font-medium' : ''}>
-                        {status === 'all' ? 'All Status' : status === 'ACTIVE' ? 'Active' : 'Inactive'}
-                      </span>
-                      {statusFilter === status && <Check className="h-4 w-4" />}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            {activeFilterCount > 0 && (
-              <div className="p-3 border-t bg-muted/50">
-                <Button
-                  variant="ghost"
-                  className="w-full text-xs h-8"
-                  onClick={() => { setCategoryFilter('all'); setStatusFilter('all'); setCurrentPage(0); }}
-                >
-                  Clear all filters
-                </Button>
-              </div>
-            )}
-          </PopoverContent>
-        </Popover>
+        <FilterPanel
+          groups={[
+            {
+              label: 'Category',
+              type: 'radio',
+              options: [
+                { value: 'all', label: 'All Categories' },
+                ...CATEGORIES.map(c => ({ value: c.value, label: c.label })),
+              ],
+              value: categoryFilter,
+              onChange: (v) => { setCategoryFilter(v); setCurrentPage(0) },
+            },
+            {
+              label: 'Status',
+              type: 'pills',
+              options: [
+                { value: 'all', label: 'All' },
+                { value: 'ACTIVE', label: 'Active' },
+                { value: 'INACTIVE', label: 'Inactive' },
+              ],
+              value: statusFilter,
+              onChange: (v) => { setStatusFilter(v); setCurrentPage(0) },
+            },
+          ]}
+        />
         <Button variant="outline" size="sm" className="gap-2 text-xs h-9" onClick={exportCsv} disabled={loading || types.length === 0}>
           <Download className="h-3.5 w-3.5" /> Export CSV
         </Button>
@@ -302,6 +260,7 @@ export default function TicketTypesConfig({ conferenceId }: Props) {
         </div>
       ) : (
         <div className="rounded-lg border overflow-hidden">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30">
@@ -367,21 +326,22 @@ export default function TicketTypesConfig({ conferenceId }: Props) {
               ))}
             </TableBody>
           </Table>
+          </div>
         </div>
       )}
 
       {/* Pagination */}
       {!loading && totalPages > 1 && (
-        <div className="flex items-center justify-between pt-4 border-t mt-4">
-          <p className="text-xs text-muted-foreground">
+        <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20 mt-4 rounded-b-lg">
+          <div className="text-sm text-muted-foreground">
             Page {currentPage + 1} of {totalPages} · {filtered.length} types
-          </p>
-          <div className="flex gap-1">
+          </div>
+          <div className="flex gap-2">
             <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4 mr-1" /> Previous
             </Button>
             <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
-              <ChevronRight className="h-4 w-4" />
+              Next <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         </div>

@@ -17,10 +17,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import {
     Loader2, Search, Download, Eye, Users, ChevronLeft, ChevronRight, 
     Zap, ThumbsUp, Minus, ThumbsDown, FileSpreadsheet, Filter,
-    Building2, Mail, Globe, GraduationCap, Phone, User2, Check
+    Building2, Mail, Globe, GraduationCap, Phone, User2
 } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { FilterPanel } from "@/components/ui/filter-panel"
 import toast from "react-hot-toast"
 import * as XLSX from "xlsx"
 
@@ -58,9 +58,6 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
     const [searchQuery, setSearchQuery] = useState("")
     const [filterBid, setFilterBid] = useState<"all" | "has_bids" | "no_bids">("all")
     const [currentPage, setCurrentPage] = useState(0)
-
-    // Derived state
-    const activeFilterCount = filterBid !== "all" ? 1 : 0
 
     // Detail sheet
     const [detailReviewerId, setDetailReviewerId] = useState<number | null>(null)
@@ -322,55 +319,21 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                             onChange={e => setSearchQuery(e.target.value)}
                         />
                     </div>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="h-9 gap-2 text-sm px-3">
-                                    <Filter className="h-4 w-4 text-muted-foreground" />
-                                    Filters
-                                    {activeFilterCount > 0 && (
-                                        <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs font-normal">
-                                            {activeFilterCount}
-                                        </Badge>
-                                    )}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 p-0" align="end">
-                                <div className="p-4 space-y-4">
-                                    <div className="space-y-2">
-                                        <h4 className="font-medium text-sm">Bid Status</h4>
-                                        <div className="grid gap-1">
-                                            {[
-                                                { value: "all", label: "All Statuses" },
-                                                { value: "has_bids", label: "Has Bids" },
-                                                { value: "no_bids", label: "No Bids" }
-                                            ].map(opt => (
-                                                <div
-                                                    key={opt.value}
-                                                    className="flex items-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-muted"
-                                                    onClick={() => { setFilterBid(opt.value as any); setCurrentPage(0); }}
-                                                >
-                                                    <span className={filterBid === opt.value ? "font-medium" : ""}>
-                                                        {opt.label}
-                                                    </span>
-                                                    {filterBid === opt.value && <Check className="h-4 w-4" />}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                                {activeFilterCount > 0 && (
-                                    <div className="p-3 border-t bg-muted/50">
-                                        <Button
-                                            variant="ghost"
-                                            className="w-full text-xs h-8"
-                                            onClick={() => { setFilterBid("all"); setCurrentPage(0); }}
-                                        >
-                                            Clear filters
-                                        </Button>
-                                    </div>
-                                )}
-                            </PopoverContent>
-                        </Popover>
+                    <FilterPanel
+                        groups={[
+                            {
+                                label: 'Bid Status',
+                                type: 'radio',
+                                options: [
+                                    { value: 'all', label: 'All Statuses' },
+                                    { value: 'has_bids', label: 'Has Bids' },
+                                    { value: 'no_bids', label: 'No Bids' },
+                                ],
+                                value: filterBid,
+                                onChange: (v) => { setFilterBid(v as any); setCurrentPage(0) },
+                            },
+                        ]}
+                    />
                     <Button variant="outline" size="sm" className="gap-2 text-xs h-9" onClick={handleExportExcel}>
                         <FileSpreadsheet className="h-3.5 w-3.5" />
                         Export Excel
@@ -378,6 +341,7 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                 </div>
             </div>
             <div className="rounded-lg border overflow-hidden">
+                        <div className="overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-muted/30">
@@ -411,7 +375,9 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                                             </TableCell>
                                             <TableCell className="font-medium text-sm">{row.firstName}</TableCell>
                                             <TableCell className="font-medium text-sm">{row.lastName}</TableCell>
-                                            <TableCell className="text-muted-foreground text-xs">{row.email}</TableCell>
+                                            <TableCell className="text-muted-foreground text-xs max-w-[160px]">
+                                                <span className="truncate block" title={row.email}>{row.email}</span>
+                                            </TableCell>
                                             <TableCell className="text-xs text-muted-foreground">{row.institution || "—"}</TableCell>
                                             <TableCell className="text-center">
                                                 {row.quota !== null ? (
@@ -458,6 +424,7 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                                 )}
                             </TableBody>
                         </Table>
+                        </div>
                     </div>
 
                     {/* Pagination */}
@@ -690,7 +657,7 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                                             return (
                                                 <div key={bid.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5 hover:bg-muted/20 transition-colors">
                                                     <div className="flex-1 min-w-0 mr-3">
-                                                        <p className="text-sm font-medium line-clamp-1">{bid.paperTitle}</p>
+                                                        <p className="text-sm font-medium line-clamp-1" title={bid.paperTitle}>{bid.paperTitle}</p>
                                                         <p className="text-[10px] text-muted-foreground">
                                                             Paper #{bid.paperId} · {new Date(bid.updatedAt || bid.createdAt).toLocaleDateString("vi-VN")}
                                                         </p>
