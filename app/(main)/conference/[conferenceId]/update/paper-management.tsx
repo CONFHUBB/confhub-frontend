@@ -1,159 +1,141 @@
 "use client"
 
-import { useEffect, useState, useMemo, useCallback } from "react"
-import { getPapersByConference, updatePaperStatus, getAuthorsByPaper, type PaperAuthorItem } from "@/app/api/paper.api"
-import { getAggregatesByConference, type ReviewAggregate } from "@/app/api/review-aggregate.api"
-import { getMetaReviewsByConference, createMetaReview } from "@/app/api/meta-review.api"
-import { getCurrentAssignments, type AssignmentPreview } from "@/app/api/assignment.api"
-import { getConflictsByConference } from "@/app/api/conflict.api"
-import type { PaperResponse, PaperStatus } from "@/types/paper"
-import type { MetaReviewResponse, Decision } from "@/types/meta-review"
-import type { PaperConflictResponse } from "@/types/conflict"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import {
-    Loader2, Search, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
-    MoreHorizontal, Eye, UserPlus, Gavel, Shield, Download, Filter, Check
+import { useState, useEffect, useMemo, useCallback } from "react"
+import { 
+    FileText, Search, Shield, Filter, ChevronDown, Check,
+    Download, UserPlus, Eye, Gavel, Loader2
 } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
 import {
-    DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-    DropdownMenuTrigger, DropdownMenuSeparator
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import toast from "react-hot-toast"
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import { toast } from "sonner"
+
+import { getPapersByConference, batchNotifyDecisions, updatePaperStatus, getAuthorsByPaper, type PaperAuthorItem } from "@/app/api/paper.api"
+import { getAggregatesByConference } from "@/app/api/review-aggregate.api"
+import { getTracksByConference } from "@/app/api/track.api"
+import { getConflictsByConference } from "@/app/api/conflict.api"
+import { getMetaReviewsByConference } from "@/app/api/meta-review.api"
+
+import type { PaperResponse, PaperStatus } from "@/types/paper"
+import type { TrackResponse } from "@/types/track"
+import type { MetaReviewResponse, Decision } from "@/types/meta-review"
+import type { PaperConflictResponse } from "@/types/conflict"
 import { PaperDetailSheet } from "./paper-detail-sheet"
+import { UnifiedDataTable, type DataTableColumn } from "@/components/ui/unified-data-table"
 
-interface PaperManagementProps {
-    conferenceId: number
+const STATUS_CONFIG: Record<string, { label: string, color: string }> = {
+    DRAFT: { label: "Draft", color: "bg-slate-100 text-slate-700" },
+    SUBMITTED: { label: "Submitted", color: "bg-blue-100 text-blue-700 font-medium" },
+    UNDER_REVIEW: { label: "Under Review", color: "bg-purple-100 text-purple-700 font-medium" },
+    AWAITING_DECISION: { label: "Awaiting Decision", color: "bg-amber-100 text-amber-700 font-medium" },
+    ACCEPTED: { label: "Accepted", color: "bg-green-100 text-green-700 font-bold" },
+    REJECTED: { label: "Rejected", color: "bg-red-100 text-red-700 font-bold" },
+    REVISION: { label: "Revision Required", color: "bg-orange-100 text-orange-700 font-medium" },
+    WITHDRAWN: { label: "Withdrawn", color: "bg-gray-100 text-gray-500 line-through" },
+    CAMERA_READY_SUBMITTED: { label: "Camera Ready", color: "bg-emerald-100 text-emerald-800 font-bold" },
 }
 
-// ── Status config ──
-const STATUS_CONFIG: Record<string, { label: string; color: string; dotColor: string }> = {
-    DRAFT: { label: "Draft", color: "bg-gray-100 text-gray-700 border-gray-200", dotColor: "bg-gray-400" },
-    SUBMITTED: { label: "Submitted", color: "bg-indigo-100 text-indigo-700 border-indigo-200", dotColor: "bg-indigo-500" },
-    UNDER_REVIEW: { label: "Under Review", color: "bg-amber-100 text-amber-700 border-amber-200", dotColor: "bg-amber-500" },
-    ACCEPTED: { label: "Accepted", color: "bg-emerald-100 text-emerald-700 border-emerald-200", dotColor: "bg-emerald-500" },
-    REJECTED: { label: "Rejected", color: "bg-red-100 text-red-700 border-red-200", dotColor: "bg-red-500" },
-    REVISION: { label: "Revision", color: "bg-orange-100 text-orange-700 border-orange-200", dotColor: "bg-orange-500" },
-    WITHDRAWN: { label: "Withdrawn", color: "bg-gray-100 text-gray-500 border-gray-200", dotColor: "bg-gray-400" },
-    PUBLISHED: { label: "Published", color: "bg-teal-100 text-teal-700 border-teal-200", dotColor: "bg-teal-500" },
-}
-
-const DECISION_CONFIG: Record<string, { label: string; color: string }> = {
-    APPROVE: { label: "Approve", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-    REJECT: { label: "Reject", color: "bg-red-100 text-red-700 border-red-200" },
-    REVISION: { label: "Revision", color: "bg-amber-100 text-amber-700 border-amber-200" },
-}
-
-const PAGE_SIZE = 50
-
-// ── Enriched paper type ──
-export interface EnrichedPaper {
-    id: number
-    title: string
-    trackName: string
-    trackId: number
-    status: PaperStatus
-    submissionTime: string
-    abstractField: string
-    keywords: string[]
-    primarySubjectAreaId: number
-    secondarySubjectAreaIds: number[]
+interface EnrichedPaper extends PaperResponse {
+    conflictCount: number
+    metaReviewScore?: number
+    metaReviewStatus?: Decision
+    reviewProgress?: string
     authors: string
     reviewCount: number
     completedReviewCount: number
     averageTotalScore: number | null
-    assignedReviewerCount: number
-    assignedReviewerNames: string[]
-    decision: Decision | null
-    metaReviewId: number | null
-    metaReviewReason: string | null
-    conflictCount: number
-    bidCount: number
 }
 
-type SortKey = "id" | "title" | "status" | "reviewProgress" | "avgScore" | "authors"
+type SortColumn = "id" | "title" | "authors" | "reviewProgress" | "avgScore" | "status"
+type SortDirection = "asc" | "desc"
 
-export function PaperManagement({ conferenceId }: PaperManagementProps) {
-    // ── Data state ──
+interface PaperManagementProps {
+    conferenceId: number
+    trackIds?: number[] // For Track Chair filtering
+}
+
+export function PaperManagement({ conferenceId, trackIds }: PaperManagementProps) {
     const [papers, setPapers] = useState<PaperResponse[]>([])
-    const [aggregates, setAggregates] = useState<ReviewAggregate[]>([])
-    const [metaReviews, setMetaReviews] = useState<MetaReviewResponse[]>([])
-    const [assignments, setAssignments] = useState<AssignmentPreview | null>(null)
-    const [conflicts, setConflicts] = useState<PaperConflictResponse[]>([])
+    const [tracks, setTracks] = useState<TrackResponse[]>([])
+    const [aggregates, setAggregates] = useState<Record<number, any>>({})
+    const [metaReviewMap, setMetaReviewMap] = useState<Record<number, MetaReviewResponse>>({})
+    const [conflictMap, setConflictMap] = useState<Record<number, PaperConflictResponse[]>>({})
     const [paperAuthors, setPaperAuthors] = useState<Record<number, string>>({})
-    const [loading, setLoading] = useState(true)
 
-    // ── UI state ──
+    const [isLoading, setIsLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState("")
-    const [filterStatus, setFilterStatus] = useState<string>("all")
     const [filterTrack, setFilterTrack] = useState<string>("all")
-    const [sortKey, setSortKey] = useState<SortKey>("id")
-    const [sortAsc, setSortAsc] = useState(true)
+    const [filterStatus, setFilterStatus] = useState<string>("all")
     const [currentPage, setCurrentPage] = useState(0)
+    const itemsPerPage = 15
+
+    const [sortColumn, setSortColumn] = useState<SortColumn>("id")
+    const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
+
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
-    const [updatingStatus, setUpdatingStatus] = useState<number | null>(null)
-    const [chairId, setChairId] = useState<number | null>(null)
+    const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
+    const [isNotifying, setIsNotifying] = useState(false)
 
-    useEffect(() => {
-        try {
-            const token = localStorage.getItem('accessToken')
-            if (token) {
-                const payload = JSON.parse(atob(token.split('.')[1]))
-                setChairId(payload.userId || payload.id)
-            }
-        } catch { /* ignore */ }
-    }, [])
-
-    // ── Sheet state ──
+    // Sheet / Detail State
     const [sheetPaperId, setSheetPaperId] = useState<number | null>(null)
-    const [sheetDefaultTab, setSheetDefaultTab] = useState<string>("info")
+    const [sheetDefaultTab, setSheetDefaultTab] = useState<"info" | "assignments" | "reviews" | "decision" | "conflicts">("info")
 
-    // ── User ID ──
-    const [userId, setUserId] = useState<number | null>(null)
-    useEffect(() => {
-        try {
-            const token = localStorage.getItem("accessToken")
-            if (token) {
-                const payload = JSON.parse(atob(token.split(".")[1]))
-                setUserId(payload.userId || payload.id)
-            }
-        } catch { /* ignore */ }
-    }, [])
+    // Assuming we have user ID implicitly from auth token context
+    const userId = 0 
 
-    // ── Data loading ──
     const fetchAllData = useCallback(async () => {
+        setIsLoading(true)
         try {
-            setLoading(true)
-            const [papersData, aggData, mrData, assignData, conflictData] = await Promise.all([
-                getPapersByConference(conferenceId),
-                getAggregatesByConference(conferenceId).catch(() => []),
-                getMetaReviewsByConference(conferenceId).catch(() => []),
-                getCurrentAssignments(conferenceId).catch(() => null),
+            const [papersData, tracksData, conflictsData, metaReviewsData, aggregatesData] = await Promise.all([
+                getPapersByConference(conferenceId, trackIds),
+                getTracksByConference(conferenceId),
                 getConflictsByConference(conferenceId).catch(() => []),
+                getMetaReviewsByConference(conferenceId).catch(() => []), 
+                getAggregatesByConference(conferenceId).catch(() => [])
             ])
+
             setPapers(papersData || [])
-            setAggregates(aggData || [])
-            setMetaReviews(mrData || [])
-            setAssignments(assignData)
-            setConflicts(conflictData || [])
+            setTracks(tracksData || [])
+
+            const conflictsByPaper: Record<number, PaperConflictResponse[]> = {}
+            if (Array.isArray(conflictsData)) {
+                conflictsData.forEach(c => {
+                    if (c.paper && c.paper.id) {
+                        if (!conflictsByPaper[c.paper.id]) conflictsByPaper[c.paper.id] = []
+                        conflictsByPaper[c.paper.id].push(c)
+                    }
+                })
+            }
+            setConflictMap(conflictsByPaper)
+
+            const metaMap: Record<number, MetaReviewResponse> = {}
+            if (Array.isArray(metaReviewsData)) {
+                metaReviewsData.forEach(mr => {
+                    if (mr.paper && mr.paper.id) metaMap[mr.paper.id] = mr
+                })
+            }
+            setMetaReviewMap(metaMap)
+
+            const aggMap: Record<number, any> = {}
+            if (Array.isArray(aggregatesData)) {
+                aggregatesData.forEach(a => {
+                    aggMap[a.paperId] = a
+                })
+            }
+            setAggregates(aggMap)
 
             // Fetch authors for all papers
             const authorResults = await Promise.all(
@@ -167,590 +149,427 @@ export function PaperManagement({ conferenceId }: PaperManagementProps) {
             const authorMap: Record<number, string> = {}
             authorResults.forEach(({ paperId, authors }) => {
                 authorMap[paperId] = authors
-                    .map(a => a.user.fullName || `${a.user.firstName || ""} ${a.user.lastName || ""}`.trim())
-                    .filter(Boolean).join(", ") || "—"
+                    .map(a => a.user.fullName || `${a.user.firstName || ""} ${a.user.lastName || ""}`.trim())   
+                    .filter(Boolean).join(", ") || "Unknown Authors"
             })
             setPaperAuthors(authorMap)
-        } catch (err) {
-            console.error("Failed to load paper management data:", err)
-            toast.error("Failed to load data")
+
+        } catch (error) {
+            console.error("Failed to fetch conference data:", error)
+            toast.error("Failed to load papers. Please refresh the page.")
         } finally {
-            setLoading(false)
+            setIsLoading(false)
         }
-    }, [conferenceId])
+    }, [conferenceId, trackIds])
 
-    useEffect(() => { fetchAllData() }, [fetchAllData])
+    useEffect(() => {
+        fetchAllData()
+    }, [fetchAllData])
 
-    // ── Derived maps ──
-    const aggregateMap = useMemo(() => {
-        const map: Record<number, ReviewAggregate> = {}
-        aggregates.forEach(a => { map[a.paperId] = a })
-        return map
-    }, [aggregates])
-
-    const metaReviewMap = useMemo(() => {
-        const map: Record<number, MetaReviewResponse> = {}
-        metaReviews.forEach(mr => { map[mr.paper.id] = mr })
-        return map
-    }, [metaReviews])
-
-    const assignmentCountPerPaper = useMemo(() => {
-        const map: Record<number, { count: number; names: string[] }> = {}
-        ;(assignments?.assignments || []).forEach(a => {
-            if (!map[a.paperId]) map[a.paperId] = { count: 0, names: [] }
-            map[a.paperId].count++
-            if (a.reviewerName && !map[a.paperId].names.includes(a.reviewerName)) {
-                map[a.paperId].names.push(a.reviewerName)
-            }
-        })
-        return map
-    }, [assignments])
-
-    const conflictCountPerPaper = useMemo(() => {
-        const map: Record<number, number> = {}
-        conflicts.forEach(c => { map[c.paper?.id] = (map[c.paper?.id] || 0) + 1 })
-        return map
-    }, [conflicts])
-
-    // ── Enriched papers ──
-    const enrichedPapers: EnrichedPaper[] = useMemo(() => {
-        return papers.map(p => {
-            const agg = aggregateMap[p.id]
-            const mr = metaReviewMap[p.id]
-            const assign = assignmentCountPerPaper[p.id]
-            return {
-                id: p.id,
-                title: p.title,
-                trackName: p.track?.name || p.trackName || "—",
-                trackId: p.trackId,
-                status: p.status,
-                submissionTime: p.submissionTime,
-                abstractField: p.abstractField,
-                keywords: p.keywords || [],
-                primarySubjectAreaId: p.primarySubjectAreaId,
-                secondarySubjectAreaIds: p.secondarySubjectAreaIds || [],
-                authors: paperAuthors[p.id] || "—",
-                reviewCount: agg?.reviewCount || 0,
-                completedReviewCount: agg?.completedReviewCount || 0,
-                averageTotalScore: agg?.completedReviewCount > 0 ? agg.averageTotalScore : null,
-                assignedReviewerCount: assign?.count || 0,
-                assignedReviewerNames: assign?.names || [],
-                decision: mr?.finalDecision || null,
-                metaReviewId: mr?.id || null,
-                metaReviewReason: mr?.reason || null,
-                conflictCount: conflictCountPerPaper[p.id] || 0,
-                bidCount: 0, // loaded lazily in sheet
-            }
-        })
-    }, [papers, aggregateMap, metaReviewMap, assignmentCountPerPaper, conflictCountPerPaper, paperAuthors])
-
-    // ── Track names ──
-    const trackNames = useMemo(() => {
-        const names = new Set(enrichedPapers.map(p => p.trackName).filter(Boolean))
-        return Array.from(names).sort()
-    }, [enrichedPapers])
-
-    // ── Status counts ──
-    const statusCounts = useMemo(() => {
-        const counts: Record<string, number> = {}
-        enrichedPapers.forEach(p => { counts[p.status] = (counts[p.status] || 0) + 1 })
-        return counts
-    }, [enrichedPapers])
-
-    // ── Filter + Sort ──
-    const activeFilterCount = filterTrack !== "all" ? 1 : 0
-
-    const filteredPapers = useMemo(() => {
-        let result = enrichedPapers
-
-        // Search
-        if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase()
-            result = result.filter(p =>
-                p.title.toLowerCase().includes(q) ||
-                p.id.toString().includes(q) ||
-                p.authors.toLowerCase().includes(q)
-            )
-        }
-
-        // Status filter
-        if (filterStatus !== "all") {
-            result = result.filter(p => p.status === filterStatus)
-        }
-
-        // Track filter
-        if (filterTrack !== "all") {
-            result = result.filter(p => p.trackName === filterTrack)
-        }
-
-        // Sort
-        result = [...result].sort((a, b) => {
-            let cmp = 0
-            switch (sortKey) {
-                case "id": cmp = a.id - b.id; break
-                case "title": cmp = a.title.localeCompare(b.title); break
-                case "status": cmp = a.status.localeCompare(b.status); break
-                case "reviewProgress":
-                    cmp = (a.completedReviewCount / Math.max(a.reviewCount, 1)) -
-                          (b.completedReviewCount / Math.max(b.reviewCount, 1))
-                    break
-                case "avgScore":
-                    cmp = (a.averageTotalScore ?? -1) - (b.averageTotalScore ?? -1)
-                    break
-                case "authors": cmp = a.authors.localeCompare(b.authors); break
-            }
-            return sortAsc ? cmp : -cmp
-        })
-
-        return result
-    }, [enrichedPapers, searchQuery, filterStatus, filterTrack, sortKey, sortAsc])
-
-    // ── Pagination ──
-    const totalPages = Math.ceil(filteredPapers.length / PAGE_SIZE)
-    const paginatedPapers = useMemo(() => {
-        const start = currentPage * PAGE_SIZE
-        return filteredPapers.slice(start, start + PAGE_SIZE)
-    }, [filteredPapers, currentPage])
-
-    // Reset page on filter change
-    useEffect(() => { setCurrentPage(0) }, [searchQuery, filterStatus, filterTrack])
-
-    // ── Selection ──
-    const allOnPageSelected = paginatedPapers.length > 0 && paginatedPapers.every(p => selectedIds.has(p.id))
-    const toggleSelectAll = () => {
-        if (allOnPageSelected) {
-            setSelectedIds(prev => {
-                const n = new Set(prev)
-                paginatedPapers.forEach(p => n.delete(p.id))
-                return n
-            })
-        } else {
-            setSelectedIds(prev => {
-                const n = new Set(prev)
-                paginatedPapers.forEach(p => n.add(p.id))
-                return n
-            })
-        }
-    }
-    const toggleSelect = (id: number) => {
-        setSelectedIds(prev => {
-            const n = new Set(prev)
-            if (n.has(id)) n.delete(id); else n.add(id)
-            return n
-        })
-    }
-
-    // ── Sort handler ──
-    const handleSort = (key: SortKey) => {
-        if (sortKey === key) setSortAsc(!sortAsc)
-        else { setSortKey(key); setSortAsc(true) }
-    }
-
-    const SortIcon = ({ columnKey }: { columnKey: SortKey }) => {
-        if (sortKey !== columnKey) return <ChevronUp className="h-3 w-3 opacity-0 group-hover:opacity-30" />
-        return sortAsc
-            ? <ChevronUp className="h-3 w-3 text-primary" />
-            : <ChevronDown className="h-3 w-3 text-primary" />
-    }
-
-    // ── Bulk status change ──
-    const handleBulkStatusChange = async (newStatus: string) => {
-        const ids = Array.from(selectedIds)
-        if (ids.length === 0) return
+    const handleBatchNotify = async () => {
+        setIsNotifying(true)
         try {
-            setUpdatingStatus(-1)
-            await Promise.all(ids.map(async (id) => {
-                // Determine if this is a decision
-                let finalDecision: Decision | null = null
-                if (newStatus === "ACCEPTED") finalDecision = "APPROVE"
-                if (newStatus === "REJECTED") finalDecision = "REJECT"
-                if (newStatus === "REVISION") finalDecision = "REVISION"
-
-                if (finalDecision && chairId) {
-                    try {
-                        // Creating meta-review will also update the paper status automatically on the backend
-                        await createMetaReview({
-                            paperId: id,
-                            userId: chairId,
-                            finalDecision: finalDecision,
-                            reason: "Batch decision applied by Program Chair."
-                        })
-                    } catch (e: any) {
-                        // Fallback if meta-review already exists or error
-                        await updatePaperStatus(id, newStatus)
-                    }
-                } else {
-                    await updatePaperStatus(id, newStatus)
-                }
-            }))
-            toast.success(`Updated ${ids.length} papers to ${STATUS_CONFIG[newStatus]?.label || newStatus}`)
-            setSelectedIds(new Set())
-            fetchAllData()
+            await batchNotifyDecisions(conferenceId)
+            toast.success("Batch notification requested successfully. Emails are being sent.")
         } catch (err: any) {
-            toast.error(err?.response?.data?.message || "Failed to update papers")
+            console.error(err)
+            toast.error(err.response?.data?.message || "Failed to trigger batch notifications.")
         } finally {
-            setUpdatingStatus(null)
+            setIsNotifying(false)
         }
     }
 
-    // ── Export CSV ──
     const exportToCSV = () => {
-        if (filteredPapers.length === 0) {
-            toast.error("No papers to export")
-            return
-        }
-
-        const headers = [
-            "ID", "Title", "Authors", "Track", "Status",
-            "Submission Time", "Review Progress", "Avg Score",
-            "Conflicts", "Decision", "Assigned Reviewers"
-        ]
-
-        const csvRows = [headers.join(",")]
-
-        filteredPapers.forEach(p => {
-            const row = [
-                p.id,
-                `"${p.title.replace(/"/g, '""')}"`,
-                `"${p.authors.replace(/"/g, '""')}"`,
-                `"${p.trackName}"`,
-                p.status,
-                new Date(p.submissionTime).toLocaleDateString(),
-                `"${p.completedReviewCount}/${p.reviewCount}"`,
-                p.averageTotalScore !== null ? p.averageTotalScore.toFixed(2) : "N/A",
-                p.conflictCount,
-                p.decision || "N/A",
-                `"${p.assignedReviewerNames.join("; ")}"`
-            ]
-            csvRows.push(row.join(","))
-        })
-
-        const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + csvRows.join("\n")
-        const encodedUri = encodeURI(csvContent)
-        const link = document.createElement("a")
-        link.setAttribute("href", encodedUri)
-        link.setAttribute("download", `papers_export_${new Date().toISOString().split('T')[0]}.csv`)
+        if (!papers || papers.length === 0) return
+        const headers = ["ID", "Title", "Authors", "Track", "Status", "Review Progress", "Avg Score", "Conflicts"]
+        const csvContent = [
+            headers.join(","),
+            ...enrichedPapers.map(p => 
+                `"${p.id}","${p.title?.replace(/"/g, '""')}","${p.authors?.replace(/"/g, '""')}","${p.trackName}","${p.status}","${p.completedReviewCount}/${p.reviewCount}","${p.averageTotalScore || ''}","${p.conflictCount}"`
+            )
+        ].join("\n")
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.setAttribute('href', url)
+        link.setAttribute('download', `conference_${conferenceId}_papers.csv`)
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
     }
 
-    // ── Open sheet ──
-    const openSheet = (paperId: number, tab: string = "info") => {
-        setSheetPaperId(paperId)
+    const openSheet = (id: number, tab: "info" | "assignments" | "reviews" | "decision" | "conflicts" = "info") => {
         setSheetDefaultTab(tab)
+        setSheetPaperId(id)
     }
 
-    // ── Loading ──
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center py-16">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        )
+    const handleSort = (column: SortColumn) => {
+        if (sortColumn === column) {
+            setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+        } else {
+            setSortColumn(column)
+            setSortDirection("asc")
+        }
     }
+
+    const handleBulkStatusChange = async (newStatus: PaperStatus) => {
+        if (selectedIds.size === 0) return
+        setUpdatingStatus(newStatus)
+        try {
+            const promises = Array.from(selectedIds).map(id => updatePaperStatus(id, newStatus))
+            await Promise.all(promises)
+            toast.success(`Successfully updated ${selectedIds.size} papers to ${STATUS_CONFIG[newStatus]?.label || newStatus}`)
+            setSelectedIds(new Set())
+            fetchAllData()
+        } catch (error) {
+            console.error("Bulk update failed:", error)
+            toast.error("Failed to update status for some papers.")
+        } finally {
+            setUpdatingStatus(null)
+        }
+    }
+
+    const enrichedPapers: EnrichedPaper[] = useMemo(() => {
+        return papers.map(p => {
+            const mr = metaReviewMap[p.id]
+            const agg = aggregates[p.id]
+            return {
+                ...p,
+                conflictCount: conflictMap[p.id]?.length || 0,
+                metaReviewScore: 0,
+                metaReviewStatus: mr?.finalDecision,
+                authors: paperAuthors[p.id] || "Unknown Authors",
+                reviewCount: agg?.reviewCount || 0,
+                completedReviewCount: agg?.completedReviewCount || 0,
+                averageTotalScore: agg?.completedReviewCount > 0 ? agg.averageTotalScore : null,
+            }
+        })
+    }, [papers, conflictMap, metaReviewMap, aggregates, paperAuthors])
+
+    const filteredPapers = useMemo(() => {
+        return enrichedPapers.filter(paper => {
+            const matchesSearch = !searchQuery || 
+                paper.title?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                paper.authors?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                paper.id.toString().includes(searchQuery)
+            const matchesTrack = filterTrack === "all" || paper.trackName === tracks.find(t => t.id.toString() === filterTrack)?.name
+            const matchesStatus = filterStatus === "all" || paper.status === filterStatus
+            return matchesSearch && matchesTrack && matchesStatus
+        }).sort((a, b) => {
+            let aVal: any = a[sortColumn as keyof EnrichedPaper]
+            let bVal: any = b[sortColumn as keyof EnrichedPaper]
+
+            if (sortColumn === "reviewProgress") {
+                aVal = a.reviewCount > 0 ? (a.completedReviewCount / a.reviewCount) : 0
+                bVal = b.reviewCount > 0 ? (b.completedReviewCount / b.reviewCount) : 0
+            } else if (sortColumn === "avgScore") {
+                aVal = a.averageTotalScore || 0
+                bVal = b.averageTotalScore || 0
+            }
+
+            if (aVal < bVal) return sortDirection === "asc" ? -1 : 1
+            if (aVal > bVal) return sortDirection === "asc" ? 1 : -1
+            return 0
+        })
+    }, [enrichedPapers, searchQuery, filterTrack, filterStatus, tracks, sortColumn, sortDirection])
+
+    const totalPages = Math.ceil(filteredPapers.length / itemsPerPage)
+    const paginatedPapers = filteredPapers.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage)
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size === paginatedPapers.length && paginatedPapers.length > 0) {
+            setSelectedIds(new Set())
+        } else {
+            const newIds = new Set(selectedIds)
+            paginatedPapers.forEach(p => newIds.add(p.id))
+            setSelectedIds(newIds)
+        }
+    }
+
+    const toggleSelect = (id: number) => {
+        const newIds = new Set(selectedIds)
+        if (newIds.has(id)) newIds.delete(id)
+        else newIds.add(id)
+        setSelectedIds(newIds)
+    }
+
+    const allOnPageSelected = paginatedPapers.length > 0 && paginatedPapers.every(p => selectedIds.has(p.id))
+
+    const SortIcon = ({ columnKey }: { columnKey: SortColumn }) => {
+        if (sortColumn !== columnKey) return <span className="opacity-0 group-hover:opacity-40 ml-1">↕</span>
+        return <span className="text-primary ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span>
+    }
+
+    // ─── UNIFIED DATA TABLE CONFIGURATION ────────────────────────────
+
+    const columns: DataTableColumn<EnrichedPaper>[] = [
+        {
+            header: (
+                <div className="flex items-center justify-center w-full">
+                    <Checkbox checked={allOnPageSelected} onCheckedChange={toggleSelectAll} />
+                </div>
+            ),
+            cell: (paper) => (
+                <div className="flex items-center justify-center w-full" onClick={e => e.stopPropagation()}>
+                    <Checkbox checked={selectedIds.has(paper.id)} onCheckedChange={() => toggleSelect(paper.id)} />
+                </div>
+            ),
+            className: "w-12 px-2"
+        },
+        {
+            header: <span className="cursor-pointer group flex items-center gap-1" onClick={() => handleSort("id")}># <SortIcon columnKey="id" /></span>,
+            cell: (paper) => <span className="text-muted-foreground font-mono">{paper.id}</span>,
+            className: "w-16"
+        },
+        {
+            header: <span className="cursor-pointer group flex items-center gap-1" onClick={() => handleSort("title")}>Title <SortIcon columnKey="title" /></span>,
+            cell: (paper) => (
+                <div className="max-w-[250px] font-medium text-sm truncate" title={paper.title}>
+                    {paper.title}
+                </div>
+            ),
+            className: "min-w-[200px]"
+        },
+        {
+            header: <span className="cursor-pointer group flex items-center gap-1" onClick={() => handleSort("authors")}>Authors <SortIcon columnKey="authors" /></span>,
+            cell: (paper) => (
+                <div className="max-w-[200px] text-xs text-muted-foreground truncate" title={paper.authors}>
+                    {paper.authors}
+                </div>
+            ),
+            className: "min-w-[150px]"
+        },
+        {
+            header: "Track",
+            accessorKey: "trackName",
+            className: "text-xs text-muted-foreground"
+        },
+        {
+            header: <span className="cursor-pointer group flex items-center gap-1 w-full justify-center" onClick={() => handleSort("reviewProgress")}>Reviews <SortIcon columnKey="reviewProgress" /></span>,
+            cell: (paper) => {
+                const reviewPct = (paper.reviewCount ?? 0) > 0
+                    ? Math.round(((paper.completedReviewCount ?? 0) / paper.reviewCount) * 100)
+                    : 0
+                return (
+                    <div className="flex items-center justify-center gap-2">
+                        <span className={`text-[11px] font-mono w-6 text-right ${
+                            paper.completedReviewCount === paper.reviewCount && (paper.reviewCount ?? 0) > 0
+                                ? "text-emerald-600 font-semibold" : "text-muted-foreground"
+                        }`}>
+                            {paper.completedReviewCount ?? 0}/{paper.reviewCount ?? 0}
+                        </span>
+                        {(paper.reviewCount ?? 0) > 0 && (
+                            <div className="w-12 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                                <div className={`h-full rounded-full transition-all ${reviewPct === 100 ? "bg-emerald-500" : "bg-indigo-400"}`}
+                                    style={{ width: `${reviewPct}%` }} />
+                            </div>
+                        )}
+                    </div>
+                )
+            },
+            className: "text-center"
+        },
+        {
+            header: <span className="cursor-pointer group flex items-center gap-1 w-full justify-center" onClick={() => handleSort("avgScore")}>Score <SortIcon columnKey="avgScore" /></span>,
+            cell: (paper) => {
+                if (paper.averageTotalScore !== null) {
+                    return (
+                        <div className="text-center w-full text-[13px]">
+                            <span className={`font-mono font-semibold ${
+                                paper.averageTotalScore >= 3.5 ? "text-emerald-600" :
+                                paper.averageTotalScore >= 2 ? "text-indigo-600" : "text-rose-600"
+                            }`}>
+                                {paper.averageTotalScore.toFixed(1)}
+                            </span>
+                        </div>
+                    )
+                }
+                return <div className="text-center w-full text-muted-foreground text-xs">—</div>
+            },
+            className: "text-center w-24"
+        },
+        {
+            header: <div className="flex items-center justify-center gap-1 w-full"><Shield className="h-3 w-3" /> Conflicts</div>,
+            cell: (paper) => (
+                <div className="flex justify-center w-full">
+                    {paper.conflictCount > 0 ? (
+                        <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">
+                            {paper.conflictCount}
+                        </Badge>
+                    ) : (
+                        <span className="text-muted-foreground text-xs">0</span>
+                    )}
+                </div>
+            )
+        },
+        {
+            header: <span className="cursor-pointer group flex items-center justify-center gap-1 w-full" onClick={() => handleSort("status")}>Status <SortIcon columnKey="status" /></span>,
+            cell: (paper) => (
+                <div className="flex justify-center w-full">
+                    <Badge className={`text-[10px] whitespace-nowrap shadow-none ${STATUS_CONFIG[paper.status]?.color || ""}`}>
+                        {STATUS_CONFIG[paper.status]?.label || paper.status}
+                    </Badge>
+                </div>
+            )
+        }
+    ]
+
+    const renderRowActions = (paper: EnrichedPaper) => (
+        <>
+            <DropdownMenuItem onClick={() => openSheet(paper.id, "info")}>
+                <Eye className="h-3.5 w-3.5 mr-2 text-slate-500" /> View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openSheet(paper.id, "assignments")}>
+                <UserPlus className="h-3.5 w-3.5 mr-2 text-indigo-500" /> Assignments
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openSheet(paper.id, "decision")}>
+                <Gavel className="h-3.5 w-3.5 mr-2 text-amber-500" /> Decision
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openSheet(paper.id, "conflicts")}>
+                <Shield className="h-3.5 w-3.5 mr-2 text-rose-500" /> Conflicts
+            </DropdownMenuItem>
+        </>
+    )
+
+    const PrimaryActions = (
+        <div className="flex items-center gap-2">
+            {/* Filter Popover */}
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 gap-1.5 shadow-sm bg-white">
+                        <Filter className="h-4 w-4 text-slate-500" /> 
+                        Filter
+                        {(filterTrack !== "all" || filterStatus !== "all") && (
+                            <Badge variant="secondary" className="ml-1 h-5 px-1.5 bg-indigo-100 text-indigo-700 font-medium hover:bg-indigo-100 border border-indigo-200">2 Active</Badge>
+                        )}
+                        <ChevronDown className="h-3 w-3 opacity-50 ml-1" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-4 shadow-xl rounded-xl border border-slate-200" align="end">
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <h4 className="font-medium text-sm text-slate-900">Track</h4>
+                            <select 
+                                className="w-full text-sm border border-slate-200 rounded-md p-2 focus:ring-1 focus:ring-indigo-500 outline-none"
+                                value={filterTrack}
+                                onChange={(e) => { setFilterTrack(e.target.value); setCurrentPage(0); }}
+                            >
+                                <option value="all">All Tracks</option>
+                                {tracks.map(t => <option key={t.id} value={t.id.toString()}>{t.name}</option>)}
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <h4 className="font-medium text-sm text-slate-900">Status</h4>
+                            <select 
+                                className="w-full text-sm border border-slate-200 rounded-md p-2 focus:ring-1 focus:ring-indigo-500 outline-none"
+                                value={filterStatus}
+                                onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(0); }}
+                            >
+                                <option value="all">All Statuses</option>
+                                {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                                    <option key={key} value={key}>{config.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    {(filterTrack !== "all" || filterStatus !== "all") && (
+                        <div className="pt-3 mt-4 border-t border-slate-100">
+                            <Button
+                                variant="ghost"
+                                className="w-full text-xs h-8 text-slate-500 hover:text-slate-900"
+                                onClick={() => { setFilterTrack("all"); setFilterStatus("all"); setCurrentPage(0); }}
+                            >
+                                Clear all filters
+                            </Button>
+                        </div>
+                    )}
+                </PopoverContent>
+            </Popover>
+
+            {/* Bulk Actions Menu */}
+            {selectedIds.size > 0 && (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 shadow-sm border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-medium">
+                            Bulk Actions ({selectedIds.size})
+                            <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem onClick={() => handleBulkStatusChange("UNDER_REVIEW")} disabled={updatingStatus !== null}>
+                            → Set Under Review
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleBulkStatusChange("ACCEPTED")} disabled={updatingStatus !== null} className="text-emerald-600 focus:text-emerald-700 font-medium">
+                            → Set Accepted
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleBulkStatusChange("REJECTED")} disabled={updatingStatus !== null} className="text-rose-600 focus:text-rose-700 font-medium">
+                            → Set Rejected
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setSelectedIds(new Set())}>
+                            Clear Selection
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            )}
+
+            {/* Notify Authors Button */}
+            <Button
+                variant="outline"
+                size="sm"
+                className="h-9 shadow-sm bg-white"
+                onClick={handleBatchNotify}
+                disabled={isNotifying || isLoading}
+            >
+                {isNotifying ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin text-slate-500" /> : <FileText className="h-4 w-4 mr-1.5 text-slate-500" />}
+                Notify Authors
+            </Button>
+
+            {/* Export CSV Button */}
+            <Button
+                size="sm"
+                className="h-9 shadow-sm"
+                onClick={exportToCSV}
+                disabled={isLoading}
+            >
+                <Download className="h-4 w-4 mr-1.5" />
+                Export CSV
+            </Button>
+        </div>
+    )
 
     return (
-        <div className="space-y-5">
-            {/* ── Header ── */}
-            <div>
-                <h2 className="text-xl font-bold mb-1">Paper Management</h2>
-                <p className="text-sm text-muted-foreground">
-                    View and manage all {enrichedPapers.length} papers — assignments, reviews, decisions, and conflicts.
-                </p>
-            </div>
+        <div className="space-y-6">
+            <UnifiedDataTable
+                title="Paper Management"
+                description="Manage all submitted papers, their review progress, conflicts, and final decisions."
+                columns={columns}
+                data={paginatedPapers}
+                isLoading={isLoading}
+                keyExtractor={(paper) => paper.id}
+                
+                // Search
+                searchValue={searchQuery}
+                onSearchChange={(v) => { setSearchQuery(v); setCurrentPage(0); }}
+                searchPlaceholder="Search titles, authors, or IDs..."
+                
+                // Primary Action Toolbar
+                primaryAction={PrimaryActions}
+                
+                // Kebab Menu Actions per row
+                renderRowActions={renderRowActions}
+                
+                // Pagination
+                pagination={{
+                    currentPage,
+                    totalPages,
+                    totalElements: filteredPapers.length,
+                    onPageChange: setCurrentPage
+                }}
+            />
 
-            {/* ── Status Summary Cards ── */}
-            <div className="flex flex-wrap gap-2">
-                {Object.entries(STATUS_CONFIG).map(([status, config]) => {
-                    const count = statusCounts[status] || 0
-                    const isActive = filterStatus === status
-                    return (
-                        <button
-                            key={status}
-                            onClick={() => setFilterStatus(isActive ? "all" : status)}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all hover:shadow-sm ${
-                                isActive ? "ring-2 ring-primary bg-primary/5 border-primary/30" : "hover:bg-muted/50"
-                            }`}
-                        >
-                            <span className={`w-2 h-2 rounded-full ${config.dotColor}`} />
-                            <span className="font-bold">{count}</span>
-                            <span className="text-muted-foreground text-xs">{config.label}</span>
-                        </button>
-                    )
-                })}
-            </div>
-
-            {/* ── Toolbar ── */}
-            <div className="flex flex-col sm:flex-row gap-2">
-                {/* Search */}
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        className="pl-9 h-9 text-sm"
-                        placeholder="Search by title, ID, or author..."
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                    />
-                </div>
-
-                {/* Filters */}
-                <div className="flex gap-2 flex-wrap">
-                    {trackNames.length > 1 && (
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="h-9 gap-2 text-sm px-3">
-                                    <Filter className="h-4 w-4 text-muted-foreground" />
-                                    Tracks
-                                    {activeFilterCount > 0 && (
-                                        <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs font-normal">
-                                            {activeFilterCount}
-                                        </Badge>
-                                    )}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 p-0" align="end">
-                                <div className="p-4 space-y-4">
-                                    <div className="space-y-2">
-                                        <h4 className="font-medium text-sm">Track</h4>
-                                        <div className="grid gap-1">
-                                            {[{ value: "all", label: "All Tracks" }, ...trackNames.map(t => ({ value: t, label: t }))].map(opt => (
-                                                <div
-                                                    key={opt.value}
-                                                    className="flex items-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-muted"
-                                                    onClick={() => { setFilterTrack(opt.value); setCurrentPage(0); }}
-                                                >
-                                                    <span className={filterTrack === opt.value ? "font-medium" : ""}>
-                                                        {opt.label}
-                                                    </span>
-                                                    {filterTrack === opt.value && <Check className="h-4 w-4" />}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                                {activeFilterCount > 0 && (
-                                    <div className="p-3 border-t bg-muted/50">
-                                        <Button
-                                            variant="ghost"
-                                            className="w-full text-xs h-8"
-                                            onClick={() => { setFilterTrack("all"); setCurrentPage(0); }}
-                                        >
-                                            Clear filters
-                                        </Button>
-                                    </div>
-                                )}
-                            </PopoverContent>
-                        </Popover>
-                    )}
-
-                    {/* Bulk Actions */}
-                    {selectedIds.size > 0 && (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" className="h-9">
-                                    Bulk Actions ({selectedIds.size})
-                                    <ChevronDown className="h-3 w-3 ml-1" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuItem
-                                    onClick={() => handleBulkStatusChange("UNDER_REVIEW")}
-                                    disabled={updatingStatus !== null}
-                                >
-                                    → Under Review
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={() => handleBulkStatusChange("ACCEPTED")}
-                                    disabled={updatingStatus !== null}
-                                >
-                                    → Accepted
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={() => handleBulkStatusChange("REJECTED")}
-                                    disabled={updatingStatus !== null}
-                                >
-                                    → Rejected
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => setSelectedIds(new Set())}>
-                                    Clear Selection
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    )}
-
-                    {/* Export */}
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-9 gap-1.5"
-                        onClick={exportToCSV}
-                    >
-                        <Download className="h-4 w-4" />
-                        Export
-                    </Button>
-                </div>
-
-            </div>
-
-            {/* ── Papers Table ── */}
-            {filteredPapers.length === 0 ? (
-                <div className="text-center py-16 text-muted-foreground border rounded-lg">
-                    <FileText className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                    <p>{searchQuery || filterStatus !== "all" ? "No papers match your filters." : "No papers submitted yet."}</p>
-                </div>
-            ) : (
-            <div className="rounded-lg border overflow-hidden">
-                <Table>
-                    <TableHeader>
-                        <TableRow className="bg-muted/30">
-                            <TableHead className="w-10 text-center">
-                                <Checkbox
-                                    checked={allOnPageSelected}
-                                    onCheckedChange={toggleSelectAll}
-                                />
-                            </TableHead>
-                            <TableHead className="w-12 text-center text-xs cursor-pointer group" onClick={() => handleSort("id")}>
-                                <span className="flex items-center justify-center gap-1"># <SortIcon columnKey="id" /></span>
-                            </TableHead>
-                            <TableHead className="min-w-[200px] cursor-pointer group" onClick={() => handleSort("title")}>
-                                <span className="flex items-center gap-1">Title <SortIcon columnKey="title" /></span>
-                            </TableHead>
-                            <TableHead className="min-w-[140px] cursor-pointer group" onClick={() => handleSort("authors")}>
-                                <span className="flex items-center gap-1">Authors <SortIcon columnKey="authors" /></span>
-                            </TableHead>
-                            <TableHead className="w-28">Track</TableHead>
-                            <TableHead className="w-32 text-center cursor-pointer group" onClick={() => handleSort("reviewProgress")}>
-                                <span className="flex items-center justify-center gap-1">Reviews <SortIcon columnKey="reviewProgress" /></span>
-                            </TableHead>
-                            <TableHead className="w-20 text-center cursor-pointer group" onClick={() => handleSort("avgScore")}>
-                                <span className="flex items-center justify-center gap-1">Score <SortIcon columnKey="avgScore" /></span>
-                            </TableHead>
-                            <TableHead className="w-24 text-center">
-                                <span className="flex items-center justify-center gap-1"><Shield className="h-3 w-3" /> Conflicts</span>
-                            </TableHead>
-                            <TableHead className="w-28 text-center cursor-pointer group" onClick={() => handleSort("status")}>
-                                <span className="flex items-center justify-center gap-1">Status <SortIcon columnKey="status" /></span>
-                            </TableHead>
-                            <TableHead className="w-20 text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {paginatedPapers.map((paper) => {
-                            const isSelected = selectedIds.has(paper.id)
-                            const reviewPct = paper.reviewCount > 0
-                                ? Math.round((paper.completedReviewCount / paper.reviewCount) * 100)
-                                : 0
-
-                            return (
-                                <TableRow
-                                    key={paper.id}
-                                    className={`cursor-pointer ${ isSelected ? "bg-primary/5" : ""}`}
-                                    onClick={() => openSheet(paper.id)}
-                                >
-                                    <TableCell className="text-center" onClick={e => e.stopPropagation()}>
-                                        <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(paper.id)} />
-                                    </TableCell>
-                                    <TableCell className="text-center text-xs text-muted-foreground font-medium font-mono">
-                                        {paper.id}
-                                    </TableCell>
-                                    <TableCell>
-                                        <p className="font-medium line-clamp-1 text-sm">{paper.title}</p>
-                                    </TableCell>
-                                    <TableCell>
-                                        <p className="text-xs text-muted-foreground line-clamp-1">{paper.authors}</p>
-                                    </TableCell>
-                                    <TableCell className="text-xs text-muted-foreground">{paper.trackName}</TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center justify-center gap-2">
-                                            <span className={`text-xs font-mono ${
-                                                paper.completedReviewCount === paper.reviewCount && paper.reviewCount > 0
-                                                    ? "text-green-600 font-semibold" : "text-muted-foreground"
-                                            }`}>
-                                                {paper.completedReviewCount}/{paper.reviewCount}
-                                            </span>
-                                            {paper.reviewCount > 0 && (
-                                                <div className="w-12 h-1.5 rounded-full bg-gray-200 overflow-hidden">
-                                                    <div className={`h-full rounded-full transition-all ${reviewPct === 100 ? "bg-green-500" : "bg-indigo-400"}`}
-                                                        style={{ width: `${reviewPct}%` }} />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                        {paper.averageTotalScore !== null ? (
-                                            <span className={`font-mono text-xs font-semibold ${
-                                                paper.averageTotalScore >= 3.5 ? "text-emerald-600" :
-                                                paper.averageTotalScore >= 2 ? "text-indigo-600" : "text-red-600"
-                                            }`}>{paper.averageTotalScore.toFixed(1)}</span>
-                                        ) : (
-                                            <span className="text-muted-foreground text-xs">—</span>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                        {paper.conflictCount > 0 ? (
-                                            <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">{paper.conflictCount}</Badge>
-                                        ) : (
-                                            <span className="text-muted-foreground text-xs">0</span>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                        <Badge className={`text-[10px] ${STATUS_CONFIG[paper.status]?.color || ""}`}>
-                                            {STATUS_CONFIG[paper.status]?.label || paper.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right" onClick={e => e.stopPropagation()}>
-                                        <div className="flex items-center justify-end gap-1">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => openSheet(paper.id, "info")}>
-                                                    <Eye className="h-3.5 w-3.5 mr-2" /> View Details
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => openSheet(paper.id, "assignments")}>
-                                                    <UserPlus className="h-3.5 w-3.5 mr-2" /> Assignments
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => openSheet(paper.id, "decision")}>
-                                                    <Gavel className="h-3.5 w-3.5 mr-2" /> Decision
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => openSheet(paper.id, "conflicts")}>
-                                                    <Shield className="h-3.5 w-3.5 mr-2" /> Conflicts
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            )
-                        })}
-                    </TableBody>
-                </Table>
-            </div>
-            )}
-
-            {/* ── Pagination ── */}
-            {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-4 border-t">
-                    <p className="text-xs text-muted-foreground">
-                        Page {currentPage + 1} of {totalPages} · {filteredPapers.length} papers
-                    </p>
-                    <div className="flex gap-1">
-                        <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            {/* ── Paper Detail Sheet ── */}
+            {/* Background Sheet / Detail view trigger */}
             <PaperDetailSheet
                 paperId={sheetPaperId}
                 conferenceId={conferenceId}

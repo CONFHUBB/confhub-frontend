@@ -68,6 +68,15 @@ export interface CheckInResponse {
   message: string
 }
 
+export interface PagedResponse<T> {
+  content: T[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+  last: boolean
+}
+
 // ── Ticket Types ──
 
 export const getTicketTypes = async (conferenceId: number, activeOnly = true): Promise<TicketTypeResponse[]> => {
@@ -115,8 +124,18 @@ export const getMyTickets = async (userId: number): Promise<TicketResponse[]> =>
   return res.data
 }
 
-export const getAttendees = async (conferenceId: number): Promise<TicketResponse[]> => {
-  const res = await http.get<TicketResponse[]>(`/conferences/${conferenceId}/attendees`)
+export const getAttendees = async (
+  conferenceId: number,
+  params?: { page?: number; size?: number; search?: string; status?: string }
+): Promise<PagedResponse<TicketResponse>> => {
+  const query = new URLSearchParams()
+  if (params?.page !== undefined) query.append('page', String(params.page))
+  if (params?.size !== undefined) query.append('size', String(params.size))
+  if (params?.search) query.append('search', params.search)
+  if (params?.status && params.status !== 'ALL') query.append('status', params.status)
+  const res = await http.get<PagedResponse<TicketResponse>>(
+    `/conferences/${conferenceId}/attendees?${query.toString()}`
+  )
   return res.data
 }
 

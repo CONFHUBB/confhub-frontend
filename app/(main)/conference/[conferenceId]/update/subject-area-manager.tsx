@@ -340,6 +340,7 @@ export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
                         </div>
                     ) : (
                         <div className="rounded-lg border overflow-hidden">
+                            <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-muted/30">
@@ -382,23 +383,24 @@ export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
                                     ))}
                                 </TableBody>
                             </Table>
+                            </div>
                         </div>
                     )}
 
                     {/* Pagination */}
                     {totalPages > 1 && (
-                        <div className="flex items-center justify-between pt-4 border-t">
-                            <p className="text-xs text-muted-foreground">
+                        <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
+                            <div className="text-sm text-muted-foreground">
                                 Page {currentPage + 1} of {totalPages} · {totalElements} subject areas
-                            </p>
-                            <div className="flex gap-1">
+                            </div>
+                            <div className="flex gap-2">
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     disabled={currentPage === 0}
                                     onClick={() => setCurrentPage(p => p - 1)}
                                 >
-                                    <ChevronLeft className="h-4 w-4" />
+                                    <ChevronLeft className="h-4 w-4 mr-1" /> Previous
                                 </Button>
                                 <Button
                                     variant="outline"
@@ -406,7 +408,7 @@ export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
                                     disabled={currentPage >= totalPages - 1}
                                     onClick={() => setCurrentPage(p => p + 1)}
                                 >
-                                    <ChevronRight className="h-4 w-4" />
+                                    Next <ChevronRight className="h-4 w-4 ml-1" />
                                 </Button>
                             </div>
                         </div>
