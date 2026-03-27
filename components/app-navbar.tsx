@@ -59,7 +59,7 @@ const PRIMARY_NAV = [
     { name: 'All Conferences',   path: '/conference',         exact: true,  chairOnly: false },
     { name: 'Submit Paper',      path: '/conference',         exact: false, chairOnly: false, query: '?status=ONGOING' },
     { name: 'Published Papers',  path: '/paper/published',    exact: false, chairOnly: false },
-    { name: 'Create Conference', path: '/conference/create',  exact: false, chairOnly: true  },
+    { name: 'Create Conference', path: '/conference/create',  exact: false },
 ]
 
 export function AppNavbar() {
@@ -163,7 +163,6 @@ export function AppNavbar() {
                         {/* ── Center: Primary Nav + Workspace Dropdown (Desktop) ── */}
                         <nav className="hidden lg:flex items-center gap-1">
                             {PRIMARY_NAV.map((link) => {
-                                if (link.chairOnly && !hasAnyRole('CONFERENCE_CHAIR')) return null
                                 const href = link.query ? `${link.path}${link.query}` : link.path
                                 return (
                                     <Link
