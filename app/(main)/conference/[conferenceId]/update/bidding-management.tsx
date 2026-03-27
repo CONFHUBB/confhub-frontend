@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
-    Loader2, Search, Download, Eye, Users, ChevronLeft, ChevronRight, 
+    Loader2, Search, Download, Eye, Users, ChevronLeft, ChevronRight,
     Zap, ThumbsUp, Minus, ThumbsDown, FileSpreadsheet, Filter,
     Building2, Mail, Globe, GraduationCap, Phone, User2, Check
 } from "lucide-react"
@@ -130,12 +130,12 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
 
             // 5. Compute per-reviewer conflict counts
             const conflictCountMap: Record<number, number> = {}
-            ;(conflictsData || []).forEach((c: PaperConflictResponse) => {
-                const userId = c.user?.id
-                if (userId) {
-                    conflictCountMap[userId] = (conflictCountMap[userId] || 0) + 1
-                }
-            })
+                ; (conflictsData || []).forEach((c: PaperConflictResponse) => {
+                    const userId = c.user?.id
+                    if (userId) {
+                        conflictCountMap[userId] = (conflictCountMap[userId] || 0) + 1
+                    }
+                })
 
             // 6. Fetch bid summaries for all reviewers in parallel
             const bidSummaries = await Promise.all(
@@ -322,55 +322,55 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                             onChange={e => setSearchQuery(e.target.value)}
                         />
                     </div>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="h-9 gap-2 text-sm px-3">
-                                    <Filter className="h-4 w-4 text-muted-foreground" />
-                                    Filters
-                                    {activeFilterCount > 0 && (
-                                        <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs font-normal">
-                                            {activeFilterCount}
-                                        </Badge>
-                                    )}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 p-0" align="end">
-                                <div className="p-4 space-y-4">
-                                    <div className="space-y-2">
-                                        <h4 className="font-medium text-sm">Bid Status</h4>
-                                        <div className="grid gap-1">
-                                            {[
-                                                { value: "all", label: "All Statuses" },
-                                                { value: "has_bids", label: "Has Bids" },
-                                                { value: "no_bids", label: "No Bids" }
-                                            ].map(opt => (
-                                                <div
-                                                    key={opt.value}
-                                                    className="flex items-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-muted"
-                                                    onClick={() => { setFilterBid(opt.value as any); setCurrentPage(0); }}
-                                                >
-                                                    <span className={filterBid === opt.value ? "font-medium" : ""}>
-                                                        {opt.label}
-                                                    </span>
-                                                    {filterBid === opt.value && <Check className="h-4 w-4" />}
-                                                </div>
-                                            ))}
-                                        </div>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="h-9 gap-2 text-sm px-3">
+                                <Filter className="h-4 w-4 text-muted-foreground" />
+                                Filters
+                                {activeFilterCount > 0 && (
+                                    <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs font-normal">
+                                        {activeFilterCount}
+                                    </Badge>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-0" align="end">
+                            <div className="p-4 space-y-4">
+                                <div className="space-y-2">
+                                    <h4 className="font-medium text-sm">Bid Status</h4>
+                                    <div className="grid gap-1">
+                                        {[
+                                            { value: "all", label: "All Statuses" },
+                                            { value: "has_bids", label: "Has Bids" },
+                                            { value: "no_bids", label: "No Bids" }
+                                        ].map(opt => (
+                                            <div
+                                                key={opt.value}
+                                                className="flex items-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-muted"
+                                                onClick={() => { setFilterBid(opt.value as any); setCurrentPage(0); }}
+                                            >
+                                                <span className={filterBid === opt.value ? "font-medium" : ""}>
+                                                    {opt.label}
+                                                </span>
+                                                {filterBid === opt.value && <Check className="h-4 w-4" />}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
-                                {activeFilterCount > 0 && (
-                                    <div className="p-3 border-t bg-muted/50">
-                                        <Button
-                                            variant="ghost"
-                                            className="w-full text-xs h-8"
-                                            onClick={() => { setFilterBid("all"); setCurrentPage(0); }}
-                                        >
-                                            Clear filters
-                                        </Button>
-                                    </div>
-                                )}
-                            </PopoverContent>
-                        </Popover>
+                            </div>
+                            {activeFilterCount > 0 && (
+                                <div className="p-3 border-t bg-muted/50">
+                                    <Button
+                                        variant="ghost"
+                                        className="w-full text-xs h-8"
+                                        onClick={() => { setFilterBid("all"); setCurrentPage(0); }}
+                                    >
+                                        Clear filters
+                                    </Button>
+                                </div>
+                            )}
+                        </PopoverContent>
+                    </Popover>
                     <Button variant="outline" size="sm" className="gap-2 text-xs h-9" onClick={handleExportExcel}>
                         <FileSpreadsheet className="h-3.5 w-3.5" />
                         Export Excel
@@ -378,104 +378,102 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                 </div>
             </div>
             <div className="rounded-lg border overflow-hidden">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="bg-muted/30">
-                                    <TableHead className="w-12 text-center">#</TableHead>
-                                    <TableHead>First Name</TableHead>
-                                    <TableHead>Last Name</TableHead>
-                                    <TableHead>Email</TableHead>
-                                    <TableHead>Institution</TableHead>
-                                    <TableHead className="text-center">Quota</TableHead>
-                                    <TableHead className="text-center">Assigned</TableHead>
-                                    <TableHead className="text-center">% Done</TableHead>
-                                    <TableHead className="text-center">Bids</TableHead>
-                                    <TableHead className="text-center">Conflicts</TableHead>
-                                    <TableHead className="w-24 text-center">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {paginatedRows.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={11} className="text-center py-12 text-muted-foreground">
-                                            {searchQuery || filterBid !== "all"
-                                                ? "No reviewers match your filters."
-                                                : "No reviewers in this conference yet."}
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    paginatedRows.map((row, idx) => (
-                                        <TableRow key={row.id}>
-                                            <TableCell className="text-center text-xs text-muted-foreground font-medium">
-                                                {currentPage * PAGE_SIZE + idx + 1}
-                                            </TableCell>
-                                            <TableCell className="font-medium text-sm">{row.firstName}</TableCell>
-                                            <TableCell className="font-medium text-sm">{row.lastName}</TableCell>
-                                            <TableCell className="text-muted-foreground text-xs">{row.email}</TableCell>
-                                            <TableCell className="text-xs text-muted-foreground">{row.institution || "—"}</TableCell>
-                                            <TableCell className="text-center">
-                                                {row.quota !== null ? (
-                                                    <span className="font-semibold">{row.quota}</span>
-                                                ) : (
-                                                    <span className="text-xs text-muted-foreground">Not Set</span>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <span className={`font-semibold ${row.assigned > 0 ? "text-indigo-600" : ""}`}>
-                                                    {row.assigned}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                {row.assigned > 0 ? (
-                                                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                                                        row.percentCompleted === 100 ? "bg-emerald-100 text-emerald-700"
-                                                        : row.percentCompleted > 0 ? "bg-amber-100 text-amber-700"
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-muted/30">
+                            <TableHead className="w-12 text-center">#</TableHead>
+                            <TableHead>First Name</TableHead>
+                            <TableHead>Last Name</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Institution</TableHead>
+                            <TableHead className="text-center">Quota</TableHead>
+                            <TableHead className="text-center">Assigned</TableHead>
+                            <TableHead className="text-center">% Done</TableHead>
+                            <TableHead className="text-center">Bids</TableHead>
+                            <TableHead className="text-center">Conflicts</TableHead>
+                            <TableHead className="w-24 text-center">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {paginatedRows.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={11} className="text-center py-12 text-muted-foreground">
+                                    {searchQuery || filterBid !== "all"
+                                        ? "No reviewers match your filters."
+                                        : "No reviewers in this conference yet."}
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            paginatedRows.map((row, idx) => (
+                                <TableRow key={row.id}>
+                                    <TableCell className="text-center text-xs text-muted-foreground font-medium">
+                                        {currentPage * PAGE_SIZE + idx + 1}
+                                    </TableCell>
+                                    <TableCell className="font-medium text-sm">{row.firstName}</TableCell>
+                                    <TableCell className="font-medium text-sm">{row.lastName}</TableCell>
+                                    <TableCell className="text-muted-foreground text-xs">{row.email}</TableCell>
+                                    <TableCell className="text-xs text-muted-foreground">{row.institution || "—"}</TableCell>
+                                    <TableCell className="text-center">
+                                        {row.quota !== null ? (
+                                            <span className="font-semibold">{row.quota}</span>
+                                        ) : (
+                                            <span className="text-xs text-muted-foreground">Not Set</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        <span className={`font-semibold ${row.assigned > 0 ? "text-indigo-600" : ""}`}>
+                                            {row.assigned}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        {row.assigned > 0 ? (
+                                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${row.percentCompleted === 100 ? "bg-emerald-100 text-emerald-700"
+                                                    : row.percentCompleted > 0 ? "bg-amber-100 text-amber-700"
                                                         : "bg-gray-100 text-gray-500"
-                                                    }`}>
-                                                        {row.percentCompleted}%
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-xs text-muted-foreground">—</span>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <span className={`font-semibold ${
-                                                    row.totalBids > 0 ? "text-emerald-600" : "text-muted-foreground"
-                                                }`}>{row.totalBids}</span>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <span className={row.conflictCount > 0 ? "text-amber-600 font-semibold" : "text-muted-foreground"}>
-                                                    {row.conflictCount}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openDetail(row.id)}>
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
+                                                }`}>
+                                                {row.percentCompleted}%
+                                            </span>
+                                        ) : (
+                                            <span className="text-xs text-muted-foreground">—</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        <span className={`font-semibold ${row.totalBids > 0 ? "text-emerald-600" : "text-muted-foreground"
+                                            }`}>{row.totalBids}</span>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        <span className={row.conflictCount > 0 ? "text-amber-600 font-semibold" : "text-muted-foreground"}>
+                                            {row.conflictCount}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openDetail(row.id)}>
+                                            <Eye className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
 
-                    {/* Pagination */}
-                    {totalPages > 1 && (
-                        <div className="flex items-center justify-between px-5 py-3 border-t">
-                            <p className="text-xs text-muted-foreground">
-                                Page {currentPage + 1} of {totalPages} · {filteredRows.length} reviewers
-                            </p>
-                            <div className="flex items-center gap-1">
-                                <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </div>
-                    )}
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between px-5 py-3 border-t">
+                    <p className="text-xs text-muted-foreground">
+                        Page {currentPage + 1} of {totalPages} · {filteredRows.length} reviewers
+                    </p>
+                    <div className="flex items-center gap-1">
+                        <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
 
 
             {/* Detail Sheet */}
@@ -490,22 +488,20 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                         <div className="flex gap-1 pt-2 -mb-[9px]">
                             <button
                                 onClick={() => setDetailTab("profile")}
-                                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
-                                    detailTab === "profile"
+                                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors ${detailTab === "profile"
                                         ? "border-indigo-600 text-indigo-600"
                                         : "border-transparent text-muted-foreground hover:text-foreground"
-                                }`}
+                                    }`}
                             >
                                 <User2 className="h-3.5 w-3.5" />
                                 Profile
                             </button>
                             <button
                                 onClick={() => setDetailTab("bids")}
-                                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
-                                    detailTab === "bids"
+                                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors ${detailTab === "bids"
                                         ? "border-indigo-600 text-indigo-600"
                                         : "border-transparent text-muted-foreground hover:text-foreground"
-                                }`}
+                                    }`}
                             >
                                 <Zap className="h-3.5 w-3.5" />
                                 Bid Detail
@@ -629,19 +625,19 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                                             <div className="flex flex-wrap gap-2">
                                                 {detailProfile.orcidId && (
                                                     <a href={`https://orcid.org/${detailProfile.orcidId}`} target="_blank" rel="noopener noreferrer"
-                                                       className="text-xs px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors">
+                                                        className="text-xs px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors">
                                                         ORCID: {detailProfile.orcidId}
                                                     </a>
                                                 )}
                                                 {detailProfile.googleScholarLink && (
                                                     <a href={detailProfile.googleScholarLink} target="_blank" rel="noopener noreferrer"
-                                                       className="text-xs px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors">
+                                                        className="text-xs px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors">
                                                         Google Scholar
                                                     </a>
                                                 )}
                                                 {detailProfile.dblpId && (
                                                     <a href={`https://dblp.org/pid/${detailProfile.dblpId}`} target="_blank" rel="noopener noreferrer"
-                                                       className="text-xs px-2.5 py-1 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100 transition-colors">
+                                                        className="text-xs px-2.5 py-1 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100 transition-colors">
                                                         DBLP: {detailProfile.dblpId}
                                                     </a>
                                                 )}
