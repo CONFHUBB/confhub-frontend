@@ -162,3 +162,44 @@ export const batchNotifyDecisions = async (conferenceId: number): Promise<string
     const response = await http.post<string>(`/paper/conference/${conferenceId}/batch-notify`)
     return response.data
 }
+
+export interface PublishedPaperDTO {
+    id: number
+    conferenceId: number
+    conferenceName: string
+    trackId: number
+    trackName: string
+    title: string
+    abstractField: string
+    keywords: string[]
+    submissionTime: string
+    status: string
+    authorNames: string[]
+}
+
+export interface PagedPublishedPapers {
+    content: PublishedPaperDTO[]
+    totalElements: number
+    totalPages: number
+    currentPage: number
+    pageSize: number
+}
+
+/**
+ * Get all published papers with BE-side pagination and optional title search.
+ * Replaces N+1 pattern: authorNames are embedded directly by the API.
+ */
+export const getPublishedPapers = async (
+    page = 0,
+    size = 20,
+    search?: string
+): Promise<PagedPublishedPapers> => {
+    const params = new URLSearchParams({ page: String(page), size: String(size) })
+    if (search && search.trim()) params.append('search', search.trim())
+    const response = await http.get<PagedPublishedPapers>(`/paper/published?${params.toString()}`)
+    return response.data
+}
+
+export const deletePaperFile = async (fileId: number): Promise<void> => {
+    await http.delete(`/paper-file/${fileId}`)
+}

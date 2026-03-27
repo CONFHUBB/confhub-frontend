@@ -8,13 +8,18 @@ import type { ConferenceActivityDTO, ConferenceResponse, TrackResponse } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-    Calendar, MapPin, ExternalLink, Loader2, ArrowLeft, Settings,
+import { Calendar, MapPin, ExternalLink, Loader2, ArrowLeft, Settings,
     Globe, Phone, FileText, Clock, Send, Ticket, BookOpen
 } from 'lucide-react'
 import Link from 'next/link'
 import { isActivityOpen } from '@/lib/activity'
 import { useUserRoles } from '@/hooks/useUserConferenceRoles'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 export default function ConferenceDetailsPage() {
     const params = useParams()
@@ -104,6 +109,8 @@ export default function ConferenceDetailsPage() {
         'REVIEW_DISCUSSION',
         'AUTHOR_NOTIFICATION',
         'CAMERA_READY_SUBMISSION',
+        'REGISTRATION',
+        'EVENT_DAY',
     ]
 
     const ACTIVITY_LABELS: Record<string, string> = {
@@ -112,7 +119,9 @@ export default function ConferenceDetailsPage() {
         REVIEW_SUBMISSION: 'Review Submission',
         REVIEW_DISCUSSION: 'Review Discussion',
         AUTHOR_NOTIFICATION: 'Author Notification',
-        CAMERA_READY_SUBMISSION: 'Camera Ready Submission',
+        CAMERA_READY_SUBMISSION: 'Camera Ready',
+        REGISTRATION: 'Registration',
+        EVENT_DAY: 'Conference Event',
     }
 
     const paperSubmissionActivity = activities.find(a => a.activityType === 'PAPER_SUBMISSION')
@@ -260,38 +269,68 @@ export default function ConferenceDetailsPage() {
                     </div>
 
         
+                    {/* ── Call-to-Action Buttons ── */}
+                    {(() => {
+                        const registrationActivity = activities.find(a => a.activityType === 'REGISTRATION')
+                        const eventDayActivity = activities.find(a => a.activityType === 'EVENT_DAY')
+                        const canRegister = isActivityOpen(registrationActivity)
+                        const hasProgramAvailable = isActivityOpen(eventDayActivity)
 
-                    {canManageConference && (
-                        <div className="flex gap-3 pt-2 flex-wrap">
-                            <Link href={`/conference/${conferenceId}/update`}>
-                                <Button variant="outline" className="gap-2">
-                                    <Settings className="h-4 w-4" />
-                                    Manage Conference
-                                </Button>
-                            </Link>
-                        </div>
-                    )}
-                    {/* Registration CTAs — visible to all authenticated users */}
-                    <div className="flex gap-3 pt-2 flex-wrap">
-                        <Link href={`/conference/${conferenceId}/author`}>
-                            <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700">
-                                <BookOpen className="h-4 w-4" />
-                                Author Workspace
-                            </Button>
-                        </Link>
-                        <Link href={`/conference/${conferenceId}/register`}>
-                            <Button variant="outline" className="gap-2">
-                                <Ticket className="h-4 w-4" />
-                                Register to Attend
-                            </Button>
-                        </Link>
-                        <Link href={`/conference/${conferenceId}/program`}>
-                            <Button variant="outline" className="gap-2">
-                                <Calendar className="h-4 w-4" />
-                                View Program
-                            </Button>
-                        </Link>
-                    </div>
+                        return (
+                            <TooltipProvider delayDuration={200}>
+                                <div className="flex gap-3 pt-4 flex-wrap">
+                                    {/* Register to Attend */}
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span className="inline-flex" tabIndex={0} style={{ pointerEvents: 'auto' }}>
+                                                <Button
+                                                    size="lg"
+                                                    className="gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:pointer-events-none"
+                                                    disabled={!canRegister}
+                                                    onClick={() => canRegister && window.location.assign(`/conference/${conferenceId}/register`)}
+                                                >
+                                                    <Ticket className="h-5 w-5" />
+                                                    Register to Attend
+                                                </Button>
+                                            </span>
+                                        </TooltipTrigger>
+                                        {!canRegister && (
+                                            <TooltipContent side="bottom" className="max-w-xs">
+                                                {registrationActivity?.deadline && new Date(registrationActivity.deadline).getTime() < Date.now()
+                                                    ? 'Registration is closed.'
+                                                    : 'Registration is not open yet. Please wait until the Registration phase.'}
+                                            </TooltipContent>
+                                        )}
+                                    </Tooltip>
+
+                                    {/* View Program */}
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span className="inline-flex" tabIndex={0} style={{ pointerEvents: 'auto' }}>
+                                                <Button
+                                                    size="lg"
+                                                    variant="outline"
+                                                    className="gap-2 disabled:pointer-events-none"
+                                                    disabled={!hasProgramAvailable}
+                                                    onClick={() => hasProgramAvailable && window.location.assign(`/conference/${conferenceId}/program`)}
+                                                >
+                                                    <Calendar className="h-5 w-5" />
+                                                    View Program
+                                                </Button>
+                                            </span>
+                                        </TooltipTrigger>
+                                        {!hasProgramAvailable && (
+                                            <TooltipContent side="bottom" className="max-w-xs">
+                                                Detailed program is not yet available
+                                            </TooltipContent>
+                                        )}
+                                    </Tooltip>
+                                </div>
+                            </TooltipProvider>
+                        )
+                    })()}
+
+
                 </div>
 
                 <div className="lg:col-span-3 pt-9">
@@ -313,13 +352,13 @@ export default function ConferenceDetailsPage() {
                 </div>
             </div>
 
-            {/* Phase Indicator */}
-            {activities.length > 0 && (
-                <div className="mb-8 rounded-xl border bg-card p-4 sm:p-5">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
-                        Conference Progress
-                    </h3>
-                    <div className="flex items-center gap-1 sm:gap-0 overflow-x-auto pb-1">
+            {/* Phase Indicator — always render so user sees full roadmap */}
+            <div className="mb-8 rounded-xl border bg-card p-4 sm:p-5">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
+                    Conference Progress
+                </h3>
+                <div className="w-full overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+                    <div className="flex flex-row flex-nowrap items-center min-w-max">
                         {ACTIVITY_ORDER.map((actType, idx) => {
                             const activity = activities.find(a => a.activityType === actType)
                             const isActive = activity?.isEnabled === true
@@ -330,13 +369,14 @@ export default function ConferenceDetailsPage() {
                             const done = isCompleted || (isPast && !isActive)
 
                             return (
-                                <div key={actType} className="flex items-center flex-1 min-w-0">
-                                    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap
-                                        ${isActive 
-                                            ? 'bg-primary/10 text-primary ring-1 ring-primary/30' 
-                                            : done 
-                                                ? 'bg-emerald-50 text-emerald-700' 
-                                                : 'bg-muted text-muted-foreground/50'
+                                <div key={actType} className="flex items-center shrink-0">
+                                    {/* Phase badge */}
+                                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap shrink-0
+                                        ${isActive
+                                            ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
+                                            : done
+                                                ? 'bg-emerald-50 text-emerald-700'
+                                                : 'bg-muted text-muted-foreground/40'
                                         }`}
                                     >
                                         {done ? (
@@ -348,16 +388,13 @@ export default function ConferenceDetailsPage() {
                                         ) : (
                                             <span className="h-2 w-2 rounded-full bg-muted-foreground/30 shrink-0" />
                                         )}
-                                        <span className="hidden sm:inline truncate">
-                                            {ACTIVITY_LABELS[actType]}
-                                        </span>
-                                        <span className="sm:hidden truncate">
-                                            {ACTIVITY_LABELS[actType].split(' ')[0]}
-                                        </span>
+                                        {ACTIVITY_LABELS[actType]}
                                     </div>
+
+                                    {/* Connector line between nodes */}
                                     {idx < ACTIVITY_ORDER.length - 1 && (
-                                        <div className={`hidden sm:block flex-1 h-px mx-1 ${
-                                            done ? 'bg-emerald-300' : 'bg-border'
+                                        <div className={`min-w-[24px] w-6 h-[2px] mx-2 shrink-0 rounded-full ${
+                                            done ? 'bg-emerald-300' : 'bg-slate-200'
                                         }`} />
                                     )}
                                 </div>
@@ -365,7 +402,7 @@ export default function ConferenceDetailsPage() {
                         })}
                     </div>
                 </div>
-            )}
+            </div>
 
             <section>
                 <div className="flex items-center justify-between mb-6">

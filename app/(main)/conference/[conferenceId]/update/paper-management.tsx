@@ -48,7 +48,7 @@ const STATUS_CONFIG: Record<string, { label: string, color: string }> = {
     CAMERA_READY_SUBMITTED: { label: "Camera Ready", color: "bg-emerald-100 text-emerald-800 font-bold" },
 }
 
-interface EnrichedPaper extends PaperResponse {
+export interface EnrichedPaper extends PaperResponse {
     conflictCount: number
     metaReviewScore?: number
     metaReviewStatus?: Decision

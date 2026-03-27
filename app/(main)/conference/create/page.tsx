@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ConferenceForm } from "./conference-form"
 import { ConferenceImport } from "./conference-import"
@@ -14,6 +14,24 @@ export default function CreateConferencePage() {
     const router = useRouter()
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [activeTab, setActiveTab] = useState<TabMode>("form")
+
+    useEffect(() => {
+        const token = localStorage.getItem('accessToken')
+        if (!token) {
+            router.push('/auth/login')
+            return
+        }
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]))
+            const roles = payload.roles || []
+            if (!roles.includes('ADMIN')) {
+                toast.error('Only administrators can create conferences.')
+                router.push('/dashboard')
+            }
+        } catch (e) {
+            router.push('/dashboard')
+        }
+    }, [router])
 
     const handleConferenceSubmit = async (data: ConferenceData) => {
         setIsSubmitting(true)

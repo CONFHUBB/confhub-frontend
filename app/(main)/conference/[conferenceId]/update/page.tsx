@@ -195,12 +195,20 @@ export default function ConferenceUpdatePage() {
                     r === 'CONFERENCE_CHAIR' || r === 'PROGRAM_CHAIR'
                 )
                 if (!isHighChair) {
-                    // Extract trackIds from REVIEWER role entries only
                     const trackIds: number[] = (me.roles || [])
                         .filter((r: any) => r.assignedRole === 'REVIEWER')
                         .map((r: any) => r.conferenceTrackId)
                         .filter(Boolean)
                     setChairTrackIds(trackIds.length > 0 ? trackIds : null)
+
+                    // SECURITY PATCH: Redirect if user is not a high chair and not a track chair
+                    // If they are purely AUTHOR or REVIEWER, block access to the entire page
+                    const isTrackChair = roles.some(r => r === 'TRACK_CHAIR')
+                    if (!isTrackChair) {
+                        toast.error('Access Denied. Chair privileges required.')
+                        // Redirect away
+                        router.push('/dashboard')
+                    }
                 }
             } catch { /* ignore — user has full access */ }
         }
