@@ -2,10 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { assignAuthorToPaper, getAuthorsByPaper, deleteAuthorFromPaper, getPaperById, getPaperFilesByPaperId, updatePaper, updatePaperFile, withdrawPaper, restorePaper } from '@/app/api/paper.api'
+import { assignAuthorToPaper, getAuthorsByPaper, deleteAuthorFromPaper, getPaperById, getPaperFilesByPaperId, updatePaper, updatePaperFile, withdrawPaper, restorePaper, deletePaperFile } from '@/app/api/paper.api'
 import type { PaperAuthorItem } from '@/app/api/paper.api'
 import { getUsers } from '@/app/api/user.api'
 import { getSubjectAreasByTrack } from '@/app/api/track.api'
+import { getAggregateByPaper, type ReviewAggregate } from '@/app/api/review-aggregate.api'
+import { getMetaReviewByPaper } from '@/app/api/meta-review.api'
+import { getConferenceActivities } from '@/app/api/conference.api'
+import type { MetaReviewResponse } from '@/types/meta-review'
+import type { ConferenceActivityDTO } from '@/types/conference'
 import type { PaperResponse, PaperFileResponse } from '@/types/paper'
 import type { SubjectAreaResponse } from '@/types/subject-area'
 import type { User } from '@/types/user'
@@ -16,6 +21,7 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
@@ -26,17 +32,40 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { FieldError } from '@/components/ui/field'
 import { V } from '@/lib/validation'
-import { Loader2, ArrowLeft, Upload, FileUp, FileText, Trash2, Save, ExternalLink, UserPlus, Layers, X, AlertTriangle, RotateCcw, Eye, EyeOff } from 'lucide-react'
+import {
+    Loader2, ArrowLeft, Upload, FileUp, FileText, Trash2, Save, ExternalLink,
+    UserPlus, Layers, X, AlertTriangle, RotateCcw, Eye, Lock, Clock, CalendarDays,
+    Star, BarChart3, CheckCircle2, XCircle, ClipboardList, Camera, Users
+} from 'lucide-react'
 import { Select as AntdSelect } from 'antd'
 import toast from 'react-hot-toast'
 
-export default function EditPaperPage() {
+// ── Status Configuration ──
+const STATUS_COLOR: Record<string, string> = {
+    DRAFT: 'bg-amber-500',
+    SUBMITTED: 'bg-indigo-600',
+    UNDER_REVIEW: 'bg-purple-600',
+    ACCEPTED: 'bg-green-600',
+    REJECTED: 'bg-red-600',
+    WITHDRAWN: 'bg-gray-500',
+    CAMERA_READY: 'bg-indigo-600',
+    PUBLISHED: 'bg-emerald-600',
+    REVISION: 'bg-orange-500',
+}
+const DECISION_STYLE: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+    APPROVE: { label: 'Accepted', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <CheckCircle2 className="h-3 w-3" /> },
+    REJECT: { label: 'Rejected', color: 'bg-red-100 text-red-700 border-red-200', icon: <XCircle className="h-3 w-3" /> },
+    REVISION: { label: 'Revision Required', color: 'bg-amber-100 text-amber-700 border-amber-200', icon: <AlertTriangle className="h-3 w-3" /> },
+}
+
+export default function PaperWorkspacePage() {
     const params = useParams()
     const router = useRouter()
     const paperId = Number(params.paperId)
 
     const [paper, setPaper] = useState<PaperResponse | null>(null)
     const [paperFiles, setPaperFiles] = useState<PaperFileResponse[]>([])
+    const [activities, setActivities] = useState<ConferenceActivityDTO[]>([])
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [uploading, setUploading] = useState(false)
@@ -45,100 +74,73 @@ export default function EditPaperPage() {
     const [selectedUser, setSelectedUser] = useState('')
     const [isAssigning, setIsAssigning] = useState(false)
     const [openAddAuthorDialog, setOpenAddAuthorDialog] = useState(false)
+    const [openWithdrawDialog, setOpenWithdrawDialog] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [withdrawing, setWithdrawing] = useState(false)
-    const [previewFileId, setPreviewFileId] = useState<number | null>(null)
+    const [previewFileUrl, setPreviewFileUrl] = useState<string | null>(null)
 
     const [subjectAreas, setSubjectAreas] = useState<SubjectAreaResponse[]>([])
     const [primarySubjectAreaId, setPrimarySubjectAreaId] = useState<string>('')
     const [secondarySubjectAreaIds, setSecondarySubjectAreaIds] = useState<number[]>([])
 
-    const [formData, setFormData] = useState({
-        title: '',
-        abstractField: '',
-    })
+    const [formData, setFormData] = useState({ title: '', abstractField: '' })
     const [keywords, setKeywords] = useState<string[]>([])
     const [keywordInput, setKeywordInput] = useState('')
     const [errors, setErrors] = useState<{ title?: string; abstractField?: string; keywords?: string }>({})
 
-    const fetchUsers = async () => {
-        try {
-            const data = await getUsers()
-            setUsers(data)
-        } catch (error) {
-            console.error('Error fetching users:', error)
-            toast.error('Failed to load available authors')
-        }
-    }
+    // Review data
+    const [aggregate, setAggregate] = useState<ReviewAggregate | null>(null)
+    const [metaReview, setMetaReview] = useState<MetaReviewResponse | null>(null)
 
+    const fetchUsers = async () => {
+        try { setUsers(await getUsers()) } catch { toast.error('Failed to load available authors') }
+    }
     const fetchAuthors = async () => {
-        try {
-            const data = await getAuthorsByPaper(paperId)
-            setAuthors(data)
-        } catch (error) {
-            console.error('Error fetching authors:', error)
-            toast.error('Failed to load authors')
-        }
+        try { setAuthors(await getAuthorsByPaper(paperId)) } catch { toast.error('Failed to load authors') }
+    }
+    const fetchFiles = async () => {
+        try { setPaperFiles(Array.isArray(await getPaperFilesByPaperId(paperId)) ? await getPaperFilesByPaperId(paperId) : []) } catch { /* ignore */ }
     }
 
     useEffect(() => {
-        const fetchPaper = async () => {
+        const fetchAll = async () => {
             try {
                 setLoading(true)
                 const data = await getPaperById(paperId)
                 setPaper(data)
-                setFormData({
-                    title: data.title || '',
-                    abstractField: data.abstractField || '',
-                })
+                setFormData({ title: data.title || '', abstractField: data.abstractField || '' })
                 setKeywords(data.keywords || [])
-                
-                if (data.primarySubjectAreaId) {
-                    setPrimarySubjectAreaId(data.primarySubjectAreaId.toString())
+                if (data.primarySubjectAreaId) setPrimarySubjectAreaId(data.primarySubjectAreaId.toString())
+                if (data.secondarySubjectAreaIds) setSecondarySubjectAreaIds(data.secondarySubjectAreaIds)
+
+                const trackId = data.trackId || data.track?.id
+                if (trackId) {
+                    try { setSubjectAreas(await getSubjectAreasByTrack(trackId) || []) } catch { /* ignore */ }
                 }
-                if (data.secondarySubjectAreaIds) {
-                    setSecondarySubjectAreaIds(data.secondarySubjectAreaIds)
+                const confId = data.track?.conference?.id || data.conferenceId
+                if (confId) {
+                    try { setActivities(await getConferenceActivities(confId)) } catch { /* ignore */ }
                 }
 
-                // Fetch subject areas for this track
-                const trackIdToFetch = data.trackId || data.track?.id
-                if (trackIdToFetch) {
-                    try {
-                        const areas = await getSubjectAreasByTrack(trackIdToFetch)
-                        setSubjectAreas(areas || [])
-                    } catch (err) {
-                        console.error('Failed to load subject areas', err)
-                    }
-                }
+                await fetchFiles()
 
-                // Load existing paper files
-                try {
-                    const rawFiles = await getPaperFilesByPaperId(paperId)
-                    setPaperFiles(Array.isArray(rawFiles) ? rawFiles : [])
-                } catch (err) {
-                    console.error('Could not fetch paper files', err)
+                if (!['DRAFT', 'SUBMITTED'].includes(data.status)) {
+                    try { setAggregate(await getAggregateByPaper(paperId)) } catch { /* ignore */ }
+                    try { setMetaReview(await getMetaReviewByPaper(paperId)) } catch { /* ignore */ }
                 }
-
-            } catch (error) {
+            } catch {
                 toast.error('Failed to load paper details')
-                console.error(error)
             } finally {
                 setLoading(false)
             }
         }
-        if (paperId) {
-            fetchPaper()
-            fetchUsers()
-            fetchAuthors()
-        }
+        if (paperId && !isNaN(paperId)) { fetchAll(); fetchUsers(); fetchAuthors() }
     }, [paperId])
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target
         setFormData(prev => ({ ...prev, [name]: value }))
-        if (errors[name as keyof typeof errors]) {
-            setErrors(prev => ({ ...prev, [name]: undefined }))
-        }
+        if (errors[name as keyof typeof errors]) setErrors(prev => ({ ...prev, [name]: undefined }))
     }
 
     const handleSavePaper = async () => {
@@ -149,42 +151,32 @@ export default function EditPaperPage() {
         if (abstractErr) newErrors.abstractField = abstractErr
         const keywordErr = keywords.length === 0 ? 'Please add at least one keyword' : keywords.some(k => k.length > 50) ? 'Keywords cannot be longer than 50 characters' : null
         if (keywordErr) newErrors.keywords = keywordErr
-
-        if (Object.keys(newErrors).length > 0) {
-            setErrors(newErrors)
-            return
-        }
+        if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return }
 
         try {
             setSaving(true)
             await updatePaper(paperId, {
-                ...paper,
-                ...formData,
-                keywords,
+                ...paper, ...formData, keywords,
                 primarySubjectAreaId: Number(primarySubjectAreaId),
-                secondarySubjectAreaIds: secondarySubjectAreaIds,
+                secondarySubjectAreaIds,
                 conferenceTrackId: paper?.trackId || paper?.track?.id
             })
             toast.success('Paper details updated successfully!')
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to update paper')
-        } finally {
-            setSaving(false)
-        }
+        } finally { setSaving(false) }
     }
 
     const handleWithdraw = async () => {
-        if (!confirm('Are you sure you want to withdraw this paper? You can restore it later.')) return
         try {
             setWithdrawing(true)
             const updated = await withdrawPaper(paperId)
             setPaper(updated)
+            setOpenWithdrawDialog(false)
             toast.success('Paper withdrawn successfully')
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to withdraw paper')
-        } finally {
-            setWithdrawing(false)
-        }
+        } finally { setWithdrawing(false) }
     }
 
     const handleRestore = async () => {
@@ -195,72 +187,54 @@ export default function EditPaperPage() {
             toast.success('Paper restored successfully')
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to restore paper')
-        } finally {
-            setWithdrawing(false)
-        }
+        } finally { setWithdrawing(false) }
     }
 
     const handleUploadFile = async () => {
-        if (!selectedFile) {
-            toast.error('Please select a file to upload')
-            return
-        }
+        if (!selectedFile) { toast.error('Please select a file to upload'); return }
         try {
             setUploading(true)
             const conferenceId = paper?.conferenceId ?? paper?.track?.conference?.id
-            if (!conferenceId) {
-                toast.error('Conference information not available')
-                return
-            }
+            if (!conferenceId) { toast.error('Conference information not available'); return }
             await updatePaperFile(conferenceId, paperId, selectedFile)
-            toast.success('Manuscript file uploaded successfully!')
+            toast.success('File uploaded successfully!')
             setSelectedFile(null)
-
-            // Refresh file list
-            try {
-                const rawFiles = await getPaperFilesByPaperId(paperId)
-                setPaperFiles(Array.isArray(rawFiles) ? rawFiles : [])
-            } catch (err) {
-                console.error(err)
-            }
+            await fetchFiles()
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to upload manuscript')
-        } finally {
-            setUploading(false)
+        } finally { setUploading(false) }
+    }
+
+    const handleDeleteFile = async (fileId: number) => {
+        if (!confirm('Are you sure you want to delete this file?')) return
+        try {
+            await deletePaperFile(fileId)
+            toast.success('File deleted successfully.')
+            await fetchFiles()
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to delete file')
         }
     }
 
     const handleAssignAuthor = async () => {
-        if (!selectedUser) {
-            toast.error('Please select a user')
-            return
-        }
-
-        // Duplicate check on frontend
-        if (authors.some(a => a.user.id === Number(selectedUser))) {
-            toast.error('This author is already added to the paper.')
-            return
-        }
-
+        if (!selectedUser) { toast.error('Please select a user'); return }
+        if (authors.some(a => a.user.id === Number(selectedUser))) { toast.error('This author is already added.'); return }
         try {
             setIsAssigning(true)
             await assignAuthorToPaper(paperId, Number(selectedUser))
             toast.success('Author assigned successfully!')
-            setSelectedUser('')
-            setOpenAddAuthorDialog(false)
+            setSelectedUser(''); setOpenAddAuthorDialog(false)
             await fetchAuthors()
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to assign author')
-        } finally {
-            setIsAssigning(false)
-        }
+        } finally { setIsAssigning(false) }
     }
 
     const handleRemoveAuthor = async (paperAuthorId: number, authorName: string) => {
         if (!confirm(`Are you sure you want to remove ${authorName} as a co-author?`)) return
         try {
             await deleteAuthorFromPaper(paperAuthorId)
-            toast.success(`${authorName} has been removed and notified.`)
+            toast.success(`${authorName} has been removed.`)
             await fetchAuthors()
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to remove author')
@@ -280,382 +254,246 @@ export default function EditPaperPage() {
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
                 <p className="text-muted-foreground text-lg">Paper not found</p>
                 <Button onClick={() => router.push('/paper')} variant="outline">
-                    <ArrowLeft className="h-4 w-4 mr-2" /> Back to My Submissions
+                    <ArrowLeft className="h-4 w-4 mr-2" /> Back to My Papers
                 </Button>
             </div>
         )
     }
 
+    // ── Business logic flags ──
+    const isPaperSubmissionOpen = activities.some(
+        a => a.activityType === 'PAPER_SUBMISSION' && a.isEnabled && (!a.deadline || new Date(a.deadline) > new Date())
+    )
+    const isCameraReadyOpen = activities.some(
+        a => a.activityType === 'CAMERA_READY_SUBMISSION' && a.isEnabled && (!a.deadline || new Date(a.deadline) > new Date())
+    )
+
+    const isEditable = isPaperSubmissionOpen || paper.status === 'REVISION'
+    const showReviews = ['ACCEPTED', 'REJECTED', 'REVISION', 'CAMERA_READY', 'PUBLISHED'].includes(paper.status) || aggregate?.reviewCount! > 0
+    const showCameraReadyUpload = ['ACCEPTED'].includes(paper.status) && isCameraReadyOpen
+    const canWithdraw = ['SUBMITTED', 'UNDER_REVIEW'].includes(paper.status)
+    const decision = metaReview?.finalDecision ? DECISION_STYLE[metaReview.finalDecision] : null
+
+    // ── Separate Files ──
+    const CR_KEYS = ['camera-ready', 'cr_']
+    const isCrFile = (url: string) => CR_KEYS.some(k => url.toLowerCase().includes(k))
+    const manuscriptFiles = paperFiles.filter(pf => !isCrFile(pf.url))
+    const cameraReadyFiles = paperFiles.filter(pf => isCrFile(pf.url))
+
     return (
-        <div className="container mx-auto py-8 px-4 max-w-4xl space-y-6">
-            <Button variant="ghost" onClick={() => router.push('/paper')} className="-ml-2 mb-2">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to My Submissions
+        <div className="container mx-auto py-8 px-4 max-w-6xl space-y-6">
+            <Button variant="ghost" onClick={() => router.push('/paper')} className="-ml-2">
+                <ArrowLeft className="h-4 w-4 mr-2" /> Back to My Papers
             </Button>
 
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Edit Paper</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Update your paper information and upload a new manuscript
-                    </p>
+            {/* ── Workspace Header ── */}
+            <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                    <h1 className="text-3xl font-bold tracking-tight line-clamp-2">{paper.title}</h1>
+                    <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-muted-foreground">
+                        <Badge className={`px-2.5 py-0.5 text-white ${STATUS_COLOR[paper.status] || 'bg-gray-500'}`}>
+                            {paper.status.replace(/_/g, ' ')}
+                        </Badge>
+                        <span>·</span>
+                        <span className="font-mono">#{paper.id}</span>
+                        <span>·</span>
+                        <span>{paper.track?.conference?.acronym}</span>
+                        <span>·</span>
+                        <span>{paper.track?.name}</span>
+                    </div>
                 </div>
-                <Badge
-                    className={`text-sm px-3 py-1 ${
-                        paper.status === 'ACCEPTED' ? 'bg-green-600 text-white' :
-                        paper.status === 'REJECTED' ? 'bg-red-600 text-white' :
-                        paper.status === 'PUBLISHED' ? 'bg-emerald-600 text-white' :
-                        paper.status === 'CAMERA_READY' ? 'bg-indigo-600 text-white' :
-                        paper.status === 'WITHDRAWN' ? 'bg-gray-500 text-white' :
-                        paper.status === 'DRAFT' ? 'bg-amber-500 text-white' :
-                        paper.status === 'UNDER_REVIEW' ? 'bg-purple-600 text-white' :
-                        ''
-                    }`}
-                >
-                    {paper.status.replace(/_/g, ' ')}
-                </Badge>
             </div>
 
-            {/* Withdraw / Restore Actions */}
-            {(paper.status === 'SUBMITTED' || paper.status === 'UNDER_REVIEW') && (
-                <div className="flex items-center gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
-                    <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
-                    <p className="text-sm text-amber-800 dark:text-amber-300 flex-1">
-                        You can withdraw this paper if you no longer wish it to be considered.
-                    </p>
-                    <Button
-                        variant="warning"
-                        size="sm"
-                        onClick={handleWithdraw}
-                        disabled={withdrawing}
-                        className="shrink-0"
-                    >
-                        {withdrawing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <AlertTriangle className="h-4 w-4 mr-1" />}
-                        Withdraw Paper
-                    </Button>
-                </div>
-            )}
-
-            {paper.status === 'WITHDRAWN' && (
-                <div className="flex items-center gap-3 p-4 rounded-lg border border-indigo-200 bg-indigo-50 dark:bg-indigo-950/20 dark:border-indigo-800">
-                    <RotateCcw className="h-5 w-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                    <p className="text-sm text-indigo-800 dark:text-indigo-300 flex-1">
-                        This paper has been withdrawn. You can restore it to resubmit.
-                    </p>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleRestore}
-                        disabled={withdrawing}
-                        className="shrink-0"
-                    >
-                        {withdrawing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RotateCcw className="h-4 w-4 mr-1" />}
-                        Restore Paper
-                    </Button>
-                </div>
-            )}
-
-            <div className="grid gap-6 md:grid-cols-2">
-                {/* Paper Details Form */}
-                <Card className="md:col-span-2">
-                    <CardHeader>
-                        <CardTitle>Paper Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="title">Title</Label>
-                            <Input
-                                id="title"
-                                name="title"
-                                value={formData.title}
-                                onChange={handleInputChange}
-                                placeholder="Paper Title"
-                            />
-                            <FieldError>{errors.title}</FieldError>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* ── Main Info Column (Left) ── */}
+                <div className="lg:col-span-2 space-y-8">
+                    {/* Lock banner */}
+                    {!isEditable && (
+                        <div className="flex items-center gap-3 p-4 rounded-lg border border-indigo-200 bg-indigo-50 dark:bg-indigo-950/20 dark:border-indigo-800">
+                            <Lock className="h-5 w-5 text-indigo-600 shrink-0" />
+                            <p className="text-sm text-indigo-800 dark:text-indigo-300">
+                                <strong>Submission is locked.</strong> Editing is only allowed while the paper submission phase is active.
+                            </p>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="abstractField">Abstract</Label>
-                            <Textarea
-                                id="abstractField"
-                                name="abstractField"
-                                value={formData.abstractField}
-                                onChange={handleInputChange}
-                                placeholder="Paper Abstract"
-                                rows={5}
-                            />
-                            <FieldError>{errors.abstractField}</FieldError>
-                        </div>
-                        <div className="space-y-3">
-                            <Label>Keywords</Label>
-                            {keywords.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                    {keywords.map((kw, i) => (
-                                        <Badge key={i} variant="secondary" className="text-sm gap-1 pl-3 pr-1.5 py-1">
-                                            {kw}
-                                            <button
-                                                type="button"
-                                                onClick={() => setKeywords(prev => prev.filter((_, idx) => idx !== i))}
-                                                className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5 transition-colors"
-                                            >
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        </Badge>
-                                    ))}
-                                </div>
-                            )}
-                            <div className="flex gap-2">
-                                <Input
-                                    value={keywordInput}
-                                    onChange={(e) => setKeywordInput(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault()
-                                            const trimmed = keywordInput.trim()
-                                            if (trimmed && trimmed.length > 50) {
-                                                setErrors(prev => ({ ...prev, keywords: 'Keyword is too long (max 50 chars)' }))
-                                                return
-                                            }
-                                            if (trimmed && !keywords.includes(trimmed)) {
-                                                setKeywords(prev => [...prev, trimmed])
-                                                setKeywordInput('')
-                                                setErrors(prev => ({ ...prev, keywords: undefined }))
-                                            }
-                                        }
-                                    }}
-                                    placeholder="Type a keyword and press Enter"
-                                    className="flex-1"
-                                />
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => {
-                                        const trimmed = keywordInput.trim()
-                                        if (trimmed && trimmed.length > 50) {
-                                            setErrors(prev => ({ ...prev, keywords: 'Keyword is too long (max 50 chars)' }))
-                                            return
-                                        }
-                                        if (trimmed && !keywords.includes(trimmed)) {
-                                            setKeywords(prev => [...prev, trimmed])
-                                            setKeywordInput('')
-                                            setErrors(prev => ({ ...prev, keywords: undefined }))
-                                        }
-                                    }}
-                                    className="shrink-0"
-                                >
-                                    Add
-                                </Button>
-                            </div>
-                            <p className="text-xs text-muted-foreground">Press Enter or click Add to add each keyword.</p>
-                            <FieldError>{errors.keywords}</FieldError>
-                        </div>
+                    )}
 
-                        {subjectAreas.length > 0 && (
-                            <div className="grid gap-4 md:grid-cols-2 pt-2">
+                    {/* Paper Overview */}
+                    <div className="space-y-6">
+                        <h2 className="text-lg font-semibold border-b pb-2">Paper Details</h2>
+                        
+                        {/* ── Conference Timeline ── */}
+                        {activities && activities.length > 0 && (
+                            <div className="bg-slate-50 border rounded-lg p-4 mb-6">
+                                <h3 className="text-sm font-semibold flex items-center gap-2 mb-3"><Clock className="h-4 w-4 text-slate-500" /> Conference Timeline</h3>
                                 <div className="space-y-2">
-                                    <Label htmlFor="primarySubjectArea">Primary Subject Area</Label>
-                                    <Select
-                                        value={primarySubjectAreaId}
-                                        onValueChange={setPrimarySubjectAreaId}
-                                    >
-                                        <SelectTrigger id="primarySubjectArea">
-                                            <SelectValue placeholder="Select primary area" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {subjectAreas.map((sa) => (
-                                                <SelectItem key={sa.id} value={sa.id.toString()}>
+                                    {activities
+                                        .filter(a => ['PAPER_SUBMISSION', 'REVIEW', 'CAMERA_READY_SUBMISSION'].includes(a.activityType))
+                                        .map(a => {
+                                            const isActive = a.isEnabled && (!a.deadline || new Date(a.deadline) > new Date())
+                                            const isPast = a.deadline && new Date(a.deadline) < new Date()
+                                            return (
+                                                <div key={a.id} className="flex items-center justify-between text-sm py-1 border-b last:border-0 border-slate-200">
                                                     <div className="flex items-center gap-2">
-                                                        {sa.parentId !== null && <Layers className="h-3 w-3 text-muted-foreground ml-2" />}
-                                                        <span>{sa.name}</span>
+                                                        {isActive ? <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> : isPast ? <span className="w-2 h-2 rounded-full bg-slate-300" /> : <span className="w-2 h-2 rounded-full bg-amber-500" />}
+                                                        <span className={`font-medium ${isActive ? 'text-green-700' : 'text-slate-600'}`}>
+                                                            {a.name}
+                                                        </span>
+                                                        {!a.isEnabled && <Badge variant="secondary" className="scale-75 text-[10px]">Disabled</Badge>}
                                                     </div>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2 flex flex-col">
-                                    <Label htmlFor="secondarySubjectAreas">Secondary Subject Areas</Label>
-                                    <AntdSelect
-                                        mode="multiple"
-                                        id="secondarySubjectAreas"
-                                        className="w-full flex-1"
-                                        placeholder="Select secondary areas"
-                                        value={secondarySubjectAreaIds}
-                                        onChange={setSecondarySubjectAreaIds}
-                                        options={subjectAreas
-                                            .filter(sa => sa.id.toString() !== primarySubjectAreaId)
-                                            .map((sa) => ({ label: sa.name, value: sa.id }))}
-                                    />
+                                                    <div className="flex items-center gap-1.5 text-slate-500">
+                                                        <CalendarDays className="h-3 w-3" />
+                                                        {a.deadline ? new Date(a.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'No deadline'}
+                                                    </div>
+                                                </div>
+                                            )
+                                        })
+                                    }
                                 </div>
                             </div>
                         )}
-                        <div className="pt-4 flex justify-end">
-                            <Button onClick={handleSavePaper} disabled={saving} className="gap-2">
-                                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                Save Changes
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
 
-                <Card className="md:col-span-2">
-                    <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <CardTitle>Authors</CardTitle>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Manage co-authors for this paper from the edit page.
-                            </p>
+                        <div className="space-y-4">
+                            <div>
+                                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Abstract</h3>
+                                <p className="text-sm leading-relaxed">{paper.abstractField || <span className="text-muted-foreground italic">No abstract provided</span>}</p>
+                            </div>
+                            
+                            {paper.keywords && paper.keywords.length > 0 && (
+                                <div>
+                                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Keywords</h3>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {paper.keywords.map((kw, i) => (
+                                            <Badge key={i} variant="secondary" className="text-xs font-normal bg-muted">{kw}</Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {subjectAreas && subjectAreas.length > 0 && (
+                                <div>
+                                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Subject Areas</h3>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {subjectAreas.filter(sa => sa.id.toString() === primarySubjectAreaId).map(sa => (
+                                            <Badge key={sa.id} variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-700">Primary: {sa.name}</Badge>
+                                        ))}
+                                        {secondarySubjectAreaIds.map(id => {
+                                            const sa = subjectAreas.find(s => s.id === id)
+                                            return sa ? <Badge key={sa.id} variant="outline" className="text-muted-foreground">{sa.name}</Badge> : null
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div>
+                                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Submitted Date</h3>
+                                <p className="text-sm">{new Date(paper.submissionTime).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                            </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                            <Dialog open={openAddAuthorDialog} onOpenChange={setOpenAddAuthorDialog}>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" className="gap-2">
-                                        <UserPlus className="h-4 w-4" />
-                                        Add Author
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Add Co-Author</DialogTitle>
-                                        <DialogDescription>
-                                            Select a user to add as a co-author to this paper.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="space-y-4 py-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="author-select">Select User</Label>
+                    </div>
+
+                    {/* Authors List */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between border-b pb-2">
+                            <h2 className="text-lg font-semibold flex items-center gap-2"><Users className="h-5 w-5" /> Co-Authors ({authors.length})</h2>
+                            {isEditable && (
+                                <Dialog open={openAddAuthorDialog} onOpenChange={setOpenAddAuthorDialog}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" size="sm" className="gap-1.5"><UserPlus className="h-4 w-4" /> Add Author</Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Add Co-Author</DialogTitle>
+                                            <DialogDescription>Select a user to add as a co-author to this paper.</DialogDescription>
+                                        </DialogHeader>
+                                        <div className="space-y-4 py-4">
                                             <Select value={selectedUser} onValueChange={setSelectedUser}>
-                                                <SelectTrigger id="author-select">
-                                                    <SelectValue placeholder="Choose a user" />
-                                                </SelectTrigger>
+                                                <SelectTrigger><SelectValue placeholder="Choose a user" /></SelectTrigger>
                                                 <SelectContent>
-                                                    {users.map((user) => (
-                                                        <SelectItem key={user.id} value={user.id.toString()}>
-                                                            {user.fullName} ({user.email})
-                                                        </SelectItem>
+                                                    {users.map(u => (
+                                                        <SelectItem key={u.id} value={u.id.toString()}>{u.fullName} ({u.email})</SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
+                                            <Button onClick={handleAssignAuthor} disabled={isAssigning || !selectedUser} className="w-full">
+                                                {isAssigning ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Assigning...</> : 'Assign Author'}
+                                            </Button>
                                         </div>
-                                        <Button onClick={handleAssignAuthor} disabled={isAssigning || !selectedUser} className="w-full">
-                                            {isAssigning ? (
-                                                <>
-                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                    Assigning...
-                                                </>
-                                            ) : (
-                                                'Assign Author'
-                                            )}
-                                        </Button>
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
+                                    </DialogContent>
+                                </Dialog>
+                            )}
                         </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <p className="text-sm text-muted-foreground">
-                            Current co-authors: {authors.length}
-                        </p>
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full text-sm">
-                                <thead className="bg-muted/60">
+                        <div className="bg-white border rounded-lg overflow-hidden">
+                            <table className="w-full text-sm">
+                                <thead className="bg-muted/30">
                                     <tr>
-                                        <th className="px-4 py-2 text-left font-semibold text-muted-foreground">Name</th>
-                                        <th className="px-4 py-2 text-left font-semibold text-muted-foreground">Email</th>
-                                        <th className="px-4 py-2 text-right font-semibold text-muted-foreground">Actions</th>
+                                        <th className="px-4 py-2 text-left text-xs font-semibold text-muted-foreground">Name</th>
+                                        <th className="px-4 py-2 text-left text-xs font-semibold text-muted-foreground">Email</th>
+                                        <th className="px-4 py-2 text-right text-xs font-semibold text-muted-foreground"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {authors.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={3} className="px-4 py-3 text-center text-muted-foreground">
-                                                No co-authors added yet
+                                        <tr><td colSpan={3} className="px-4 py-4 text-center text-sm text-muted-foreground">No co-authors added yet</td></tr>
+                                    ) : authors.map(item => (
+                                        <tr key={item.paperAuthorId} className="border-b last:border-0 hover:bg-muted/20">
+                                            <td className="px-4 py-3 font-medium">{item.user.fullName}</td>
+                                            <td className="px-4 py-3 text-muted-foreground">{item.user.email}</td>
+                                            <td className="px-4 py-3 text-right">
+                                                {isEditable && (
+                                                    <Button variant="ghost" size="sm" onClick={() => handleRemoveAuthor(item.paperAuthorId, item.user.fullName || item.user.email)} className="text-destructive hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
+                                                )}
                                             </td>
                                         </tr>
-                                    ) : (
-                                        authors.map((item) => (
-                                            <tr key={item.paperAuthorId} className="border-b last:border-0">
-                                                <td className="px-4 py-3 font-medium">{item.user.fullName}</td>
-                                                <td className="px-4 py-3 text-muted-foreground">{item.user.email}</td>
-                                                <td className="px-4 py-3 text-right">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleRemoveAuthor(item.paperAuthorId, item.user.fullName || item.user.email)}
-                                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
-                    </CardContent>
-                </Card>
+                    </div>
 
-                {/* File Upload Section */}
-                <Card className="md:col-span-2">
-                    <CardHeader>
-                        <CardTitle>Manuscript File</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        {/* All Paper Files Table */}
-                        {paperFiles.length > 0 && (
-                            <div className="space-y-3">
-                                <Label>Submitted Files ({paperFiles.length})</Label>
-                                <div className="border rounded-lg overflow-hidden">
+                    {/* Files Section Separated */}
+                    <div className="space-y-6 pt-2">
+                        {/* Manuscript Files */}
+                        <div className="space-y-3">
+                            <h2 className="text-lg font-semibold border-b pb-2 flex items-center gap-2"><Layers className="h-5 w-5" /> Manuscript Files</h2>
+                            {manuscriptFiles.length > 0 ? (
+                                <div className="border border-muted-foreground/20 rounded-lg overflow-hidden bg-white shadow-sm">
                                     <table className="w-full text-sm">
-                                        <thead className="bg-muted/50">
+                                        <thead className="bg-muted/30">
                                             <tr>
-                                                <th className="px-4 py-3 text-left font-medium text-muted-foreground">#</th>
+                                                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-12">#</th>
                                                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">File</th>
-                                                <th className="px-4 py-3 text-center font-medium text-muted-foreground">Status</th>
-                                                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
+                                                <th className="px-4 py-3 text-center font-medium text-muted-foreground w-24">Status</th>
+                                                <th className="px-4 py-3 text-right font-medium text-muted-foreground w-48">Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y">
-                                            {paperFiles.map((pf, idx) => (
-                                                <tr key={pf.id} className="hover:bg-muted/30 transition-colors">
+                                        <tbody className="divide-y divide-border">
+                                            {manuscriptFiles.map((pf, idx) => (
+                                                <tr key={pf.id} className="hover:bg-muted/20">
                                                     <td className="px-4 py-3 text-muted-foreground">{idx + 1}</td>
                                                     <td className="px-4 py-3">
                                                         <div className="flex items-center gap-2 min-w-0">
                                                             <FileText className="h-4 w-4 text-indigo-500 shrink-0" />
-                                                            <a
-                                                                href={pf.url}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="text-primary hover:underline truncate max-w-[300px] inline-block"
-                                                            >
+                                                            <span className="font-medium truncate max-w-[250px]" title={pf.url.split('/').pop()}>
                                                                 {decodeURIComponent(pf.url.split('/').pop() || 'paper-file')}
-                                                            </a>
+                                                            </span>
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-3 text-center">
-                                                        {pf.isActive ? (
-                                                            <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-0">Active</Badge>
-                                                        ) : (
-                                                            <Badge variant="secondary" className="text-muted-foreground">Previous</Badge>
-                                                        )}
+                                                        {pf.isActive ? <Badge className="bg-green-100/50 text-green-700 border border-green-200">Active</Badge> : <Badge variant="secondary" className="opacity-50">Archived</Badge>}
                                                     </td>
                                                     <td className="px-4 py-3 text-right">
                                                         <div className="flex items-center justify-end gap-1">
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="gap-1.5 text-xs"
-                                                                onClick={() => setPreviewFileId(previewFileId === pf.id ? null : pf.id)}
-                                                            >
-                                                                {previewFileId === pf.id ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                                                                {previewFileId === pf.id ? 'Hide' : 'Preview'}
+                                                            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-slate-600 hover:text-indigo-600 hover:bg-indigo-50" onClick={() => setPreviewFileUrl(pf.url)}>
+                                                                <Eye className="h-3.5 w-3.5" /> Preview
                                                             </Button>
                                                             <a href={pf.url} target="_blank" rel="noopener noreferrer">
-                                                                <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
-                                                                    <ExternalLink className="h-3.5 w-3.5" />
-                                                                    Open
-                                                                </Button>
+                                                                <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-slate-600 hover:text-slate-900"><ExternalLink className="h-3.5 w-3.5" /> Open</Button>
                                                             </a>
+                                                            {isEditable && (
+                                                                <Button variant="ghost" size="sm" className="p-1 h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteFile(pf.id)}>
+                                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -663,92 +501,366 @@ export default function EditPaperPage() {
                                         </tbody>
                                     </table>
                                 </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">No manuscript files uploaded yet.</p>
+                            )}
+                        </div>
 
-                                {/* PDF Preview for selected file */}
-                                {previewFileId && (() => {
-                                    const pf = paperFiles.find(f => f.id === previewFileId)
-                                    if (!pf) return null
-                                    return (
-                                        <div className="rounded-lg border overflow-hidden bg-gray-100 dark:bg-gray-900">
-                                            <div className="px-4 py-2 bg-muted/50 flex items-center justify-between">
-                                                <span className="text-xs text-muted-foreground font-medium">Preview: {decodeURIComponent(pf.url.split('/').pop() || 'file')}</span>
-                                                <Button variant="ghost" size="sm" onClick={() => setPreviewFileId(null)} className="h-6 w-6 p-0">
-                                                    <X className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
-                                            <iframe
-                                                src={pf.url}
-                                                className="w-full border-0"
-                                                style={{ height: '600px' }}
-                                                title="Manuscript PDF Viewer"
-                                            />
-                                        </div>
-                                    )
-                                })()}
-                            </div>
-                        )}
-
-                        {paperFiles.length === 0 && (
-                            <div className="text-center py-6 text-muted-foreground text-sm">
-                                No manuscript files have been uploaded yet.
-                            </div>
-                        )}
-
-                        <div className="space-y-4 border-t pt-6">
-                            <Label>Upload New Manuscript</Label>
-                            <div className="flex gap-3 items-center">
-                                <div className="flex-1">
-                                    <label
-                                        htmlFor="file-upload"
-                                        className="flex items-center gap-3 p-3 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-all"
-                                    >
-                                        <FileUp className="h-5 w-5 text-muted-foreground" />
-                                        <span className="text-sm text-muted-foreground">
-                                            {selectedFile ? selectedFile.name : 'Choose a PDF file...'}
-                                        </span>
-                                    </label>
-                                    <input
-                                        id="file-upload"
-                                        type="file"
-                                        accept=".pdf"
-                                        className="hidden"
-                                        onChange={(e) => {
-                                            const file = e.target.files?.[0]
-                                            if (file) {
-                                                if (file.type !== 'application/pdf') {
-                                                    toast.error('Please select a PDF file')
-                                                    return
-                                                }
-                                                setSelectedFile(file)
-                                            }
-                                        }}
-                                    />
-                                </div>
-                            </div>
-
-                            {selectedFile && (
-                                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <FileText className="h-4 w-4 text-primary" />
-                                        <span className="font-medium">{selectedFile.name}</span>
-                                        <span className="text-muted-foreground">({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                        {/* Camera Ready Files */}
+                        <div className="space-y-3">
+                            <h2 className="text-lg font-semibold border-b pb-2 flex items-center gap-2"><Camera className="h-5 w-5 text-emerald-600" /> Camera-Ready Files</h2>
+                            {cameraReadyFiles.length > 0 ? (
+                                    <div className="border border-emerald-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-emerald-50/50">
+                                                <tr>
+                                                    <th className="px-4 py-3 text-left font-medium text-emerald-900 w-12">#</th>
+                                                    <th className="px-4 py-3 text-left font-medium text-emerald-900">File</th>
+                                                    <th className="px-4 py-3 text-center font-medium text-emerald-900 w-24">Status</th>
+                                                    <th className="px-4 py-3 text-right font-medium text-emerald-900 w-48">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-emerald-100">
+                                                {cameraReadyFiles.map((pf, idx) => (
+                                                    <tr key={pf.id} className="hover:bg-emerald-50/30">
+                                                        <td className="px-4 py-3 text-emerald-600/70">{idx + 1}</td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                <Camera className="h-4 w-4 text-emerald-600 shrink-0" />
+                                                                <span className="font-medium truncate max-w-[250px] text-emerald-950" title={pf.url.split('/').pop()}>
+                                                                    {decodeURIComponent(pf.url.split('/').pop() || 'camera-ready-file')}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            {pf.isActive ? <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300">Active</Badge> : <Badge variant="secondary" className="opacity-50">Archived</Badge>}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-emerald-700 hover:text-emerald-800 hover:bg-emerald-100" onClick={() => setPreviewFileUrl(pf.url)}>
+                                                                    <Eye className="h-3.5 w-3.5" /> Preview
+                                                                </Button>
+                                                                <a href={pf.url} target="_blank" rel="noopener noreferrer">
+                                                                    <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100"><ExternalLink className="h-3.5 w-3.5" /> Open</Button>
+                                                                </a>
+                                                                {showCameraReadyUpload && (
+                                                                    <Button variant="ghost" size="sm" className="p-1 h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteFile(pf.id)}>
+                                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                    <Button variant="ghost" size="sm" onClick={() => setSelectedFile(null)}>
-                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                ) : (
+                                    <p className="text-sm text-muted-foreground p-4 text-center border rounded-lg bg-emerald-50/20 border-emerald-100">No camera-ready files uploaded yet.</p>
+                                )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Actions Sidebar (Right) ── */}
+                <div className="lg:col-span-1">
+                    <Card className="sticky top-24 shadow-sm border-indigo-100/50 dark:border-indigo-900/50 bg-gradient-to-b from-transparent to-indigo-50/10 dark:to-indigo-950/10">
+                        <CardHeader className="pb-4">
+                            <CardTitle className="text-lg flex items-center gap-2"><Layers className="h-5 w-5 text-indigo-500" /> Actions</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            {/* Update Metadata */}
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" className="w-full justify-start gap-3 h-11 bg-white hover:bg-indigo-50 hover:text-indigo-800" disabled={!isEditable}>
+                                        <ClipboardList className="h-4 w-4 text-indigo-600" /> Update Metadata
                                     </Button>
-                                </div>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                                    <DialogHeader>
+                                        <DialogTitle>Update Paper Metadata</DialogTitle>
+                                        <DialogDescription>Modify your submission details below.</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="title">Title</Label>
+                                            <Input id="title" name="title" value={formData.title} onChange={handleInputChange} placeholder="Paper Title" />
+                                            <FieldError>{errors.title}</FieldError>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="abstractField">Abstract</Label>
+                                            <Textarea id="abstractField" name="abstractField" value={formData.abstractField} onChange={handleInputChange} placeholder="Paper Abstract" rows={5} />
+                                            <FieldError>{errors.abstractField}</FieldError>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <Label>Keywords (Press Enter to add)</Label>
+                                            {keywords.length > 0 && (
+                                                <div className="flex flex-wrap gap-2 mb-2">
+                                                    {keywords.map((kw, i) => (
+                                                        <Badge key={i} variant="secondary" className="text-sm gap-1 pl-3 pr-1.5 py-1">
+                                                            {kw}
+                                                            <button type="button" onClick={() => setKeywords(prev => prev.filter((_, idx) => idx !== i))} className="ml-1 rounded-full text-slate-500 hover:text-slate-800"><X className="h-3 w-3" /></button>
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <Input value={keywordInput} onChange={(e) => setKeywordInput(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault()
+                                                        const trimmed = keywordInput.trim()
+                                                        if (trimmed && !keywords.includes(trimmed)) { setKeywords(prev => [...prev, trimmed]); setKeywordInput(''); setErrors(prev => ({ ...prev, keywords: undefined })) }
+                                                    }
+                                                }} placeholder="Type a keyword and press Enter" />
+                                        </div>
+                                        {subjectAreas.length > 0 && (
+                                            <div className="grid gap-4 md:grid-cols-2 pt-2">
+                                                <div className="space-y-2">
+                                                    <Label>Primary Subject Area</Label>
+                                                    <Select value={primarySubjectAreaId} onValueChange={setPrimarySubjectAreaId}>
+                                                        <SelectTrigger><SelectValue placeholder="Select primary area" /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {subjectAreas.map(sa => (
+                                                                <SelectItem key={sa.id} value={sa.id.toString()}>{sa.name}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Secondary Subject Areas</Label>
+                                                    <AntdSelect mode="multiple" className="w-full" placeholder="Select secondary areas" value={secondarySubjectAreaIds} onChange={setSecondarySubjectAreaIds} options={subjectAreas.filter(sa => sa.id.toString() !== primarySubjectAreaId).map(sa => ({ label: sa.name, value: sa.id }))} />
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div className="pt-4 flex justify-end">
+                                            <DialogTrigger asChild>
+                                                <Button onClick={handleSavePaper} disabled={saving} className="gap-2 w-full sm:w-auto">
+                                                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save Changes
+                                                </Button>
+                                            </DialogTrigger>
+                                        </div>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+
+                            {/* Upload File */}
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" className="w-full justify-start gap-3 h-11 bg-white hover:bg-blue-50 hover:text-blue-800" disabled={!isEditable}>
+                                        <FileUp className="h-4 w-4 text-blue-600" /> Upload Manuscript
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Upload / Update Manuscript</DialogTitle>
+                                        <DialogDescription>Select a PDF file to upload as your manuscript.</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                        <label htmlFor="file-upload" className="flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary/50 hover:bg-muted/30">
+                                            <FileUp className="h-8 w-8 text-muted-foreground" />
+                                            <span className="text-sm font-medium">{selectedFile ? selectedFile.name : 'Click to choose a PDF file'}</span>
+                                        </label>
+                                        <input id="file-upload" type="file" accept=".pdf" className="hidden"
+                                            onChange={e => {
+                                                const f = e.target.files?.[0]
+                                                if (f) { if (f.type !== 'application/pdf') { toast.error('Please select a PDF file'); return }; setSelectedFile(f) }
+                                            }} />
+                                        <div className="flex justify-end pt-2">
+                                            <DialogTrigger asChild>
+                                                <Button onClick={handleUploadFile} disabled={uploading || !selectedFile} className="gap-2">
+                                                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} Upload
+                                                </Button>
+                                            </DialogTrigger>
+                                        </div>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+
+                            {/* Camera Ready */}
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" className="w-full justify-start gap-3 h-11 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-800 shadow-sm" disabled={!showCameraReadyUpload}>
+                                        <Camera className="h-4 w-4 text-emerald-600" /> Upload Camera Ready
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Upload Camera-Ready Manuscript</DialogTitle>
+                                        <DialogDescription>Upload your final accepted version with all corrections.</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                        <label htmlFor="cr-file-upload" className="flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed border-emerald-300 bg-emerald-50/50 rounded-lg cursor-pointer hover:border-emerald-500 hover:bg-emerald-50">
+                                            <Camera className="h-8 w-8 text-emerald-500/70" />
+                                            <span className="text-sm font-medium text-emerald-900">{selectedFile ? selectedFile.name : 'Click to choose the final PDF'}</span>
+                                        </label>
+                                        <input id="cr-file-upload" type="file" accept=".pdf" className="hidden"
+                                            onChange={e => {
+                                                const f = e.target.files?.[0]
+                                                if (f) { if (f.type !== 'application/pdf') { toast.error('Please select a PDF file'); return }; setSelectedFile(f) }
+                                            }} />
+                                        <div className="flex justify-end pt-2">
+                                            <DialogTrigger asChild>
+                                                <Button onClick={handleUploadFile} disabled={uploading || !selectedFile} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                                                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} Upload Version
+                                                </Button>
+                                            </DialogTrigger>
+                                        </div>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+
+                            {/* View Reviews */}
+                            {showReviews && (
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" className="w-full justify-start gap-3 h-11 border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-800 shadow-sm">
+                                            <Star className="h-4 w-4 text-purple-600" /> View Reviews Result
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                                        <DialogHeader>
+                                            <DialogTitle>Review Results</DialogTitle>
+                                        </DialogHeader>
+                                        <div className="space-y-6 py-4">
+                                            {aggregate && aggregate.reviewCount > 0 ? (
+                                                <>
+                                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                        <Card className="border-0 shadow-sm bg-muted/30">
+                                                            <CardContent className="p-4 text-center">
+                                                                <p className="text-xl font-bold">{aggregate.reviewCount}</p>
+                                                                <p className="text-xs text-muted-foreground mt-0.5">Reviews</p>
+                                                            </CardContent>
+                                                        </Card>
+                                                        <Card className="border-0 shadow-sm bg-muted/30">
+                                                            <CardContent className="p-4 text-center">
+                                                                <p className="text-xl font-bold text-green-700">{aggregate.completedReviewCount}</p>
+                                                                <p className="text-xs text-muted-foreground mt-0.5">Completed</p>
+                                                            </CardContent>
+                                                        </Card>
+                                                        {aggregate.averageTotalScore > 0 && (
+                                                            <Card className="border-0 shadow-sm bg-indigo-50 dark:bg-indigo-950/20">
+                                                                <CardContent className="p-4 text-center">
+                                                                    <p className="text-xl font-bold text-indigo-700">{aggregate.averageTotalScore.toFixed(2)}</p>
+                                                                    <p className="text-xs text-muted-foreground mt-0.5">Avg Score</p>
+                                                                </CardContent>
+                                                            </Card>
+                                                        )}
+                                                        {decision && (
+                                                            <Card className="border-0 shadow-sm bg-muted/30">
+                                                                <CardContent className="p-4 flex flex-col items-center justify-center h-full">
+                                                                    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full border ${decision.color}`}>
+                                                                        {decision.icon} {decision.label}
+                                                                    </span>
+                                                                </CardContent>
+                                                            </Card>
+                                                        )}
+                                                    </div>
+
+                                                    {aggregate.questionAggregates?.length > 0 && (
+                                                        <Card>
+                                                            <CardHeader><CardTitle className="text-base flex items-center gap-2"><BarChart3 className="h-4 w-4" /> Scores</CardTitle></CardHeader>
+                                                            <CardContent className="space-y-4">
+                                                                {aggregate.questionAggregates.map(qa => (
+                                                                    <div key={qa.questionId}>
+                                                                        <div className="flex items-center justify-between mb-1">
+                                                                            <span className="text-xs font-medium">{qa.questionText}</span>
+                                                                            <span className="text-sm font-bold text-indigo-700">{qa.averageScore.toFixed(1)}</span>
+                                                                        </div>
+                                                                        <div className="w-full bg-muted rounded-full h-1.5">
+                                                                            <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: `${Math.min((qa.averageScore / (qa.maxScore || 5)) * 100, 100)}%` }} />
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </CardContent>
+                                                        </Card>
+                                                    )}
+
+                                                    {metaReview?.reason && (
+                                                        <Card>
+                                                            <CardHeader><CardTitle className="text-base">Chair's Comments</CardTitle></CardHeader>
+                                                            <CardContent>
+                                                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{metaReview.reason}</p>
+                                                            </CardContent>
+                                                        </Card>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <div className="py-12 text-center text-muted-foreground">
+                                                    <Star className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                                                    <p>Reviews will appear here once reviewers complete their assessments.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
                             )}
 
-                            <div className="pt-2 flex justify-end">
-                                <Button onClick={handleUploadFile} disabled={uploading || !selectedFile} className="gap-2">
-                                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                                    Upload Manuscript
-                                </Button>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                            {/* Withdraw/Restore Paper */}
+                            {canWithdraw && (
+                                <>
+                                    <div className="my-2 border-t border-slate-100" />
+                                    <Dialog open={openWithdrawDialog} onOpenChange={setOpenWithdrawDialog}>
+                                        <DialogTrigger asChild>
+                                            <Button variant="ghost" className="w-full justify-start gap-3 h-10 text-red-600 hover:bg-red-50 hover:text-red-700">
+                                                <AlertTriangle className="h-4 w-4" /> Withdraw Submission
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Withdraw Paper</DialogTitle>
+                                                <DialogDescription>
+                                                    Are you sure you want to withdraw <strong>{paper.title}</strong>?
+                                                    Your submission will be removed from review. You can restore it later if submissions are still open.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <DialogFooter className="mt-4">
+                                                <Button variant="outline" onClick={() => setOpenWithdrawDialog(false)}>Cancel</Button>
+                                                <Button variant="destructive" onClick={handleWithdraw} disabled={withdrawing}>
+                                                    {withdrawing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Confirm Withdraw
+                                                </Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
+                                </>
+                            )}
+                            
+                            {paper.status === 'WITHDRAWN' && (
+                                <>
+                                  <div className="my-2 border-t border-slate-100" />
+                                  <Button variant="ghost" className="w-full justify-start gap-3 h-10 text-gray-700" onClick={handleRestore} disabled={withdrawing}>
+                                      {withdrawing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />} Restore Submission
+                                  </Button>
+                                </>
+                            )}
+
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
+
+            {/* Nested PDF Preview Dialog */}
+            <Dialog open={!!previewFileUrl} onOpenChange={(o) => { if (!o) setPreviewFileUrl(null) }}>
+                <DialogContent className="max-w-5xl h-[90vh] p-0 overflow-hidden flex flex-col gap-0 border-0 bg-transparent shadow-2xl">
+                    <DialogHeader className="p-4 bg-slate-900 border-b border-slate-800 flex flex-row items-center justify-between m-0 shrink-0">
+                        <div>
+                            <DialogTitle className="text-slate-100 text-base">PDF Preview</DialogTitle>
+                            <DialogDescription className="text-slate-400 text-xs hidden sm:block truncate pr-8">
+                                {previewFileUrl?.split('/').pop()}
+                            </DialogDescription>
+                        </div>
+                    </DialogHeader>
+                    <div className="flex-1 bg-slate-900/50 relative w-full h-full backdrop-blur-sm">
+                        {previewFileUrl && (
+                            <iframe 
+                                src={`${previewFileUrl}#toolbar=0`} 
+                                className="w-full h-full border-0 absolute inset-0" 
+                                title="PDF Document Viewer"
+                                sandbox="allow-same-origin allow-scripts"
+                            />
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

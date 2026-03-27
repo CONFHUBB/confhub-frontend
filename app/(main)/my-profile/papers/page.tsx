@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { getPapersByAuthor } from "@/app/api/paper.api"
+import { getUserByEmail } from "@/app/api/user.api"
 import { PaperResponse } from "@/types/paper"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -39,8 +40,8 @@ export default function MyAllPapersPage() {
             if (!token) return router.push("/auth/login")
             const payload = JSON.parse(atob(token.split(".")[1]))
             const email = payload.sub
-            const userRes = await fetch(`/api/v1/users/email/${email}`)
-            const user = await userRes.json()
+            
+            const user = await getUserByEmail(email)
             if (!user || !user.id) return
             
             const data = await getPapersByAuthor(user.id)

@@ -33,6 +33,7 @@ export interface FilterValues {
     datePreset: DatePreset
     location: string
     area: string
+    status: string
 }
 
 interface ConferenceFilterBarProps {
@@ -52,7 +53,7 @@ const datePresetLabel: Record<DatePreset, string> = {
 }
 
 export function filterConferences<T extends {
-    startDate: string; endDate: string; location: string; area: string
+    startDate: string; endDate: string; location: string; area: string; status: string
 }>(items: T[], filters: FilterValues): T[] {
     let result = items
 
@@ -69,6 +70,7 @@ export function filterConferences<T extends {
     }
     if (filters.location !== 'all') result = result.filter(c => c.location === filters.location)
     if (filters.area !== 'all') result = result.filter(c => c.area === filters.area)
+    if (filters.status !== 'all') result = result.filter(c => c.status?.toUpperCase() === filters.status.toUpperCase())
 
     return result
 }
@@ -96,23 +98,27 @@ export function ConferenceFilterBar({ locations, areas, isStaff, filters, onFilt
         return () => document.removeEventListener('mousedown', handler)
     }, [])
 
-    const activeFilterCount = [filters.location !== 'all', filters.area !== 'all'].filter(Boolean).length
+    const activeFilterCount = [filters.location !== 'all', filters.area !== 'all', filters.status !== 'all'].filter(Boolean).length
 
     const openFilterPanel = () => {
         setTempLocation(filters.location)
         setTempArea(filters.area)
+        setTempStatus(filters.status)
         setShowFilterPanel(true)
         setShowDatePicker(false)
     }
 
+    const [tempStatus, setTempStatus] = useState(filters.status)
+
     const applyFilters = () => {
-        onFiltersChange({ ...filters, location: tempLocation, area: tempArea })
+        onFiltersChange({ ...filters, location: tempLocation, area: tempArea, status: tempStatus })
         setShowFilterPanel(false)
     }
 
     const resetFilters = () => {
         setTempLocation('all')
         setTempArea('all')
+        setTempStatus('all')
     }
 
     // ─── Calendar rendering ───
@@ -233,7 +239,7 @@ export function ConferenceFilterBar({ locations, areas, isStaff, filters, onFilt
                     {activeFilterCount > 0 && (
                         <>
                             <span className="bg-[#6366f1]/20 text-[#6366f1] text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{activeFilterCount}</span>
-                            <X className="h-3.5 w-3.5 ml-0.5" onClick={(e) => { e.stopPropagation(); onFiltersChange({ ...filters, location: 'all', area: 'all' }); setShowFilterPanel(false) }} />
+                            <X className="h-3.5 w-3.5 ml-0.5" onClick={(e) => { e.stopPropagation(); onFiltersChange({ ...filters, location: 'all', area: 'all', status: 'all' }); setShowFilterPanel(false) }} />
                         </>
                     )}
                 </button>
@@ -279,6 +285,31 @@ export function ConferenceFilterBar({ locations, areas, isStaff, filters, onFilt
                                             {area}
                                         </button>
                                     ))}
+                                </div>
+                            </div>
+
+                            <hr />
+
+                            {/* Status */}
+                            <div>
+                                <h4 className="text-sm font-semibold text-gray-800 mb-3">Status</h4>
+                                <div className="flex flex-wrap gap-2">
+                                    {(['all', 'ONGOING', 'SCHEDULED', 'PENDING', 'BIDDING', 'COMPLETED', 'CANCELLED'] as const).map(s => {
+                                        const label = s === 'all' ? 'All statuses'
+                                            : s === 'ONGOING' ? 'Open for Submissions'
+                                            : s.charAt(0) + s.slice(1).toLowerCase()
+                                        return (
+                                            <button
+                                                key={s}
+                                                onClick={() => setTempStatus(s)}
+                                                className={`px-4 py-1.5 text-sm rounded-full border transition-colors cursor-pointer ${
+                                                    tempStatus === s ? 'bg-[#6366f1] text-white border-[#6366f1]' : 'border-gray-300 text-gray-700 hover:border-[#6366f1] hover:text-[#6366f1]'
+                                                }`}
+                                            >
+                                                {label}
+                                            </button>
+                                        )
+                                    })}
                                 </div>
                             </div>
                         </div>

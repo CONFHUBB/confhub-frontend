@@ -80,9 +80,13 @@ export function NotificationBell() {
 
     const handleClickNotification = async (notif: NotificationResponse) => {
         if (!notif.isRead) {
-            await markAsRead(notif.id)
-            setUnreadCount(prev => Math.max(0, prev - 1))
-            setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n))
+            try {
+                await markAsRead(notif.id)
+                // Update only this notification locally
+                setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n))
+                // Re-fetch authoritative count from server to detect any backend desync
+                fetchUnreadCount()
+            } catch { /* ignore */ }
         }
         if (notif.link) {
             router.push(notif.link)
@@ -92,10 +96,15 @@ export function NotificationBell() {
 
     const handleMarkAllRead = async () => {
         if (!userId) return
-        await markAllAsRead(userId)
-        setUnreadCount(0)
-        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
+        try {
+            await markAllAsRead(userId)
+            setUnreadCount(0)
+            setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
+        } catch { /* ignore */ }
     }
+
+    // Derived: are there any locally unread notifications?
+    const hasLocalUnread = notifications.some(n => !n.isRead)
 
     const timeAgo = (dateStr: string) => {
         const diff = Date.now() - new Date(dateStr).getTime()
@@ -130,14 +139,12 @@ export function NotificationBell() {
                     <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
                         <h3 className="font-semibold text-gray-900 text-sm">Notifications</h3>
                         <div className="flex items-center gap-2">
-                            {unreadCount > 0 && (
-                                <button
+                            <button
                                     onClick={handleMarkAllRead}
                                     className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
                                 >
                                     <CheckCheck className="h-3 w-3" /> Mark all read
                                 </button>
-                            )}
                             <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer">
                                 <X className="h-4 w-4" />
                             </button>
