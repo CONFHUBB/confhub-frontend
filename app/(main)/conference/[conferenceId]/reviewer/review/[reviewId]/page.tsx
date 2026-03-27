@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { getReviewById, updateReview, getAnswersByReview, submitAnswer, getReviewQuestionsByTrack } from '@/app/api/review.api'
-import { getPaperFilesByPaperId } from '@/app/api/paper.api'
+import { getReviewerPaperFiles } from '@/app/api/paper.api'
 import { getConferenceActivities } from '@/app/api/conference.api'
 import type { ReviewResponse, ReviewAnswerResponse, ReviewAnswerRequest } from '@/types/review'
 import type { PaperFileResponse } from '@/types/paper'
@@ -111,14 +111,14 @@ export default function ReviewPaperPage() {
             })
             setAnswers(answersMap)
 
-            // Fetch paper files
+            // Fetch paper files — uses auth-gated endpoint that verifies reviewer assignment
             if (reviewData.paper?.id) {
                 try {
-                    const files = await getPaperFilesByPaperId(reviewData.paper.id)
+                    const files = await getReviewerPaperFiles(reviewData.paper.id)
                     if (Array.isArray(files)) {
                         setPaperFiles(files)
                     }
-                } catch { /* ignore */ }
+                } catch { /* ignore — viewer may not be assigned */ }
             }
         } catch (err) {
             console.error('Failed to load review:', err)

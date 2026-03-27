@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { getProgram } from '@/app/api/program.api'
+import { getSessionBookmarks, addSessionBookmark, removeSessionBookmark } from '@/app/api/session-bookmark.api'
 import { AdvancedProgram, ProgramSession } from '@/types/program'
 import { Calendar, MapPin, Bookmark, BookmarkCheck, User, Filter, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -38,17 +39,35 @@ export default function ProgramPage({ params }: { params: { conferenceId: string
       } catch (e) { console.error(e) }
       finally { setLoading(false) }
     }
-    const bm = localStorage.getItem(`myBookmarks_${conferenceId}`)
-    if (bm) { try { setBookmarks(JSON.parse(bm)) } catch {} }
+    // Task 4: load bookmarks from server instead of localStorage
+    getSessionBookmarks(conferenceId)
+      .then(bm => setBookmarks(bm))
+      .catch(() => {
+        // Fallback to localStorage if not authenticated
+        const bm = localStorage.getItem(`myBookmarks_${conferenceId}`)
+        if (bm) { try { setBookmarks(JSON.parse(bm)) } catch {} }
+      })
     const rt = localStorage.getItem(`sessionRatings_${conferenceId}`)
     if (rt) { try { setRatings(JSON.parse(rt)) } catch {} }
     loadData()
   }, [conferenceId])
 
-  const toggleBookmark = (sessionId: string) => {
-    const next = bookmarks.includes(sessionId) ? bookmarks.filter(x => x !== sessionId) : [...bookmarks, sessionId]
+  // Task 4: server-side toggle with optimistic local state update
+  const toggleBookmark = async (sessionId: string) => {
+    const isCurrently = bookmarks.includes(sessionId)
+    // Optimistic update
+    const next = isCurrently ? bookmarks.filter(x => x !== sessionId) : [...bookmarks, sessionId]
     setBookmarks(next)
-    localStorage.setItem(`myBookmarks_${conferenceId}`, JSON.stringify(next))
+    try {
+      if (isCurrently) {
+        await removeSessionBookmark(conferenceId, sessionId)
+      } else {
+        await addSessionBookmark(conferenceId, sessionId)
+      }
+    } catch {
+      // Rollback on failure
+      setBookmarks(bookmarks)
+    }
   }
 
   const rateSession = (sessionId: string, rating: number) => {

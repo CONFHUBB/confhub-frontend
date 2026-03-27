@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { getConferencePaymentHistory, PaymentHistoryResponse } from '@/app/api/registration.api'
-import { Loader2, CheckCircle2, XCircle, AlertCircle, ChevronDown, ChevronRight, Search, Filter, ChevronLeft, Check, Download } from 'lucide-react'
+import { Loader2, CheckCircle2, XCircle, AlertCircle, ChevronDown, ChevronRight, Search, Filter, ChevronLeft, Download } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { FilterPanel } from '@/components/ui/filter-panel'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/lib/utils'
 
@@ -101,51 +101,22 @@ export function PaymentHistoryView({ conferenceId }: PaymentHistoryViewProps) {
             className="pl-9 h-9 text-sm"
           />
         </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="h-9 gap-2 text-sm px-3">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              Filters
-              {activeFilterCount > 0 && (
-                <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs font-normal">
-                  {activeFilterCount}
-                </Badge>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64 p-0" align="end">
-            <div className="p-4 space-y-4">
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Outcome</h4>
-                <div className="grid gap-1">
-                  {['ALL', 'PAID', 'FAILED', 'INVALID'].map(status => (
-                    <div
-                      key={status}
-                      className="flex items-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-muted"
-                      onClick={() => { setOutcomeFilter(status); setCurrentPage(0); }}
-                    >
-                      <span className={outcomeFilter === status ? 'font-medium' : ''}>
-                        {status === 'ALL' ? 'All Outcomes' : status.charAt(0) + status.slice(1).toLowerCase()}
-                      </span>
-                      {outcomeFilter === status && <Check className="h-4 w-4" />}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            {activeFilterCount > 0 && (
-              <div className="p-3 border-t bg-muted/50">
-                <Button
-                  variant="ghost"
-                  className="w-full text-xs h-8"
-                  onClick={() => { setOutcomeFilter('ALL'); setCurrentPage(0); }}
-                >
-                  Clear filters
-                </Button>
-              </div>
-            )}
-          </PopoverContent>
-        </Popover>
+        <FilterPanel
+          groups={[
+            {
+              label: 'Outcome',
+              type: 'pills',
+              options: [
+                { value: 'ALL', label: 'All' },
+                { value: 'PAID', label: 'Paid' },
+                { value: 'FAILED', label: 'Failed' },
+                { value: 'INVALID', label: 'Invalid' },
+              ],
+              value: outcomeFilter,
+              onChange: (v) => { setOutcomeFilter(v); setCurrentPage(0) },
+            },
+          ]}
+        />
       </div>
 
       {/* Table */}
@@ -159,6 +130,7 @@ export function PaymentHistoryView({ conferenceId }: PaymentHistoryViewProps) {
         </div>
       ) : (
         <div className="rounded-lg border overflow-hidden">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30">
@@ -228,21 +200,22 @@ export function PaymentHistoryView({ conferenceId }: PaymentHistoryViewProps) {
               })}
             </TableBody>
           </Table>
+          </div>
         </div>
       )}
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-4 border-t">
-          <p className="text-xs text-muted-foreground">
+        <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
+          <div className="text-sm text-muted-foreground">
             Page {currentPage + 1} of {totalPages} · {filtered.length} records
-          </p>
-          <div className="flex gap-1">
+          </div>
+          <div className="flex gap-2">
             <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4 mr-1" /> Previous
             </Button>
             <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
-              <ChevronRight className="h-4 w-4" />
+              Next <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         </div>

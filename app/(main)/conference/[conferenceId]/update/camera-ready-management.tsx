@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
-    Loader2, Search, FileText, Eye, CheckCircle, ExternalLink, FileCheck, Upload, ChevronLeft, ChevronRight, Filter, Check
+    Loader2, Search, FileText, Eye, CheckCircle, ExternalLink, FileCheck, Upload, ChevronLeft, ChevronRight, Filter
 } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { FilterPanel } from "@/components/ui/filter-panel"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import toast from "react-hot-toast"
 
@@ -190,56 +190,22 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                         onChange={e => setSearch(e.target.value)}
                     />
                 </div>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" className="h-9 gap-2 text-sm px-3">
-                            <Filter className="h-4 w-4 text-muted-foreground" />
-                            Filters
-                            {activeFilterCount > 0 && (
-                                <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs font-normal">
-                                    {activeFilterCount}
-                                </Badge>
-                            )}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-0" align="end">
-                        <div className="p-4 space-y-4">
-                            <div className="space-y-2">
-                                <h4 className="font-medium text-sm">Status</h4>
-                                <div className="grid gap-1">
-                                    {[
-                                        { value: "all", label: "All Eligible" },
-                                        { value: "uploaded", label: "Uploaded" },
-                                        { value: "approved", label: "Approved" },
-                                        { value: "pending", label: "Pending" }
-                                    ].map(opt => (
-                                        <div
-                                            key={opt.value}
-                                            className="flex items-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-muted"
-                                            onClick={() => { setFilter(opt.value as any); setCurrentPage(0); }}
-                                        >
-                                            <span className={filter === opt.value ? "font-medium" : ""}>
-                                                {opt.label}
-                                            </span>
-                                            {filter === opt.value && <Check className="h-4 w-4" />}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                        {activeFilterCount > 0 && (
-                            <div className="p-3 border-t bg-muted/50">
-                                <Button
-                                    variant="ghost"
-                                    className="w-full text-xs h-8"
-                                    onClick={() => { setFilter("all"); setCurrentPage(0); }}
-                                >
-                                    Clear filters
-                                </Button>
-                            </div>
-                        )}
-                    </PopoverContent>
-                </Popover>
+                <FilterPanel
+                    groups={[
+                        {
+                            label: 'Status',
+                            type: 'pills',
+                            options: [
+                                { value: 'all', label: 'All' },
+                                { value: 'uploaded', label: 'Uploaded' },
+                                { value: 'approved', label: 'Approved' },
+                                { value: 'pending', label: 'Pending' },
+                            ],
+                            value: filter,
+                            onChange: (v) => { setFilter(v as any); setCurrentPage(0) },
+                        },
+                    ]}
+                />
             </div>
 
             {/* Table */}
@@ -251,12 +217,13 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
             ) : (
                 <>
                 <div className="rounded-lg border overflow-hidden">
+                    <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-muted/30">
                                 <TableHead className="w-12">#</TableHead>
                                 <TableHead className="w-14">ID</TableHead>
-                                <TableHead className="min-w-[200px]">Title</TableHead>
+                                <TableHead className="min-w-[200px] max-w-[300px]">Title</TableHead>
                                 <TableHead className="w-28">Track</TableHead>
                                 <TableHead className="w-24 text-center">Status</TableHead>
                                 <TableHead className="w-28 text-center">Camera-Ready</TableHead>
@@ -268,7 +235,9 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                                 <TableRow key={p.paperId}>
                                     <TableCell className="text-muted-foreground text-xs font-medium">{currentPage * PAGE_SIZE + idx + 1}</TableCell>
                                     <TableCell className="text-muted-foreground font-mono text-xs">{p.paperId}</TableCell>
-                                    <TableCell className="font-medium line-clamp-1 text-sm">{p.paperTitle}</TableCell>
+                                    <TableCell className="font-medium text-sm max-w-[300px]">
+                                        <span className="line-clamp-1 block" title={p.paperTitle}>{p.paperTitle}</span>
+                                    </TableCell>
                                     <TableCell className="text-xs text-muted-foreground">{p.trackName}</TableCell>
                                     <TableCell className="text-center">
                                         <Badge className={
@@ -324,18 +293,19 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                             ))}
                         </TableBody>
                     </Table>
+                    </div>
                 </div>
                 {totalPages > 1 && (
-                    <div className="flex items-center justify-between pt-3">
-                        <p className="text-xs text-muted-foreground">
+                    <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
+                        <div className="text-sm text-muted-foreground">
                             Page {currentPage + 1} of {totalPages} · {filtered.length} papers
-                        </p>
-                        <div className="flex items-center gap-1">
+                        </div>
+                        <div className="flex gap-2">
                             <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
-                                <ChevronLeft className="h-4 w-4" />
+                                <ChevronLeft className="h-4 w-4 mr-1" /> Previous
                             </Button>
                             <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
-                                <ChevronRight className="h-4 w-4" />
+                                Next <ChevronRight className="h-4 w-4 ml-1" />
                             </Button>
                         </div>
                     </div>

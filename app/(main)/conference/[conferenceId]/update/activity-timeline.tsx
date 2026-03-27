@@ -27,6 +27,8 @@ const ACTIVITY_ORDER = [
     "REVIEW_DISCUSSION",
     "AUTHOR_NOTIFICATION",
     "CAMERA_READY_SUBMISSION",
+    "REGISTRATION",
+    "EVENT_DAY",
 ]
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -36,6 +38,8 @@ const ACTIVITY_LABELS: Record<string, string> = {
     "REVIEW_DISCUSSION": "Review Discussion",
     "AUTHOR_NOTIFICATION": "Author Decision Notification",
     "CAMERA_READY_SUBMISSION": "Camera-Ready Submission",
+    "REGISTRATION": "Registration",
+    "EVENT_DAY": "Event Day",
 }
 
 const ACTIVITY_DESCRIPTIONS: Record<string, string> = {
@@ -45,6 +49,8 @@ const ACTIVITY_DESCRIPTIONS: Record<string, string> = {
     "REVIEW_DISCUSSION": "When enabled, reviewers can discuss papers and view each other's reviews. Typically enabled after all reviews are submitted.",
     "AUTHOR_NOTIFICATION": "When enabled, authors receive acceptance/rejection decisions. Enable this after all review discussions are complete.",
     "CAMERA_READY_SUBMISSION": "When enabled, accepted authors can upload final camera-ready versions. Enable after author notifications are sent.",
+    "REGISTRATION": "When enabled, accepted authors and attendees can register and purchase tickets for the conference. Set the registration deadline here.",
+    "EVENT_DAY": "Marks the event start date. Enable this on the day of the conference for check-in and on-site management features.",
 }
 
 // Quick action configuration per activity type
@@ -55,6 +61,8 @@ const QUICK_ACTIONS: Record<string, { label: string; tab: string }> = {
     "REVIEW_DISCUSSION": { label: "View Reviews", tab: "features-review-management" },
     "AUTHOR_NOTIFICATION": { label: "View Decisions", tab: "features-review-management" },
     "CAMERA_READY_SUBMISSION": { label: "View Camera-Ready", tab: "features-camera-ready" },
+    "REGISTRATION": { label: "View Attendees", tab: "features-attendees" },
+    "EVENT_DAY": { label: "View Check-In", tab: "features-attendees" },
 }
 
 // Activity icons/emoji
@@ -65,6 +73,8 @@ const ACTIVITY_ICONS: Record<string, string> = {
     "REVIEW_DISCUSSION": "💬",
     "AUTHOR_NOTIFICATION": "📧",
     "CAMERA_READY_SUBMISSION": "🏁",
+    "REGISTRATION": "🎟️",
+    "EVENT_DAY": "🎤",
 }
 
 // Audit log action config
@@ -382,8 +392,8 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
                                         </div>
 
                                         <div className="flex items-center gap-3 pl-11 sm:pl-0 shrink-0 flex-wrap sm:flex-nowrap">
-                                            {/* Deadline input */}
-                                            <div className="flex-1 sm:w-48 relative">
+                                            {/* Deadline input — w-56 prevents AM/PM cut-off */}
+                                            <div className="sm:w-56 relative">
                                                 <Input 
                                                     type="datetime-local" 
                                                     value={formattedDate}

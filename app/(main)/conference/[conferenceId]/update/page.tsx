@@ -16,6 +16,7 @@ import toast from 'react-hot-toast'
 import { SubmissionFormManager } from '../submission-form/submission-form-manager'
 import { getTracksByConference, getSubjectAreasByTrack, getTrackReviewSettings } from '@/app/api/track.api'
 import { getConferenceMembers } from '@/app/api/user.api'
+import { getConferenceUsersWithRoles } from "@/app/api/conference-user-track.api"
 import { getPapersByConference } from '@/app/api/paper.api'
 import { saveConferenceSubmissionForm, getConferenceSubmissionForm } from '@/app/api/submission-form.api'
 import { getReviewQuestionsByTrack } from '@/app/api/review.api'
@@ -172,6 +173,39 @@ export default function ConferenceUpdatePage() {
     const [trackRefreshKey, setTrackRefreshKey] = useState(0)
     const [workflowRefreshKey, setWorkflowRefreshKey] = useState(0)
     const refreshWorkflow = () => setWorkflowRefreshKey(k => k + 1)
+
+    // Task 5: Track Chair filtered view — null means full access (chair), array means restricted
+    const [chairTrackIds, setChairTrackIds] = useState<number[] | null>(null)
+
+    useEffect(() => {
+        // Parse JWT to detect if current user is only a REVIEWER on this conference
+        // REVIEWER-only users see only papers from their assigned tracks
+        const detectRole = async () => {
+            try {
+                const token = localStorage.getItem('accessToken')
+                if (!token) return
+                const payload = JSON.parse(atob(token.split('.')[1]))
+                const userId: number = payload.userId || payload.id
+                const data = await getConferenceUsersWithRoles(conferenceId, 0, 200)
+                const members: any[] = (data as any)?.content || data || []
+                const me = members.find((m: any) => (m.user?.id || m.userId || m.id) === userId)
+                if (!me) return
+                const roles: string[] = (me.roles || []).map((r: any) => r.assignedRole)
+                const isHighChair = roles.some(r =>
+                    r === 'CONFERENCE_CHAIR' || r === 'PROGRAM_CHAIR'
+                )
+                if (!isHighChair) {
+                    // Extract trackIds from REVIEWER role entries only
+                    const trackIds: number[] = (me.roles || [])
+                        .filter((r: any) => r.assignedRole === 'REVIEWER')
+                        .map((r: any) => r.conferenceTrackId)
+                        .filter(Boolean)
+                    setChairTrackIds(trackIds.length > 0 ? trackIds : null)
+                }
+            } catch { /* ignore — user has full access */ }
+        }
+        detectRole()
+    }, [conferenceId])
 
     // Workflow completion status
     const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus>({})
@@ -497,7 +531,8 @@ export default function ConferenceUpdatePage() {
                 return <ConfigMembers conferenceId={conferenceId} />
 
             case 'features-paper-management':
-                return <PaperManagement conferenceId={conferenceId} />
+                return <PaperManagement conferenceId={conferenceId} trackIds={chairTrackIds ?? undefined} />
+
 
             case 'features-review-settings':
                 return (
