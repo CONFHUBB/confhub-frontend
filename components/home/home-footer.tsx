@@ -9,7 +9,7 @@ const FOOTER_LINKS = {
         { name: "Browse Conferences", path: "/conference" },
         { name: "Create Conference", path: "/conference/create" },
         { name: "My Papers", path: "/paper" },
-        { name: "Reviewer Console", path: "/conference/reviewer-select" },
+        { name: "My Reviews", path: "/conference/reviewer-select" },
     ],
     Resources: [
         { name: "Getting Started", path: "/conference" },
@@ -36,14 +36,14 @@ export function HomeFooter() {
                         <Link href="/" className="inline-flex items-center gap-2">
                             <Image
                                 src="/images/Favicon-White.png"
-                                alt="ConfMS"
+                                alt="ConfHub"
                                 width={32}
                                 height={32}
                                 className="h-8 w-auto object-contain"
                             />
                             <Image
                                 src="/images/White.png"
-                                alt="ConfMS"
+                                alt="ConfHub"
                                 width={100}
                                 height={40}
                                 className="h-6 w-auto object-contain"

@@ -43,7 +43,6 @@ const STATUS_CONFIG: Record<string, { label: string, color: string }> = {
     AWAITING_DECISION: { label: "Awaiting Decision", color: "bg-amber-100 text-amber-700 font-medium" },
     ACCEPTED: { label: "Accepted", color: "bg-green-100 text-green-700 font-bold" },
     REJECTED: { label: "Rejected", color: "bg-red-100 text-red-700 font-bold" },
-    REVISION: { label: "Revision Required", color: "bg-orange-100 text-orange-700 font-medium" },
     WITHDRAWN: { label: "Withdrawn", color: "bg-gray-100 text-gray-500 line-through" },
     CAMERA_READY_SUBMITTED: { label: "Camera Ready", color: "bg-emerald-100 text-emerald-800 font-bold" },
 }

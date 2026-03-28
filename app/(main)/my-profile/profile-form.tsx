@@ -24,6 +24,8 @@ import {
 } from "lucide-react"
 import type { UserProfileRequest, UserProfile } from "@/types/user"
 import toast from "react-hot-toast"
+import { FieldError } from "@/components/ui/field"
+import { V } from "@/lib/validation"
 
 interface ProfileFormProps {
     initialData?: UserProfile | null
@@ -400,8 +402,9 @@ export function ProfileForm({ initialData, onSubmit, userName, userEmail }: Prof
                                         <Input
                                             id="orcidId"
                                             placeholder="0000-0002-1825-0097"
-                                            {...register("orcidId")}
+                                            {...register("orcidId", { validate: val => V.orcid(val) || undefined })}
                                         />
+                                        {errors.orcidId?.message && <FieldError>{errors.orcidId.message}</FieldError>}
                                         <p className="text-xs text-muted-foreground">
                                             Your unique ORCID identifier (e.g. 0000-0002-1825-0097).
                                         </p>

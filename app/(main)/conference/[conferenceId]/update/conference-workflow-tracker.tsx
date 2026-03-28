@@ -108,7 +108,7 @@ export function ConferenceWorkflowTracker({
             const papersWithReviewers = papers.filter((p: any) => {
                 // Papers that have reviewCount > 0 or status beyond SUBMITTED
                 return p.status === 'UNDER_REVIEW' || p.status === 'ACCEPTED' || 
-                       p.status === 'REJECTED' || p.status === 'REVISION' || p.status === 'PUBLISHED'
+                       p.status === 'REJECTED' || p.status === 'PUBLISHED'
             })
             const hasReviewerAssignments = papersWithReviewers.length > 0
 

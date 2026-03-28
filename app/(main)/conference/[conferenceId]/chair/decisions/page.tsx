@@ -19,7 +19,6 @@ const STATUS_COLORS: Record<string, string> = {
     UNDER_REVIEW: 'bg-indigo-100 text-indigo-800',
     ACCEPTED: 'bg-green-100 text-green-800',
     REJECTED: 'bg-red-100 text-red-800',
-    REVISION: 'bg-amber-100 text-amber-800',
     PUBLISHED: 'bg-emerald-100 text-emerald-800',
     WITHDRAWN: 'bg-gray-200 text-gray-500',
 }
@@ -85,12 +84,11 @@ export default function ChairDecisionsPage() {
     }, [aggregates, search, statusFilter])
 
     const counts = useMemo(() => {
-        const c = { total: aggregates.length, awaiting: 0, accepted: 0, rejected: 0, revision: 0, published: 0 }
+        const c = { total: aggregates.length, awaiting: 0, accepted: 0, rejected: 0, published: 0 }
         aggregates.forEach(a => {
             switch (a.paperStatus) {
                 case 'ACCEPTED': c.accepted++; break
                 case 'REJECTED': c.rejected++; break
-                case 'REVISION': c.revision++; break
                 case 'PUBLISHED': c.published++; break
                 default: c.awaiting++; break
             }
@@ -213,7 +211,6 @@ export default function ChairDecisionsPage() {
                             <option value="UNDER_REVIEW">Under Review</option>
                             <option value="ACCEPTED">Accepted</option>
                             <option value="REJECTED">Rejected</option>
-                            <option value="REVISION">Revision</option>
                             <option value="PUBLISHED">Published</option>
                         </select>
                     </div>
@@ -275,8 +272,7 @@ export default function ChairDecisionsPage() {
                                                     {mr ? (
                                                         <Badge className={
                                                             mr.finalDecision === 'APPROVE' ? 'bg-green-100 text-green-800' :
-                                                            mr.finalDecision === 'REJECT' ? 'bg-red-100 text-red-800' :
-                                                            'bg-amber-100 text-amber-800'
+                                                            'bg-red-100 text-red-800'
                                                         }>
                                                             {mr.finalDecision}
                                                         </Badge>

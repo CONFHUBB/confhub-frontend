@@ -122,7 +122,7 @@ NEXT_PUBLIC_API_URL=/api/v1               # Proxy qua Next.js hoặc trực ti�
 
 ### Chạy test backend
 ```powershell
-cd "d:\Coding\ĐỒ ÁN\confms-backend"
+cd "d:\Coding\ĐỒ ÁN\confhub-backend"
 .\mvnw.cmd test -Dtest="EmailControllerTest,EmailServiceImplTest"
 ```
 

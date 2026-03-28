@@ -27,7 +27,7 @@ export const V = {
 
     orcid: (val: string): string | null => {
         if (!val || !val.trim()) return null
-        return /^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/.test(val.trim()) ? null : 'Format: 0000-0000-0000-0000'
+        return /^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/i.test(val.trim()) ? null : 'Format: 0000-0000-0000-0000'
     },
 
     password: (val: string): string | null =>

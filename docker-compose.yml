@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  frontend:
+    build: .
+    container_name: confhub-frontend
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - BACKEND_URL=http://localhost:8080
+      - NEXT_PUBLIC_API_URL=/api/v1
+      - NEXT_PUBLIC_AUTH_API_URL=/api/v1/

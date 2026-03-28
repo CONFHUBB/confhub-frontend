@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Loader2, Search, Zap, ThumbsUp, Minus, ThumbsDown, ChevronDown, ChevronUp, AlertTriangle, Target, Tag, Pencil, XCircle } from 'lucide-react'
+import { Loader2, Search, Zap, ThumbsUp, Minus, ThumbsDown, ChevronDown, ChevronUp, AlertTriangle, Target, Tag, Pencil, XCircle, Lock } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const BID_OPTIONS: { value: BidValue; label: string; shortLabel: string; color: string; activeColor: string; icon: React.ReactNode }[] = [
@@ -225,6 +225,18 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged }: BiddingT
                                                 <button type="button" onClick={() => setExpandedPaper(isExpanded ? null : paper.paperId)} className="text-left">
                                                     <h3 className="font-semibold text-gray-900 hover:text-indigo-600 transition-colors">{paper.title}</h3>
                                                 </button>
+                                                {paper.isDoubleBlind ? (
+                                                    <div className="mt-1 flex items-center gap-2">
+                                                        <Badge variant="outline" className="text-[10px] bg-slate-100 text-slate-600 border-slate-200">
+                                                            <Lock className="h-3 w-3 mr-1" />
+                                                            Đã ẩn do chế độ Double-Blind
+                                                        </Badge>
+                                                    </div>
+                                                ) : (
+                                                    paper.authorNames && paper.authorNames.length > 0 && (
+                                                        <p className="mt-1 text-xs text-muted-foreground">{paper.authorNames.join(', ')}</p>
+                                                    )
+                                                )}
                                                 <div className="flex flex-wrap items-center gap-2 mt-1.5">
                                                     {paper.trackName && <Badge variant="outline" className="text-xs border-purple-200 text-purple-700 bg-purple-50">{paper.trackName}</Badge>}
                                                     {paper.primarySubjectArea && <Badge variant="secondary" className="text-xs">{paper.primarySubjectArea}</Badge>}

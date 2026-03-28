@@ -14,7 +14,7 @@ import {
     FieldLegend,
     FieldSet,
 } from "@/components/ui/field"
-import { ArrowLeft, Eye, Loader2, MessageSquare } from "lucide-react"
+import { Eye, Loader2 } from "lucide-react"
 
 interface ReviewTypeProps {
     initialData: ReviewTypeData | null
@@ -32,7 +32,6 @@ export function ReviewType({ initialData, onSubmit, isSubmitting }: ReviewTypePr
     const [errors, setErrors] = useState<Record<string, string>>({})
 
     const [reviewOption, setReviewOption] = useState(initialData?.reviewOption ?? "")
-    const [isRebuttal, setIsRebuttal] = useState(initialData?.isRebuttal ?? false)
 
     const validate = () => {
         const newErrors: Record<string, string> = {}
@@ -44,7 +43,7 @@ export function ReviewType({ initialData, onSubmit, isSubmitting }: ReviewTypePr
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!validate()) return
-        await onSubmit({ reviewOption, isRebuttal })
+        await onSubmit({ reviewOption })
     }
 
     const selectedOption = REVIEW_OPTIONS.find((o) => o.value === reviewOption)
@@ -54,7 +53,7 @@ export function ReviewType({ initialData, onSubmit, isSubmitting }: ReviewTypePr
             <FieldSet>
                 <FieldLegend>Review Configuration</FieldLegend>
                 <FieldDescription>
-                    Choose the review type and rebuttal option for your conference.
+                    Choose the review type for your conference.
                 </FieldDescription>
 
                 <FieldGroup>
@@ -93,27 +92,7 @@ export function ReviewType({ initialData, onSubmit, isSubmitting }: ReviewTypePr
                         )}
                     </Field>
 
-                    {/* Rebuttal */}
-                    <Field>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <FieldLabel className="mb-0">
-                                    <MessageSquare className="size-4" />
-                                    Allow Rebuttal
-                                </FieldLabel>
-                                <FieldDescription>
-                                    Enable authors to respond to reviewer comments before the final decision.
-                                </FieldDescription>
-                            </div>
-                            <Switch
-                                checked={isRebuttal}
-                                onCheckedChange={(checked: boolean) =>
-                                    setIsRebuttal(checked)
-                                }
-                                disabled={isSubmitting}
-                            />
-                        </div>
-                    </Field>
+
                 </FieldGroup>
             </FieldSet>
 

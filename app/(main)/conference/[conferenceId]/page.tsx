@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { getConference, getConferenceActivities } from '@/app/api/conference.api'
 import { getTracksByConference } from '@/app/api/track.api'
+import { getUserRoleAssignments, acceptInvitation, declineInvitation } from '@/app/api/conference-user-track.api'
+import toast from 'react-hot-toast'
 import type { ConferenceActivityDTO, ConferenceResponse, TrackResponse } from '@/types/conference'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -31,21 +33,25 @@ export default function ConferenceDetailsPage() {
     const [activities, setActivities] = useState<ConferenceActivityDTO[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const { hasRoleInConference } = useUserRoles()
+    const { hasRoleInConference, userId, refreshRoles } = useUserRoles()
     const canManageConference = hasRoleInConference(conferenceId, 'CONFERENCE_CHAIR') || hasRoleInConference(conferenceId, 'PROGRAM_CHAIR')
+    const [pendingInvitations, setPendingInvitations] = useState<any[]>([])
+    const [actionLoading, setActionLoading] = useState(false)
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true)
-                const [conferenceData, tracksData, activitiesData] = await Promise.all([
+                const [conferenceData, tracksData, activitiesData, userRoles] = await Promise.all([
                     getConference(conferenceId),
                     getTracksByConference(conferenceId),
-                    getConferenceActivities(conferenceId).catch(() => [] as ConferenceActivityDTO[])
+                    getConferenceActivities(conferenceId).catch(() => [] as ConferenceActivityDTO[]),
+                    userId ? getUserRoleAssignments(userId).catch(() => []) : Promise.resolve([])
                 ])
                 setConference(conferenceData)
                 setTracks(tracksData)
                 setActivities(activitiesData)
+                setPendingInvitations(userRoles.filter((r: any) => r.conferenceId === conferenceId && r.isAccepted === null))
             } catch (err: any) {
                 if (err.response?.status === 401 || err.response?.status === 403) {
                     setError('You must be logged in to view this conference.')
@@ -64,7 +70,37 @@ export default function ConferenceDetailsPage() {
         if (conferenceId) {
             fetchData()
         }
-    }, [conferenceId, router])
+    }, [conferenceId, router, userId])
+
+    const handleAcceptInvitation = async () => {
+        if (!userId || !conferenceId) return
+        try {
+            setActionLoading(true)
+            await acceptInvitation(userId, conferenceId)
+            toast.success('Invitation accepted!')
+            setPendingInvitations([])
+            await refreshRoles()
+        } catch {
+            toast.error('Failed to accept invitation.')
+        } finally {
+            setActionLoading(false)
+        }
+    }
+
+    const handleDeclineInvitation = async () => {
+        if (!userId || !conferenceId) return
+        try {
+            setActionLoading(true)
+            await declineInvitation(userId, conferenceId)
+            toast.success('Invitation declined.')
+            setPendingInvitations([])
+            await refreshRoles()
+        } catch {
+            toast.error('Failed to decline invitation.')
+        } finally {
+            setActionLoading(false)
+        }
+    }
 
     const formatDate = (dateString: string) => {
         if (!dateString) return '—'
@@ -187,6 +223,28 @@ export default function ConferenceDetailsPage() {
                     Back to Conferences
                 </Button>
             </Link>
+
+            {pendingInvitations.length > 0 && (
+                <div className="bg-amber-50 border-[2px] border-amber-300 rounded-xl p-5 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                    <div>
+                        <h3 className="font-bold text-amber-900 text-lg flex items-center gap-2">
+                            👋 You have been invited
+                        </h3>
+                        <p className="text-amber-800 mt-1 font-medium">
+                            You have a pending invitation to join this conference as: {Array.from(new Set(pendingInvitations.map(p => p.assignedRole.replace('_', ' ')))).join(', ')}. 
+                        </p>
+                    </div>
+                    <div className="flex gap-2 shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+                        <Button variant="outline" onClick={handleDeclineInvitation} disabled={actionLoading} className="w-full sm:w-auto border-amber-300 text-amber-700 bg-white hover:bg-amber-100 font-bold">
+                            Decline
+                        </Button>
+                        <Button onClick={handleAcceptInvitation} disabled={actionLoading} className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white font-bold">
+                            {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Accept Invitation
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 mb-10">
                 <div className="lg:col-span-2 space-y-6">

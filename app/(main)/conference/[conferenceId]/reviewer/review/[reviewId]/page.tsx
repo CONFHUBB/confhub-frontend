@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { FieldError } from '@/components/ui/field'
-import { Loader2, ArrowLeft, FileText, Check, X, AlertTriangle, Save, Eye, ExternalLink, FileDown, MessageSquare } from 'lucide-react'
+import { Loader2, ArrowLeft, FileText, Check, X, AlertTriangle, Save, Eye, ExternalLink, FileDown, MessageSquare, Lock } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { PaperDiscussion } from '@/components/paper-discussion'
 
@@ -341,6 +341,16 @@ export default function ReviewPaperPage() {
                         <FileText className="h-5 w-5 text-indigo-500 mt-0.5 shrink-0" />
                         <div>
                             <CardTitle className="text-lg">{review.paper?.title}</CardTitle>
+                            {review.paper?.isDoubleBlind ? (
+                                <Badge variant="outline" className="mt-2 text-xs bg-slate-100 text-slate-600 border-slate-200">
+                                    <Lock className="h-3 w-3 mr-1" />
+                                    Đã ẩn do chế độ Double-Blind
+                                </Badge>
+                            ) : (
+                                review.paper?.authorNames && review.paper.authorNames.length > 0 && (
+                                    <p className="mt-1.5 text-sm text-muted-foreground">{review.paper.authorNames.join(', ')}</p>
+                                )
+                            )}
                         </div>
                     </div>
                 </CardHeader>
@@ -405,7 +415,7 @@ export default function ReviewPaperPage() {
                             {showPdfPreview && (
                                 <div className="rounded-lg border overflow-hidden bg-gray-50">
                                     <iframe
-                                        src={activeFile.url}
+                                        src={`https://docs.google.com/gview?url=${encodeURIComponent(activeFile.url)}&embedded=true`}
                                         className="w-full border-0"
                                         style={{ height: '700px' }}
                                         title="Manuscript PDF"

@@ -48,6 +48,13 @@ export const getChairedConferences = async (userId: number, page = 0, size = 20)
     return response.data
 }
 
+export const getProgramConferences = async (userId: number, page = 0, size = 20): Promise<{ content: ConferenceListResponse[], totalElements: number }> => {
+    const response = await http.get<{ content: ConferenceListResponse[], totalElements: number }>(
+        `/conference-user-tracks/users/${userId}/chaired-conferences?page=${page}&size=${size}`
+    )
+    return response.data
+}
+
 export const approveConference = async (id: number): Promise<any> => {
     const response = await http.put(`/conferences/${id}/approve-conference`)
     return response.data

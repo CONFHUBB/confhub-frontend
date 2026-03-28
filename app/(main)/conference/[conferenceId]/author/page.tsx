@@ -8,7 +8,7 @@ import { getPapersByAuthor } from '@/app/api/paper.api'
 import { getMyTickets, type TicketResponse } from '@/app/api/registration.api'
 import { getAggregateByPaper, type ReviewAggregate } from '@/app/api/review-aggregate.api'
 import { getMetaReviewByPaper } from '@/app/api/meta-review.api'
-import { downloadAcceptanceLetter, downloadInvoice, downloadVisaLetter, downloadCertificate } from '@/app/api/document.api'
+import { downloadAcceptanceLetter, downloadInvoice, downloadCertificate } from '@/app/api/document.api'
 import type { MetaReviewResponse } from '@/types/meta-review'
 import type { ConferenceResponse } from '@/types/conference'
 import type { PaperResponse } from '@/types/paper'
@@ -640,7 +640,6 @@ function MyTicketTab({ tickets, papers, conferenceId }: { tickets: TicketRespons
             setDownloading(type)
             if (type === 'acceptance') await downloadAcceptanceLetter(docId)
             if (type === 'invoice') await downloadInvoice(docId)
-            if (type === 'visa') await downloadVisaLetter(docId)
             if (type === 'certificate') await downloadCertificate(docId)
             toast.success('Download started')
         } catch { toast.error('Download failed') }
@@ -714,7 +713,6 @@ function MyTicketTab({ tickets, papers, conferenceId }: { tickets: TicketRespons
                                         {[
                                             { label: 'Acceptance Letter', type: 'acceptance', docId: acceptedPaper?.id, available: !!acceptedPaper },
                                             { label: 'Invoice', type: 'invoice', docId: ticket.id, available: isPaid },
-                                            { label: 'Visa Letter', type: 'visa', docId: ticket.id, available: isPaid },
                                             { label: 'Certificate', type: 'certificate', docId: ticket.id, available: !!ticket.isCheckedIn },
                                         ].map(doc => {
                                             const isDownloading = downloading === doc.type

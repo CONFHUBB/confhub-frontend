@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { getMyPaymentHistory, PaymentHistoryResponse } from "@/app/api/registration.api"
+import { getUserByEmail } from "@/app/api/user.api"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, CreditCard } from "lucide-react"
@@ -22,8 +23,7 @@ export default function GlobalPaymentHistoryPage() {
             if (!token) return router.push("/auth/login")
             const payload = JSON.parse(atob(token.split(".")[1]))
             const email = payload.sub
-            const userRes = await fetch(`/api/v1/users/email/${email}`)
-            const user = await userRes.json()
+            const user = await getUserByEmail(email)
             if (!user || !user.id) return
             
             const data = await getMyPaymentHistory(user.id)

@@ -21,6 +21,8 @@ export interface ReviewResponse {
         keywordsJson: string
         status: string
         trackId?: number
+        authorNames?: string[]
+        isDoubleBlind?: boolean
     }
     reviewer: {
         id: number

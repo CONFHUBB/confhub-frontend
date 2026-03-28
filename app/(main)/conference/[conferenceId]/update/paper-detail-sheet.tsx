@@ -62,7 +62,6 @@ const STATUS_COLORS: Record<string, string> = {
     UNDER_REVIEW: "bg-amber-100 text-amber-700",
     ACCEPTED: "bg-emerald-100 text-emerald-700",
     REJECTED: "bg-red-100 text-red-700",
-    REVISION: "bg-orange-100 text-orange-700",
     WITHDRAWN: "bg-gray-100 text-gray-500",
     PUBLISHED: "bg-teal-100 text-teal-700",
 }
@@ -583,7 +582,6 @@ function DecisionTab({
     const DECISIONS: { value: Decision; label: string; color: string; desc: string }[] = [
         { value: "APPROVE", label: "Accept", color: "border-green-400 bg-green-50 text-green-800", desc: "Paper accepted for publication" },
         { value: "REJECT", label: "Reject", color: "border-red-400 bg-red-50 text-red-800", desc: "Paper rejected" },
-        { value: "REVISION", label: "Revision", color: "border-amber-400 bg-amber-50 text-amber-800", desc: "Request author revision" },
     ]
 
     return (

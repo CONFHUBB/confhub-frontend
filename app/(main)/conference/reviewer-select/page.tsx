@@ -20,7 +20,18 @@ import {
     DialogDescription,
     DialogFooter,
 } from '@/components/ui/dialog'
-import { Loader2, ArrowRight, Calendar, MapPin, ShieldAlert, Check, X, Clock, CheckCircle2, Info } from 'lucide-react'
+import { 
+    Loader2, ArrowRight, Calendar, MapPin, Search, Filter, 
+    Building2, X, ChevronLeft, ChevronRight, Check, Info, FolderOpen, Star
+} from 'lucide-react'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import Link from 'next/link'
 import toast from 'react-hot-toast'
 
 interface ConferenceInfo {
@@ -33,18 +44,19 @@ interface ConferenceInfo {
     status?: string
 }
 
-interface ReviewerInvitation {
+interface RoleInvitation {
     conferenceId: number
     conference: ConferenceInfo | null
     isAccepted: boolean | null
     assignedAt: string
     trackIds: number[]
+    roles: string[]
 }
 
-export default function ReviewerSelectPage() {
+export default function RoleInvitationsPage() {
     const router = useRouter()
     const { userId, refreshRoles } = useUserRoles()
-    const [invitations, setInvitations] = useState<ReviewerInvitation[]>([])
+    const [invitations, setInvitations] = useState<RoleInvitation[]>([])
     const [loading, setLoading] = useState(true)
     const [actionLoadingId, setActionLoadingId] = useState<number | null>(null)
 
@@ -54,32 +66,45 @@ export default function ReviewerSelectPage() {
     const [selectedConferenceName, setSelectedConferenceName] = useState<string>('')
     const [quotaValue, setQuotaValue] = useState<string>('')
 
+    // Table state
+    const [searchQuery, setSearchQuery] = useState('')
+    const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'ACCEPTED' | 'DECLINED'>('ALL')
+    const [currentPage, setCurrentPage] = useState(0)
+    const PAGE_SIZE = 10
+
     const fetchInvitations = useCallback(async () => {
         if (!userId) {
             setLoading(false)
             return
         }
         try {
-            const roles = await getUserRoleAssignments(userId)
-            // Filter reviewer roles and group by conferenceId
-            const reviewerRoles = roles.filter((r: ConferenceUserTrackResponse) => r.assignedRole === 'REVIEWER')
+            const rolesObj = await getUserRoleAssignments(userId)
+            // Filter only REVIEWER roles that are invitations
+            const invitationRoles = rolesObj.filter((r: ConferenceUserTrackResponse) => r.assignedRole === 'REVIEWER' && r.invitedAt != null && r.isAccepted !== undefined)
 
-            const grouped = new Map<number, { isAccepted: boolean | null; assignedAt: string; trackIds: number[] }>()
-            for (const r of reviewerRoles) {
+            const grouped = new Map<number, { isAccepted: boolean | null; assignedAt: string; trackIds: number[], roles: Set<string> }>()
+            for (const r of invitationRoles) {
                 if (!grouped.has(r.conferenceId)) {
                     grouped.set(r.conferenceId, {
                         isAccepted: r.isAccepted,
                         assignedAt: r.invitedAt || r.createdAt,
-                        trackIds: []
+                        trackIds: [],
+                        roles: new Set<string>()
                     })
                 }
+                const group = grouped.get(r.conferenceId)!
                 if (r.conferenceTrackId) {
-                    grouped.get(r.conferenceId)!.trackIds.push(r.conferenceTrackId)
+                    group.trackIds.push(r.conferenceTrackId)
+                }
+                group.roles.add(r.assignedRole)
+                // If any role within the group has 'pending', the overall group is pending
+                if (r.isAccepted === null) {
+                    group.isAccepted = null
                 }
             }
 
             // Fetch conference details for each unique conference
-            const invitationsList: ReviewerInvitation[] = []
+            const invitationsList: RoleInvitation[] = []
             await Promise.all(
                 Array.from(grouped.entries()).map(async ([confId, data]) => {
                     let conf: ConferenceInfo | null = null
@@ -92,6 +117,7 @@ export default function ReviewerSelectPage() {
                         isAccepted: data.isAccepted,
                         assignedAt: data.assignedAt,
                         trackIds: data.trackIds,
+                        roles: Array.from(data.roles)
                     })
                 })
             )
@@ -104,7 +130,7 @@ export default function ReviewerSelectPage() {
 
             setInvitations(invitationsList)
         } catch (err) {
-            console.error('Failed to load reviewer invitations:', err)
+            console.error('Failed to load role invitations:', err)
         } finally {
             setLoading(false)
         }
@@ -143,26 +169,34 @@ export default function ReviewerSelectPage() {
         }
     }
 
-    const handleAcceptClick = async (inv: ReviewerInvitation) => {
+    const getRedirectUrl = (roles: string[], conferenceId: number) => {
+        if (roles.includes('CONFERENCE_CHAIR')) return `/conference/my-conference`
+        if (roles.includes('PROGRAM_CHAIR')) return `/conference/program-conference`
+        if (roles.includes('REVIEWER')) return `/conference/${conferenceId}/reviewer`
+        return `/conference/${conferenceId}`
+    }
+
+    const handleAcceptClick = async (inv: RoleInvitation) => {
         if (!userId) return
         setActionLoadingId(inv.conferenceId)
         try {
-            const quotaAllowed = await checkAllowReviewerQuota(inv.conferenceId, inv.trackIds)
-            if (quotaAllowed) {
-                // Show quota modal
-                setSelectedConferenceId(inv.conferenceId)
-                setSelectedConferenceName(inv.conference?.name || `Conference #${inv.conferenceId}`)
-                setQuotaValue('')
-                setQuotaModalOpen(true)
-                setActionLoadingId(null)
-            } else {
-                // Accept directly without quota
-                await acceptInvitation(userId, inv.conferenceId)
-                toast.success('Invitation accepted!')
-                await refreshRoles()
-                await fetchInvitations()
-                setActionLoadingId(null)
+            const isReviewerInv = inv.roles.includes('REVIEWER')
+            if (isReviewerInv) {
+                const quotaAllowed = await checkAllowReviewerQuota(inv.conferenceId, inv.trackIds)
+                if (quotaAllowed) {
+                    // Show quota modal
+                    setSelectedConferenceId(inv.conferenceId)
+                    setSelectedConferenceName(inv.conference?.name || `Conference #${inv.conferenceId}`)
+                    setQuotaValue('')
+                    setQuotaModalOpen(true)
+                    setActionLoadingId(null)
+                    return
+                }
             }
+            // Accept directly without quota (or for non-reviewer roles)
+            await acceptInvitation(userId, inv.conferenceId)
+            toast.success('Invitation accepted!')
+            router.push(getRedirectUrl(inv.roles, inv.conferenceId))
         } catch (err) {
             console.error('Failed to accept:', err)
             toast.error('Failed to accept invitation.')
@@ -183,8 +217,12 @@ export default function ReviewerSelectPage() {
             }
             await acceptInvitation(userId, selectedConferenceId, quota)
             toast.success(quota ? `Invitation accepted with quota of ${quota} papers!` : 'Invitation accepted!')
-            await refreshRoles()
-            await fetchInvitations()
+            const inv = invitations.find(i => i.conferenceId === selectedConferenceId)
+            if (inv) {
+                router.push(getRedirectUrl(inv.roles, selectedConferenceId))
+            } else {
+                router.push(`/conference/${selectedConferenceId}/reviewer`)
+            }
         } catch (err) {
             console.error('Failed to accept:', err)
             toast.error('Failed to accept invitation.')
@@ -200,8 +238,12 @@ export default function ReviewerSelectPage() {
         try {
             await acceptInvitation(userId, selectedConferenceId)
             toast.success('Invitation accepted!')
-            await refreshRoles()
-            await fetchInvitations()
+            const inv = invitations.find(i => i.conferenceId === selectedConferenceId)
+            if (inv) {
+                router.push(getRedirectUrl(inv.roles, selectedConferenceId))
+            } else {
+                router.push(`/conference/${selectedConferenceId}`)
+            }
         } catch (err) {
             console.error('Failed to accept:', err)
             toast.error('Failed to accept invitation.')
@@ -226,198 +268,246 @@ export default function ReviewerSelectPage() {
         }
     }
 
+    const handleOpenWorkspace = async (inv: RoleInvitation) => {
+        if (inv.isAccepted === true) {
+            router.push(getRedirectUrl(inv.roles, inv.conferenceId))
+        } else {
+            await handleAcceptClick(inv)
+        }
+    }
+
     const formatDate = (dateStr: string) => {
         if (!dateStr) return ''
         return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
     }
 
+    const filteredInvitations = invitations.filter(inv => {
+        if (statusFilter === 'PENDING' && inv.isAccepted !== null) return false
+        if (statusFilter === 'ACCEPTED' && inv.isAccepted !== true) return false
+        if (statusFilter === 'DECLINED' && inv.isAccepted !== false) return false
+
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase()
+            const nameMatch = inv.conference?.name.toLowerCase().includes(q)
+            const acronymMatch = inv.conference?.acronym.toLowerCase().includes(q)
+            const locationMatch = inv.conference?.location?.toLowerCase().includes(q)
+            if (!nameMatch && !acronymMatch && !locationMatch) return false
+        }
+        return true
+    })
+
+    const totalPages = Math.ceil(filteredInvitations.length / PAGE_SIZE)
+    const pagedInvitations = filteredInvitations.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
+
+    useEffect(() => { setCurrentPage(0) }, [searchQuery, statusFilter])
+
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="flex min-h-[400px] items-center justify-center">
+                <Loader2 className="size-8 animate-spin text-primary" />
             </div>
         )
     }
 
-    const pendingInvitations = invitations.filter(i => i.isAccepted === null)
-    const acceptedInvitations = invitations.filter(i => i.isAccepted === true)
-    const declinedInvitations = invitations.filter(i => i.isAccepted === false)
+    const stats = {
+        total: invitations.length,
+        pending: invitations.filter(i => i.isAccepted === null).length,
+        accepted: invitations.filter(i => i.isAccepted === true).length,
+        declined: invitations.filter(i => i.isAccepted === false).length,
+    }
 
     return (
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900">Reviewer Console</h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                    Manage your reviewer invitations and access conference review dashboards.
-                </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+            {/* ── Header ──────────────────────────────────── */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2.5">
+                        <Star className="h-6 w-6 text-amber-600" />
+                        My Reviews
+                    </h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Manage your conference invitations and active reviews
+                    </p>
+                </div>
             </div>
 
+            {/* ── Stats Cards ────────────────────────────── */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                    { label: "Total", value: stats.total, color: "text-indigo-600", bg: "bg-indigo-50 border-indigo-100" },
+                    { label: "Pending", value: stats.pending, color: "text-amber-600", bg: "bg-amber-50 border-amber-100" },
+                    { label: "Accepted", value: stats.accepted, color: "text-green-600", bg: "bg-green-50 border-green-100" },
+                    { label: "Declined", value: stats.declined, color: "text-gray-600", bg: "bg-gray-50 border-gray-100" },
+                ].map((stat) => (
+                    <div key={stat.label} className={`rounded-xl border p-4 ${stat.bg}`}>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{stat.label}</p>
+                        <p className={`text-2xl font-bold mt-1 ${stat.color}`}>{stat.value}</p>
+                    </div>
+                ))}
+            </div>
+
+            {/* ── Filter Toolbar ──────────────────────────── */}
+            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                {/* Search */}
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search by name, acronym, or location..."
+                        className="pl-9 h-10"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+                {/* Status Filter */}
+                <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                    <SelectTrigger className="w-full sm:w-44 h-10">
+                        <div className="flex items-center gap-2">
+                            <Filter className="h-3.5 w-3.5" />
+                            <SelectValue placeholder="Filter status" />
+                        </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="ALL">All Statuses</SelectItem>
+                        <SelectItem value="PENDING">Pending</SelectItem>
+                        <SelectItem value="ACCEPTED">Accepted</SelectItem>
+                        <SelectItem value="DECLINED">Declined</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {/* ── Results info ────────────────────────────── */}
+            {searchQuery || statusFilter !== 'ALL' ? (
+                <p className="text-xs text-muted-foreground">
+                    Showing {filteredInvitations.length} of {invitations.length} invitations
+                </p>
+            ) : null}
+
+            {/* ── Empty State ────────────────────────────── */}
             {invitations.length === 0 ? (
-                <Card>
-                    <CardContent className="py-12 text-center text-muted-foreground">
-                        <ShieldAlert className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-                        <p className="font-medium text-gray-600">No reviewer invitations</p>
-                        <p className="text-sm mt-1">You haven&apos;t been invited as a reviewer for any conference yet.</p>
-                    </CardContent>
-                </Card>
+                <div className="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 py-16 text-center">
+                    <FolderOpen className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-700">No invitations yet</h3>
+                    <p className="text-sm text-muted-foreground mt-1 mb-6">You have not received any reviewer invitations yet.</p>
+                </div>
+            ) : filteredInvitations.length === 0 ? (
+                <div className="rounded-xl border border-gray-200 bg-gray-50/50 py-12 text-center">
+                    <Search className="h-10 w-10 mx-auto text-gray-300 mb-3" />
+                    <p className="text-sm text-muted-foreground">No invitations match your filters.</p>
+                    <Button variant="link" className="mt-2 text-indigo-600" onClick={() => { setSearchQuery(""); setStatusFilter("ALL") }}>
+                        Clear all filters
+                    </Button>
+                </div>
             ) : (
-                <>
-                    {/* ── Pending Invitations ── */}
-                    {pendingInvitations.length > 0 && (
-                        <section>
-                            <h2 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                                <Clock className="h-5 w-5 text-amber-500" />
-                                Pending Invitations
-                                <Badge variant="secondary" className="ml-1">{pendingInvitations.length}</Badge>
-                            </h2>
-                            <div className="grid gap-4">
-                                {pendingInvitations.map(inv => (
-                                    <Card key={inv.conferenceId} className="border-amber-200 bg-amber-50/30">
-                                        <CardContent className="p-5">
-                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                                <div className="min-w-0 flex-1">
-                                                    <h3 className="font-semibold text-gray-900">
-                                                        {inv.conference?.name || `Conference #${inv.conferenceId}`}
-                                                    </h3>
-                                                    <div className="flex flex-wrap items-center gap-3 mt-1.5 text-sm text-muted-foreground">
-                                                        {inv.conference?.startDate && (
-                                                            <span className="flex items-center gap-1">
-                                                                <Calendar className="h-3.5 w-3.5" />
-                                                                {formatDate(inv.conference.startDate)} — {formatDate(inv.conference.endDate || '')}
-                                                            </span>
-                                                        )}
-                                                        {inv.conference?.location && (
-                                                            <span className="flex items-center gap-1">
-                                                                <MapPin className="h-3.5 w-3.5" />
-                                                                {inv.conference.location}
-                                                            </span>
-                                                        )}
-                                                        {inv.conference?.acronym && <Badge variant="secondary">{inv.conference.acronym}</Badge>}
-                                                    </div>
-                                                    <p className="text-xs text-muted-foreground mt-2">
-                                                        Invited on {formatDate(inv.assignedAt)}
-                                                    </p>
+                /* ── Table View ────────────────────────────── */
+                <div className="rounded-xl border bg-white overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead className="border-b bg-muted/30 text-muted-foreground">
+                                <tr>
+                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">#</th>
+                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Conference</th>
+                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Location</th>
+                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Date</th>
+                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Status</th>
+                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y">
+                                {pagedInvitations.map((inv, idx) => {
+                                    return (
+                                        <tr key={inv.conferenceId} className="transition-colors hover:bg-indigo-50/30">
+                                            <td className="px-5 py-4 text-xs text-muted-foreground font-medium">
+                                                {currentPage * PAGE_SIZE + idx + 1}
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <div>
+                                                    <p className="font-medium truncate max-w-[250px]">{inv.conference?.name || `Conference #${inv.conferenceId}`}</p>
+                                                    <p className="text-xs font-mono text-muted-foreground mt-0.5">{inv.conference?.acronym}</p>
                                                 </div>
-                                                <div className="flex items-center gap-2 shrink-0">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                                                        onClick={() => handleDecline(inv.conferenceId)}
-                                                        disabled={actionLoadingId === inv.conferenceId}
-                                                    >
-                                                        {actionLoadingId === inv.conferenceId ? (
-                                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                                        ) : (
-                                                            <><X className="h-4 w-4 mr-1" /> Decline</>
-                                                        )}
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        className="bg-green-600 hover:bg-green-700 text-white"
-                                                        onClick={() => handleAcceptClick(inv)}
-                                                        disabled={actionLoadingId === inv.conferenceId}
-                                                    >
-                                                        {actionLoadingId === inv.conferenceId ? (
-                                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                                        ) : (
-                                                            <><Check className="h-4 w-4 mr-1" /> Accept</>
-                                                        )}
-                                                    </Button>
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+                                                    <MapPin className="size-3.5 shrink-0" />
+                                                    <span className="truncate max-w-[150px]">{inv.conference?.location || 'TBA'}</span>
                                                 </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                        </section>
-                    )}
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                                                    <Calendar className="size-3.5 shrink-0" />
+                                                    {inv.conference?.startDate ? formatDate(inv.conference.startDate) : 'TBA'} {inv.conference?.endDate && `— ${formatDate(inv.conference.endDate)}`}
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <Badge variant="outline" className={`text-[10px] font-semibold border-transparent ${
+                                                        inv.isAccepted === null ? "bg-amber-100 text-amber-700" :
+                                                        inv.isAccepted === true ? "bg-green-100 text-green-700" :
+                                                        "bg-gray-100 text-gray-700"
+                                                    }`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                                                        inv.isAccepted === null ? "bg-amber-600" :
+                                                        inv.isAccepted === true ? "bg-green-600" :
+                                                        "bg-gray-600"
+                                                    }`} />
+                                                    {inv.isAccepted === null ? 'PENDING' : inv.isAccepted === true ? 'ACCEPTED' : 'DECLINED'}
+                                                </Badge>
+                                            </td>
+                                            <td className="px-5 py-4 text-right">
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    disabled={actionLoadingId === inv.conferenceId}
+                                                    onClick={() => handleOpenWorkspace(inv)}
+                                                    className="gap-2 shrink-0 border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
+                                                >
+                                                    {actionLoadingId === inv.conferenceId ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                                                    Open Workspace <ArrowRight className="h-4 w-4" />
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
-                    {/* ── Accepted — Active Conferences ── */}
-                    {acceptedInvitations.length > 0 && (
-                        <section>
-                            <h2 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                                <CheckCircle2 className="h-5 w-5 text-green-500" />
-                                Active Conferences
-                                <Badge variant="secondary" className="ml-1">{acceptedInvitations.length}</Badge>
-                            </h2>
-                            <div className="grid gap-4">
-                                {acceptedInvitations.map(inv => (
-                                    <Card key={inv.conferenceId} className="hover:shadow-md transition-shadow">
-                                        <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                            <div className="min-w-0 flex-1">
-                                                <h3 className="font-semibold text-gray-900">
-                                                    {inv.conference?.name || `Conference #${inv.conferenceId}`}
-                                                </h3>
-                                                <div className="flex flex-wrap items-center gap-3 mt-1.5 text-sm text-muted-foreground">
-                                                    {inv.conference?.startDate && (
-                                                        <span className="flex items-center gap-1">
-                                                            <Calendar className="h-3.5 w-3.5" />
-                                                            {formatDate(inv.conference.startDate)} — {formatDate(inv.conference.endDate || '')}
-                                                        </span>
-                                                    )}
-                                                    {inv.conference?.location && (
-                                                        <span className="flex items-center gap-1">
-                                                            <MapPin className="h-3.5 w-3.5" />
-                                                            {inv.conference.location}
-                                                        </span>
-                                                    )}
-                                                    {inv.conference?.acronym && <Badge variant="secondary">{inv.conference.acronym}</Badge>}
-                                                </div>
-                                            </div>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => router.push(`/conference/${inv.conferenceId}/reviewer`)}
-                                            >
-                                                Open Console <ArrowRight className="ml-1.5 h-4 w-4" />
-                                            </Button>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                        </section>
-                    )}
-
-                    {/* ── Declined ── */}
-                    {declinedInvitations.length > 0 && (
-                        <section>
-                            <h2 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                                <X className="h-5 w-5 text-gray-400" />
-                                Declined
-                                <Badge variant="secondary" className="ml-1">{declinedInvitations.length}</Badge>
-                            </h2>
-                            <div className="grid gap-4">
-                                {declinedInvitations.map(inv => (
-                                    <Card key={inv.conferenceId} className="opacity-60">
-                                        <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                            <div className="min-w-0 flex-1">
-                                                <h3 className="font-medium text-gray-600 line-through">
-                                                    {inv.conference?.name || `Conference #${inv.conferenceId}`}
-                                                </h3>
-                                                <p className="text-xs text-muted-foreground mt-1">
-                                                    You declined this invitation.
-                                                </p>
-                                            </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleAcceptClick(inv)}
-                                                disabled={actionLoadingId === inv.conferenceId}
-                                            >
-                                                {actionLoadingId === inv.conferenceId ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                ) : (
-                                                    'Reconsider'
-                                                )}
-                                            </Button>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                        </section>
-                    )}
-                </>
+            {/* ── Pagination ─────────────────────────────── */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-2">
+                    <p className="text-xs text-muted-foreground">
+                        Page {currentPage + 1} of {totalPages} · {filteredInvitations.length} invitation{filteredInvitations.length !== 1 ? 's' : ''}
+                    </p>
+                    <div className="flex gap-1">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={currentPage === 0}
+                            onClick={() => setCurrentPage(p => p - 1)}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        {Array.from({ length: totalPages }, (_, i) => (
+                            <Button
+                                key={i}
+                                variant={i === currentPage ? "default" : "outline"}
+                                size="sm"
+                                className={`w-8 h-8 p-0 text-xs ${i === currentPage ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
+                                onClick={() => setCurrentPage(i)}
+                            >
+                                {i + 1}
+                            </Button>
+                        ))}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={currentPage >= totalPages - 1}
+                            onClick={() => setCurrentPage(p => p + 1)}
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
             )}
 
             {/* ── Reviewer Quota Modal ── */}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { getChairedConferences } from "@/app/api/conference.api"
+import { getProgramConferences } from "@/app/api/conference.api"
 import { getUserByEmail } from "@/app/api/user.api"
 import type { ConferenceListResponse } from "@/types/conference"
 import { Button } from "@/components/ui/button"
@@ -46,7 +46,7 @@ const getStatusInfo = (status: string) => {
 
 const PAGE_SIZE = 6
 
-export default function MyConferencesPage() {
+export default function ProgramConferencesPage() {
     const router = useRouter()
     const [conferences, setConferences] = useState<ConferenceListResponse[]>([])
     const [loading, setLoading] = useState(true)
@@ -90,10 +90,10 @@ export default function MyConferencesPage() {
                     return
                 }
 
-                const data = await getChairedConferences(user.id, 0, 100)
+                const data = await getProgramConferences(user.id, 0, 100)
                 setConferences(data.content || [])
             } catch (err: any) {
-                console.error("Error fetching chaired conferences:", err)
+                console.error("Error fetching program chaired conferences:", err)
                 if (err.response?.status === 401 || err.response?.status === 403) {
                     setError("Session expired. Please log in again.")
                     setTimeout(() => router.push("/auth/login"), 2000)
@@ -178,7 +178,7 @@ export default function MyConferencesPage() {
                         My Conferences
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Manage conferences where you serve as Conference Chair
+                        Manage conferences where you serve as Program Chair
                     </p>
                 </div>
                 <Link href="/conference/create">
@@ -247,13 +247,8 @@ export default function MyConferencesPage() {
                 <div className="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 py-16 text-center">
                     <FolderOpen className="h-12 w-12 mx-auto text-gray-300 mb-4" />
                     <h3 className="text-lg font-semibold text-gray-700">No conferences yet</h3>
-                    <p className="text-sm text-muted-foreground mt-1 mb-6">You are not serving as a Conference Chair for any conferences. Create one to get started.</p>
-                    <Link href="/conference/create">
-                        <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700">
-                            <Plus className="h-4 w-4" />
-                            Create a Conference
-                        </Button>
-                    </Link>
+                    <p className="text-sm text-muted-foreground mt-1 mb-6">You are not serving as a Program Chair for any conferences.</p>
+
                 </div>
             ) : filteredConferences.length === 0 ? (
                 <div className="rounded-xl border border-gray-200 bg-gray-50/50 py-12 text-center">
