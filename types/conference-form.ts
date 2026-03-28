@@ -8,33 +8,31 @@ export interface ConferenceData {
     startDate: string
     endDate: string
     websiteUrl: string
+    area: string
+    societySponsor: string[]
+
+    country: string
+    province: string
+    bannerImageUrl: string
+    contactInformation: string
+    chairEmails: string
 }
 
 export interface TrackData {
     name: string
     description: string
-    submissionStart: string
-    submissionEnd: string
-    registrationStart: string
-    registrationEnd: string
-    cameraReadyStart: string
-    cameraReadyEnd: string
-    biddingStart: string
-    biddingEnd: string
-    reviewStart: string
-    reviewEnd: string
-    maxSubmissions: string
 }
 
-export interface TopicData {
+export interface SubjectAreaData {
     id: number
-    title: string
+    name: string
     description: string
+    parentId: number | null
 }
 
-export interface TrackWithTopics {
+export interface TrackWithSubjectAreas {
     track: TrackData
-    topics: TopicData[]
+    subjectAreas: SubjectAreaData[]
 }
 
 export interface RoleAssignmentData {
@@ -55,19 +53,5 @@ export interface TemplateData {
 
 export interface ReviewTypeData {
     reviewOption: string
-    isRebuttal: boolean
-}
-
-// Default track dates to remember across multiple track additions
-export interface DefaultTrackDates {
-    submissionStart: string
-    submissionEnd: string
-    registrationStart: string
-    registrationEnd: string
-    cameraReadyStart: string
-    cameraReadyEnd: string
-    biddingStart: string
-    biddingEnd: string
-    reviewStart: string
-    reviewEnd: string
+    // isRebuttal removed — no longer supported per updated functional spec
 }

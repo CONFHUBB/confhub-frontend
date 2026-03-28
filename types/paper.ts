@@ -1,5 +1,19 @@
+export type PaperStatus =
+    | "DRAFT"
+    | "SUBMITTED"
+    | "UNDER_REVIEW"
+    | "ACCEPTED"
+    | "REJECTED"
+    | "WITHDRAWN"
+    | "CAMERA_READY"
+    | "PUBLISHED"
+    | "REVISION"
+
 export interface PaperResponse {
     id: number
+    conferenceId: number
+    trackId: number
+    trackName: string
     track: {
         createdAt: string
         updatedAt: string
@@ -23,83 +37,32 @@ export interface PaperResponse {
             startDate: string
             endDate: string
         }
-        submissionStart: string
-        submissionEnd: string
-        registrationStart: string
-        registrationEnd: string
-        cameraReadyStart: string
-        cameraReadyEnd: string
-        biddingStart: string
-        biddingEnd: string
-        reviewStart: string
-        reviewEnd: string
-        maxSubmissions: number
     }
-    topic: {
-        createdAt: string
-        updatedAt: string
-        createdBy: string
-        updatedBy: string
-        id: number
-        track: {
-            createdAt: string
-            updatedAt: string
-            createdBy: string
-            updatedBy: string
-            id: number
-            name: string
-            description: string
-            conference: {
-                createdAt: string
-                updatedAt: string
-                createdBy: string
-                updatedBy: string
-                id: number
-                name: string
-                acronym: string
-                description: string
-                websiteUrl: string
-                location: string
-                status: string
-                startDate: string
-                endDate: string
-            }
-            submissionStart: string
-            submissionEnd: string
-            registrationStart: string
-            registrationEnd: string
-            cameraReadyStart: string
-            cameraReadyEnd: string
-            biddingStart: string
-            biddingEnd: string
-            reviewStart: string
-            reviewEnd: string
-            maxSubmissions: number
-        }
-        title: string
-        description: string
-    }
+    primarySubjectAreaId: number
+    secondarySubjectAreaIds: number[]
     title: string
     abstractField: string
-    keyword1: string
-    keyword2: string
-    keyword3: string
-    keyword4: string
+    keywords: string[]
     submissionTime: string
-    isPassedPlagiarism: boolean
-    status: string
+    status: PaperStatus
+    authorNames?: string[]
+    isDoubleBlind?: boolean
 }
 
 export interface CreatePaperRequest {
-    conferenceTrackId: number,
-    topicId: number,
-    title: string,
-    abstractField: string,
-    keyword1: string,
-    keyword2: string,
-    keyword3: string,
-    keyword4: string,
-    submissionTime: string,
-    isPassedPlagiarism: boolean,
+    conferenceTrackId: number
+    primarySubjectAreaId: number
+    secondarySubjectAreaIds: number[]
+    title: string
+    abstractField: string
+    keywords: string[]
+    submissionTime: string
     status: string
+}
+
+export interface PaperFileResponse {
+    id: number
+    paperId: number
+    url: string
+    isActive: boolean
 }

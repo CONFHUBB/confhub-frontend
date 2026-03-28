@@ -8,7 +8,7 @@ import type { TrackResponse } from '@/types/track'
 import type { ConferenceResponse } from '@/types/conference'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Calendar, Loader2, FileText, ArrowLeft } from 'lucide-react'
+import { Loader2, FileText, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
 export default function TracksPage() {
@@ -50,21 +50,6 @@ export default function TracksPage() {
             fetchData()
         }
     }, [conferenceId, router])
-
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        })
-    }
-
-    const isSubmissionOpen = (track: TrackResponse) => {
-        const now = new Date()
-        const start = new Date(track.submissionStart)
-        const end = new Date(track.submissionEnd)
-        return now >= start && now <= end
-    }
 
     if (loading) {
         return (
@@ -116,70 +101,35 @@ export default function TracksPage() {
                 </div>
             ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {tracks.map((track) => {
-                        const submissionOpen = isSubmissionOpen(track)
-
-                        return (
-                            <Card key={track.id} className="hover:shadow-lg transition-shadow">
-                                <CardHeader>
-                                    <div className="flex items-start justify-between gap-2">
-                                        <CardTitle className="text-xl">
-                                            {track.name}
-                                        </CardTitle>
-                                        {submissionOpen && (
-                                            <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                                Open
-                                            </span>
-                                        )}
+                    {tracks.map((track) => (
+                        <Card key={track.id} className="hover:shadow-lg transition-shadow">
+                            <CardHeader>
+                                <div className="flex items-start justify-between gap-2">
+                                    <CardTitle className="text-xl">
+                                        {track.name}
+                                    </CardTitle>
+                                    <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                        Open
+                                    </span>
+                                </div>
+                                <CardDescription className="line-clamp-2">
+                                    {track.description}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-3">
+                                    <div className="pt-4">
+                                        <Link href={`/track/${track.id}/submit?conferenceId=${conferenceId}`}>
+                                            <Button className="w-full">
+                                                <FileText className="h-4 w-4 mr-2" />
+                                                Submit Paper
+                                            </Button>
+                                        </Link>
                                     </div>
-                                    <CardDescription className="line-clamp-2">
-                                        {track.description}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-3">
-                                        <div>
-                                            <h4 className="text-sm font-semibold mb-2">Submission Period</h4>
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <Calendar className="h-4 w-4 text-muted-foreground" />
-                                                <span className="text-muted-foreground">
-                                                    {formatDate(track.submissionStart)} - {formatDate(track.submissionEnd)}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <h4 className="text-sm font-semibold mb-2">Review Period</h4>
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <Calendar className="h-4 w-4 text-muted-foreground" />
-                                                <span className="text-muted-foreground">
-                                                    {formatDate(track.reviewStart)} - {formatDate(track.reviewEnd)}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="pt-2 border-t">
-                                            <p className="text-sm text-muted-foreground">
-                                                Max Submissions: <span className="font-semibold">{track.maxSubmissions}</span>
-                                            </p>
-                                        </div>
-
-                                        <div className="pt-4">
-                                            <Link href={`/track/${track.id}/submit?conferenceId=${conferenceId}`}>
-                                                <Button
-                                                    className="w-full"
-                                                    disabled={!submissionOpen}
-                                                >
-                                                    <FileText className="h-4 w-4 mr-2" />
-                                                    {submissionOpen ? 'Submit Paper' : 'Submissions Closed'}
-                                                </Button>
-                                            </Link>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )
-                    })}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
                 </div>
             )}
         </div>

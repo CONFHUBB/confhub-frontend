@@ -2,22 +2,27 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
-import { getTrack, getTopicsByTrack } from '@/app/api/track.api'
+import { getTrack, getSubjectAreasByTrack } from '@/app/api/track.api'
 import type { TrackResponse } from '@/types/track'
-import type { TopicResponse } from '@/types/topic'
+import type { SubjectAreaResponse } from '@/types/subject-area'
 import type { User } from '@/types/user'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select as AntdSelect } from 'antd'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, ArrowLeft, Check, FileText, Users, Upload, Search, Trash2, Send, FileUp } from 'lucide-react'
+import { Loader2, ArrowLeft, Check, FileText, Users, Upload, Search, Trash2, Send, FileUp, Layers } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { createPaper, assignAuthorToPaper, getAuthorsByPaper } from '@/app/api/paper.api'
+import { createPaper, assignAuthorToPaper, getAuthorsByPaper, uploadPaperFile } from '@/app/api/paper.api'
+import type { PaperAuthorItem } from '@/app/api/paper.api'
 import { getConferenceSubmissionForm } from '@/app/api/submission-form.api'
+import { getConferenceActivities } from '@/app/api/conference.api'
+import type { ConferenceActivityDTO } from '@/types/conference'
+import { isActivityOpen } from '@/lib/activity'
 import { getUserByEmail } from '@/app/api/user.api'
-import { FormRenderer } from '@/components/submission-form/form-renderer'
+import { FormRenderer } from '@/app/(main)/conference/[conferenceId]/submission-form/form-renderer'
 
 const getCurrentUserEmail = (): string | null => {
     if (typeof window === 'undefined') return null
@@ -32,7 +37,6 @@ const getCurrentUserEmail = (): string | null => {
     }
 }
 
-// ─── Stepper Component ──────────────────────────────────────────────────
 function Stepper({ currentStep }: { currentStep: number }) {
     const steps = [
         { label: 'Register Paper', icon: FileText },
@@ -91,7 +95,7 @@ function StepAddAuthors({
     paperTitle: string
     onNext: () => void
 }) {
-    const [authors, setAuthors] = useState<User[]>([])
+    const [authors, setAuthors] = useState<PaperAuthorItem[]>([])
     const [loadingAuthors, setLoadingAuthors] = useState(true)
     const [searchEmail, setSearchEmail] = useState('')
     const [addingAuthor, setAddingAuthor] = useState(false)
@@ -125,7 +129,7 @@ function StepAddAuthors({
                 return
             }
             // Check if already added
-            if (authors.some((a) => a.id === user.id)) {
+            if (authors.some((a) => a.user.id === user.id)) {
                 toast.error('This author is already added')
                 return
             }
@@ -183,11 +187,11 @@ function StepAddAuthors({
                                             </td>
                                         </tr>
                                     ) : (
-                                        authors.map((author, idx) => (
-                                            <tr key={author.id} className="hover:bg-muted/30 transition-colors">
+                                        authors.map((item, idx) => (
+                                            <tr key={item.paperAuthorId} className="hover:bg-muted/30 transition-colors">
                                                 <td className="px-4 py-3">{idx + 1}</td>
-                                                <td className="px-4 py-3 font-medium">{author.fullName}</td>
-                                                <td className="px-4 py-3 text-muted-foreground">{author.email}</td>
+                                                <td className="px-4 py-3 font-medium">{item.user.fullName}</td>
+                                                <td className="px-4 py-3 text-muted-foreground">{item.user.email}</td>
                                             </tr>
                                         ))
                                     )}
@@ -240,6 +244,28 @@ function StepUploadManuscript({
     const router = useRouter()
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [uploading, setUploading] = useState(false)
+    const [uploaded, setUploaded] = useState(false)
+    const [showPreview, setShowPreview] = useState(false)
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+    // Generate local preview URL when file is selected
+    const handleFileSelect = (file: File) => {
+        setSelectedFile(file)
+        setUploaded(false)
+        // Revoke old URL to avoid memory leak
+        if (previewUrl) URL.revokeObjectURL(previewUrl)
+        const url = URL.createObjectURL(file)
+        setPreviewUrl(url)
+        setShowPreview(true)
+    }
+
+    const handleClearFile = () => {
+        setSelectedFile(null)
+        setUploaded(false)
+        setShowPreview(false)
+        if (previewUrl) URL.revokeObjectURL(previewUrl)
+        setPreviewUrl(null)
+    }
 
     const handleUpload = async () => {
         if (!selectedFile) {
@@ -248,12 +274,11 @@ function StepUploadManuscript({
         }
         try {
             setUploading(true)
-            // TODO: Replace with actual file upload API e.g. POST /api/v1/paper/{paperId}/manuscript
-            await new Promise((resolve) => setTimeout(resolve, 1500))
+            await uploadPaperFile(conferenceId, paperId, selectedFile)
             toast.success('Manuscript uploaded successfully!')
-            router.push(`/track?conferenceId=${conferenceId}`)
-        } catch (err) {
-            toast.error('Failed to upload manuscript')
+            setUploaded(true)
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to upload manuscript')
             console.error('Error uploading:', err)
         } finally {
             setUploading(false)
@@ -263,7 +288,7 @@ function StepUploadManuscript({
     return (
         <div className="space-y-6">
             {/* Info banner */}
-            <div className="p-4 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 text-sm text-blue-800 dark:text-blue-300 space-y-2">
+            <div className="p-4 rounded-lg border bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800 text-sm text-indigo-800 dark:text-indigo-300 space-y-2">
                 <p>
                     To convert other file formats, such as Microsoft Word, to PDF, you can use online services.
                     Examples include Adobe, PDFonline or FreePDFConvert.
@@ -281,6 +306,16 @@ function StepUploadManuscript({
                     Files larger than 1 GB need to be uploaded via Google Drive or Dropbox links.
                 </p>
             </div>
+
+            {/* Upload success banner */}
+            {uploaded && (
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+                    <Check className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                        Manuscript uploaded successfully! You can preview it below or go back to the tracks page.
+                    </p>
+                </div>
+            )}
 
             {/* Upload Card */}
             <Card>
@@ -309,7 +344,7 @@ function StepUploadManuscript({
                                             toast.error('Please select a PDF file')
                                             return
                                         }
-                                        setSelectedFile(file)
+                                        handleFileSelect(file)
                                     }
                                 }}
                             />
@@ -323,20 +358,59 @@ function StepUploadManuscript({
                                 <span className="font-medium">{selectedFile.name}</span>
                                 <span className="text-muted-foreground">({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
                             </div>
-                            <Button variant="ghost" size="sm" onClick={() => setSelectedFile(null)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setShowPreview(!showPreview)}
+                                    className="text-xs gap-1.5"
+                                >
+                                    <FileText className="h-3.5 w-3.5" />
+                                    {showPreview ? 'Hide Preview' : 'Preview'}
+                                </Button>
+                                {!uploaded && (
+                                    <Button variant="ghost" size="sm" onClick={handleClearFile}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PDF Preview */}
+                    {showPreview && previewUrl && (
+                        <div className="rounded-lg border overflow-hidden bg-gray-100 dark:bg-gray-900">
+                            <iframe
+                                src={previewUrl}
+                                className="w-full border-0"
+                                style={{ height: '600px' }}
+                                title="Manuscript PDF Preview"
+                            />
                         </div>
                     )}
 
                     <div className="flex gap-3 pt-2">
-                        <Button onClick={handleUpload} disabled={uploading || !selectedFile} className="gap-2">
-                            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                            {uploading ? 'Uploading...' : 'Upload PDF'}
-                        </Button>
-                        <Button variant="outline" onClick={() => router.push(`/track?conferenceId=${conferenceId}`)}>
-                            Skip for now
-                        </Button>
+                        {!uploaded ? (
+                            <>
+                                <Button onClick={handleUpload} disabled={uploading || !selectedFile} className="gap-2">
+                                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                                    {uploading ? 'Uploading...' : 'Upload PDF'}
+                                </Button>
+                                <Button variant="outline" onClick={() => router.push(`/track?conferenceId=${conferenceId}`)}>
+                                    Skip for now
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <Button onClick={() => router.push(`/track?conferenceId=${conferenceId}`)} className="gap-2">
+                                    <Check className="h-4 w-4" />
+                                    Done — Go to Tracks
+                                </Button>
+                                <Button variant="outline" onClick={() => { handleClearFile(); setUploaded(false) }}>
+                                    Upload a Different File
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </CardContent>
             </Card>
@@ -362,33 +436,41 @@ export default function SubmitPaperPage() {
     const [createdPaperTitle, setCreatedPaperTitle] = useState(paperTitleParam)
 
     const [track, setTrack] = useState<TrackResponse | null>(null)
-    const [topics, setTopics] = useState<TopicResponse[]>([])
+    const [subjectAreas, setSubjectAreas] = useState<SubjectAreaResponse[]>([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [definitionJson, setDefinitionJson] = useState<string>("")
     const [submissionFormId, setSubmissionFormId] = useState<number | null>(null)
-    const [selectedTopicId, setSelectedTopicId] = useState<string>("")
+    const [primarySubjectAreaId, setPrimarySubjectAreaId] = useState<string>("")
+    const [secondarySubjectAreaIds, setSecondarySubjectAreaIds] = useState<number[]>([])
+    const [activities, setActivities] = useState<ConferenceActivityDTO[]>([])
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true)
-                const [trackData, topicsData] = await Promise.all([
+                const [trackData, areasData] = await Promise.all([
                     getTrack(trackId),
-                    getTopicsByTrack(trackId)
+                    getSubjectAreasByTrack(trackId)
                 ])
                 setTrack(trackData)
-                setTopics(topicsData)
+                setSubjectAreas(areasData)
 
                 if (conferenceId) {
-                    const formConfig = await getConferenceSubmissionForm(conferenceId)
+                    const [formConfig, activitiesData] = await Promise.all([
+                        getConferenceSubmissionForm(conferenceId),
+                        getConferenceActivities(conferenceId).catch(() => [] as ConferenceActivityDTO[])
+                    ])
+
                     if (formConfig) {
                         setDefinitionJson(formConfig.definitionJson)
                         if (formConfig.id) {
                             setSubmissionFormId(formConfig.id)
                         }
                     }
+
+                    setActivities(activitiesData)
                 }
             } catch (err: any) {
                 if (err.response?.status === 401 || err.response?.status === 403) {
@@ -419,9 +501,17 @@ export default function SubmitPaperPage() {
         router.replace(url)
     }
 
+    const paperSubmissionActivity = activities.find(a => a.activityType === 'PAPER_SUBMISSION')
+    const isPaperSubmissionOpen = isActivityOpen(paperSubmissionActivity)
+
     const handleFormSubmit = async (fixedData: any, extraAnswersJson: string) => {
-        if (!selectedTopicId) {
-            toast.error('Please select a topic')
+        if (!isPaperSubmissionOpen) {
+            toast.error('Paper submission is currently closed for this conference.')
+            return
+        }
+
+        if (!primarySubjectAreaId) {
+            toast.error('Please select a primary subject area.')
             return
         }
 
@@ -429,17 +519,14 @@ export default function SubmitPaperPage() {
             setSubmitting(true)
             const payload: any = {
                 conferenceTrackId: trackId,
-                topicId: Number(selectedTopicId),
-                submissionFormId: submissionFormId || 0,
+                primarySubjectAreaId: Number(primarySubjectAreaId),
+                secondarySubjectAreaIds,
+                submissionFormId: submissionFormId || null,
                 title: fixedData.title,
                 abstractField: fixedData.abstractField,
-                keyword1: fixedData.keyword1 || "",
-                keyword2: fixedData.keyword2 || "",
-                keyword3: fixedData.keyword3 || "",
-                keyword4: fixedData.keyword4 || "",
+                keywords: fixedData.keywords || [],
                 extraAnswersJson,
                 submissionTime: new Date().toISOString(),
-                isPassedPlagiarism: false,
                 status: 'SUBMITTED'
             }
 
@@ -520,48 +607,76 @@ export default function SubmitPaperPage() {
             {currentStep === 1 && (
                 <Card>
                     <CardContent className="pt-6">
-                        {/* Topic selector */}
-                        <div className="mb-8 space-y-3">
-                            <Label htmlFor="topic" className="text-base">Select Track Topic <span className="text-destructive">*</span></Label>
-                            <p className="text-sm text-muted-foreground">Choose the topic that best fits your submission.</p>
+                        {/* Subject Area Selection */}
+                        <div className="mb-0 space-y-6">
+                            {/* Primary Subject Area */}
+                            <div className="space-y-3">
+                                <Label htmlFor="primary-subject-area" className="text-base">Primary Subject Area <span className="text-destructive">*</span></Label>
+                                <p className="text-sm text-muted-foreground">Choose the primary area that best fits your submission.</p>
 
-                            {topics && topics.length > 0 ? (
-                                <Select
-                                    value={selectedTopicId || undefined}
-                                    onValueChange={(value) => setSelectedTopicId(value)}
-                                >
-                                    <SelectTrigger id="topic" className="bg-background">
-                                        <SelectValue placeholder="Select a topic" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {topics.map((topic) => (
-                                            <SelectItem key={topic.id} value={topic.id.toString()}>
-                                                {topic.title}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            ) : (
-                                <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-md border border-destructive/20 font-medium">
-                                    No topics are available for this track. Please ask the organizer to create topics first.
+                                {subjectAreas && subjectAreas.length > 0 ? (
+                                    <Select
+                                        value={primarySubjectAreaId || undefined}
+                                        onValueChange={(value) => setPrimarySubjectAreaId(value)}
+                                    >
+                                        <SelectTrigger id="primary-subject-area" className="bg-background">
+                                            <SelectValue placeholder="Select primary subject area" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {subjectAreas.map((sa) => (
+                                                <SelectItem key={sa.id} value={sa.id.toString()}>
+                                                    <div className="flex items-center gap-2">
+                                                        {sa.parentId !== null && <Layers className="h-3 w-3 text-muted-foreground ml-2" />}
+                                                        <span>{sa.name}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                ) : (
+                                    <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-md border border-destructive/20 font-medium">
+                                        No subject areas are available for this track. Please ask the organizer to create subject areas first.
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Secondary Subject Areas */}
+                            {subjectAreas && subjectAreas.length > 0 && (
+                                <div className="space-y-3">
+                                    <Label htmlFor="secondary-subject-areas" className="text-base">Secondary Subject Areas</Label>
+                                    <p className="text-sm text-muted-foreground">Optionally, choose other relevant areas.</p>
+                                    <AntdSelect
+                                        mode="multiple"
+                                        className="w-full text-base"
+                                        placeholder="Select secondary subject areas"
+                                        value={secondarySubjectAreaIds}
+                                        onChange={(val) => setSecondarySubjectAreaIds(val)}
+                                        options={subjectAreas
+                                            // Optional: Don't show primary area in secondary list
+                                            .filter(sa => sa.id.toString() !== primarySubjectAreaId)
+                                            .map((sa) => ({ 
+                                                label: sa.name, 
+                                                value: sa.id 
+                                            }))}
+                                    />
                                 </div>
                             )}
                         </div>
 
                         {/* Divider */}
-                        {selectedTopicId && <div className="border-t mb-6" />}
+                        {primarySubjectAreaId && <div className="border-t my-8" />}
 
                         {/* Form */}
-                        {selectedTopicId ? (
+                        {primarySubjectAreaId ? (
                             <FormRenderer
                                 definitionJson={definitionJson}
                                 onSubmit={handleFormSubmit}
                                 isSubmitting={submitting}
                             />
                         ) : (
-                            topics && topics.length > 0 && (
-                                <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
-                                    Please select a topic above to start filling out your submission.
+                            subjectAreas && subjectAreas.length > 0 && (
+                                <div className="text-center py-12 mt-8 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
+                                    Please select a Primary Subject Area above to start filling out your submission.
                                 </div>
                             )
                         )}

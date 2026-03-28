@@ -1,27 +1,39 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import type { ConferenceData } from "@/types/conference-form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import {
     Field,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
     FieldLegend,
     FieldSet,
 } from "@/components/ui/field"
+import { CountrySelect } from "@/components/ui/country-select"
+import { Select } from "antd"
+import { AREA_OPTIONS, SOCIETY_SPONSOR_OPTIONS } from "@/lib/constants/conference-options"
+import { uploadBannerImage } from "@/app/api/conference.api"
+import toast from "react-hot-toast"
+import { Upload, Loader2 } from "lucide-react"
+import { V } from "@/lib/validation"
 
 interface ConferenceFormProps {
     initialData: ConferenceData | null
     onSubmit: (data: ConferenceData) => void
+    isSubmitting?: boolean
+    submitLabel?: string
+    conferenceId?: number
 }
 
-export function ConferenceForm({ initialData, onSubmit }: ConferenceFormProps) {
+export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabel, conferenceId }: ConferenceFormProps) {
+    const isEditMode = !!initialData
     const [errors, setErrors] = useState<Record<string, string>>({})
+    const [isUploading, setIsUploading] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     const [formData, setFormData] = useState<ConferenceData>(
         initialData ?? {
@@ -32,6 +44,14 @@ export function ConferenceForm({ initialData, onSubmit }: ConferenceFormProps) {
             startDate: "",
             endDate: "",
             websiteUrl: "",
+            area: "",
+            societySponsor: [],
+
+            country: "",
+            province: "",
+            bannerImageUrl: "",
+            contactInformation: "",
+            chairEmails: "",
         }
     )
 
@@ -49,13 +69,27 @@ export function ConferenceForm({ initialData, onSubmit }: ConferenceFormProps) {
         }
     }
 
+    const handleSelectChange = (field: string, value: string | string[]) => {
+        setFormData((prev) => ({ ...prev, [field]: value }))
+        if (errors[field]) {
+            setErrors((prev) => {
+                const next = { ...prev }
+                delete next[field]
+                return next
+            })
+        }
+    }
+
+    // Max length constraints matching DB varchar columns
+    const SHORT_MAX = 255
+    const LONG_MAX = 1000
+
     const validate = () => {
         const newErrors: Record<string, string> = {}
         if (!formData.name.trim()) newErrors.name = "Conference name is required."
-        if (!formData.acronym.trim()) newErrors.acronym = "Acronym is required."
-        if (!formData.description.trim())
-            newErrors.description = "Description is required."
-        if (!formData.location.trim()) newErrors.location = "Location is required."
+        if (formData.name.length > SHORT_MAX) newErrors.name = `Name must be ${SHORT_MAX} characters or less.`
+        if (!formData.acronym.trim()) newErrors.acronym = "Short name is required."
+        if (formData.acronym.length > 20) newErrors.acronym = "Short name must be 20 characters or less."
         if (!formData.startDate) newErrors.startDate = "Start date is required."
         if (!formData.endDate) newErrors.endDate = "End date is required."
         if (
@@ -72,6 +106,32 @@ export function ConferenceForm({ initialData, onSubmit }: ConferenceFormProps) {
         ) {
             newErrors.websiteUrl = "Please enter a valid URL (e.g. https://example.com)."
         }
+        if (formData.websiteUrl.length > SHORT_MAX) newErrors.websiteUrl = `URL must be ${SHORT_MAX} characters or less.`
+
+        if (
+            formData.bannerImageUrl &&
+            !/^https?:\/\/.+\..+/.test(formData.bannerImageUrl)
+        ) {
+            newErrors.bannerImageUrl = "Please enter a valid image URL."
+        }
+        if (formData.bannerImageUrl.length > SHORT_MAX) newErrors.bannerImageUrl = `Banner URL must be ${SHORT_MAX} characters or less.`
+
+        if (formData.location.length > SHORT_MAX) newErrors.location = `Location must be ${SHORT_MAX} characters or less.`
+        if (formData.province.length > SHORT_MAX) newErrors.province = `Province must be ${SHORT_MAX} characters or less.`
+
+        if (formData.contactInformation.length > SHORT_MAX) newErrors.contactInformation = `Contact info must be ${SHORT_MAX} characters or less.`
+        if (formData.contactInformation && V.phone(formData.contactInformation)) newErrors.contactInformation = 'Invalid phone format. Use digits, +, -, spaces (7–20 chars).'
+        if (formData.description.length > LONG_MAX) newErrors.description = `Description must be ${LONG_MAX} characters or less.`
+        if (formData.chairEmails.length > LONG_MAX) newErrors.chairEmails = `Chair emails must be ${LONG_MAX} characters or less.`
+        if (formData.chairEmails && !newErrors.chairEmails) {
+            const emailErr = V.emailList(formData.chairEmails)
+            if (emailErr) newErrors.chairEmails = emailErr
+        }
+
+        // societySponsor is joined with ", " before sending – check combined length
+        const sponsorJoined = formData.societySponsor.join(", ")
+        if (sponsorJoined.length > SHORT_MAX) newErrors.societySponsor = `Combined sponsors must be ${SHORT_MAX} characters or less. Remove some selections.`
+
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
     }
@@ -83,142 +143,354 @@ export function ConferenceForm({ initialData, onSubmit }: ConferenceFormProps) {
     }
 
     return (
-        <form onSubmit={handleSubmit}>
-            <FieldSet>
-                <FieldGroup>
-                    {/* Conference Full Name – full width */}
-                    <Field data-invalid={!!errors.name || undefined}>
-                        <FieldLabel htmlFor="name" className="text-base font-semibold">
-                            Conference Full Name
-                        </FieldLabel>
-                        <Input
-                            id="name"
-                            className="h-12 text-base"
-                            placeholder="e.g. International Conference on Artificial Intelligence 2024"
-                            value={formData.name}
-                            onChange={handleChange}
-                            aria-invalid={!!errors.name}
-                        />
-                        {errors.name && <FieldError>{errors.name}</FieldError>}
-                    </Field>
+        <form onSubmit={handleSubmit} className="space-y-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                {/* ── LEFT COLUMN ── */}
+                <div className="space-y-10">
+                    {/* ── Section: Basic Conference Information ── */}
+                    <section>
+                        <div className="mb-5 border-b pb-2">
+                            <h3 className="text-lg font-semibold text-indigo-700">Basic conference information</h3>
+                        </div>
+                        <FieldSet>
+                            <FieldGroup>
+                                {/* Full name */}
+                                <Field data-invalid={!!errors.name || undefined}>
+                                    <FieldLabel htmlFor="name" className="text-base font-semibold">
+                                        Full name of conference <span className="text-red-500">*</span>
+                                    </FieldLabel>
+                                    <Input
+                                        id="name"
+                                        className="h-12 text-base"
+                                        placeholder="e.g. First International Workshop on Rodent-Based Computing 2026"
+                                        maxLength={SHORT_MAX}
+                                        value={formData.name}
+                                        onChange={handleChange}
+                                    />
+                                    {errors.name && <FieldError>{errors.name}</FieldError>}
+                                </Field>
 
-                    {/* Acronym + Location – 2 columns */}
-                    <div className="grid gap-6 sm:grid-cols-2">
-                        <Field data-invalid={!!errors.acronym || undefined}>
-                            <FieldLabel htmlFor="acronym" className="text-base font-semibold">
-                                Acronym
-                            </FieldLabel>
-                            <Input
-                                id="acronym"
-                                className="h-12 text-base"
-                                placeholder="e.g. ICAI-24"
-                                value={formData.acronym}
-                                onChange={handleChange}
-                                aria-invalid={!!errors.acronym}
-                            />
-                            {errors.acronym && (
-                                <FieldError>{errors.acronym}</FieldError>
-                            )}
-                        </Field>
+                                {/* Short name */}
+                                <Field data-invalid={!!errors.acronym || undefined}>
+                                    <FieldLabel htmlFor="acronym" className="text-base font-semibold">
+                                        Short name of conference <span className="text-red-500">*</span>
+                                    </FieldLabel>
+                                    <Input
+                                        id="acronym"
+                                        className="h-12 text-base"
+                                        placeholder="e.g. ICC 26 (20 characters or less, including year)"
+                                        maxLength={20}
+                                        value={formData.acronym}
+                                        onChange={handleChange}
+                                    />
+                                    {errors.acronym && <FieldError>{errors.acronym}</FieldError>}
+                                </Field>
 
-                        <Field data-invalid={!!errors.location || undefined}>
-                            <FieldLabel htmlFor="location" className="text-base font-semibold">
-                                Location
-                            </FieldLabel>
-                            <Input
-                                id="location"
-                                className="h-12 text-base"
-                                placeholder="City, Country or Remote"
-                                value={formData.location}
-                                onChange={handleChange}
-                                aria-invalid={!!errors.location}
-                            />
-                            {errors.location && (
-                                <FieldError>{errors.location}</FieldError>
-                            )}
-                        </Field>
-                    </div>
+                                {/* Area */}
+                                <Field data-invalid={!!errors.area || undefined}>
+                                    <FieldLabel className="text-base font-semibold">Area</FieldLabel>
+                                    <Select
+                                        showSearch
+                                        optionFilterProp="label"
+                                        className="w-full h-12"
+                                        placeholder="Select closest topical area"
+                                        value={formData.area || undefined}
+                                        onChange={(val) => handleSelectChange("area", val)}
+                                        options={AREA_OPTIONS.map((a) => ({ label: a, value: a }))}
+                                    />
+                                    {errors.area && <FieldError>{errors.area}</FieldError>}
+                                </Field>
 
-                    {/* Description – full width */}
-                    <Field data-invalid={!!errors.description || undefined}>
-                        <FieldLabel htmlFor="description" className="text-base font-semibold">
-                            Description
-                        </FieldLabel>
-                        <Textarea
-                            id="description"
-                            className="min-h-[120px] text-base"
-                            placeholder="Briefly describe the goals and scope of the conference..."
-                            rows={5}
-                            value={formData.description}
-                            onChange={handleChange}
-                            aria-invalid={!!errors.description}
-                        />
-                        {errors.description && (
-                            <FieldError>{errors.description}</FieldError>
-                        )}
-                    </Field>
+                                {/* Society Sponsor */}
+                                <Field data-invalid={!!errors.societySponsor || undefined}>
+                                    <FieldLabel className="text-base font-semibold">
+                                        Society Sponsor (you can select multiple)
+                                    </FieldLabel>
+                                    <Select
+                                        mode="multiple"
+                                        showSearch
+                                        optionFilterProp="label"
+                                        className="w-full min-h-12"
+                                        placeholder="Select society sponsors"
+                                        value={formData.societySponsor}
+                                        onChange={(val) => handleSelectChange("societySponsor", val)}
+                                        options={SOCIETY_SPONSOR_OPTIONS.map((s) => ({
+                                            label: s.label,
+                                            value: s.value,
+                                        }))}
+                                    />
+                                    {errors.societySponsor && (
+                                        <FieldError>{errors.societySponsor}</FieldError>
+                                    )}
+                                </Field>
 
-                    {/* Start Date + End Date – 2 columns */}
-                    <div className="grid gap-6 sm:grid-cols-2">
-                        <Field data-invalid={!!errors.startDate || undefined}>
-                            <FieldLabel htmlFor="startDate" className="text-base font-semibold">
-                                Start Date
-                            </FieldLabel>
-                            <Input
-                                id="startDate"
-                                type="datetime-local"
-                                className="h-12 text-base"
-                                value={formData.startDate}
-                                onChange={handleChange}
-                                aria-invalid={!!errors.startDate}
-                            />
-                            {errors.startDate && (
-                                <FieldError>{errors.startDate}</FieldError>
-                            )}
-                        </Field>
 
-                        <Field data-invalid={!!errors.endDate || undefined}>
-                            <FieldLabel htmlFor="endDate" className="text-base font-semibold">
-                                End Date
-                            </FieldLabel>
-                            <Input
-                                id="endDate"
-                                type="datetime-local"
-                                className="h-12 text-base"
-                                value={formData.endDate}
-                                onChange={handleChange}
-                                aria-invalid={!!errors.endDate}
-                            />
-                            {errors.endDate && (
-                                <FieldError>{errors.endDate}</FieldError>
-                            )}
-                        </Field>
-                    </div>
 
-                    {/* Website URL – full width */}
-                    <Field data-invalid={!!errors.websiteUrl || undefined}>
-                        <FieldLabel htmlFor="websiteUrl" className="text-base font-semibold">
-                            Website URL
-                        </FieldLabel>
-                        <Input
-                            id="websiteUrl"
-                            type="url"
-                            className="h-12 text-base"
-                            placeholder="https://your-conference-site.com"
-                            value={formData.websiteUrl}
-                            onChange={handleChange}
-                            aria-invalid={!!errors.websiteUrl}
-                        />
-                        {errors.websiteUrl && (
-                            <FieldError>{errors.websiteUrl}</FieldError>
-                        )}
-                    </Field>
-                </FieldGroup>
-            </FieldSet>
+                                {/* Description */}
+                                <Field data-invalid={!!errors.description || undefined}>
+                                    <FieldLabel htmlFor="description" className="text-base font-semibold">
+                                        Description
+                                    </FieldLabel>
+                                    <Textarea
+                                        id="description"
+                                        className="min-h-[120px] text-base"
+                                        placeholder="Briefly describe the goals and scope of the conference..."
+                                        rows={5}
+                                        maxLength={LONG_MAX}
+                                        value={formData.description}
+                                        onChange={handleChange}
+                                    />
+                                    {errors.description && (
+                                        <FieldError>{errors.description}</FieldError>
+                                    )}
+                                </Field>
+                            </FieldGroup>
+                        </FieldSet>
+                    </section>
+                </div>
 
-            <div className="mt-10 flex items-center justify-end gap-4">
-                <Button type="submit" size="lg" className="text-base px-8">
-                    Next: Add Tracks →
+                {/* ── RIGHT COLUMN ── */}
+                <div className="space-y-10">
+                    {/* ── Section: Location ── */}
+                    <section>
+                        <div className="mb-5 border-b pb-2">
+                            <h3 className="text-lg font-semibold text-indigo-700">Location</h3>
+                        </div>
+                        <FieldSet>
+                            <FieldGroup>
+                                {/* Location */}
+                                <Field data-invalid={!!errors.location || undefined}>
+                                    <FieldLabel htmlFor="location" className="text-base font-semibold">
+                                        Location of conference
+                                    </FieldLabel>
+                                    <Input
+                                        id="location"
+                                        className="h-12 text-base"
+                                        placeholder='e.g. Sydney, without country and state name. Use "virtual" for remote/virtual conferences.'
+                                        maxLength={SHORT_MAX}
+                                        value={formData.location}
+                                        onChange={handleChange}
+                                    />
+                                    {errors.location && (
+                                        <FieldError>{errors.location}</FieldError>
+                                    )}
+                                </Field>
+
+                                {/* Province */}
+                                <Field>
+                                    <FieldLabel htmlFor="province" className="text-base font-semibold">
+                                        Province
+                                    </FieldLabel>
+                                    <Input
+                                        id="province"
+                                        className="h-12 text-base"
+                                        placeholder="Province or state"
+                                        maxLength={SHORT_MAX}
+                                        value={formData.province}
+                                        onChange={handleChange}
+                                    />
+                                </Field>
+
+                                {/* Country */}
+                                <Field>
+                                    <FieldLabel className="text-base font-semibold">
+                                        Country where conference is taking place
+                                    </FieldLabel>
+                                    <CountrySelect
+                                        value={formData.country}
+                                        onValueChange={(val) => handleSelectChange("country", val)}
+                                    />
+                                </Field>
+                            </FieldGroup>
+                        </FieldSet>
+                    </section>
+
+                    {/* ── Section: Web page ── */}
+                    <section>
+                        <div className="mb-5 border-b pb-2">
+                            <h3 className="text-lg font-semibold text-indigo-700">Web page</h3>
+                        </div>
+                        <FieldSet>
+                            <FieldGroup>
+                                {/* Website URL */}
+                                <Field data-invalid={!!errors.websiteUrl || undefined}>
+                                    <FieldLabel htmlFor="websiteUrl" className="text-base font-semibold">
+                                        URL for existing conference web site, including http:// or https://
+                                    </FieldLabel>
+                                    <Input
+                                        id="websiteUrl"
+                                        type="url"
+                                        className="h-12 text-base"
+                                        placeholder="https://your-conference-site.com"
+                                        maxLength={SHORT_MAX}
+                                        value={formData.websiteUrl}
+                                        onChange={handleChange}
+                                    />
+                                    {errors.websiteUrl && (
+                                        <FieldError>{errors.websiteUrl}</FieldError>
+                                    )}
+                                </Field>
+
+                                {/* Banner Image URL */}
+                                <Field data-invalid={!!errors.bannerImageUrl || undefined}>
+                                    <FieldLabel htmlFor="bannerImageUrl" className="text-base font-semibold">
+                                        URL for conference banner image (JPEG, GIF, or PNG)
+                                    </FieldLabel>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            id="bannerImageUrl"
+                                            type="url"
+                                            className="h-12 text-base flex-1"
+                                            placeholder="https://example.com/banner.png"
+                                            maxLength={SHORT_MAX}
+                                            value={formData.bannerImageUrl}
+                                            onChange={handleChange}
+                                        />
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/gif"
+                                            className="hidden"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0]
+                                                if (!file) return
+                                                setIsUploading(true)
+                                                try {
+                                                    const url = await uploadBannerImage(conferenceId ?? 0, file)
+                                                    setFormData((prev) => ({ ...prev, bannerImageUrl: url }))
+                                                    toast.success("Banner image uploaded successfully!")
+                                                } catch (err) {
+                                                    console.error("Upload failed:", err)
+                                                    toast.error("Failed to upload image. Please try again.")
+                                                } finally {
+                                                    setIsUploading(false)
+                                                    if (fileInputRef.current) fileInputRef.current.value = ""
+                                                }
+                                            }}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="h-12 px-4 shrink-0"
+                                            disabled={isUploading}
+                                            onClick={() => fileInputRef.current?.click()}
+                                        >
+                                            {isUploading ? (
+                                                <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Uploading...</>
+                                            ) : (
+                                                <><Upload className="h-4 w-4 mr-2" /> Upload Image</>
+                                            )}
+                                        </Button>
+                                    </div>
+                                    {errors.bannerImageUrl && (
+                                        <FieldError>{errors.bannerImageUrl}</FieldError>
+                                    )}
+                                </Field>
+                            </FieldGroup>
+                        </FieldSet>
+                    </section>
+
+                    {/* ── Section: Contact information ── */}
+                    <section>
+                        <div className="mb-5 border-b pb-2">
+                            <h3 className="text-lg font-semibold text-indigo-700">Contact information</h3>
+                        </div>
+                        <FieldSet>
+                            <FieldGroup>
+                                <Field>
+                                    <FieldLabel htmlFor="contactInformation" className="text-base font-semibold">
+                                        Phone number for conference information
+                                    </FieldLabel>
+                                    <Input
+                                        id="contactInformation"
+                                        className="h-12 text-base"
+                                        placeholder="e.g. chair, written as +1 900 555 1212"
+                                        maxLength={SHORT_MAX}
+                                        value={formData.contactInformation}
+                                        onChange={handleChange}
+                                    />
+                                </Field>
+                            </FieldGroup>
+                        </FieldSet>
+                    </section>
+
+                    {/* ── Section: Dates ── */}
+                    <section>
+                        <div className="mb-5 border-b pb-2">
+                            <h3 className="text-lg font-semibold text-indigo-700">Dates</h3>
+                        </div>
+                        <FieldSet>
+                            <FieldGroup>
+                                {/* Start + End Date in 2 cols */}
+                                <div className="grid gap-6 sm:grid-cols-2">
+                                    <Field data-invalid={!!errors.startDate || undefined}>
+                                        <FieldLabel htmlFor="startDate" className="text-base font-semibold">
+                                            Start date <span className="text-red-500">*</span>
+                                        </FieldLabel>
+                                        <Input
+                                            id="startDate"
+                                            type="date"
+                                            className="h-12 text-base"
+                                            value={formData.startDate}
+                                            onChange={handleChange}
+                                        />
+                                        {errors.startDate && (
+                                            <FieldError>{errors.startDate}</FieldError>
+                                        )}
+                                    </Field>
+
+                                    <Field data-invalid={!!errors.endDate || undefined}>
+                                        <FieldLabel htmlFor="endDate" className="text-base font-semibold">
+                                            End date <span className="text-red-500">*</span>
+                                        </FieldLabel>
+                                        <Input
+                                            id="endDate"
+                                            type="date"
+                                            className="h-12 text-base"
+                                            value={formData.endDate}
+                                            onChange={handleChange}
+                                        />
+                                        {errors.endDate && (
+                                            <FieldError>{errors.endDate}</FieldError>
+                                        )}
+                                    </Field>
+                                </div>
+                            </FieldGroup>
+                        </FieldSet>
+                    </section>
+
+                    {/* ── Section: Chair email addresses ── */}
+                    <section>
+                        <div className="mb-5 border-b pb-2">
+                            <h3 className="text-lg font-semibold text-indigo-700">Chair email addresses</h3>
+                        </div>
+                        <FieldSet>
+                            <FieldGroup>
+                                <Field>
+                                    <FieldLabel htmlFor="chairEmails" className="text-base font-semibold">
+                                        Chair email addresses, one address per line
+                                    </FieldLabel>
+                                    <Textarea
+                                        id="chairEmails"
+                                        className="min-h-[120px] text-base"
+                                        placeholder={"chair1@example.com\nchair2@example.com"}
+                                        rows={5}
+                                        maxLength={LONG_MAX}
+                                        value={formData.chairEmails}
+                                        onChange={handleChange}
+                                    />
+                                </Field>
+                            </FieldGroup>
+                        </FieldSet>
+                    </section>
+                </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-4 pt-4 border-t">
+                <Button type="submit" size="lg" className="text-base px-8" disabled={isSubmitting}>
+                    {isSubmitting 
+                        ? (isEditMode ? "Saving..." : "Creating...") 
+                        : (submitLabel || (isEditMode ? "Save Changes" : "Create Conference"))}
                 </Button>
             </div>
         </form>

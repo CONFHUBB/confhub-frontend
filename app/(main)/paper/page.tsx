@@ -1,159 +1,169 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { getPapersByAuthor, assignAuthorToPaper, getAuthorsByPaper } from '@/app/api/paper.api'
-import { getUsers, getUserByEmail } from '@/app/api/user.api'
-import type { PaperResponse } from '@/types/paper'
-import type { User } from '@/types/user'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { getPapersByAuthor } from '@/app/api/paper.api'
+import { getUserByEmail } from '@/app/api/user.api'
+import type { PaperResponse, PaperStatus } from '@/types/paper'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, UserPlus, Users } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { Input } from '@/components/ui/input'
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
+    Loader2, Edit, FileText, Send, Search, CheckCircle2, XCircle, Ban,
+    Camera, Globe, AlertTriangle, Calendar, Tag, Layers, BarChart3, Star, Upload,
+    Filter, X, Building2, ChevronLeft, ChevronRight, ArrowRight, FolderOpen
+} from 'lucide-react'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import Link from 'next/link'
+
+// ── Status Configuration ──
+const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+    DRAFT: { label: 'Draft', color: 'bg-amber-100 text-amber-700 hover:bg-amber-100', icon: <Edit className="w-3 h-3" /> },
+    SUBMITTED: { label: 'Submitted', color: 'bg-blue-100 text-blue-700 hover:bg-blue-100', icon: <Send className="w-3 h-3" /> },
+    UNDER_REVIEW: { label: 'Under Review', color: 'bg-purple-100 text-purple-700 hover:bg-purple-100', icon: <Search className="w-3 h-3" /> },
+    ACCEPTED: { label: 'Accepted', color: 'bg-green-100 text-green-700 hover:bg-green-100', icon: <CheckCircle2 className="w-3 h-3" /> },
+    REJECTED: { label: 'Rejected', color: 'bg-red-100 text-red-700 hover:bg-red-100', icon: <XCircle className="w-3 h-3" /> },
+    WITHDRAWN: { label: 'Withdrawn', color: 'bg-gray-100 text-gray-700 hover:bg-gray-100', icon: <Ban className="w-3 h-3" /> },
+    CAMERA_READY: { label: 'Camera Ready', color: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100', icon: <Camera className="w-3 h-3" /> },
+    PUBLISHED: { label: 'Published', color: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-100', icon: <Globe className="w-3 h-3" /> }
+}
+
+const ALL_STATUSES = Object.keys(STATUS_CONFIG) as PaperStatus[]
+const ACTION_STATUSES: PaperStatus[] = ['DRAFT']
+
+function StatusBadge({ status }: { status: PaperStatus }) {
+    const config = STATUS_CONFIG[status] || { label: status, color: 'text-gray-600', icon: null }
+    return (
+        <Badge variant="outline" className={`text-[10px] font-semibold border-transparent uppercase ${config.color.includes('text') ? config.color.replace(/bg-.*?\s/, '') : 'text-gray-700'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${config.color.split(' ')[0]}`} />
+            {config.label}
+        </Badge>
+    )
+}
+
+const ITEMS_PER_PAGE = 10
 
 export default function UserSubmissionsPage() {
     const router = useRouter()
     const [papers, setPapers] = useState<PaperResponse[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [users, setUsers] = useState<User[]>([])
-    const [selectedPaper, setSelectedPaper] = useState<number | null>(null)
-    const [selectedUser, setSelectedUser] = useState<string>('')
-    const [authors, setAuthors] = useState<{ [paperId: number]: User[] }>({})
-    const [isAssigning, setIsAssigning] = useState(false)
-    const [openDialog, setOpenDialog] = useState(false)
-    const [viewAuthorsDialog, setViewAuthorsDialog] = useState<number | null>(null)
+
+    // Search, filter & pagination state
+    const [searchQuery, setSearchQuery] = useState('')
+    const [statusFilter, setStatusFilter] = useState<PaperStatus | 'ALL'>('ALL')
+    const [conferenceFilter, setConferenceFilter] = useState<number | 'ALL'>('ALL')
+    const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title'>('newest')
+    const [currentPage, setCurrentPage] = useState(1)
 
     useEffect(() => {
+        const fetchPapers = async () => {
+            try {
+                setLoading(true)
+                const token = localStorage.getItem("accessToken")
+                if (!token) return router.push("/auth/login")
+                const payload = JSON.parse(atob(token.split(".")[1]))
+                const email = payload.sub
+                const user = await getUserByEmail(email)
+                if (!user || !user.id) return
+
+                const data = await getPapersByAuthor(user.id)
+                setPapers(Array.isArray(data) ? data : [])
+            } catch (err: any) {
+                setError(err.response?.data?.message || 'Failed to fetch your papers.')
+            } finally {
+                setLoading(false)
+            }
+        }
         fetchPapers()
-        fetchUsers()
     }, [])
 
-    const fetchPapers = async () => {
-        try {
-            setLoading(true)
-            
-            // Get email from token
-            const token = localStorage.getItem('accessToken')
-            if (!token) {
-                setError('You must be logged in to view your submissions.')
-                setTimeout(() => router.push('/auth/login'), 2000)
-                return
-            }
-            
-            const payload = JSON.parse(atob(token.split('.')[1]))
-            const userEmail = payload.sub
-            
-            console.log('User email from token:', userEmail)
-            
-            if (!userEmail) {
-                setError('Invalid token. Please log in again.')
-                setTimeout(() => router.push('/auth/login'), 2000)
-                return
-            }
-            
-            // Get user info by email to get the user ID
-            console.log('Fetching user by email:', userEmail)
-            const user = await getUserByEmail(userEmail)
-            console.log('User found:', user)
-            
-            if (!user || !user.id) {
-                setError('User not found. Unable to load papers.')
-                setLoading(false)
-                return
-            }
-            
-            console.log('User object:', user)
-            const userId = user.id
-            console.log('Extracted user ID:', userId, 'Type:', typeof userId)
-            
-            console.log('About to fetch papers for user ID:', userId)
-            const data = await getPapersByAuthor(userId)
-            console.log('Papers loaded:', data)
-            setPapers(data)
-        } catch (err: any) {
-            console.error('Error fetching papers:', err)
-            console.error('Error response:', err.response)
-            console.error('Error message:', err.message)
-            
-            if (err.response?.status === 401 || err.response?.status === 403) {
-                setError('Session expired. Please log in again.')
-                setTimeout(() => {
-                    router.push('/auth/login')
-                }, 2000)
-            } else {
-                setError(`Failed to load submissions: ${err.message || 'Unknown error'}`)
-            }
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    const fetchUsers = async () => {
-        try {
-            const data = await getUsers()
-            setUsers(data)
-        } catch (err) {
-            console.error('Error fetching users:', err)
-        }
-    }
-
-    const fetchAuthors = async (paperId: number) => {
-        try {
-            const data = await getAuthorsByPaper(paperId)
-            setAuthors(prev => ({ ...prev, [paperId]: data }))
-        } catch (err) {
-            console.error('Error fetching authors:', err)
-            toast.error('Failed to load authors')
-        }
-    }
-
-    const handleAssignAuthor = async () => {
-        if (!selectedPaper || !selectedUser) {
-            toast.error('Please select a user')
-            return
-        }
-
-        try {
-            setIsAssigning(true)
-            await assignAuthorToPaper(selectedPaper, Number(selectedUser))
-            toast.success('Author assigned successfully!')
-            setOpenDialog(false)
-            setSelectedUser('')
-            // Refresh authors list for this paper
-            await fetchAuthors(selectedPaper)
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to assign author')
-            console.error('Error assigning author:', err)
-        } finally {
-            setIsAssigning(false)
-        }
-    }
-
-    const handleViewAuthors = async (paperId: number) => {
-        setViewAuthorsDialog(paperId)
-        if (!authors[paperId]) {
-            await fetchAuthors(paperId)
-        }
-    }
-
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
+    const conferences = useMemo(() => {
+        const map = new Map<number, string>()
+        papers.forEach(p => {
+            const conf = p.track?.conference
+            if (conf && !map.has(conf.id)) map.set(conf.id, `${conf.acronym} – ${conf.name}`)
         })
+        return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]))
+    }, [papers])
+
+    // ── Filtered + sorted papers ──
+    const filteredPapers = useMemo(() => {
+        let result = [...papers]
+
+        // Search filter
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase()
+            result = result.filter(p =>
+                p.title?.toLowerCase().includes(q) ||
+                (p.abstractField && p.abstractField.toLowerCase().includes(q)) ||
+                (p.keywords && p.keywords.some(kw => kw.toLowerCase().includes(q))) ||
+                p.track?.name?.toLowerCase().includes(q)
+            )
+        }
+
+        // Status filter
+        if (statusFilter !== 'ALL') {
+            result = result.filter(p => p.status === statusFilter)
+        }
+
+        // Conference filter
+        if (conferenceFilter !== 'ALL') {
+            result = result.filter(p => p.track?.conference?.id === conferenceFilter)
+        }
+
+        // Sort
+        switch (sortBy) {
+            case 'newest':
+                result.sort((a, b) => new Date(b.submissionTime).getTime() - new Date(a.submissionTime).getTime())
+                break
+            case 'oldest':
+                result.sort((a, b) => new Date(a.submissionTime).getTime() - new Date(b.submissionTime).getTime())
+                break
+            case 'title':
+                result.sort((a, b) => (a.title || '').localeCompare(b.title || ''))
+                break
+        }
+
+        return result
+    }, [papers, searchQuery, statusFilter, conferenceFilter, sortBy])
+
+    // ── Pagination ──
+    const totalPages = Math.ceil(filteredPapers.length / ITEMS_PER_PAGE)
+    const paginatedPapers = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE
+        return filteredPapers.slice(start, start + ITEMS_PER_PAGE)
+    }, [filteredPapers, currentPage])
+
+    // Reset page when filters change
+    useEffect(() => { setCurrentPage(1) }, [searchQuery, statusFilter, conferenceFilter, sortBy])
+
+    // ── Compute stats ──
+    const stats = {
+        total: papers.length,
+        underReview: papers.filter(p => p.status === 'UNDER_REVIEW').length,
+        accepted: papers.filter(p => p.status === 'ACCEPTED' || p.status === 'PUBLISHED').length,
+        needsAction: papers.filter(p => ACTION_STATUSES.includes(p.status)).length,
+    }
+
+    // Active filter count
+    const activeFilterCount = [
+        statusFilter !== 'ALL' ? 1 : 0,
+        conferenceFilter !== 'ALL' ? 1 : 0,
+    ].reduce((a, b) => a + b, 0)
+
+    const clearFilters = () => {
+        setSearchQuery('')
+        setStatusFilter('ALL')
+        setConferenceFilter('ALL')
+        setSortBy('newest')
     }
 
     if (loading) {
@@ -178,172 +188,197 @@ export default function UserSubmissionsPage() {
     }
 
     return (
-        <div className="container mx-auto py-6 px-4 max-w-5xl">
-            <div className="mb-4">
-                <h1 className="text-2xl font-bold">My Paper Submissions</h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                    Manage your paper submissions and co-authors
-                </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+            {/* ── Header ──────────────────────────────────── */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2.5">
+                        <FileText className="h-6 w-6 text-indigo-600" />
+                        My Papers
+                    </h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Track your submissions and manage paper details
+                    </p>
+                </div>
             </div>
 
+            {/* ── Stats Cards ────────────────────────────── */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                    { label: "Total", value: stats.total, color: "text-indigo-600", bg: "bg-indigo-50 border-indigo-100" },
+                    { label: "Under Review", value: stats.underReview, color: "text-purple-600", bg: "bg-purple-50 border-purple-100" },
+                    { label: "Accepted", value: stats.accepted, color: "text-green-600", bg: "bg-green-50 border-green-100" },
+                    { label: "Needs Action", value: stats.needsAction, color: stats.needsAction > 0 ? "text-amber-600" : "text-gray-600", bg: stats.needsAction > 0 ? "bg-amber-50 border-amber-200 ring-1 ring-amber-200" : "bg-gray-50 border-gray-100" },
+                ].map((stat) => (
+                    <div key={stat.label} className={`rounded-xl border p-4 ${stat.bg}`}>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{stat.label}</p>
+                        <p className={`text-2xl font-bold mt-1 ${stat.color}`}>{stat.value}</p>
+                    </div>
+                ))}
+            </div>
+
+            {/* ── Filter Toolbar ──────────────────────────── */}
+            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                {/* Search */}
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search by title, abstract, or keywords..."
+                        className="pl-9 h-10"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+                {/* Status Filter */}
+                <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as any)}>
+                    <SelectTrigger className="w-full sm:w-44 h-10">
+                        <div className="flex items-center gap-2">
+                            <Filter className="h-3.5 w-3.5" />
+                            <SelectValue placeholder="Filter status" />
+                        </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="ALL">All Statuses</SelectItem>
+                        {ALL_STATUSES.map(s => (
+                            <SelectItem key={s} value={s}>{STATUS_CONFIG[s].label}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                {/* Conference Filter */}
+                <Select value={conferenceFilter.toString()} onValueChange={(val) => setConferenceFilter(val === 'ALL' ? 'ALL' : Number(val))}>
+                    <SelectTrigger className="w-full sm:w-[200px] h-10">
+                        <div className="flex items-center gap-2">
+                            <Building2 className="h-3.5 w-3.5" />
+                            <SelectValue placeholder="Filter conference" />
+                        </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="ALL">All Conferences</SelectItem>
+                        {conferences.map(([id, name]) => (
+                            <SelectItem key={id} value={id.toString()}>{name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {/* ── Results info ────────────────────────────── */}
+            {searchQuery || statusFilter !== 'ALL' || conferenceFilter !== 'ALL' ? (
+                <p className="text-xs text-muted-foreground">
+                    Showing {filteredPapers.length} of {papers.length} papers
+                </p>
+            ) : null}
+
+            {/* ── Empty State ────────────────────────────── */}
             {papers.length === 0 ? (
-                <Card>
-                    <CardContent className="py-8 text-center">
-                        <p className="text-sm text-muted-foreground">You haven&apos;t submitted any papers yet.</p>
-                    </CardContent>
-                </Card>
+                <div className="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 py-16 text-center">
+                    <FolderOpen className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-700">No papers yet</h3>
+                    <p className="text-sm text-muted-foreground mt-1 mb-6">You have not submitted any papers to conferences yet.</p>
+                </div>
+            ) : filteredPapers.length === 0 ? (
+                <div className="rounded-xl border border-gray-200 bg-gray-50/50 py-12 text-center">
+                    <Search className="h-10 w-10 mx-auto text-gray-300 mb-3" />
+                    <p className="text-sm text-muted-foreground">No papers match your filters.</p>
+                    <Button variant="link" className="mt-2 text-indigo-600" onClick={clearFilters}>
+                        Clear all filters
+                    </Button>
+                </div>
             ) : (
-                <div className="grid gap-4">
-                    {papers.map((paper) => (
-                        <Card key={paper.id} className="shadow-sm gap-2">
-                            <CardHeader className="pb-3">
-                                <div className="flex justify-between items-start gap-4">
-                                    <div className="flex-1 min-w-0">
-                                        <CardTitle className="text-lg leading-tight">{paper.title}</CardTitle>
-                                        <CardDescription className="mt-1.5 text-xs">
-                                            <div className="space-y-0.5">
-                                                <p><strong>Conference:</strong> {paper.track.conference.name} ({paper.track.conference.acronym})</p>
-                                                <p><strong>Track:</strong> {paper.track.name}</p>
-                                            </div>
-                                        </CardDescription>
-                                    </div>
-                                    <Badge variant={paper.status === 'SUBMITTED' ? 'default' : 'secondary'} className="text-xs shrink-0">
-                                        {paper.status}
-                                    </Badge>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="pt-0 space-y-3">
-                                <div>
-                                    <h4 className="text-sm font-semibold mb-1">Abstract</h4>
-                                    <p className="text-xs text-muted-foreground line-clamp-2">{paper.abstractField}</p>
-                                </div>
-
-                                <div>
-                                    <h4 className="text-sm font-semibold mb-1">Keywords</h4>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        <Badge variant="outline" className="text-xs">{paper.keyword1}</Badge>
-                                        <Badge variant="outline" className="text-xs">{paper.keyword2}</Badge>
-                                        <Badge variant="outline" className="text-xs">{paper.keyword3}</Badge>
-                                        <Badge variant="outline" className="text-xs">{paper.keyword4}</Badge>
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-4 text-xs text-muted-foreground pt-2 border-t">
-                                    <span>
-                                        <strong>Submitted:</strong> {formatDate(paper.submissionTime)}
-                                    </span>
-                                    <span>
-                                        <strong>Plagiarism:</strong> {paper.isPassedPlagiarism ? 'Passed' : 'Pending'}
-                                    </span>
-                                </div>
-
-                                <div className="flex gap-2 pt-2">
-                                    <Dialog open={openDialog && selectedPaper === paper.id} onOpenChange={(open) => {
-                                        setOpenDialog(open)
-                                        if (open) setSelectedPaper(paper.id)
-                                        else {
-                                            setSelectedPaper(null)
-                                            setSelectedUser('')
-                                        }
-                                    }}>
-                                        <DialogTrigger asChild>
-                                            <Button variant="outline" size="sm" className="text-xs h-8">
-                                                <UserPlus className="h-3 w-3 mr-1.5" />
-                                                Add Co-Author
-                                            </Button>
-                                        </DialogTrigger>
-                                            <DialogContent>
-                                                <DialogHeader>
-                                                    <DialogTitle>Add Co-Author</DialogTitle>
-                                                    <DialogDescription>
-                                                        Select a user to add as a co-author to this paper.
-                                                    </DialogDescription>
-                                                </DialogHeader>
-                                                <div className="space-y-4 py-4">
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="user-select">Select User</Label>
-                                                        <Select value={selectedUser} onValueChange={setSelectedUser}>
-                                                            <SelectTrigger id="user-select">
-                                                                <SelectValue placeholder="Choose a user" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {users.map((user) => (
-                                                                    <SelectItem key={user.id} value={user.id.toString()}>
-                                                                        {user.fullName} ({user.email})
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                    <Button 
-                                                        onClick={handleAssignAuthor} 
-                                                        disabled={isAssigning || !selectedUser}
-                                                        className="w-full"
-                                                    >
-                                                        {isAssigning ? (
-                                                            <>
-                                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                                Assigning...
-                                                            </>
-                                                        ) : (
-                                                            'Assign Author'
-                                                        )}
+                /* ── Table View ────────────────────────────── */
+                <div className="rounded-xl border bg-white overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead className="border-b bg-muted/30 text-muted-foreground">
+                                <tr>
+                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">#</th>
+                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Paper Link</th>
+                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Conference / Track</th>
+                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Submitted</th>
+                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Status</th>
+                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y">
+                                {paginatedPapers.map((paper, idx) => {
+                                    const pageOffset = (currentPage - 1) * ITEMS_PER_PAGE
+                                    return (
+                                        <tr key={paper.id} className="transition-colors hover:bg-indigo-50/30">
+                                            <td className="px-5 py-4 text-xs text-muted-foreground font-medium">
+                                                {pageOffset + idx + 1}
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <div>
+                                                    <p className="font-medium truncate max-w-[250px]">{paper.title}</p>
+                                                    <p className="text-xs font-mono text-muted-foreground mt-0.5">#{paper.id}</p>
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <div className="flex flex-col gap-0.5 text-muted-foreground text-sm">
+                                                    <span className="truncate max-w-[200px] flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" />{paper.track?.conference?.acronym}</span>
+                                                    <span className="text-xs pl-5 truncate max-w-[200px]">{paper.track?.name}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                                                    <Calendar className="size-3.5 shrink-0" />
+                                                    {new Date(paper.submissionTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <StatusBadge status={paper.status} />
+                                            </td>
+                                            <td className="px-5 py-4 text-right">
+                                                <Link href={`/paper/${paper.id}`}>
+                                                    <Button variant="outline" size="sm" className="gap-2 shrink-0 border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700">
+                                                        Open Workspace <ArrowRight className="h-4 w-4" />
                                                     </Button>
-                                                </div>
-                                            </DialogContent>
-                                        </Dialog>
+                                                </Link>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
-                                        <Dialog open={viewAuthorsDialog === paper.id} onOpenChange={(open) => {
-                                            if (!open) setViewAuthorsDialog(null)
-                                            else handleViewAuthors(paper.id)
-                                        }}>
-                                            <DialogTrigger asChild>
-                                                <Button variant="outline" size="sm" className="text-xs h-8">
-                                                    <Users className="h-3 w-3 mr-1.5" />
-                                                    View Authors
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent>
-                                                <DialogHeader>
-                                                    <DialogTitle className="text-lg">Paper Authors</DialogTitle>
-                                                    <DialogDescription className="text-sm">
-                                                        List of all authors for this paper
-                                                    </DialogDescription>
-                                                </DialogHeader>
-                                                <div className="py-3">
-                                                    {!authors[paper.id] ? (
-                                                        <div className="flex justify-center py-6">
-                                                            <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                                                        </div>
-                                                    ) : authors[paper.id].length === 0 ? (
-                                                        <p className="text-center text-sm text-muted-foreground py-6">
-                                                            No co-authors added yet
-                                                        </p>
-                                                    ) : (
-                                                        <div className="space-y-2">
-                                                            {authors[paper.id].map((author) => (
-                                                                <Card key={author.id} className="shadow-sm">
-                                                                    <CardContent className="py-2.5 px-3">
-                                                                        <p className="text-sm font-medium">{author.fullName}</p>
-                                                                        <p className="text-xs text-muted-foreground">{author.email}</p>
-                                                                        {author.phoneNumber && (
-                                                                            <p className="text-xs text-muted-foreground">{author.phoneNumber}</p>
-                                                                        )}
-                                                                        {author.country && (
-                                                                            <p className="text-xs text-muted-foreground">{author.country}</p>
-                                                                        )}
-                                                                    </CardContent>
-                                                                </Card>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </DialogContent>
-                                        </Dialog>
-                                    </div>
-                            </CardContent>
-                        </Card>
-                    ))}
+            {/* ── Pagination ─────────────────────────────── */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-2">
+                    <p className="text-xs text-muted-foreground">
+                        Page {currentPage} of {totalPages} · {filteredPapers.length} paper{filteredPapers.length !== 1 ? 's' : ''}
+                    </p>
+                    <div className="flex gap-1">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(p => p - 1)}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        {/* Page numbers */}
+                        {Array.from({ length: totalPages }, (_, i) => (
+                            <Button
+                                key={i}
+                                variant={i + 1 === currentPage ? "default" : "outline"}
+                                size="sm"
+                                className={`w-8 h-8 p-0 text-xs ${i + 1 === currentPage ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
+                                onClick={() => setCurrentPage(i + 1)}
+                            >
+                                {i + 1}
+                            </Button>
+                        ))}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={currentPage >= totalPages}
+                            onClick={() => setCurrentPage(p => p + 1)}
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
             )}
         </div>
