@@ -11,7 +11,7 @@ import { formatDate } from '@/lib/utils'
 import QRCode from 'qrcode'
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { downloadAcceptanceLetter, downloadInvoice, downloadVisaLetter, downloadCertificate } from '@/app/api/document.api'
+import { downloadAcceptanceLetter, downloadInvoice, downloadCertificate } from '@/app/api/document.api'
 import toast from 'react-hot-toast'
 
 const STATUS_CONFIG = {
@@ -54,7 +54,6 @@ function MyTicketContent() {
       setDownloading(type)
       if (type === 'acceptance') await downloadAcceptanceLetter(id)
       if (type === 'invoice') await downloadInvoice(id)
-      if (type === 'visa') await downloadVisaLetter(id)
       if (type === 'certificate') await downloadCertificate(id)
     } catch (e) {
       toast.error('Failed to download document')
@@ -198,7 +197,6 @@ function MyTicketContent() {
           {[
             { label: 'Acceptance Letter', type: 'acceptance', id: ticket.paperId, disabled: !ticket.paperId },
             { label: 'Invoice', type: 'invoice', id: ticket.id, disabled: false },
-            { label: 'Visa Letter', type: 'visa', id: ticket.id, disabled: false },
             { label: 'Certificate', type: 'certificate', id: ticket.id, disabled: !ticket.isCheckedIn },
           ].map((doc) => (
             <button

@@ -147,7 +147,7 @@ export function DashboardSidebar({ ...props }: React.ComponentProps<typeof Sideb
                                     <Command className="size-4" />
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight">
-                                    <span className="truncate font-medium">ConfMS</span>
+                                    <span className="truncate font-medium">ConfHub</span>
                                     <span className="truncate text-xs">Dashboard</span>
                                 </div>
                             </a>

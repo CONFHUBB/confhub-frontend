@@ -263,14 +263,13 @@ export default function PaperDecisionDetail({ paperId, conferenceId, userId, exi
                             </h3>
                             <div className="space-y-4">
                                 <div className="flex gap-3">
-                                    {(['APPROVE', 'REJECT', 'REVISION'] as Decision[]).map(d => (
+                                    {(['APPROVE', 'REJECT'] as Decision[]).map(d => (
                                         <label
                                             key={d}
                                             className={`flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-all ${
                                                 decision === d
                                                     ? d === 'APPROVE' ? 'border-green-500 bg-green-50 text-green-800'
-                                                    : d === 'REJECT' ? 'border-red-500 bg-red-50 text-red-800'
-                                                    : 'border-amber-500 bg-amber-50 text-amber-800'
+                                                    : 'border-red-500 bg-red-50 text-red-800'
                                                     : 'border-gray-200 hover:border-gray-300'
                                             }`}
                                         >
@@ -282,7 +281,7 @@ export default function PaperDecisionDetail({ paperId, conferenceId, userId, exi
                                                 onChange={() => setDecision(d)}
                                                 className="sr-only"
                                             />
-                                            <span className="font-medium text-sm">{d === 'APPROVE' ? 'Accept' : d === 'REJECT' ? 'Reject' : 'Revision'}</span>
+                                            <span className="font-medium text-sm">{d === 'APPROVE' ? 'Accept' : 'Reject'}</span>
                                         </label>
                                     ))}
                                 </div>
@@ -307,8 +306,7 @@ export default function PaperDecisionDetail({ paperId, conferenceId, userId, exi
                                         disabled={saving || !reason.trim()}
                                         className={
                                             decision === 'APPROVE' ? 'bg-green-600 hover:bg-green-700' :
-                                            decision === 'REJECT' ? 'bg-red-600 hover:bg-red-700' :
-                                            'bg-amber-600 hover:bg-amber-700'
+                                            'bg-red-600 hover:bg-red-700'
                                         }
                                     >
                                         {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}

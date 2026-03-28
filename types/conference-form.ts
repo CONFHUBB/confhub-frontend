@@ -53,5 +53,5 @@ export interface TemplateData {
 
 export interface ReviewTypeData {
     reviewOption: string
-    isRebuttal: boolean
+    // isRebuttal removed — no longer supported per updated functional spec
 }

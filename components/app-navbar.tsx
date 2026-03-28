@@ -35,7 +35,15 @@ const WORKSPACE_SECTIONS = [
         ],
     },
     {
-        label: 'As Chair',
+        label: 'As Program Chair',
+        icon: <GraduationCap className="h-3.5 w-3.5" />,
+        color: 'text-indigo-600',
+        items: [
+            { name: 'Program Conferences',   path: '/conference/program-conference',    icon: <Building2 className="h-4 w-4" /> },
+        ],
+    },
+    {
+        label: 'As Conference Chair',
         icon: <GraduationCap className="h-3.5 w-3.5" />,
         color: 'text-emerald-600',
         items: [
@@ -45,10 +53,12 @@ const WORKSPACE_SECTIONS = [
 ]
 
 // Paths that belong to the "My Workspace" group — used to highlight the dropdown trigger
-const WORKSPACE_PATHS = [
-    '/paper',
-    '/conference/my-conference',
-    '/conference/reviewer-select',
+// Use { path, exact } to prevent /paper/published from matching /paper
+const WORKSPACE_PATHS: { path: string; exact: boolean }[] = [
+    { path: '/paper', exact: true },
+    { path: '/conference/my-conference', exact: false },
+    { path: '/conference/program-conference', exact: false },
+    { path: '/conference/reviewer-select', exact: false },
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -133,7 +143,7 @@ export function AppNavbar() {
     }
 
     // Workspace dropdown is active if current path starts with any workspace path
-    const isWorkspaceActive = WORKSPACE_PATHS.some(p => pathname.startsWith(p))
+    const isWorkspaceActive = WORKSPACE_PATHS.some(wp => wp.exact ? pathname === wp.path : pathname.startsWith(wp.path))
 
     return (
         <header className="sticky top-0 left-0 w-full z-50">

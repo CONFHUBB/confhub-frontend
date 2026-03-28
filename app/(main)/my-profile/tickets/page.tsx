@@ -4,13 +4,14 @@ import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { getMyTickets, TicketResponse } from "@/app/api/registration.api"
 import { getPapersByAuthor } from "@/app/api/paper.api"
+import { getUserByEmail } from "@/app/api/user.api"
 import { PaperResponse } from "@/types/paper"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ChevronDown, ChevronUp, Download, Loader2, Ticket } from "lucide-react"
 import QRCode from "qrcode"
-import { downloadAcceptanceLetter, downloadCertificate, downloadInvoice, downloadVisaLetter } from "@/app/api/document.api"
+import { downloadAcceptanceLetter, downloadCertificate, downloadInvoice } from "@/app/api/document.api"
 import { toast } from "react-hot-toast"
 
 export default function MyGlobalTicketsPage() {
@@ -32,11 +33,7 @@ export default function MyGlobalTicketsPage() {
             if (!token) return router.push("/auth/login")
             const payload = JSON.parse(atob(token.split(".")[1]))
             const email = payload.sub
-            // fetch user based on email (simplified, actual implementation might need user API)
-            // For now, we decode userId directly if it's there or we make a call:
-            // Assuming we have to get user id:
-            const userRes = await fetch(`/api/v1/users/email/${email}`)
-            const user = await userRes.json()
+            const user = await getUserByEmail(email)
             if (!user || !user.id) return
             
             const [tData, pData] = await Promise.all([
@@ -67,7 +64,6 @@ export default function MyGlobalTicketsPage() {
             setDownloading({ type, id: ticketId })
             if (type === 'acceptance') await downloadAcceptanceLetter(id)
             if (type === 'invoice') await downloadInvoice(id)
-            if (type === 'visa') await downloadVisaLetter(id)
             if (type === 'certificate') await downloadCertificate(id)
             toast.success('Download started')
         } catch { toast.error('Download failed') }
@@ -179,7 +175,6 @@ export default function MyGlobalTicketsPage() {
                                                                                 {[
                                                                                     { label: 'Acceptance Letter', type: 'acceptance', docId: acceptedPaper?.id, available: !!acceptedPaper },
                                                                                     { label: 'Invoice', type: 'invoice', docId: ticket.id, available: isPaid },
-                                                                                    { label: 'Visa Letter', type: 'visa', docId: ticket.id, available: isPaid },
                                                                                     { label: 'Certificate', type: 'certificate', docId: ticket.id, available: !!ticket.isCheckedIn },
                                                                                 ].map(doc => {
                                                                                     const isDownloading = downloading?.type === doc.type && downloading?.id === ticket.id

@@ -1,0 +1,32 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Copy env file
+        run: |
+          # Copy the .env.local before docker build so Next.js embeds the env variables
+          cp /state/partition1/devops/secrets/.env.local .env.local
+
+      - name: Build and Deploy via Docker Compose
+        run: |
+          # Stop the old container
+          docker compose down || true
+          
+          # Force build a fresh Next.js image
+          docker compose build --no-cache
+          
+          # Start the container
+          docker compose up -d
+
+      - name: Clean up dangling images
+        run: docker image prune -f

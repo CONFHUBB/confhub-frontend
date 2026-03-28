@@ -45,6 +45,8 @@ export interface PaperResponse {
     keywords: string[]
     submissionTime: string
     status: PaperStatus
+    authorNames?: string[]
+    isDoubleBlind?: boolean
 }
 
 export interface CreatePaperRequest {

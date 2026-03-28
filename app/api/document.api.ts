@@ -24,10 +24,6 @@ export const downloadInvoice = (ticketId: number) => {
   return downloadDocument(`/documents/tickets/${ticketId}/invoice`, `Invoice_${ticketId}.pdf`)
 }
 
-export const downloadVisaLetter = (ticketId: number) => {
-  return downloadDocument(`/documents/tickets/${ticketId}/visa-letter`, `Visa_Letter_${ticketId}.pdf`)
-}
-
 export const downloadCertificate = (ticketId: number) => {
   return downloadDocument(`/documents/tickets/${ticketId}/certificate`, `Certificate_${ticketId}.pdf`)
 }

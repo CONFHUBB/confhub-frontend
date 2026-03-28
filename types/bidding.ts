@@ -30,6 +30,7 @@ export interface PaperForBidding {
     relevanceScore: number        // 0.0 - 1.0
     currentBid: BidValue | null   // null = chưa bid
     isDoubleBlind: boolean
+    authorNames: string[]
 }
 
 export interface BidsSummary {

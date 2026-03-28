@@ -15,7 +15,7 @@ interface AuthorNotificationWizardProps {
     conferenceId: number
 }
 
-const PAPER_STATUSES = ["SUBMITTED", "UNDER_REVIEW", "ACCEPTED", "REJECTED", "REVISION", "WITHDRAWN"]
+const PAPER_STATUSES = ["SUBMITTED", "UNDER_REVIEW", "ACCEPTED", "REJECTED", "WITHDRAWN"]
 
 export function AuthorNotificationWizard({ conferenceId }: AuthorNotificationWizardProps) {
     const [aggregates, setAggregates] = useState<ReviewAggregate[]>([])
@@ -51,7 +51,7 @@ export function AuthorNotificationWizard({ conferenceId }: AuthorNotificationWiz
     }, [conferenceId])
 
     const handleSend = async () => {
-        const statuses = ["ACCEPTED", "REJECTED", "REVISION"]
+        const statuses = ["ACCEPTED", "REJECTED"]
         for (const s of statuses) {
             const err = V.minLen(messagePerStatus[s] || "", 10)
             if (err) {
@@ -82,7 +82,6 @@ export function AuthorNotificationWizard({ conferenceId }: AuthorNotificationWiz
         switch (status) {
             case "ACCEPTED": return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
             case "REJECTED": return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-            case "REVISION": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
             case "UNDER_REVIEW": return "bg-indigo-100 text-indigo-800 dark:bg-blue-900/30 dark:text-indigo-400"
             case "SUBMITTED": return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
             case "WITHDRAWN": return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
@@ -249,7 +248,7 @@ export function AuthorNotificationWizard({ conferenceId }: AuthorNotificationWiz
                             <p className="text-xs text-muted-foreground mb-3">
                                 Placeholders: {"{paperTitle}"}, {"{paperId}"}, {"{status}"}
                             </p>
-                            {["ACCEPTED", "REJECTED", "REVISION"].map((status) => (
+                            {["ACCEPTED", "REJECTED"].map((status) => (
                                 <div key={status} className="mb-4">
                                     <label className="text-sm font-medium flex items-center gap-2 mb-1">
                                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(status)}`}>

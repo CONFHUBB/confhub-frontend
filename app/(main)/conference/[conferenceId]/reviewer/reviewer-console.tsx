@@ -637,7 +637,7 @@ function ProfileTab({
         const bioErr = V.maxLen(form.biography, 2000)
         if (bioErr) newErrs.biography = bioErr
         
-        const orcErr = V.maxLen(form.orcidId, 100)
+        const orcErr = V.maxLen(form.orcidId, 100) || V.orcid(form.orcidId)
         if (orcErr) newErrs.orcidId = orcErr
         
         const scholarErr = V.url(form.googleScholarLink) || V.maxLen(form.googleScholarLink, 500)

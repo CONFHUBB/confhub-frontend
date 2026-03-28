@@ -50,12 +50,10 @@ const STATUS_COLOR: Record<string, string> = {
     WITHDRAWN: 'bg-gray-500',
     CAMERA_READY: 'bg-indigo-600',
     PUBLISHED: 'bg-emerald-600',
-    REVISION: 'bg-orange-500',
 }
 const DECISION_STYLE: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
     APPROVE: { label: 'Accepted', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <CheckCircle2 className="h-3 w-3" /> },
     REJECT: { label: 'Rejected', color: 'bg-red-100 text-red-700 border-red-200', icon: <XCircle className="h-3 w-3" /> },
-    REVISION: { label: 'Revision Required', color: 'bg-amber-100 text-amber-700 border-amber-200', icon: <AlertTriangle className="h-3 w-3" /> },
 }
 
 export default function PaperWorkspacePage() {
@@ -268,8 +266,8 @@ export default function PaperWorkspacePage() {
         a => a.activityType === 'CAMERA_READY_SUBMISSION' && a.isEnabled && (!a.deadline || new Date(a.deadline) > new Date())
     )
 
-    const isEditable = isPaperSubmissionOpen || paper.status === 'REVISION'
-    const showReviews = ['ACCEPTED', 'REJECTED', 'REVISION', 'CAMERA_READY', 'PUBLISHED'].includes(paper.status) || aggregate?.reviewCount! > 0
+    const isEditable = isPaperSubmissionOpen
+    const showReviews = ['ACCEPTED', 'REJECTED', 'CAMERA_READY', 'PUBLISHED'].includes(paper.status) || aggregate?.reviewCount! > 0
     const showCameraReadyUpload = ['ACCEPTED'].includes(paper.status) && isCameraReadyOpen
     const canWithdraw = ['SUBMITTED', 'UNDER_REVIEW'].includes(paper.status)
     const decision = metaReview?.finalDecision ? DECISION_STYLE[metaReview.finalDecision] : null
@@ -845,17 +843,22 @@ export default function PaperWorkspacePage() {
                         <div>
                             <DialogTitle className="text-slate-100 text-base">PDF Preview</DialogTitle>
                             <DialogDescription className="text-slate-400 text-xs hidden sm:block truncate pr-8">
-                                {previewFileUrl?.split('/').pop()}
+                                {previewFileUrl?.split('/').pop()?.split('?')[0]}
                             </DialogDescription>
                         </div>
+                        <a href={previewFileUrl || '#'} target="_blank" rel="noopener noreferrer">
+                            <Button variant="ghost" size="sm" className="text-slate-300 hover:text-white gap-1.5">
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                Open in new tab
+                            </Button>
+                        </a>
                     </DialogHeader>
                     <div className="flex-1 bg-slate-900/50 relative w-full h-full backdrop-blur-sm">
                         {previewFileUrl && (
                             <iframe 
-                                src={`${previewFileUrl}#toolbar=0`} 
+                                src={`https://docs.google.com/gview?url=${encodeURIComponent(previewFileUrl)}&embedded=true`} 
                                 className="w-full h-full border-0 absolute inset-0" 
                                 title="PDF Document Viewer"
-                                sandbox="allow-same-origin allow-scripts"
                             />
                         )}
                     </div>

@@ -32,6 +32,7 @@ interface PaperSummary {
 interface ChairDashboardProps {
     conferenceId: number
     onNavigate?: (tab: string) => void
+    role?: 'CONFERENCE_CHAIR' | 'PROGRAM_CHAIR'
 }
 
 interface PhaseData {
@@ -532,7 +533,7 @@ function PhaseStatusCard({
     )
 }
 
-export function ChairDashboard({ conferenceId, onNavigate }: ChairDashboardProps) {
+export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboardProps) {
     const [papers, setPapers] = useState<PaperSummary[]>([])
     const [activities, setActivities] = useState<ConferenceActivityDTO[]>([])
     const [phaseData, setPhaseData] = useState<PhaseData>({
@@ -628,7 +629,7 @@ export function ChairDashboard({ conferenceId, onNavigate }: ChairDashboardProps
 
             const hasPapers = papersData.filter((p: any) => p.status !== 'DRAFT').length > 0
             const reviewersAssigned = merged.some(p =>
-                ['UNDER_REVIEW', 'ACCEPTED', 'REJECTED', 'REVISION', 'PUBLISHED'].includes(p.status)
+                ['UNDER_REVIEW', 'ACCEPTED', 'REJECTED', 'PUBLISHED'].includes(p.status)
             )
             const papersHaveDecisions = papersData.some((p: any) =>
                 ['ACCEPTED', 'REJECTED', 'PUBLISHED'].includes(p.status)
@@ -857,7 +858,6 @@ export function ChairDashboard({ conferenceId, onNavigate }: ChairDashboardProps
                             { label: 'Under Review', count: underReview, color: 'bg-amber-500' },
                             { label: 'Accepted', count: accepted, color: 'bg-emerald-500' },
                             { label: 'Rejected', count: rejected, color: 'bg-red-500' },
-                            { label: 'Revision', count: papers.filter(p => p.status === 'REVISION').length, color: 'bg-orange-500' },
                             { label: 'Published', count: papers.filter(p => p.status === 'PUBLISHED').length, color: 'bg-teal-500' },
                         ].filter(s => s.count > 0).map(s => (
                             <div key={s.label} className="flex items-center gap-3">

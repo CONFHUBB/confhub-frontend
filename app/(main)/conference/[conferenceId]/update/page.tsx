@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button'
 import {
     Settings, FileText, Calendar, ClipboardList, Lock, ChevronRight, ChevronDown,
     ArrowLeft, Users, LayoutDashboard, Loader2, CheckCircle2, Circle,
-    Eye, Ticket
+    Eye, Ticket, Shield, GraduationCap, Clock
 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { SubmissionFormManager } from '../submission-form/submission-form-manager'
@@ -84,13 +85,35 @@ type SettingsTab =
 // Workflow status type
 type WorkflowStatus = Record<string, boolean>
 
-const TAB_GROUPS = [
+// ── Role-based permissions ──────────────────────────────────────────────
+type TabPermission = 'edit' | 'view' | 'hidden'
+type ChairRole = 'CONFERENCE_CHAIR' | 'PROGRAM_CHAIR'
+
+interface TabItemDef {
+    key: string
+    label: string
+    completionKey: string
+    lockWhenDone: boolean
+    permissions: Record<ChairRole, TabPermission>
+}
+
+interface TabGroupDef {
+    title: string
+    icon: React.ReactNode
+    accentColor: string
+    items: TabItemDef[]
+}
+
+// Permission matrix following the use case document:
+// Conference Chair = organizer/admin (infrastructure, members, tickets, attendees)
+// Program Chair = academic workflow owner (review, papers, decisions, program)
+const TAB_GROUPS: TabGroupDef[] = [
     {
         title: "Overview",
         icon: <LayoutDashboard className="h-4 w-4" />,
         accentColor: "text-primary",
         items: [
-            { key: "dashboard", label: "Dashboard", completionKey: "", lockWhenDone: false }
+            { key: "dashboard", label: "Dashboard", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'edit' } }
         ]
     },
     {
@@ -98,10 +121,10 @@ const TAB_GROUPS = [
         icon: <Settings className="h-4 w-4" />,
         accentColor: "text-indigo-600",
         items: [
-            { key: "general-detail", label: "Conference Details", completionKey: "edit-details", lockWhenDone: true },
-            { key: "features-tracks", label: "Tracks", completionKey: "manage-tracks", lockWhenDone: true },
-            { key: "features-subject-areas", label: "Subject Areas", completionKey: "add-subject-areas", lockWhenDone: true },
-            { key: "reg-ticket-types", label: "Tickets & Fees", completionKey: "", lockWhenDone: false },
+            { key: "general-detail", label: "Conference Details", completionKey: "edit-details", lockWhenDone: true, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
+            { key: "features-tracks", label: "Tracks", completionKey: "manage-tracks", lockWhenDone: true, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
+            { key: "features-subject-areas", label: "Subject Areas", completionKey: "add-subject-areas", lockWhenDone: true, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
+            { key: "reg-ticket-types", label: "Tickets & Fees", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
         ]
     },
     {
@@ -109,7 +132,7 @@ const TAB_GROUPS = [
         icon: <Users className="h-4 w-4" />,
         accentColor: "text-sky-600",
         items: [
-            { key: "features-members", label: "Members & Roles", completionKey: "add-members", lockWhenDone: false },
+            { key: "features-members", label: "Members & Roles", completionKey: "add-members", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
         ]
     },
     {
@@ -117,11 +140,19 @@ const TAB_GROUPS = [
         icon: <ClipboardList className="h-4 w-4" />,
         accentColor: "text-teal-600",
         items: [
-            { key: "forms-submission", label: "Submission Form", completionKey: "config-submission-form", lockWhenDone: true },
-            { key: "forms-review", label: "Review Form", completionKey: "config-review-form", lockWhenDone: true },
-            { key: "forms-mail", label: "Email Templates", completionKey: "", lockWhenDone: false },
-            { key: "features-review-settings", label: "Review Settings", completionKey: "config-review-settings", lockWhenDone: false },
-            { key: "features-conflict-settings", label: "Conflict Settings", completionKey: "config-conflict-settings", lockWhenDone: false },
+            { key: "forms-submission", label: "Submission Form", completionKey: "config-submission-form", lockWhenDone: true, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
+            { key: "forms-review", label: "Review Form", completionKey: "config-review-form", lockWhenDone: true, permissions: { CONFERENCE_CHAIR: 'view', PROGRAM_CHAIR: 'edit' } },
+            { key: "forms-mail", label: "Email Templates", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'edit' } },
+            { key: "features-review-settings", label: "Review Settings", completionKey: "config-review-settings", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'view', PROGRAM_CHAIR: 'edit' } },
+            { key: "features-conflict-settings", label: "Conflict Settings", completionKey: "config-conflict-settings", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'view', PROGRAM_CHAIR: 'edit' } },
+        ]
+    },
+    {
+        title: "Activity Timeline",
+        icon: <Clock className="h-4 w-4" />,
+        accentColor: "text-amber-600",
+        items: [
+            { key: "features-activity-timeline", label: "Timeline", completionKey: "set-timeline", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'view' } },
         ]
     },
     {
@@ -129,10 +160,9 @@ const TAB_GROUPS = [
         icon: <FileText className="h-4 w-4" />,
         accentColor: "text-emerald-600",
         items: [
-            { key: "features-activity-timeline", label: "Timeline", completionKey: "set-timeline", lockWhenDone: false },
-            { key: "features-paper-management", label: "Papers", completionKey: "", lockWhenDone: false },
-            { key: "features-review-management", label: "Reviews", completionKey: "assign-reviewers", lockWhenDone: false },
-            { key: "features-camera-ready", label: "Camera-Ready", completionKey: "camera-ready", lockWhenDone: false },
+            { key: "features-paper-management", label: "Papers", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'view', PROGRAM_CHAIR: 'edit' } },
+            { key: "features-review-management", label: "Reviews", completionKey: "assign-reviewers", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'view', PROGRAM_CHAIR: 'edit' } },
+            { key: "features-camera-ready", label: "Camera-Ready", completionKey: "camera-ready", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'view', PROGRAM_CHAIR: 'edit' } },
         ]
     },
     {
@@ -140,8 +170,8 @@ const TAB_GROUPS = [
         icon: <Ticket className="h-4 w-4" />,
         accentColor: "text-rose-600",
         items: [
-            { key: "reg-attendees", label: "Attendees", completionKey: "", lockWhenDone: false },
-            { key: "reg-payment-history", label: "Payments", completionKey: "", lockWhenDone: false },
+            { key: "reg-attendees", label: "Attendees", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
+            { key: "reg-payment-history", label: "Payments", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
         ]
     },
     {
@@ -149,8 +179,8 @@ const TAB_GROUPS = [
         icon: <Calendar className="h-4 w-4" />,
         accentColor: "text-indigo-600",
         items: [
-            { key: "features-program-builder", label: "Program", completionKey: "", lockWhenDone: false },
-            { key: "reg-checkin", label: "Check-in", completionKey: "", lockWhenDone: false },
+            { key: "features-program-builder", label: "Program", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'hidden', PROGRAM_CHAIR: 'edit' } },
+            { key: "reg-checkin", label: "Check-in", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
         ]
     }
 ]
@@ -164,8 +194,11 @@ export default function ConferenceUpdatePage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<SettingsTab>('dashboard')
-    const [expandedGroups, setExpandedGroups] = useState<string[]>(['Overview', 'General Settings', 'User Management', 'Forms & Templates', 'Paper & Review', 'Registration', 'Event'])
+    const [expandedGroups, setExpandedGroups] = useState<string[]>(['Overview', 'General Settings', 'User Management', 'Forms & Templates', 'Activity Timeline', 'Paper & Review', 'Registration', 'Event'])
     const [isUpdatingGeneral, setIsUpdatingGeneral] = useState(false)
+
+    // ── Role detection state ──────────────────────────────
+    const [userRole, setUserRole] = useState<ChairRole | 'BOTH' | null>(null)
 
     // Submission Form Manager state
     const [savedFields, setSavedFields] = useState<DynamicField[]>([])
@@ -178,8 +211,6 @@ export default function ConferenceUpdatePage() {
     const [chairTrackIds, setChairTrackIds] = useState<number[] | null>(null)
 
     useEffect(() => {
-        // Parse JWT to detect if current user is only a REVIEWER on this conference
-        // REVIEWER-only users see only papers from their assigned tracks
         const detectRole = async () => {
             try {
                 const token = localStorage.getItem('accessToken')
@@ -191,24 +222,31 @@ export default function ConferenceUpdatePage() {
                 const me = members.find((m: any) => (m.user?.id || m.userId || m.id) === userId)
                 if (!me) return
                 const roles: string[] = (me.roles || []).map((r: any) => r.assignedRole)
-                const isHighChair = roles.some(r =>
-                    r === 'CONFERENCE_CHAIR' || r === 'PROGRAM_CHAIR'
-                )
-                if (!isHighChair) {
+
+                const isCC = roles.includes('CONFERENCE_CHAIR')
+                const isPC = roles.includes('PROGRAM_CHAIR')
+
+                if (isCC && isPC) {
+                    setUserRole('BOTH')
+                } else if (isCC) {
+                    setUserRole('CONFERENCE_CHAIR')
+                } else if (isPC) {
+                    setUserRole('PROGRAM_CHAIR')
+                } else {
+                    // Not a chair — check track chair, otherwise deny
+                    const isTrackChair = roles.some(r => r === 'TRACK_CHAIR')
+                    if (!isTrackChair) {
+                        toast.error('Access Denied. Chair privileges required.')
+                        router.push('/')
+                        return
+                    }
+                    // Track chairs get limited PC view
+                    setUserRole('PROGRAM_CHAIR')
                     const trackIds: number[] = (me.roles || [])
                         .filter((r: any) => r.assignedRole === 'REVIEWER')
                         .map((r: any) => r.conferenceTrackId)
                         .filter(Boolean)
                     setChairTrackIds(trackIds.length > 0 ? trackIds : null)
-
-                    // SECURITY PATCH: Redirect if user is not a high chair and not a track chair
-                    // If they are purely AUTHOR or REVIEWER, block access to the entire page
-                    const isTrackChair = roles.some(r => r === 'TRACK_CHAIR')
-                    if (!isTrackChair) {
-                        toast.error('Access Denied. Chair privileges required.')
-                        // Redirect away
-                        router.push('/dashboard')
-                    }
                 }
             } catch { /* ignore — user has full access */ }
         }
@@ -217,6 +255,30 @@ export default function ConferenceUpdatePage() {
 
     // Workflow completion status
     const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus>({})
+
+    // ── Role-based tab filtering ─────────────────────────────────────
+    const getTabPermission = useCallback((item: TabItemDef): TabPermission => {
+        if (!userRole || userRole === 'BOTH') return 'edit' // dual-role = full access
+        return item.permissions[userRole]
+    }, [userRole])
+
+    const filteredTabGroups = useMemo(() => {
+        return TAB_GROUPS.map(group => {
+            const visibleItems = group.items.filter(item => getTabPermission(item) !== 'hidden')
+            return { ...group, items: visibleItems }
+        }).filter(group => group.items.length > 0)
+    }, [getTabPermission])
+
+    const isViewOnly = useCallback((tabKey: string): boolean => {
+        for (const group of TAB_GROUPS) {
+            for (const item of group.items) {
+                if (item.key === tabKey) {
+                    return getTabPermission(item) === 'view'
+                }
+            }
+        }
+        return false
+    }, [getTabPermission])
 
     // Build a flat ordered list of all step keys (excluding Overview/Dashboard)
     const allOrderedSteps = useMemo(() => {
@@ -308,7 +370,7 @@ export default function ConferenceUpdatePage() {
 
             const hasMembers = (membersData as any).totalElements > 1
             const hasReviewerAssignments = papers.some((p: any) =>
-                ['UNDER_REVIEW', 'ACCEPTED', 'REJECTED', 'REVISION', 'PUBLISHED'].includes(p.status)
+                ['UNDER_REVIEW', 'ACCEPTED', 'REJECTED', 'PUBLISHED'].includes(p.status)
             )
 
             setWorkflowStatus({
@@ -475,6 +537,17 @@ export default function ConferenceUpdatePage() {
 
     const renderTabContent = () => {
         if (!conference) return null
+        const viewOnly = isViewOnly(activeTab)
+
+        // View-only banner for tabs where user can see but not edit
+        const ViewOnlyBanner = viewOnly ? (
+            <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 mb-6">
+                <Eye className="h-4 w-4 text-amber-600 shrink-0" />
+                <p className="text-sm text-amber-800">
+                    <span className="font-medium">View Only</span> — You are viewing this section as {userRole === 'CONFERENCE_CHAIR' ? 'Conference Chair' : 'Program Chair'}. Only {userRole === 'CONFERENCE_CHAIR' ? 'Program Chairs' : 'Conference Chairs'} can make changes here.
+                </p>
+            </div>
+        ) : null
 
         switch (activeTab) {
             case 'general-detail':
@@ -499,6 +572,7 @@ export default function ConferenceUpdatePage() {
                 }
                 return (
                     <div>
+                        {ViewOnlyBanner}
                         <h2 className="text-xl font-bold mb-6">Config Conference Detail</h2>
                         <ConferenceForm
                             initialData={safeDefaults}
@@ -510,16 +584,17 @@ export default function ConferenceUpdatePage() {
                 )
 
             case 'dashboard':
-                return <ChairDashboard conferenceId={conferenceId} onNavigate={(tab) => setActiveTab(tab as any)} />
+                return <ChairDashboard conferenceId={conferenceId} onNavigate={(tab) => setActiveTab(tab as any)} role={userRole === 'BOTH' ? undefined : userRole ?? undefined} />
 
             case 'features-tracks':
                 return (
                     <div className="space-y-6">
+                        {ViewOnlyBanner}
                         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
                             <h2 className="text-xl font-bold mb-2">Config Tracks</h2>
                             <p className="text-sm text-muted-foreground">Manage tracks in this conference.</p>
                         </div>
-                        <AddTrack conferenceId={conferenceId} onSubmit={handleSaveTrack} onImportSuccess={() => setTrackRefreshKey(k => k + 1)} />
+                        {!viewOnly && <AddTrack conferenceId={conferenceId} onSubmit={handleSaveTrack} onImportSuccess={() => setTrackRefreshKey(k => k + 1)} />}
                         <TrackList conferenceId={conferenceId} refreshKey={trackRefreshKey} />
                     </div>
                 )
@@ -527,6 +602,7 @@ export default function ConferenceUpdatePage() {
             case 'features-subject-areas':
                 return (
                     <div className="space-y-8">
+                        {ViewOnlyBanner}
                         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
                             <h2 className="text-xl font-bold mb-2">Config Subject Areas</h2>
                             <p className="text-sm text-muted-foreground">Manage primary and secondary subject areas for tracks.</p>
@@ -536,15 +612,16 @@ export default function ConferenceUpdatePage() {
                 )
 
             case 'features-members':
-                return <ConfigMembers conferenceId={conferenceId} />
+                return <>{ViewOnlyBanner}<ConfigMembers conferenceId={conferenceId} /></>
 
             case 'features-paper-management':
-                return <PaperManagement conferenceId={conferenceId} trackIds={chairTrackIds ?? undefined} />
+                return <>{ViewOnlyBanner}<PaperManagement conferenceId={conferenceId} trackIds={chairTrackIds ?? undefined} /></>
 
 
             case 'features-review-settings':
                 return (
                     <div className="space-y-6">
+                        {ViewOnlyBanner}
                         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
                             <h2 className="text-xl font-bold mb-2">Review Settings</h2>
                             <p className="text-sm text-muted-foreground">Configure review type, reviewer quota, discussion settings and more.</p>
@@ -554,23 +631,24 @@ export default function ConferenceUpdatePage() {
                 )
 
             case 'features-conflict-settings':
-                return <ConflictManagement conferenceId={conferenceId} />
+                return <>{ViewOnlyBanner}<ConflictManagement conferenceId={conferenceId} /></>
 
             case 'features-review-management':
-                return <ReviewManagement conferenceId={conferenceId} />
+                return <>{ViewOnlyBanner}<ReviewManagement conferenceId={conferenceId} /></>
 
             case 'features-camera-ready':
-                return <CameraReadyManagement conferenceId={conferenceId} />
+                return <>{ViewOnlyBanner}<CameraReadyManagement conferenceId={conferenceId} /></>
 
             case 'features-program-builder':
-                return <ProgramBuilder conferenceId={conferenceId} />
+                return <>{ViewOnlyBanner}<ProgramBuilder conferenceId={conferenceId} /></>
 
             case 'forms-mail':
-                return <EmailManagementInline conferenceId={conferenceId} />
+                return <>{ViewOnlyBanner}<EmailManagementInline conferenceId={conferenceId} /></>
 
             case 'forms-submission':
                 return (
                     <div className="space-y-8">
+                        {ViewOnlyBanner}
                         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
                             <h2 className="text-xl font-bold mb-2">Config Submission Form</h2>
                             <p className="text-sm text-muted-foreground">Design the fields authors must fill out when submitting papers.</p>
@@ -585,6 +663,7 @@ export default function ConferenceUpdatePage() {
             case 'forms-review':
                 return (
                     <div className="space-y-8">
+                        {ViewOnlyBanner}
                         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
                             <h2 className="text-xl font-bold mb-2">Config Review Form</h2>
                             <p className="text-sm text-muted-foreground">Configure the questions reviewers must answer for each track.</p>
@@ -594,14 +673,15 @@ export default function ConferenceUpdatePage() {
                 )
 
             case 'features-activity-timeline':
-                return <ActivityTimeline conferenceId={conferenceId} onNavigate={(tab) => setActiveTab(tab as any)} />
+                return <>{ViewOnlyBanner}<ActivityTimeline conferenceId={conferenceId} onNavigate={(tab) => setActiveTab(tab as any)} /></>
 
             case 'reg-ticket-types':
-                return <TicketTypesConfig conferenceId={conferenceId} />
+                return <>{ViewOnlyBanner}<TicketTypesConfig conferenceId={conferenceId} /></>
 
             case 'reg-attendees':
                 return (
                     <div className="space-y-6">
+                        {ViewOnlyBanner}
                         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
                             <h2 className="text-xl font-bold mb-2">Attendees</h2>
                             <p className="text-sm text-muted-foreground">View and manage all registered attendees.</p>
@@ -613,11 +693,11 @@ export default function ConferenceUpdatePage() {
             case 'reg-checkin':
                 return (
                     <div className="space-y-6">
+                        {ViewOnlyBanner}
                         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
                             <h2 className="text-xl font-bold mb-2">Check-In Scanner</h2>
                             <p className="text-sm text-muted-foreground">Scan QR codes or enter registration numbers to check in attendees on-site.</p>
                         </div>
-                        {/* Inline check-in component */}
                         <CheckInInline conferenceId={conferenceId} />
                     </div>
                 )
@@ -625,6 +705,7 @@ export default function ConferenceUpdatePage() {
             case 'reg-payment-history':
                 return (
                     <div className="space-y-6">
+                        {ViewOnlyBanner}
                         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
                             <h2 className="text-xl font-bold mb-2">Payment History</h2>
                             <p className="text-sm text-muted-foreground">Full audit trail of all VNPay callbacks for this conference.</p>
@@ -638,22 +719,43 @@ export default function ConferenceUpdatePage() {
         }
     }
 
+    // ── Role label helpers ────────────────────────────────────────
+    const roleLabel = userRole === 'CONFERENCE_CHAIR' ? 'Conference Chair' : userRole === 'PROGRAM_CHAIR' ? 'Program Chair' : userRole === 'BOTH' ? 'Conference & Program Chair' : ''
+    const roleBadgeColor = userRole === 'CONFERENCE_CHAIR' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : userRole === 'PROGRAM_CHAIR' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' : 'bg-violet-100 text-violet-800 border-violet-200'
+    const roleIcon = userRole === 'CONFERENCE_CHAIR' ? <Shield className="h-3.5 w-3.5" /> : <GraduationCap className="h-3.5 w-3.5" />
+    const backLink = userRole === 'PROGRAM_CHAIR' ? '/conference/program-conference' : '/conference/my-conference'
+    const backLabel = userRole === 'PROGRAM_CHAIR' ? 'Back to Program Conferences' : 'Back to My Conferences'
+
     return (
         <div className="min-h-screen bg-transparent flex flex-col overflow-hidden">
             <div className="flex-1 w-full max-w-[1700px] mx-auto flex flex-col p-4 md:p-8 overflow-hidden">
                 {/* Header Area */}
                 <div className="mb-8 shrink-0">
-                    <Link href="/conference/my-conference">
+                    <Link href={backLink}>
                         <Button variant="ghost" className="mb-4 -ml-2">
                             <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back to My Conferences
+                            {backLabel}
                         </Button>
                     </Link>
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">{conference.name}</h1>
-                        <p className="text-muted-foreground mt-1">
-                            Manage and configure your conference settings
-                        </p>
+                    <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                            <div className="flex items-center gap-3">
+                                <h1 className="text-3xl font-bold tracking-tight">{conference.name}</h1>
+                                {userRole && (
+                                    <Badge variant="outline" className={`text-xs font-semibold gap-1.5 ${roleBadgeColor}`}>
+                                        {roleIcon}
+                                        {roleLabel}
+                                    </Badge>
+                                )}
+                            </div>
+                            <p className="text-muted-foreground mt-1">
+                                {userRole === 'PROGRAM_CHAIR'
+                                    ? 'Manage academic workflow: reviews, papers, decisions'
+                                    : userRole === 'CONFERENCE_CHAIR'
+                                        ? 'Manage conference infrastructure and administration'
+                                        : 'Manage and configure your conference settings'}
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -663,7 +765,7 @@ export default function ConferenceUpdatePage() {
                     <div className="md:w-72 shrink-0 bg-muted/5 border-r flex flex-col h-full overflow-hidden">
                         <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                             <nav className="space-y-1">
-                                {TAB_GROUPS.map((group) => {
+                                {filteredTabGroups.map((group) => {
                                     const isExpanded = expandedGroups.includes(group.title)
                                     const isGroupActive = group.items.some(i => activeTab === i.key)
                                     return (
@@ -685,17 +787,21 @@ export default function ConferenceUpdatePage() {
                                                 <div className="flex flex-col space-y-0.5 mt-0.5 pl-3 border-l ml-4 border-border/50">
                                                     {group.items.map(item => {
                                                         const isActive = activeTab === item.key
+                                                        const itemIsViewOnly = isViewOnly(item.key)
                                                         return (
                                                             <button
                                                                 key={item.key}
                                                                 onClick={() => setActiveTab(item.key as SettingsTab)}
-                                                                className={`w-full text-left px-2.5 py-1.5 rounded-md text-sm transition-colors
+                                                                className={`w-full text-left px-2.5 py-1.5 rounded-md text-sm transition-colors flex items-center justify-between
                                                                     ${isActive
                                                                         ? 'bg-primary/10 text-primary font-semibold'
                                                                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                                                     }`}
                                                             >
-                                                                {item.label}
+                                                                <span>{item.label}</span>
+                                                                {itemIsViewOnly && (
+                                                                    <Eye className="h-3 w-3 text-amber-500 shrink-0 ml-1" />
+                                                                )}
                                                             </button>
                                                         )
                                                     })}
