@@ -16,11 +16,11 @@ import toast from "react-hot-toast"
 import { V, validate } from "@/lib/validation"
 
 const USER_TYPES = [
-    { value: "academia", label: "Academia" },
-    { value: "industry", label: "Industry" },
-    { value: "government", label: "Government" },
-    { value: "student", label: "Student" },
-    { value: "other", label: "Other" },
+    { value: "ACADEMIA", label: "Academia" },
+    { value: "INDUSTRY", label: "Industry" },
+    { value: "GOVERNMENT", label: "Government" },
+    { value: "STUDENT", label: "Student" },
+    { value: "OTHER", label: "Other" },
 ]
 
 type Step = "activate" | "profile" | "done"

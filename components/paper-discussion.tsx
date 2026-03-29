@@ -6,7 +6,7 @@ import type { DiscussionPost, DiscussionPostRequest } from '@/types/discussion'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, MessageSquare, Send, Reply, Trash2, ChevronDown, ChevronRight, User2 } from 'lucide-react'
+import { Loader2, MessageSquare, Send, Reply, Trash2, ChevronDown, ChevronRight, User2, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { V } from '@/lib/validation'
 
@@ -16,10 +16,12 @@ interface PaperDiscussionProps {
     isChair?: boolean
     /** If true, user names are anonymized (Reviewer 1, 2, ...) */
     anonymize?: boolean
+    /** If false, the post/reply forms are disabled with an explanation */
+    discussionEnabled?: boolean
     className?: string
 }
 
-export function PaperDiscussion({ paperId, currentUserId, isChair = false, anonymize = true, className = '' }: PaperDiscussionProps) {
+export function PaperDiscussion({ paperId, currentUserId, isChair = false, anonymize = true, discussionEnabled = true, className = '' }: PaperDiscussionProps) {
     const [posts, setPosts] = useState<DiscussionPost[]>([])
     const [loading, setLoading] = useState(true)
     const [newContent, setNewContent] = useState('')
@@ -89,8 +91,9 @@ export function PaperDiscussion({ paperId, currentUserId, isChair = false, anony
             setNewTitle('')
             toast.success('Comment posted')
             await fetchPosts()
-        } catch (err) {
-            toast.error('Failed to post comment')
+        } catch (err: any) {
+            const detail = err?.response?.data?.detail || err?.response?.data?.message || 'Failed to post comment'
+            toast.error(detail)
         } finally {
             setSubmitting(false)
         }
@@ -113,8 +116,9 @@ export function PaperDiscussion({ paperId, currentUserId, isChair = false, anony
             setReplyingTo(null)
             toast.success('Reply posted')
             await fetchPosts()
-        } catch {
-            toast.error('Failed to post reply')
+        } catch (err: any) {
+            const detail = err?.response?.data?.detail || err?.response?.data?.message || 'Failed to post reply'
+            toast.error(detail)
         } finally {
             setSubmitting(false)
         }
@@ -164,32 +168,44 @@ export function PaperDiscussion({ paperId, currentUserId, isChair = false, anony
 
     return (
         <div className={`space-y-4 ${className}`}>
-            {/* Post composer */}
-            <Card className="border-indigo-200">
-                <CardContent className="p-4 space-y-3">
-                    <input
-                        className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                        placeholder="Title (optional)"
-                        value={newTitle}
-                        onChange={e => setNewTitle(e.target.value)}
-                    />
-                    <textarea
-                        className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[80px] resize-y"
-                        placeholder="Write a discussion comment about this paper..."
-                        value={newContent}
-                        onChange={e => setNewContent(e.target.value)}
-                    />
-                    <div className="flex items-center justify-between">
-                        <p className="text-[10px] text-muted-foreground">
-                            💬 Discussion is only visible to Reviewers and Chairs
-                        </p>
-                        <Button size="sm" onClick={handlePost} disabled={submitting || !newContent.trim()} className="gap-1.5">
-                            {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                            Post
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
+            {/* Post composer or disabled banner */}
+            {!discussionEnabled ? (
+                <Card className="border-amber-200 bg-amber-50/50">
+                    <CardContent className="p-4 flex items-center gap-3">
+                        <AlertCircle className="h-5 w-5 text-amber-500 shrink-0" />
+                        <div>
+                            <p className="text-sm font-medium text-amber-800">Discussion is not enabled for this paper</p>
+                            <p className="text-xs text-amber-600 mt-0.5">The conference chair has not opened the discussion phase yet. You can still read existing comments below.</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            ) : (
+                <Card className="border-indigo-200">
+                    <CardContent className="p-4 space-y-3">
+                        <input
+                            className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            placeholder="Title (optional)"
+                            value={newTitle}
+                            onChange={e => setNewTitle(e.target.value)}
+                        />
+                        <textarea
+                            className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[80px] resize-y"
+                            placeholder="Write a discussion comment about this paper..."
+                            value={newContent}
+                            onChange={e => setNewContent(e.target.value)}
+                        />
+                        <div className="flex items-center justify-between">
+                            <p className="text-[10px] text-muted-foreground">
+                                💬 Discussion is only visible to Reviewers and Chairs
+                            </p>
+                            <Button size="sm" onClick={handlePost} disabled={submitting || !newContent.trim()} className="gap-1.5">
+                                {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                                Post
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Posts list */}
             {topLevelPosts.length === 0 ? (
@@ -245,13 +261,15 @@ export function PaperDiscussion({ paperId, currentUserId, isChair = false, anony
 
                                     {/* Actions */}
                                     <div className="flex items-center gap-3 mt-3 pt-2 border-t">
-                                        <button
-                                            onClick={() => { setReplyingTo(replyingTo === post.id ? null : post.id); setReplyContent('') }}
-                                            className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
-                                        >
-                                            <Reply className="h-3.5 w-3.5" />
-                                            Reply
-                                        </button>
+                                        {discussionEnabled && (
+                                            <button
+                                                onClick={() => { setReplyingTo(replyingTo === post.id ? null : post.id); setReplyContent('') }}
+                                                className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+                                            >
+                                                <Reply className="h-3.5 w-3.5" />
+                                                Reply
+                                            </button>
+                                        )}
                                         {replies.length > 0 && (
                                             <button
                                                 onClick={() => toggleReplies(post.id)}
