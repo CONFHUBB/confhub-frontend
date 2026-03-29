@@ -265,6 +265,7 @@ export default function ReviewerConsole() {
                     reviews={reviews}
                     conferenceId={conferenceId}
                     currentUserId={reviewerId}
+                    activities={activities}
                 />
             default:
                 return null
@@ -442,6 +443,7 @@ const COLOR_MAP: Record<string, { bg: string; text: string; border: string; ligh
     indigo:  { bg: 'bg-indigo-600',  text: 'text-indigo-700',  border: 'border-indigo-300',  light: 'bg-indigo-50',  dot: 'bg-indigo-500',  btn: 'bg-indigo-600 hover:bg-indigo-700 text-white' },
     sky:     { bg: 'bg-sky-500',     text: 'text-sky-700',     border: 'border-sky-300',     light: 'bg-sky-50',     dot: 'bg-sky-500',     btn: 'bg-sky-500 hover:bg-sky-600 text-white' },
     amber:   { bg: 'bg-amber-500',   text: 'text-amber-700',   border: 'border-amber-300',   light: 'bg-amber-50',   dot: 'bg-amber-500',   btn: 'bg-amber-500 hover:bg-amber-600 text-white' },
+    orange:  { bg: 'bg-orange-500',  text: 'text-orange-700',  border: 'border-orange-300',  light: 'bg-orange-50',  dot: 'bg-orange-500',  btn: 'bg-orange-500 hover:bg-orange-600 text-white' },
     emerald: { bg: 'bg-emerald-600', text: 'text-emerald-700', border: 'border-emerald-300', light: 'bg-emerald-50', dot: 'bg-emerald-500', btn: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
 }
 
@@ -876,7 +878,7 @@ function ProfileTab({
             await createOrUpdateUserProfile(reviewerId, {
                 ...(profile || {} as any),
                 ...form,
-                userType: profile?.userType || 'REVIEWER',
+                userType: profile?.userType || 'ACADEMIA',
                 phoneOffice: profile?.phoneOffice || '',
                 secondaryInstitution: profile?.secondaryInstitution || '',
                 secondaryCountry: profile?.secondaryCountry || '',
@@ -885,7 +887,10 @@ function ProfileTab({
             })
             toast.success('Profile updated successfully!')
             onSaved()
-        } catch { toast.error('Failed to save profile') }
+        } catch (err: any) {
+            const detail = err?.response?.data?.detail || err?.response?.data?.message || 'Failed to save profile. Please check your input and try again.'
+            toast.error(detail)
+        }
         finally { setSaving(false) }
     }
 

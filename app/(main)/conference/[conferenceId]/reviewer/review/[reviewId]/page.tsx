@@ -54,6 +54,7 @@ export default function ReviewPaperPage() {
     const [paperFiles, setPaperFiles] = useState<PaperFileResponse[]>([])
     const [showPdfPreview, setShowPdfPreview] = useState(true)
     const [showDiscussion, setShowDiscussion] = useState(false)
+    const [discussionEnabled, setDiscussionEnabled] = useState(false)
     const [currentUserId, setCurrentUserId] = useState<number | null>(null)
 
     // Get userId from JWT
@@ -95,6 +96,9 @@ export default function ReviewPaperPage() {
                             setActivityClosed(`Review submission deadline has passed (${new Date(reviewActivity.deadline).toLocaleString()}).`)
                         }
                     }
+                    // Check discussion activity
+                    const discussionActivity = activities.find(a => a.activityType === 'REVIEW_DISCUSSION')
+                    setDiscussionEnabled(!!(discussionActivity && discussionActivity.isEnabled))
                 }
             } catch { /* ignore */ }
 
@@ -649,6 +653,7 @@ export default function ReviewPaperPage() {
                                             paperId={review.paper.id}
                                             currentUserId={currentUserId}
                                             anonymize={true}
+                                            discussionEnabled={discussionEnabled}
                                         />
                                     </CardContent>
                                 )}
