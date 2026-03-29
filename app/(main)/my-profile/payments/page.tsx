@@ -7,6 +7,7 @@ import { getUserByEmail } from "@/app/api/user.api"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, CreditCard } from "lucide-react"
+import { toast } from "react-hot-toast"
 
 export default function GlobalPaymentHistoryPage() {
     const router = useRouter()
@@ -30,6 +31,7 @@ export default function GlobalPaymentHistoryPage() {
             setHistory(data || [])
         } catch (error) {
             console.error(error)
+            toast.error("Failed to load payment history. Please try again.")
         } finally {
             setLoading(false)
         }

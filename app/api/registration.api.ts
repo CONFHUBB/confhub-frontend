@@ -114,6 +114,10 @@ export const retryPayment = async (conferenceId: number, userId: number): Promis
   return res.data
 }
 
+export const refundTicket = async (conferenceId: number, ticketId: number): Promise<void> => {
+  await http.post(`/conferences/${conferenceId}/refund?ticketId=${ticketId}`)
+}
+
 export const getMyTicket = async (conferenceId: number, userId: number): Promise<TicketResponse> => {
   const res = await http.get<TicketResponse>(`/conferences/${conferenceId}/my-ticket?userId=${userId}`)
   return res.data
@@ -174,5 +178,12 @@ export const getTicketPaymentHistory = async (ticketId: number): Promise<Payment
 
 export const getMyPaymentHistory = async (userId: number): Promise<PaymentHistoryResponse[]> => {
   const res = await http.get<PaymentHistoryResponse[]>(`/my-payment-history?userId=${userId}`)
+  return res.data
+}
+
+export const exportAllInvoices = async (conferenceId: number): Promise<Blob> => {
+  const res = await http.get(`/documents/conferences/${conferenceId}/invoices`, {
+    responseType: 'blob',
+  })
   return res.data
 }

@@ -1,14 +1,23 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const publicPaths = ['/auth/login', '/auth/register']
+const isPublicPath = (pathname: string) => {
+    if (pathname === '/') return true
+    if (pathname.startsWith('/auth/')) return true
+    if (pathname === '/conference') return true
+    if (pathname === '/paper/published') return true
+    
+    // Match exactly /conference/[id] but NOT sub-paths like /conference/[id]/update
+    if (/^\/conference\/\d+$/.test(pathname)) return true
+    
+    return false
+}
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
     const token = request.cookies.get('accessToken')?.value
 
-    // Allow public paths (login, register)
-    if (publicPaths.some(path => pathname.startsWith(path))) {
+    if (isPublicPath(pathname)) {
         return NextResponse.next()
     }
 

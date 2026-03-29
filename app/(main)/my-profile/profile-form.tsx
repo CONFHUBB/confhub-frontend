@@ -63,7 +63,7 @@ export function ProfileForm({ initialData, onSubmit, userName, userEmail }: Prof
             websiteUrl: initialData?.websiteUrl || "",
             dblpId: initialData?.dblpId || "",
             googleScholarLink: initialData?.googleScholarLink || "",
-            orcidId: initialData?.orcidId || "",
+            orcid: initialData?.orcid || "",
             semanticScholarId: initialData?.semanticScholarId || "",
         },
     })
@@ -398,13 +398,13 @@ export function ProfileForm({ initialData, onSubmit, userName, userEmail }: Prof
                                         <BookOpen className="h-5 w-5" />
                                     </div>
                                     <div className="flex-1 space-y-1.5">
-                                        <Label htmlFor="orcidId" className="text-sm font-semibold">ORCID iD</Label>
+                                        <Label htmlFor="orcid" className="text-sm font-semibold">ORCID iD</Label>
                                         <Input
-                                            id="orcidId"
+                                            id="orcid"
                                             placeholder="0000-0002-1825-0097"
-                                            {...register("orcidId", { validate: val => V.orcid(val) || undefined })}
+                                            {...register("orcid", { validate: val => V.orcid(val) || undefined })}
                                         />
-                                        {errors.orcidId?.message && <FieldError>{errors.orcidId.message}</FieldError>}
+                                        {errors.orcid?.message && <FieldError>{errors.orcid.message}</FieldError>}
                                         <p className="text-xs text-muted-foreground">
                                             Your unique ORCID identifier (e.g. 0000-0002-1825-0097).
                                         </p>

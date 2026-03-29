@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ChevronDown, ChevronUp, FileText, Search, ExternalLink } from "lucide-react"
+import { toast } from "react-hot-toast"
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; dotColor: string }> = {
     'DRAFT': { label: 'Draft', color: 'bg-gray-100 text-gray-700 border-gray-200', dotColor: 'bg-gray-500' },
@@ -48,6 +49,7 @@ export default function MyAllPapersPage() {
             setPapers(data || [])
         } catch (error) {
             console.error(error)
+            toast.error("Failed to load papers. Please try again.")
         } finally {
             setLoading(false)
         }

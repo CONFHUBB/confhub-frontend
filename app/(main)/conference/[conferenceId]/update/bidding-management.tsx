@@ -590,14 +590,14 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                                     )}
 
                                     {/* Academic links */}
-                                    {(detailProfile?.orcidId || detailProfile?.googleScholarLink || detailProfile?.dblpId) && (
+                                    {(detailProfile?.orcid || detailProfile?.googleScholarLink || detailProfile?.dblpId) && (
                                         <div className="space-y-2">
                                             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Liên kết học thuật</h4>
                                             <div className="flex flex-wrap gap-2">
-                                                {detailProfile.orcidId && (
-                                                    <a href={`https://orcid.org/${detailProfile.orcidId}`} target="_blank" rel="noopener noreferrer"
+                                                {detailProfile.orcid && (
+                                                    <a href={`https://orcid.org/${detailProfile.orcid}`} target="_blank" rel="noopener noreferrer"
                                                        className="text-xs px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors">
-                                                        ORCID: {detailProfile.orcidId}
+                                                        ORCID: {detailProfile.orcid}
                                                     </a>
                                                 )}
                                                 {detailProfile.googleScholarLink && (

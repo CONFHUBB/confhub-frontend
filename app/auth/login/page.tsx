@@ -1,6 +1,7 @@
 "use client"
 
 import { LoginForm } from "@/app/auth/login/login-form"
+import { Suspense } from "react"
 
 export default function LoginPage() {
   return (
@@ -10,7 +11,9 @@ export default function LoginPage() {
         style={{ backgroundImage: "url('/images/Rectangle.webp')" }}
       />
       <div className="w-full max-w-sm md:max-w-4xl">
-        <LoginForm />
+        <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading...</div>}>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   )
