@@ -146,7 +146,7 @@ export function AppNavbar() {
 
     const handleLogout = () => {
         localStorage.removeItem('accessToken')
-        router.push('/')
+        window.location.href = '/'
     }
 
     const isPrimaryActive = (path: string, exact: boolean, query?: string) => {
