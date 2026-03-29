@@ -73,7 +73,7 @@ export interface UserProfileRequest {
     websiteUrl: string
     dblpId: string
     googleScholarLink: string
-    orcidId: string
+    orcid: string
     semanticScholarId: string
 }
 

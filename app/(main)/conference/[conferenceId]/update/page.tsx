@@ -43,6 +43,7 @@ import AttendeesManagement from './attendees-management'
 import ProgramBuilder from './program-builder'
 import { CheckInInline } from './checkin-inline'
 import { PaymentHistoryView } from './payment-history-view'
+import { AnalyticsDashboard } from './analytics-dashboard'
 
 import { AuthorNotificationWizard } from './author-notification-wizard'
 
@@ -63,6 +64,7 @@ import type {
 
 type SettingsTab =
     | 'dashboard'
+    | 'analytics'
     | 'general-detail'
     | 'features-tracks'
     | 'features-subject-areas'
@@ -113,7 +115,8 @@ const TAB_GROUPS: TabGroupDef[] = [
         icon: <LayoutDashboard className="h-4 w-4" />,
         accentColor: "text-primary",
         items: [
-            { key: "dashboard", label: "Dashboard", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'edit' } }
+            { key: "dashboard", label: "Dashboard", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'edit' } },
+            { key: "analytics", label: "Analytics", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'edit' } }
         ]
     },
     {
@@ -220,7 +223,11 @@ export default function ConferenceUpdatePage() {
                 const data = await getConferenceUsersWithRoles(conferenceId, 0, 200)
                 const members: any[] = (data as any)?.content || data || []
                 const me = members.find((m: any) => (m.user?.id || m.userId || m.id) === userId)
-                if (!me) return
+                if (!me) {
+                    // User not found in members list but has page access — assume full chair
+                    setUserRole('BOTH')
+                    return
+                }
                 const roles: string[] = (me.roles || []).map((r: any) => r.assignedRole)
 
                 const isCC = roles.includes('CONFERENCE_CHAIR')
@@ -248,7 +255,10 @@ export default function ConferenceUpdatePage() {
                         .filter(Boolean)
                     setChairTrackIds(trackIds.length > 0 ? trackIds : null)
                 }
-            } catch { /* ignore — user has full access */ }
+            } catch {
+                // API error — assume full access since user navigated here
+                setUserRole('BOTH')
+            }
         }
         detectRole()
     }, [conferenceId])
@@ -586,6 +596,9 @@ export default function ConferenceUpdatePage() {
             case 'dashboard':
                 return <ChairDashboard conferenceId={conferenceId} onNavigate={(tab) => setActiveTab(tab as any)} role={userRole === 'BOTH' ? undefined : userRole ?? undefined} />
 
+            case 'analytics':
+                return <AnalyticsDashboard conferenceId={conferenceId} />
+
             case 'features-tracks':
                 return (
                     <div className="space-y-6">
@@ -729,32 +742,85 @@ export default function ConferenceUpdatePage() {
     return (
         <div className="min-h-screen bg-transparent flex flex-col overflow-hidden">
             <div className="flex-1 w-full max-w-[1700px] mx-auto flex flex-col p-4 md:p-8 overflow-hidden">
-                {/* Header Area */}
-                <div className="mb-8 shrink-0">
+                {/* Header Area — Vibrant hero banner */}
+                <div className="mb-6 shrink-0">
                     <Link href={backLink}>
-                        <Button variant="ghost" className="mb-4 -ml-2">
+                        <Button variant="ghost" className="mb-3 -ml-2">
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             {backLabel}
                         </Button>
                     </Link>
-                    <div className="flex items-center gap-4">
-                        <div className="flex-1">
-                            <div className="flex items-center gap-3">
-                                <h1 className="text-3xl font-bold tracking-tight">{conference.name}</h1>
-                                {userRole && (
-                                    <Badge variant="outline" className={`text-xs font-semibold gap-1.5 ${roleBadgeColor}`}>
-                                        {roleIcon}
-                                        {roleLabel}
-                                    </Badge>
-                                )}
+                    <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-700 p-6 md:px-8 md:py-7 shadow-lg">
+                        {/* Decorative circles */}
+                        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
+                        <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/5 blur-xl" />
+
+                        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                                {/* Acronym + Status */}
+                                <div className="flex items-center gap-2.5 mb-2">
+                                    {conference.acronym && (
+                                        <span className="text-xs font-mono font-semibold tracking-wider text-white/70 bg-white/10 px-2.5 py-0.5 rounded-md">
+                                            {conference.acronym}
+                                        </span>
+                                    )}
+                                    <span className={`text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
+                                        conference.status === 'ONGOING' ? 'bg-emerald-400/20 text-emerald-200' :
+                                        conference.status === 'SCHEDULED' ? 'bg-blue-400/20 text-blue-200' :
+                                        conference.status === 'COMPLETED' ? 'bg-gray-400/20 text-gray-300' :
+                                        'bg-amber-400/20 text-amber-200'
+                                    }`}>
+                                        {conference.status}
+                                    </span>
+                                </div>
+
+                                {/* Title */}
+                                <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight leading-tight">
+                                    {conference.name}
+                                </h1>
+
+                                {/* Subtitle with dates */}
+                                <p className="text-white/60 text-sm mt-1.5 flex items-center gap-2 flex-wrap">
+                                    <Calendar className="h-3.5 w-3.5 shrink-0" />
+                                    {conference.startDate && conference.endDate
+                                        ? `${new Date(conference.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(conference.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                                        : 'Dates TBD'
+                                    }
+                                    {conference.location && (
+                                        <>
+                                            <span className="text-white/30">·</span>
+                                            <span>{conference.location}</span>
+                                        </>
+                                    )}
+                                </p>
                             </div>
-                            <p className="text-muted-foreground mt-1">
-                                {userRole === 'PROGRAM_CHAIR'
-                                    ? 'Manage academic workflow: reviews, papers, decisions'
-                                    : userRole === 'CONFERENCE_CHAIR'
-                                        ? 'Manage conference infrastructure and administration'
-                                        : 'Manage and configure your conference settings'}
-                            </p>
+
+                            {/* Right: Role badge */}
+                            {userRole && (
+                                <div className="flex items-center gap-2.5 md:self-start">
+                                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/95 shadow-lg">
+                                        <div className={`flex items-center justify-center h-9 w-9 rounded-lg ${
+                                            userRole === 'CONFERENCE_CHAIR'
+                                                ? 'bg-emerald-100 text-emerald-600'
+                                                : userRole === 'PROGRAM_CHAIR'
+                                                    ? 'bg-blue-100 text-blue-600'
+                                                    : 'bg-violet-100 text-violet-600'
+                                        }`}>
+                                            {roleIcon}
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wider leading-none">Your Role</p>
+                                            <p className={`text-sm font-bold leading-tight mt-0.5 ${
+                                                userRole === 'CONFERENCE_CHAIR'
+                                                    ? 'text-emerald-700'
+                                                    : userRole === 'PROGRAM_CHAIR'
+                                                        ? 'text-blue-700'
+                                                        : 'text-violet-700'
+                                            }`}>{roleLabel}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

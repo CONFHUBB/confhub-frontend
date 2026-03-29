@@ -21,11 +21,14 @@ import {
     Loader2, ArrowLeft, LayoutDashboard, User2, Shield, Target, FileSearch,
     ClipboardList, ChevronDown, ChevronRight, CheckCircle2, Circle, Lock,
     Clock, Zap, ThumbsUp, Minus, ThumbsDown, AlertTriangle,
-    Building2, Mail, Globe, GraduationCap, Phone
+    Building2, Mail, Globe, GraduationCap, Phone,
+    ChevronUp, XCircle, ArrowRight, MessageSquare
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { SubjectAreasTab } from './subject-areas-tab'
 import { BiddingTab } from './bidding-tab'
+import { ReviewsTab } from './reviews-tab'
+import { DiscussionTab } from './discussion-tab'
 import { FieldError } from '@/components/ui/field'
 import { V } from '@/lib/validation'
 
@@ -35,6 +38,7 @@ type ReviewerTab =
     | 'profile'
     | 'bidding'
     | 'reviews'
+    | 'discussion'
 
 interface StepGroup {
     title: string
@@ -75,6 +79,7 @@ const TAB_GROUPS: StepGroup[] = [
         accentColor: "text-amber-600",
         items: [
             { key: "reviews", label: "Assigned Reviews", completionKey: "reviews-done" },
+            { key: "discussion", label: "Consensus Discussion", completionKey: "" },
         ]
     }
 ]
@@ -255,6 +260,12 @@ export default function ReviewerConsole() {
                     reviews={reviews}
                     conferenceId={conferenceId}
                 />
+            case 'discussion':
+                return <DiscussionTab
+                    reviews={reviews}
+                    conferenceId={conferenceId}
+                    currentUserId={reviewerId}
+                />
             default:
                 return null
         }
@@ -269,15 +280,61 @@ export default function ReviewerConsole() {
     return (
         <div className="min-h-screen bg-transparent flex flex-col overflow-hidden">
             <div className="flex-1 w-full max-w-[1700px] mx-auto flex flex-col p-4 md:p-8 overflow-hidden">
-                {/* Header */}
+                {/* Header Area — Vibrant hero banner */}
                 <div className="mb-6 shrink-0">
                     <Button variant="ghost" className="mb-3 -ml-2 gap-2" onClick={() => router.push('/conference/reviewer-select')}>
                         <ArrowLeft className="h-4 w-4" />
                         Back to Conferences
                     </Button>
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight">{conference?.name || 'Conference'}</h1>
-                        <p className="text-muted-foreground text-sm mt-1">Reviewer Console — {conference?.acronym}</p>
+                    <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-700 p-6 md:px-8 md:py-7 shadow-lg">
+                        {/* Decorative circles */}
+                        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
+                        <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/5 blur-xl" />
+
+                        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                                {/* Acronym + Status */}
+                                <div className="flex items-center gap-2.5 mb-2">
+                                    {conference?.acronym && (
+                                        <span className="text-xs font-mono font-semibold tracking-wider text-white/70 bg-white/10 px-2.5 py-0.5 rounded-md">
+                                            {conference.acronym}
+                                        </span>
+                                    )}
+                                    <span className={`text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
+                                        conference?.status === 'ONGOING' ? 'bg-emerald-400/20 text-emerald-200' :
+                                        conference?.status === 'SCHEDULED' ? 'bg-blue-400/20 text-blue-200' :
+                                        conference?.status === 'COMPLETED' ? 'bg-gray-400/20 text-gray-300' :
+                                        'bg-amber-400/20 text-amber-200'
+                                    }`}>
+                                        {conference?.status || 'UNKNOWN'}
+                                    </span>
+                                </div>
+
+                                {/* Title */}
+                                <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight leading-tight">
+                                    {conference?.name || 'Conference'}
+                                </h1>
+
+                                {/* Subtitle with Location / Dates mapping (optional but matches styling) */}
+                                <p className="text-white/60 text-sm mt-1.5 flex items-center gap-2 flex-wrap">
+                                    <Shield className="h-3.5 w-3.5 shrink-0" />
+                                    Reviewer Console
+                                </p>
+                            </div>
+
+                            {/* Right: Role badge */}
+                            <div className="flex items-center gap-2.5 md:self-start">
+                                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/95 shadow-lg">
+                                    <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-indigo-100 text-indigo-600">
+                                        <User2 className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wider leading-none">Your Role</p>
+                                        <p className="text-sm font-bold leading-tight mt-0.5 text-indigo-700">Reviewer</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -286,19 +343,7 @@ export default function ReviewerConsole() {
                     {/* Sidebar */}
                     <div className="md:w-64 shrink-0 bg-muted/5 border-r flex flex-col h-full overflow-hidden">
                         <div className="flex-1 overflow-y-auto p-4">
-                            {/* Progress bar */}
-                            <div className="mb-5 px-1">
-                                <div className="flex items-center justify-between mb-1.5">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Progress</span>
-                                    <span className={`text-[10px] font-bold ${pct === 100 ? 'text-emerald-600' : 'text-muted-foreground'}`}>{doneCount}/{totalCount}</span>
-                                </div>
-                                <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
-                                    <div
-                                        className={`h-full rounded-full transition-all duration-700 ${pct === 100 ? 'bg-emerald-500' : 'bg-primary'}`}
-                                        style={{ width: `${pct}%` }}
-                                    />
-                                </div>
-                            </div>
+                            {/* Progress bar removed — moved to main dashboard panel */}
 
                             {/* Nav groups */}
                             <nav>
@@ -392,6 +437,190 @@ export default function ReviewerConsole() {
 // Sub-components
 // ══════════════════════════════════════════════════════════════════
 
+// ──────────────────────────── Phase Status Card ────────────────────────────
+const COLOR_MAP: Record<string, { bg: string; text: string; border: string; light: string; dot: string; btn: string }> = {
+    indigo:  { bg: 'bg-indigo-600',  text: 'text-indigo-700',  border: 'border-indigo-300',  light: 'bg-indigo-50',  dot: 'bg-indigo-500',  btn: 'bg-indigo-600 hover:bg-indigo-700 text-white' },
+    sky:     { bg: 'bg-sky-500',     text: 'text-sky-700',     border: 'border-sky-300',     light: 'bg-sky-50',     dot: 'bg-sky-500',     btn: 'bg-sky-500 hover:bg-sky-600 text-white' },
+    amber:   { bg: 'bg-amber-500',   text: 'text-amber-700',   border: 'border-amber-300',   light: 'bg-amber-50',   dot: 'bg-amber-500',   btn: 'bg-amber-500 hover:bg-amber-600 text-white' },
+    emerald: { bg: 'bg-emerald-600', text: 'text-emerald-700', border: 'border-emerald-300', light: 'bg-emerald-50', dot: 'bg-emerald-500', btn: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
+}
+
+const REVIEWER_PHASES = [
+    { id: 'onboarding', label: 'Setup Profile', icon: User2, color: 'indigo', nextPhaseTab: 'profile' },
+    { id: 'bidding', label: 'Paper Bidding', icon: FileSearch, color: 'sky', nextPhaseTab: 'bidding' },
+    { id: 'review', label: 'Paper Review', icon: ClipboardList, color: 'amber', nextPhaseTab: 'reviews' },
+    { id: 'discussion', label: 'Discussion', icon: MessageSquare, color: 'orange', nextPhaseTab: 'reviews' },
+    { id: 'done', label: 'Completed', icon: CheckCircle2, color: 'emerald', nextPhaseTab: '' },
+]
+
+function getReviewerChecklist(phaseId: string, workflowStatus: Record<string, boolean>, reviews: any[], activities: any[], profileDone: boolean, interestsDone: boolean): { label: string; met: boolean; tab: string; blocking: boolean }[] {
+    const isActivityOpen = (type: string) => activities.some((a: any) => a.activityType === type && a.isEnabled)
+    switch (phaseId) {
+        case 'onboarding':
+            return [
+                { label: 'Fill out institution details', met: profileDone, tab: 'profile', blocking: true },
+                { label: 'Select subject areas of interest', met: interestsDone, tab: 'profile', blocking: true }
+            ]
+        case 'bidding':
+            return [
+                { label: 'Bidding activity open', met: isActivityOpen('REVIEWER_BIDDING'), tab: 'dashboard', blocking: true },
+                { label: 'Place bids on papers', met: workflowStatus['bidding-done'], tab: 'bidding', blocking: false },
+                { label: 'Papers assigned to you', met: reviews.length > 0, tab: 'dashboard', blocking: true }
+            ]
+        case 'review':
+            return [
+                { label: 'Review Submission activity open', met: isActivityOpen('REVIEW_SUBMISSION'), tab: 'dashboard', blocking: true },
+                { label: 'Complete all assigned reviews', met: workflowStatus['reviews-done'], tab: 'reviews', blocking: true }
+            ]
+        case 'discussion':
+            return [
+                { label: 'Discussion activity open', met: isActivityOpen('REVIEW_DISCUSSION'), tab: 'dashboard', blocking: true },
+                { label: 'Participate in review discussions', met: false, tab: 'reviews', blocking: false }
+            ]
+        default:
+            return []
+    }
+}
+
+function ReviewerPhaseStatusCard({
+    activities, reviews, workflowStatus, interestsCount, profileComplete, onNavigate, 
+    biddingDeadline, reviewDeadline
+}: {
+    activities: ConferenceActivityDTO[]
+    reviews: ReviewResponse[]
+    workflowStatus: Record<string, boolean>
+    interestsCount: number
+    profileComplete: boolean
+    onNavigate: (tab: any) => void
+    biddingDeadline: any
+    reviewDeadline: any
+}) {
+    const isProfileDone = profileComplete
+    const hasAssignments = reviews.length > 0
+    const isReviewsDone = workflowStatus['reviews-done']
+    const isBiddingOpen = activities.some(a => a.activityType === 'REVIEWER_BIDDING' && a.isEnabled)
+    const isReviewOpen = activities.some(a => a.activityType === 'REVIEW_SUBMISSION' && a.isEnabled)
+    const isDiscussionOpen = activities.some(a => a.activityType === 'REVIEW_DISCUSSION' && a.isEnabled)
+
+    let activePhaseIdx = 0
+    if (!isProfileDone) activePhaseIdx = 0
+    else if (!hasAssignments && !isReviewOpen) activePhaseIdx = 1 
+    else if (hasAssignments && !isReviewsDone) activePhaseIdx = 2 
+    else if (isDiscussionOpen) activePhaseIdx = 3
+    else activePhaseIdx = 4
+
+    const activePhase = REVIEWER_PHASES[activePhaseIdx]
+    const c = COLOR_MAP[activePhase.color]
+    const [checklistOpen, setChecklistOpen] = useState(true)
+
+    const checklist = getReviewerChecklist(activePhase.id, workflowStatus, reviews, activities, profileComplete, interestsCount > 0)
+    const blockingItems = checklist.filter(i => i.blocking)
+    const allBlockingMet = blockingItems.length === 0 || blockingItems.every(i => i.met)
+    const metCount = checklist.filter(i => i.met).length
+
+    const isLastPhase = activePhaseIdx === REVIEWER_PHASES.length - 1
+    const upcoming = reviewDeadline && !reviewDeadline.isPast && isReviewOpen ? reviewDeadline 
+                   : biddingDeadline && !biddingDeadline.isPast && isBiddingOpen ? biddingDeadline 
+                   : null
+    const upcomingLabel = upcoming === reviewDeadline ? 'Review' : 'Bidding'
+
+    return (
+        <div className="rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+            <div className="bg-white px-6 pt-5 pb-0">
+                <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-indigo-500" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Reviewer Timeline</span>
+                    </div>
+                    {upcoming && (
+                        <div className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${upcoming.isUrgent ? 'bg-red-50 text-red-600 border border-red-200 animate-pulse' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'}`}>
+                            <Clock className="w-3 h-3" />
+                            {upcomingLabel}: {upcoming.diffDays} days left
+                            {upcoming.isUrgent && ' ⚠'}
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex items-stretch">
+                    {REVIEWER_PHASES.map((phase, idx) => {
+                        const Icon = phase.icon
+                        const isCurrent = idx === activePhaseIdx
+                        const isDone = idx < activePhaseIdx
+                        const pc = COLOR_MAP[phase.color]
+                        return (
+                            <div key={phase.id} className="flex-1 flex flex-col items-center relative">
+                                {idx > 0 && (
+                                    <div className={`absolute top-5 right-1/2 left-0 h-0.5 ${isDone || isCurrent ? 'bg-indigo-400' : 'bg-gray-200'}`} />
+                                )}
+                                {idx < REVIEWER_PHASES.length - 1 && (
+                                    <div className={`absolute top-5 left-1/2 right-0 h-0.5 ${isDone ? 'bg-indigo-400' : 'bg-gray-200'}`} />
+                                )}
+                                <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${isCurrent ? `${pc.bg} border-transparent shadow-lg ring-4 ring-offset-1 ring-${phase.color}-200` : ''} ${isDone ? 'bg-indigo-500 border-indigo-500' : ''} ${!isCurrent && !isDone ? 'bg-white border-gray-200' : ''}`}>
+                                    {isDone ? <CheckCircle2 className="w-5 h-5 text-white" /> : <Icon className={`w-4 h-4 ${isCurrent ? 'text-white' : 'text-gray-400'}`} />}
+                                </div>
+                                <span className={`mt-2 text-xs font-semibold text-center leading-tight ${isCurrent ? pc.text : isDone ? 'text-indigo-500' : 'text-gray-400'}`}>
+                                    {phase.label}
+                                </span>
+                                {isCurrent && (
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full mt-1 ${pc.light} ${pc.text} font-bold`}>
+                                        Active
+                                    </span>
+                                )}
+                            </div>
+                        )
+                    })}
+                </div>
+                <div className="mt-5 border-t border-gray-100" />
+            </div>
+
+            <div className={`${c.light} px-6 py-4`}>
+                <div className="flex flex-col md:flex-row md:items-start gap-4 justify-between">
+                    <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-bold ${c.text}`}>Current Phase: {activePhase.label}</p>
+                        <div className="flex flex-wrap gap-2 mt-1.5">
+                            {activePhaseIdx === 1 && !isBiddingOpen && <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full font-medium">Bidding is not open yet</span>}
+                            {activePhaseIdx === 1 && isBiddingOpen && <span className="text-xs bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full font-medium">Bidding is actively open</span>}
+                            {activePhaseIdx === 2 && !isReviewsDone && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">⚠ You have pending reviews</span>}
+                            {activePhaseIdx === 3 && <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">✓ All caught up!</span>}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {!isLastPhase && (
+            <div className="border-t border-gray-100 bg-white">
+                <button className="w-full flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors" onClick={() => setChecklistOpen(v => !v)}>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Required Tasks</span>
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${allBlockingMet ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {metCount}/{checklist.length} done
+                        </span>
+                    </div>
+                    {checklistOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                </button>
+                {checklistOpen && (
+                    <div className="px-6 pb-5 space-y-2">
+                        {checklist.map((item, i) => (
+                            <div key={i} onClick={() => item.tab !== 'dashboard' && onNavigate?.(item.tab)} className={`w-full flex items-center gap-3 py-2 px-3 rounded-lg transition-colors text-left group ${item.tab !== 'dashboard' ? 'cursor-pointer hover:bg-gray-50' : ''}`}>
+                                {item.met ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /> : item.blocking ? <XCircle className="w-4 h-4 text-amber-400 shrink-0" /> : <XCircle className="w-4 h-4 text-gray-300 shrink-0" />}
+                                <span className={`text-sm flex-1 ${item.met ? 'text-gray-700 line-through decoration-gray-300' : item.blocking ? 'text-gray-800 font-medium' : 'text-gray-400'}`}>{item.label}</span>
+                                {item.blocking && !item.met && <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300 bg-amber-50 shrink-0">Required</Badge>}
+                                {item.tab !== 'dashboard' && (
+                                    <Button variant="outline" size="sm" className={`text-[11px] h-6 px-2.5 rounded-md shrink-0 font-semibold border ${item.met ? 'border-gray-200 text-gray-500 bg-white hover:bg-gray-50' : `${c.border} ${c.text} bg-white hover:${c.light}`}`} onClick={(e) => { e.stopPropagation(); onNavigate?.(item.tab) }}>
+                                        Configure
+                                        <ArrowRight className="w-3 h-3 ml-0.5" />
+                                    </Button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+            )}
+        </div>
+    )
+}
+
 // ──────────────────────────── Dashboard Tab ────────────────────────────
 function DashboardTab({
     conference, bidsSummary, reviews, activities, workflowStatus, interestsCount, getDeadlineInfo, onNavigate
@@ -418,31 +647,18 @@ function DashboardTab({
                 </p>
             </div>
 
-            {/* Deadline badges */}
-            {(biddingDeadline || reviewDeadline) && (
-                <div className="flex flex-wrap gap-2">
-                    {biddingDeadline && (
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${
-                            biddingDeadline.isPast ? 'bg-gray-100 text-gray-500 border-gray-200' :
-                            biddingDeadline.isUrgent ? 'bg-red-50 text-red-700 border-red-200 animate-pulse' :
-                            'bg-indigo-50 text-indigo-700 border-indigo-200'
-                        }`}>
-                            <Clock className="h-3 w-3" />
-                            Bidding: {biddingDeadline.isPast ? 'Closed' : `${biddingDeadline.diffDays} days remaining`}
-                        </span>
-                    )}
-                    {reviewDeadline && (
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${
-                            reviewDeadline.isPast ? 'bg-gray-100 text-gray-500 border-gray-200' :
-                            reviewDeadline.isUrgent ? 'bg-red-50 text-red-700 border-red-200 animate-pulse' :
-                            'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        }`}>
-                            <Clock className="h-3 w-3" />
-                            Review: {reviewDeadline.isPast ? 'Closed' : `${reviewDeadline.diffDays} days remaining`}
-                        </span>
-                    )}
-                </div>
-            )}
+            <ReviewerPhaseStatusCard
+                activities={activities}
+                reviews={reviews}
+                workflowStatus={workflowStatus}
+                interestsCount={interestsCount}
+                profileComplete={!!workflowStatus['profile-complete']}
+                onNavigate={onNavigate}
+                biddingDeadline={biddingDeadline}
+                reviewDeadline={reviewDeadline}
+            />
+
+            {/* Old Deadline Badges block removed in favor of PhaseStatusCard */}
 
             {/* Stats cards */}
             <div className="grid gap-4 sm:grid-cols-4">
@@ -480,7 +696,7 @@ function DashboardTab({
                         <div>
                             <p className="text-sm font-semibold">Bidding</p>
                             <p className="text-xs text-muted-foreground">
-                                {bidsSummary ? `${bidsSummary.totalBids}/${bidsSummary.totalPapers} papers` : 'No bids yet'}
+                                {bidsSummary ? `${bidsSummary?.totalBids}/${bidsSummary?.totalPapers} papers` : 'No bids yet'}
                             </p>
                         </div>
                     </CardContent>
@@ -525,7 +741,7 @@ function DashboardTab({
                             {Object.entries(BID_ICONS).map(([key, { icon, color, label }]) => (
                                 <div key={key} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 ${color}`}>
                                     {icon}
-                                    <span className="font-semibold">{bidsSummary.bidCounts?.[key] || 0}</span>
+                                    <span className="font-semibold">{bidsSummary?.bidCounts?.[key] || 0}</span>
                                     <span className="text-sm text-gray-600">{label}</span>
                                 </div>
                             ))}
@@ -579,7 +795,7 @@ function ProfileTab({
         phoneMobile: profile?.phoneMobile || '',
         websiteUrl: profile?.websiteUrl || '',
         biography: profile?.biography || '',
-        orcidId: profile?.orcidId || '',
+        orcid: profile?.orcid || '',
         googleScholarLink: profile?.googleScholarLink || '',
         dblpId: profile?.dblpId || '',
         semanticScholarId: profile?.semanticScholarId || '',
@@ -606,7 +822,7 @@ function ProfileTab({
                 phoneMobile: profile.phoneMobile || '',
                 websiteUrl: profile.websiteUrl || '',
                 biography: profile.biography || '',
-                orcidId: profile.orcidId || '',
+                orcid: profile.orcid || '',
                 googleScholarLink: profile.googleScholarLink || '',
                 dblpId: profile.dblpId || '',
                 semanticScholarId: profile.semanticScholarId || '',
@@ -637,8 +853,8 @@ function ProfileTab({
         const bioErr = V.maxLen(form.biography, 2000)
         if (bioErr) newErrs.biography = bioErr
         
-        const orcErr = V.maxLen(form.orcidId, 100) || V.orcid(form.orcidId)
-        if (orcErr) newErrs.orcidId = orcErr
+        const orcErr = V.maxLen(form.orcid, 100) || V.orcid(form.orcid)
+        if (orcErr) newErrs.orcid = orcErr
         
         const scholarErr = V.url(form.googleScholarLink) || V.maxLen(form.googleScholarLink, 500)
         if (scholarErr) newErrs.googleScholarLink = scholarErr
@@ -813,8 +1029,8 @@ function ProfileTab({
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div>
                                     <label className="text-xs font-medium text-gray-700 mb-1 block">ORCID ID</label>
-                                    <input className={inputClass} value={form.orcidId} onChange={e => { setForm(f => ({ ...f, orcidId: e.target.value })); setErrors(e => ({...e, orcidId: ''}))}} placeholder="0000-0001-2345-6789" />
-                                    <FieldError>{errors.orcidId}</FieldError>
+                                    <input className={inputClass} value={form.orcid} onChange={e => { setForm(f => ({ ...f, orcid: e.target.value })); setErrors(e => ({...e, orcid: ''}))}} placeholder="0000-0001-2345-6789" />
+                                    <FieldError>{errors.orcid}</FieldError>
                                 </div>
                                 <div>
                                     <label className="text-xs font-medium text-gray-700 mb-1 block">Google Scholar</label>
@@ -932,81 +1148,3 @@ function ProfileTab({
     )
 }
 
-// ──────────────────────────── Reviews Tab ────────────────────────────
-function ReviewsTab({ reviews, conferenceId }: { reviews: ReviewResponse[]; conferenceId: number }) {
-    const [expandedReview, setExpandedReview] = useState<number | null>(null)
-
-    return (
-        <div className="space-y-4">
-            <div>
-                <h2 className="text-xl font-bold">Assigned Reviews</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                    {reviews.length} paper(s) assigned to you.
-                </p>
-            </div>
-
-            {reviews.length === 0 ? (
-                <Card>
-                    <CardContent className="py-12 text-center text-muted-foreground">
-                        <ClipboardList className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                        <p>No papers assigned yet.</p>
-                        <p className="text-sm mt-1">The Chair will assign papers after bidding is complete.</p>
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="overflow-auto rounded-xl border bg-white">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b bg-muted/30">
-                                <th className="px-5 py-3.5 text-left font-medium text-xs uppercase tracking-wider text-muted-foreground">#</th>
-                                <th className="px-5 py-3.5 text-left font-medium text-xs uppercase tracking-wider text-muted-foreground">Paper Title</th>
-                                <th className="px-5 py-3.5 text-left font-medium text-xs uppercase tracking-wider text-muted-foreground">Status</th>
-                                <th className="px-5 py-3.5 text-left font-medium text-xs uppercase tracking-wider text-muted-foreground">Score</th>
-                                <th className="px-5 py-3.5 text-right font-medium text-xs uppercase tracking-wider text-muted-foreground">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                            {reviews.map((review, i) => (
-                                <React.Fragment key={review.id}>
-                                    <tr className="hover:bg-indigo-50/30 transition-colors cursor-pointer" onClick={() => setExpandedReview(expandedReview === review.id ? null : review.id)}>
-                                        <td className="px-5 py-4 text-xs text-muted-foreground font-medium">{i + 1}</td>
-                                        <td className="px-5 py-4 font-medium max-w-md">
-                                            <span className="truncate block">{review.paper?.title || `Paper #${review.paper?.id}`}</span>
-                                        </td>
-                                        <td className="px-5 py-4">
-                                            <Badge className={STATUS_COLORS[review.status] || 'bg-gray-100 text-gray-800'}>
-                                                {review.status}
-                                            </Badge>
-                                        </td>
-                                        <td className="px-5 py-4 font-mono">
-                                            {review.totalScore != null ? review.totalScore : '—'}
-                                        </td>
-                                        <td className="px-5 py-4 text-right" onClick={e => e.stopPropagation()}>
-                                            {review.status !== 'DECLINED' && (
-                                                <Link href={`/conference/${conferenceId}/reviewer/review/${review.id}`}>
-                                                    <Button size="sm" variant={review.status === 'COMPLETED' ? 'outline' : 'default'}>
-                                                        {review.status === 'COMPLETED' ? 'View' : review.status === 'ASSIGNED' ? 'Start' : 'Continue'}
-                                                    </Button>
-                                                </Link>
-                                            )}
-                                        </td>
-                                    </tr>
-                                    {expandedReview === review.id && review.paper?.abstractField && (
-                                        <tr>
-                                            <td colSpan={5} className="px-5 py-4 bg-indigo-50/50">
-                                                <div className="text-sm text-gray-600 max-w-3xl">
-                                                    <p className="font-medium text-gray-700 text-xs uppercase tracking-wider mb-1">Abstract</p>
-                                                    <p className="leading-relaxed line-clamp-4">{review.paper.abstractField}</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </React.Fragment>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-        </div>
-    )
-}

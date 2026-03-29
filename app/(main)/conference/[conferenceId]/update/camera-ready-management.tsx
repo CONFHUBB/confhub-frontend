@@ -9,11 +9,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
-    Loader2, Search, FileText, Eye, CheckCircle, ExternalLink, FileCheck, Upload, ChevronLeft, ChevronRight, Filter
+    Loader2, Search, FileText, Eye, CheckCircle, ExternalLink, FileCheck, Upload, ChevronLeft, ChevronRight, Download
 } from "lucide-react"
 import { FilterPanel } from "@/components/ui/filter-panel"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import toast from "react-hot-toast"
+import { TableSkeleton } from "@/components/ui/table-skeleton"
+import { EmptyState } from "@/components/ui/empty-state"
 
 interface CameraReadyManagementProps {
     conferenceId: number
@@ -39,6 +41,7 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
     const [sheetPaper, setSheetPaper] = useState<PaperCameraReadySummary | null>(null)
     const [approving, setApproving] = useState<number | null>(null)
     const [currentPage, setCurrentPage] = useState(0)
+    const [exporting, setExporting] = useState(false)
     const PAGE_SIZE = 10
 
     // Derived state
@@ -91,6 +94,28 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
 
     useEffect(() => { fetchData() }, [fetchData])
 
+    const handleExportProceedings = async () => {
+        setExporting(true)
+        try {
+            const res = await fetch(`/api/v1/documents/conferences/${conferenceId}/proceedings`, {
+                headers: { Authorization: `Bearer ${document.cookie.split('token=')[1]?.split(';')[0] || ''}` },
+            })
+            if (!res.ok) throw new Error(await res.text())
+            const blob = await res.blob()
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `proceedings-conference-${conferenceId}.zip`
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success('Proceedings ZIP downloaded!')
+        } catch {
+            toast.error('Failed to export proceedings. Check that camera-ready files exist.')
+        } finally {
+            setExporting(false)
+        }
+    }
+
     const handleApprove = async (paperId: number) => {
         if (!confirm("Approve this camera-ready submission? The paper status will be set to PUBLISHED.")) return
         try {
@@ -131,9 +156,11 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center py-16">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+            <TableSkeleton
+                rows={6}
+                headers={['#', 'ID', 'Title', 'Track', 'Status', 'Camera-Ready', 'Actions']}
+                className="rounded-lg border overflow-hidden"
+            />
         )
     }
 
@@ -206,14 +233,25 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                         },
                     ]}
                 />
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 text-xs h-9 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                    onClick={handleExportProceedings}
+                    disabled={exporting || data.filter(p => p.hasUploaded).length === 0}
+                >
+                    {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                    Export Proceedings
+                </Button>
             </div>
 
             {/* Table */}
             {filtered.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground border rounded-lg">
-                    <FileText className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                    <p>No papers match your filters.</p>
-                </div>
+                <EmptyState
+                    emoji={search || filter !== 'all' ? '🔍' : '📄'}
+                    title={search || filter !== 'all' ? 'No papers match your filters' : 'No eligible papers yet'}
+                    description={search || filter !== 'all' ? 'Try clearing filters or searching differently.' : 'Accepted papers will appear here once authors upload camera-ready files.'}
+                />
             ) : (
                 <>
                 <div className="rounded-lg border overflow-hidden">

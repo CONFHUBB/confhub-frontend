@@ -30,13 +30,75 @@ http.interceptors.request.use(
     }
 )
 
+// ── Response interceptor: handle 401 (expired/invalid token) ──
+let isRedirecting = false
+
 http.interceptors.response.use(
-    (response) => {
-        return response
-    },
+    (response) => response,
     (error) => {
+        if (
+            error.response?.status === 401 &&
+            typeof window !== 'undefined' &&
+            !isRedirecting
+        ) {
+            const token = localStorage.getItem('accessToken')
+            if (token) {
+                isRedirecting = true
+                localStorage.removeItem('accessToken')
+                const event = new CustomEvent('auth:expired')
+                window.dispatchEvent(event)
+                setTimeout(() => {
+                    window.location.replace('/auth/login?expired=1')
+                    isRedirecting = false
+                }, 100)
+            }
+        }
         return Promise.reject(error)
     }
 )
 
+// ── Proactive token expiry checker ──
+// Call this once on app mount to start monitoring token expiry
+export function startTokenExpiryMonitor() {
+    if (typeof window === 'undefined') return
+
+    const CHECK_INTERVAL = 60_000 // check every minute
+    const WARN_BEFORE_MS = 5 * 60_000 // warn 5 minutes before expiry
+
+    const checkExpiry = () => {
+        const token = localStorage.getItem('accessToken')
+        if (!token) return
+
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]))
+            const exp = payload.exp * 1000 // convert to ms
+            const now = Date.now()
+            const remaining = exp - now
+
+            if (remaining <= 0) {
+                // Token already expired
+                localStorage.removeItem('accessToken')
+                if (!isRedirecting) {
+                    isRedirecting = true
+                    window.location.replace('/auth/login?expired=1')
+                }
+            } else if (remaining <= WARN_BEFORE_MS) {
+                // Warn user
+                const event = new CustomEvent('auth:expiring-soon', {
+                    detail: { remainingMs: remaining }
+                })
+                window.dispatchEvent(event)
+            }
+        } catch { /* malformed token — ignore */ }
+    }
+
+    // Initial check
+    checkExpiry()
+    // Periodic check
+    const interval = setInterval(checkExpiry, CHECK_INTERVAL)
+
+    return () => clearInterval(interval)
+}
+
 export default http
+

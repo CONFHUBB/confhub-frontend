@@ -1,14 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { getConferencePaymentHistory, PaymentHistoryResponse } from '@/app/api/registration.api'
-import { Loader2, CheckCircle2, XCircle, AlertCircle, ChevronDown, ChevronRight, Search, Filter, ChevronLeft, Download } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { getConferencePaymentHistory, exportAllInvoices, PaymentHistoryResponse } from '@/app/api/registration.api'
+import { Loader2, CheckCircle2, XCircle, AlertCircle, ChevronDown, ChevronRight, Search, ChevronLeft, Download } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { FilterPanel } from '@/components/ui/filter-panel'
+import { toast } from 'sonner'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/lib/utils'
+import { TableSkeleton } from '@/components/ui/table-skeleton'
+import { EmptyState } from '@/components/ui/empty-state'
 
 const PAGE_SIZE = 20
 
@@ -29,6 +32,7 @@ export function PaymentHistoryView({ conferenceId }: PaymentHistoryViewProps) {
   const [outcomeFilter, setOutcomeFilter] = useState('ALL')
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [currentPage, setCurrentPage] = useState(0)
+  const [exporting, setExporting] = useState(false)
 
   // Derived state
   const activeFilterCount = outcomeFilter !== 'ALL' ? 1 : 0
@@ -39,6 +43,24 @@ export function PaymentHistoryView({ conferenceId }: PaymentHistoryViewProps) {
       .catch(() => setError('Failed to load payment history.'))
       .finally(() => setLoading(false))
   }, [conferenceId])
+
+  const handleExportInvoices = async () => {
+    setExporting(true)
+    try {
+      const blob = await exportAllInvoices(conferenceId)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `invoices-conference-${conferenceId}.zip`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('Invoices ZIP downloaded successfully!')
+    } catch {
+      toast.error('Failed to export invoices. Ensure there are completed payments.')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   useEffect(() => {
     let results = history
@@ -70,7 +92,15 @@ export function PaymentHistoryView({ conferenceId }: PaymentHistoryViewProps) {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginatedHistory = filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
 
-  if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+  if (loading) return (
+    <div className="space-y-4">
+      <TableSkeleton
+        rows={6}
+        headers={['#', 'Recorded', 'Reg #', 'Txn Ref', 'Amount', 'Outcome', 'Bank', '']}
+        className="rounded-lg border overflow-hidden"
+      />
+    </div>
+  )
   if (error) return <div className="text-destructive py-8 text-center text-sm">{error}</div>
 
   return (
@@ -117,17 +147,31 @@ export function PaymentHistoryView({ conferenceId }: PaymentHistoryViewProps) {
             },
           ]}
         />
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="gap-2 text-xs h-9 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+          onClick={handleExportInvoices}
+          disabled={exporting || history.filter(h => h.outcome === 'PAID').length === 0}
+        >
+          {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+          Export Invoices
+        </Button>
       </div>
 
       {/* Table */}
       {history.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">
-          No payment records found.
-        </div>
+        <EmptyState
+          emoji="💳"
+          title="No payment records found"
+          description="Payment records will appear here after attendees complete their registration."
+        />
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">
-          No records match the current filter.
-        </div>
+        <EmptyState
+          emoji="🔍"
+          title="No records match the current filter"
+          description="Try adjusting the outcome filter or clearing your search."
+        />
       ) : (
         <div className="rounded-lg border overflow-hidden">
           <div className="overflow-x-auto">
@@ -149,9 +193,8 @@ export function PaymentHistoryView({ conferenceId }: PaymentHistoryViewProps) {
                 const cfg = OUTCOME_CONFIG[h.outcome] ?? OUTCOME_CONFIG.INVALID
                 const isOpen = expanded.has(h.id)
                 return (
-                  <>
+                  <React.Fragment key={h.id}>
                     <TableRow
-                      key={h.id}
                       className="cursor-pointer"
                       onClick={() => toggleExpand(h.id)}
                     >
@@ -195,7 +238,7 @@ export function PaymentHistoryView({ conferenceId }: PaymentHistoryViewProps) {
                         </TableCell>
                       </TableRow>
                     )}
-                  </>
+                  </React.Fragment>
                 )
               })}
             </TableBody>

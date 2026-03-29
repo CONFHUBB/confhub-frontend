@@ -29,7 +29,6 @@ export function AuthorNotificationWizard({ conferenceId }: AuthorNotificationWiz
     const [messagePerStatus, setMessagePerStatus] = useState<Record<string, string>>({
         ACCEPTED: "Congratulations! Your paper \"{paperTitle}\" (#{paperId}) has been ACCEPTED.",
         REJECTED: "We regret to inform you that your paper \"{paperTitle}\" (#{paperId}) has not been accepted.",
-        REVISION: "Your paper \"{paperTitle}\" (#{paperId}) requires revision. Please submit a revised version.",
     })
     const [isSending, setIsSending] = useState(false)
     const [results, setResults] = useState<Record<number, string>>({})

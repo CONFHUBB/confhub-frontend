@@ -9,7 +9,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Loader2, Search, Zap, ThumbsUp, Minus, ThumbsDown, ChevronDown, ChevronUp, AlertTriangle, Target, Tag, Pencil, XCircle, Lock } from 'lucide-react'
+import { Loader2, Search, Zap, ThumbsUp, Minus, ThumbsDown, ChevronDown, ChevronUp, AlertTriangle, Target, Tag, Pencil, XCircle, Lock, Download, ChevronLeft, ChevronRight } from 'lucide-react'
+import { FilterPanel } from '@/components/ui/filter-panel'
+import { EmptyState } from '@/components/ui/empty-state'
 import toast from 'react-hot-toast'
 
 const BID_OPTIONS: { value: BidValue; label: string; shortLabel: string; color: string; activeColor: string; icon: React.ReactNode }[] = [
@@ -43,6 +45,8 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged }: BiddingT
     const [editingBidPaperId, setEditingBidPaperId] = useState<number | null>(null)
     const [bidIdMap, setBidIdMap] = useState<Record<number, number>>({})
     const [activityClosed, setActivityClosed] = useState<string | null>(null)
+    const [currentPage, setCurrentPage] = useState(0)
+    const PAGE_SIZE = 15
 
     const fetchData = useCallback(async () => {
         try {
@@ -54,9 +58,9 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged }: BiddingT
                 const activities = await getConferenceActivities(conferenceId)
                 const biddingActivity = activities.find(a => a.activityType === 'REVIEWER_BIDDING')
                 if (biddingActivity) {
-                    if (!biddingActivity.isEnabled) { setActivityClosed('Reviewer bidding is currently disabled.'); setLoading(false); return }
-                    if (biddingActivity.deadline && new Date(biddingActivity.deadline) < new Date()) {
-                        setActivityClosed(`Bidding deadline has passed (${new Date(biddingActivity.deadline).toLocaleString()}).`); setLoading(false); return
+                    if (!biddingActivity.isEnabled) { setActivityClosed('Reviewer bidding is currently disabled.') }
+                    else if (biddingActivity.deadline && new Date(biddingActivity.deadline) < new Date()) {
+                        setActivityClosed(`Bidding deadline has passed (${new Date(biddingActivity.deadline).toLocaleString()}).`)
                     }
                 }
             } catch { /* ignore */ }
@@ -139,17 +143,39 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged }: BiddingT
 
     const bidCount = papers.filter(p => p.currentBid !== null).length
 
-    if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+    const paginatedPapers = useMemo(() => {
+        const start = currentPage * PAGE_SIZE
+        const end = start + PAGE_SIZE
+        return filteredPapers.slice(start, end)
+    }, [filteredPapers, currentPage])
 
-    if (activityClosed) return (
-        <Card className="border-red-200 bg-red-50">
-            <CardContent className="p-8 text-center space-y-4">
-                <div className="mx-auto w-16 h-16 rounded-full bg-red-100 flex items-center justify-center"><AlertTriangle className="h-8 w-8 text-red-600" /></div>
-                <h2 className="text-xl font-bold text-red-900">Bidding Closed</h2>
-                <p className="text-red-800 max-w-md mx-auto">{activityClosed}</p>
-            </CardContent>
-        </Card>
-    )
+    const totalPages = Math.ceil(filteredPapers.length / PAGE_SIZE)
+
+    useEffect(() => { setCurrentPage(0) }, [searchQuery, filterBid, filterTrack, sortKey, sortAsc])
+
+    const exportCsv = () => {
+        try {
+            const headers = ['Paper ID', 'Title', 'Track', 'Primary Subject Area', 'Relevance Score', 'Current Bid']
+            const rows = filteredPapers.map(p => [
+                p.paperId,
+                `"${p.title.replace(/"/g, '""')}"`,
+                p.trackName || '',
+                p.primarySubjectArea || '',
+                p.relevanceScore || 0,
+                p.currentBid || 'NOT_BID'
+            ])
+            const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `biddings-conf-${conferenceId}.csv`
+            a.click()
+            URL.revokeObjectURL(url)
+        } catch { toast.error('Failed to export bidding CSV') }
+    }
+
+    if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
 
     if (needsSubjectAreas) return (
         <Card className="border-amber-200 bg-amber-50">
@@ -165,6 +191,16 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged }: BiddingT
 
     return (
         <div className="space-y-5">
+            {activityClosed && (
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800">
+                    <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+                    <div>
+                        <h3 className="font-semibold text-amber-900">Bidding Closed</h3>
+                        <p className="text-sm mt-0.5">{activityClosed} Viewing mode only.</p>
+                    </div>
+                </div>
+            )}
+            
             <div>
                 <h2 className="text-xl font-bold">Paper Bidding</h2>
                 <p className="text-sm text-muted-foreground mt-1">Rate your interest in reviewing each paper. Bid on <strong>{bidCount}</strong>/{papers.length} papers.</p>
@@ -182,39 +218,64 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged }: BiddingT
                 </div>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input className="pl-10 h-10" placeholder="Search by title, abstract, keyword..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input className="pl-9 h-9 text-sm" placeholder="Search by title, abstract, keyword..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                 </div>
-                <div className="flex gap-2 flex-wrap">
-                    {trackNames.length > 1 && (
-                        <select className="h-10 rounded-md border px-3 text-sm bg-white" value={filterTrack} onChange={e => setFilterTrack(e.target.value)}>
-                            <option value="all">All Tracks</option>
-                            {trackNames.map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
-                    )}
-                    <select className="h-10 rounded-md border px-3 text-sm bg-white" value={filterBid} onChange={e => setFilterBid(e.target.value as FilterBid)}>
-                        <option value="all">All Bids</option><option value="NOT_BID">Not Bid</option>
-                        <option value="EAGER">Eager</option><option value="WILLING">Willing</option>
-                        <option value="IN_A_PINCH">In a Pinch</option><option value="NOT_WILLING">Not Willing</option>
-                    </select>
-                    <select className="h-10 rounded-md border px-3 text-sm bg-white" value={sortKey} onChange={e => setSortKey(e.target.value as SortKey)}>
-                        <option value="relevance">Relevance</option><option value="title">Title</option><option value="bid">Bid status</option>
-                    </select>
-                    <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => setSortAsc(!sortAsc)}>
-                        {sortAsc ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </Button>
-                </div>
+                <FilterPanel
+                    groups={[
+                        ...(trackNames.length > 1 ? [{
+                            label: 'Track',
+                            type: 'radio' as const,
+                            options: [{ value: 'all', label: 'All Tracks' }, ...trackNames.map(t => ({ value: t, label: t }))],
+                            value: filterTrack,
+                            onChange: setFilterTrack,
+                        }] : []),
+                        {
+                            label: 'Bid Status',
+                            type: 'radio' as const,
+                            options: [
+                                { value: 'all', label: 'All Bids' },
+                                { value: 'NOT_BID', label: 'Not Bid' },
+                                { value: 'EAGER', label: 'Eager' },
+                                { value: 'WILLING', label: 'Willing' },
+                                { value: 'IN_A_PINCH', label: 'In a Pinch' },
+                                { value: 'NOT_WILLING', label: 'Not Willing' },
+                            ],
+                            value: filterBid,
+                            onChange: (v) => setFilterBid(v as FilterBid),
+                        },
+                        {
+                            label: 'Sort By',
+                            type: 'radio' as const,
+                            options: [
+                                { value: 'relevance', label: 'Relevance' },
+                                { value: 'title', label: 'Title' },
+                                { value: 'bid', label: 'Bid Status' },
+                            ],
+                            value: sortKey,
+                            onChange: (v) => setSortKey(v as SortKey),
+                        }
+                    ]}
+                />
+                <Button variant="outline" size="sm" className="h-9 w-9 px-0 border-gray-200" onClick={() => setSortAsc(!sortAsc)} title="Toggle Sort Order">
+                    {sortAsc ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </Button>
+                <Button variant="outline" size="sm" className="gap-2 text-xs h-9 bg-white" onClick={exportCsv} disabled={loading || filteredPapers.length === 0}>
+                    <Download className="h-3.5 w-3.5" /> Export CSV
+                </Button>
             </div>
 
             {filteredPapers.length === 0 ? (
-                <Card><CardContent className="py-12 text-center text-muted-foreground">
-                    {searchQuery || filterBid !== 'all' || filterTrack !== 'all' ? 'No papers match your search.' : 'No papers available for bidding.'}
-                </CardContent></Card>
+                <EmptyState
+                    emoji={searchQuery || filterBid !== 'all' || filterTrack !== 'all' ? '🔍' : '📝'}
+                    title={searchQuery || filterBid !== 'all' || filterTrack !== 'all' ? 'No papers match your search' : 'No papers available for bidding'}
+                    description={searchQuery || filterBid !== 'all' || filterTrack !== 'all' ? 'Try adjusting your search or filter settings.' : 'The Chair has not configured papers for bidding yet.'}
+                />
             ) : (
                 <div className="space-y-3">
-                    {filteredPapers.map(paper => {
+                    {paginatedPapers.map(paper => {
                         const isExpanded = expandedPaper === paper.paperId
                         return (
                             <Card key={paper.paperId} className={`transition-all ${paper.currentBid ? 'border-l-4 border-l-blue-400' : ''}`}>
@@ -270,20 +331,24 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged }: BiddingT
                                         {paper.currentBid && editingBidPaperId !== paper.paperId ? (
                                             <div className="flex items-center gap-2">
                                                 {(() => { const opt = BID_OPTIONS.find(o => o.value === paper.currentBid); if (!opt) return null; return <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border ${opt.activeColor}`}>{opt.icon}<span>{opt.label}</span></div> })()}
-                                                <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-indigo-600" onClick={() => setEditingBidPaperId(paper.paperId)}><Pencil className="h-3.5 w-3.5" /> Edit</Button>
-                                                <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-red-600" disabled={submitting === paper.paperId} onClick={() => handleCancelBid(paper.paperId)}>
-                                                    {submitting === paper.paperId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />} Cancel
-                                                </Button>
+                                                {!activityClosed && (
+                                                    <>
+                                                        <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-indigo-600" onClick={() => setEditingBidPaperId(paper.paperId)}><Pencil className="h-3.5 w-3.5" /> Edit</Button>
+                                                        <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-red-600" disabled={submitting === paper.paperId} onClick={() => handleCancelBid(paper.paperId)}>
+                                                            {submitting === paper.paperId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />} Cancel
+                                                        </Button>
+                                                    </>
+                                                )}
                                             </div>
                                         ) : (
                                             <div className="flex flex-wrap items-center gap-2">
                                                 {BID_OPTIONS.map(opt => (
-                                                    <button key={opt.value} type="button" disabled={submitting === paper.paperId} onClick={() => handleBid(paper.paperId, opt.value)}
-                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${paper.currentBid === opt.value ? opt.activeColor : opt.color} ${submitting === paper.paperId ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                                                    <button key={opt.value} type="button" disabled={submitting === paper.paperId || !!activityClosed} onClick={() => handleBid(paper.paperId, opt.value)}
+                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${paper.currentBid === opt.value ? opt.activeColor : opt.color} ${(submitting === paper.paperId || !!activityClosed) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
                                                         {opt.icon}<span className="hidden sm:inline">{opt.label}</span><span className="sm:hidden">{opt.shortLabel}</span>
                                                     </button>
                                                 ))}
-                                                {editingBidPaperId === paper.paperId && <Button variant="ghost" size="sm" className="text-xs text-gray-500" onClick={() => setEditingBidPaperId(null)}>Cancel</Button>}
+                                                {editingBidPaperId === paper.paperId && !activityClosed && <Button variant="ghost" size="sm" className="text-xs text-gray-500" onClick={() => setEditingBidPaperId(null)}>Cancel</Button>}
                                             </div>
                                         )}
                                     </div>
@@ -291,6 +356,23 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged }: BiddingT
                             </Card>
                         )
                     })}
+                    
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between px-4 py-3 border bg-muted/20 mt-4 rounded-xl">
+                            <div className="text-sm text-muted-foreground">
+                                Page {currentPage + 1} of {totalPages} · {filteredPapers.length} papers matching criteria
+                            </div>
+                            <div className="flex gap-2">
+                                <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage((p) => p - 1)}>
+                                    <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+                                </Button>
+                                <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage((p) => p + 1)}>
+                                    Next <ChevronRight className="h-4 w-4 ml-1" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

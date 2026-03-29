@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { useUserRoles } from '@/hooks/useUserConferenceRoles'
 import { getUserByEmail, getUserProfile } from '@/app/api/user.api'
+import { getConference } from '@/app/api/conference.api'
 import { NotificationBell } from '@/components/notification-bell'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -50,6 +51,14 @@ const WORKSPACE_SECTIONS = [
             { name: 'My Conferences',   path: '/conference/my-conference',    icon: <Building2 className="h-4 w-4" /> },
         ],
     },
+    {
+        label: 'As Attendee',
+        icon: <Ticket className="h-3.5 w-3.5" />,
+        color: 'text-purple-600',
+        items: [
+            { name: 'My Tickets & Workspaces', path: '/my-profile/tickets', icon: <Ticket className="h-4 w-4" /> },
+        ],
+    },
 ]
 
 // Paths that belong to the "My Workspace" group — used to highlight the dropdown trigger
@@ -59,6 +68,7 @@ const WORKSPACE_PATHS: { path: string; exact: boolean }[] = [
     { path: '/conference/my-conference', exact: false },
     { path: '/conference/program-conference', exact: false },
     { path: '/conference/reviewer-select', exact: false },
+    { path: '/my-profile/tickets', exact: true },
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -75,13 +85,19 @@ const PRIMARY_NAV = [
 export function AppNavbar() {
     const pathname  = usePathname()
     const router    = useRouter()
-    const { hasAnyRole } = useUserRoles()
+    const { hasAnyRole, getRolesInConference, userId } = useUserRoles()
+    
+    // Allow checking auth state safely
+    const [isMounted, setIsMounted] = React.useState(false)
+    React.useEffect(() => { setIsMounted(true) }, [])
 
     const [isMenuOpen,      setIsMenuOpen]      = React.useState(false)
     const [userMenuOpen,    setUserMenuOpen]    = React.useState(false)
     const [workspaceOpen,   setWorkspaceOpen]   = React.useState(false)
     const [userName,        setUserName]        = React.useState('')
     const [avatarUrl,       setAvatarUrl]       = React.useState('')
+    const [ctxConferenceName, setCtxConferenceName] = React.useState('')
+    const [ctxConferenceId,   setCtxConferenceId]   = React.useState<number | null>(null)
 
     const userMenuRef     = React.useRef<HTMLDivElement>(null)
     const workspaceRef    = React.useRef<HTMLDivElement>(null)
@@ -130,7 +146,7 @@ export function AppNavbar() {
 
     const handleLogout = () => {
         localStorage.removeItem('accessToken')
-        router.push('/auth/login')
+        router.push('/')
     }
 
     const isPrimaryActive = (path: string, exact: boolean, query?: string) => {
@@ -144,6 +160,37 @@ export function AppNavbar() {
 
     // Workspace dropdown is active if current path starts with any workspace path
     const isWorkspaceActive = WORKSPACE_PATHS.some(wp => wp.exact ? pathname === wp.path : pathname.startsWith(wp.path))
+
+    // ── Conference context from URL ─────────────────────────────────
+    React.useEffect(() => {
+        const match = pathname.match(/\/conference\/(\d+)/)
+        if (match) {
+            const id = Number(match[1])
+            setCtxConferenceId(id)
+            getConference(id)
+                .then(c => setCtxConferenceName(c.acronym || c.name))
+                .catch(() => setCtxConferenceName(''))
+        } else {
+            setCtxConferenceId(null)
+            setCtxConferenceName('')
+        }
+    }, [pathname])
+
+    // Derive role label for the current conference
+    const ctxRoles = ctxConferenceId ? getRolesInConference(ctxConferenceId) : []
+    const ctxRoleLabel = ctxRoles.includes('CONFERENCE_CHAIR') && ctxRoles.includes('PROGRAM_CHAIR')
+        ? 'Chair'
+        : ctxRoles.includes('CONFERENCE_CHAIR')
+            ? 'Conference Chair'
+            : ctxRoles.includes('PROGRAM_CHAIR')
+                ? 'Program Chair'
+                : ctxRoles.includes('REVIEWER')
+                    ? 'Reviewer'
+                    : pathname.includes('/author')
+                        ? 'Author'
+                        : ctxRoles.length > 0
+                            ? ctxRoles[0].replace('_', ' ')
+                            : ''
 
     return (
         <header className="sticky top-0 left-0 w-full z-50">
@@ -190,23 +237,24 @@ export function AppNavbar() {
                             })}
 
                             {/* ── My Workspace Dropdown ── */}
-                            <div ref={workspaceRef} className="relative">
-                                <button
-                                    onClick={() => setWorkspaceOpen(prev => !prev)}
-                                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                        isWorkspaceActive || workspaceOpen
-                                            ? 'text-white bg-white/20'
-                                            : 'text-white/75 hover:text-white hover:bg-white/10'
-                                    }`}
-                                >
-                                    <Globe className="h-4 w-4" />
-                                    My Workspace
-                                    <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${workspaceOpen ? 'rotate-180' : ''}`} />
-                                </button>
+                            {userId && (
+                                <div ref={workspaceRef} className="relative">
+                                    <button
+                                        onClick={() => setWorkspaceOpen(prev => !prev)}
+                                        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                            isWorkspaceActive || workspaceOpen
+                                                ? 'text-white bg-white/20'
+                                                : 'text-white/75 hover:text-white hover:bg-white/10'
+                                        }`}
+                                    >
+                                        <Globe className="h-4 w-4" />
+                                        My Workspace
+                                        <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${workspaceOpen ? 'rotate-180' : ''}`} />
+                                    </button>
 
-                                {workspaceOpen && (
-                                    <div className="absolute left-0 top-full mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                                        {WORKSPACE_SECTIONS.map((section) => (
+                                    {workspaceOpen && (
+                                        <div className="absolute left-0 top-full mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                                            {WORKSPACE_SECTIONS.map((section) => (
                                             <div key={section.label}>
                                                 {/* Section header */}
                                                 <div className={`flex items-center gap-2 px-4 py-2 ${section.color}`}>
@@ -235,12 +283,15 @@ export function AppNavbar() {
                                         ))}
                                     </div>
                                 )}
-                            </div>
+                                </div>
+                            )}
                         </nav>
 
                         {/* ── Right: Actions (Desktop) ── */}
                         <div className="hidden lg:flex items-center gap-2">
-                            {/* Notification */}
+                            {isMounted && userId ? (
+                                <>
+                                    {/* Notification */}
                             <div className="[&_button]:text-white/80 [&_button]:hover:text-white [&_button]:hover:bg-white/10">
                                 <NotificationBell />
                             </div>
@@ -303,6 +354,17 @@ export function AppNavbar() {
                                     </div>
                                 )}
                             </div>
+                                </>
+                            ) : isMounted ? (
+                                <div className="flex items-center gap-3 ml-2">
+                                    <Link href="/auth/login" className="text-sm font-medium text-white/90 hover:text-white transition-colors">
+                                        Log in
+                                    </Link>
+                                    <Link href="/auth/register" className="text-sm font-medium bg-white text-indigo-900 hover:bg-gray-100 px-4 py-2 rounded-lg transition-colors">
+                                        Sign up
+                                    </Link>
+                                </div>
+                            ) : null}
                         </div>
 
                         {/* ── Mobile: Hamburger ── */}
@@ -337,7 +399,8 @@ export function AppNavbar() {
                         ))}
 
                         {/* Workspace section */}
-                        <div className="mt-1 pt-1 border-t border-gray-100">
+                        {isMounted && userId && (
+                            <div className="mt-1 pt-1 border-t border-gray-100">
                             <p className="px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-400">My Workspace</p>
                             {WORKSPACE_SECTIONS.map((section) => (
                                 <div key={section.label}>
@@ -361,30 +424,50 @@ export function AppNavbar() {
                                 </div>
                             ))}
                         </div>
+                        )}
 
                         {/* Account actions */}
                         <div className="border-t pt-2 mt-2 space-y-1">
-                            <Link
-                                href="/my-profile"
-                                className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
-                            >
-                                <User className="h-4 w-4 text-gray-400" /> My Profile
-                            </Link>
-                            {hasAnyRole('CONFERENCE_CHAIR') && (
-                                <Link
-                                    href="/conference/create"
-                                    className="block px-4 py-2.5 rounded-lg text-sm font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
-                                >
-                                    Create Conference
-                                </Link>
-                            )}
-                            <button
-                                onClick={handleLogout}
-                                className="flex items-center gap-2 w-full px-4 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
-                            >
-                                <LogOut className="h-4 w-4" />
-                                Log out
-                            </button>
+                            {isMounted && userId ? (
+                                <>
+                                    <Link
+                                        href="/my-profile"
+                                        className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                    >
+                                        <User className="h-4 w-4 text-gray-400" /> My Profile
+                                    </Link>
+                                    {hasAnyRole('CONFERENCE_CHAIR') && (
+                                        <Link
+                                            href="/conference/create"
+                                            className="block px-4 py-2.5 rounded-lg text-sm font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
+                                        >
+                                            Create Conference
+                                        </Link>
+                                    )}
+                                    <button
+                                        onClick={handleLogout}
+                                        className="flex items-center gap-2 w-full px-4 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                                    >
+                                        <LogOut className="h-4 w-4" />
+                                        Log out
+                                    </button>
+                                </>
+                            ) : isMounted ? (
+                                <>
+                                    <Link
+                                        href="/auth/login"
+                                        className="block px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                    >
+                                        Log in
+                                    </Link>
+                                    <Link
+                                        href="/auth/register"
+                                        className="block px-4 py-2.5 rounded-lg text-sm font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors mt-1"
+                                    >
+                                        Sign up
+                                    </Link>
+                                </>
+                            ) : null}
                         </div>
                     </div>
                 </div>

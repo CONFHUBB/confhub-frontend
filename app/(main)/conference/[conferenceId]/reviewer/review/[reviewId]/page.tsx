@@ -15,6 +15,7 @@ import { FieldError } from '@/components/ui/field'
 import { Loader2, ArrowLeft, FileText, Check, X, AlertTriangle, Save, Eye, ExternalLink, FileDown, MessageSquare, Lock } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { PaperDiscussion } from '@/components/paper-discussion'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 
 interface ReviewQuestion {
     id: number
@@ -292,7 +293,7 @@ export default function ReviewPaperPage() {
     const isReadOnly = review.status === 'COMPLETED' || review.status === 'DECLINED' || !!activityClosed
 
     return (
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div className="max-w-7xl 2xl:max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
             {/* Header */}
             <div className="space-y-4">
                 <Button variant="ghost" className="gap-2 -ml-2" onClick={() => router.push(`/conference/${conferenceId}/reviewer`)}>
@@ -334,10 +335,19 @@ export default function ReviewPaperPage() {
                 </div>
             )}
 
-            {/* Paper Info */}
-            <Card className="border-l-4 border-l-indigo-500">
-                <CardHeader className="pb-3">
-                    <div className="flex items-start gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                
+                {/* LEFT COLUMN: Paper Info & Manuscript */}
+                <div className="space-y-6 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] overflow-y-auto pr-1 pb-4">
+                    <h2 className="text-xl font-bold border-b pb-2 text-gray-800 flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-indigo-500" />
+                        Paper Reference
+                    </h2>
+                    
+                    {/* Paper Info */}
+                    <Card className="border-l-4 border-l-indigo-500">
+                        <CardHeader className="pb-3">
+                            <div className="flex items-start gap-3">
                         <FileText className="h-5 w-5 text-indigo-500 mt-0.5 shrink-0" />
                         <div>
                             <CardTitle className="text-lg">{review.paper?.title}</CardTitle>
@@ -416,8 +426,7 @@ export default function ReviewPaperPage() {
                                 <div className="rounded-lg border overflow-hidden bg-gray-50">
                                     <iframe
                                         src={`https://docs.google.com/gview?url=${encodeURIComponent(activeFile.url)}&embedded=true`}
-                                        className="w-full border-0"
-                                        style={{ height: '700px' }}
+                                        className="w-full border-0 h-[65vh] min-h-[500px]"
                                         title="Manuscript PDF"
                                     />
                                 </div>
@@ -427,8 +436,23 @@ export default function ReviewPaperPage() {
                 )
             })()}
 
-            {/* Review Questions */}
-            {questions.length === 0 ? (
+                </div>
+
+                {/* RIGHT COLUMN: Review Form & Discussion */}
+                <div className="pb-20">
+                    <Tabs defaultValue="review" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 mb-6 h-12 bg-gray-100 p-1 rounded-xl">
+                            <TabsTrigger value="review" className="text-sm font-semibold h-full flex items-center gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
+                                <Check className="h-4 w-4" /> Review Form
+                            </TabsTrigger>
+                            <TabsTrigger value="discussion" className="text-sm font-semibold h-full flex items-center gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
+                                <MessageSquare className="h-4 w-4" /> Discussion
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="review" className="space-y-6">
+                            {/* Review Questions */}
+                    {questions.length === 0 ? (
                 <Card>
                     <CardContent className="py-12 text-center text-muted-foreground">
                         <AlertTriangle className="h-8 w-8 mx-auto mb-3 text-amber-400" />
@@ -602,32 +626,37 @@ export default function ReviewPaperPage() {
                 </div>
             )}
 
-            {/* Discussion Section */}
-            <Card>
-                <CardHeader className="pb-3">
-                    <button
-                        onClick={() => setShowDiscussion(!showDiscussion)}
-                        className="flex items-center justify-between w-full"
-                    >
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <MessageSquare className="h-4 w-4 text-indigo-500" />
-                            Discussion
-                        </CardTitle>
-                        <Badge variant="outline" className="text-xs">
-                            {showDiscussion ? 'Thu gọn' : 'Mở rộng'}
-                        </Badge>
-                    </button>
-                </CardHeader>
-                {showDiscussion && currentUserId && review.paper?.id && (
-                    <CardContent>
-                        <PaperDiscussion
-                            paperId={review.paper.id}
-                            currentUserId={currentUserId}
-                            anonymize={true}
-                        />
-                    </CardContent>
-                )}
-            </Card>
+                        </TabsContent>
+
+                        <TabsContent value="discussion">
+                            <Card className="border-t-4 border-t-indigo-500 shadow-sm">
+                                <CardHeader className="pb-4 border-b border-gray-100 mb-4 bg-gray-50/50">
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <CardTitle className="text-lg flex items-center gap-2 text-indigo-700">
+                                                <MessageSquare className="h-5 w-5" />
+                                                Reviewer Discussion
+                                            </CardTitle>
+                                            <p className="text-sm text-gray-500 mt-1">
+                                                Discuss this paper with other assigned reviewers and the Chair.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                {currentUserId && review.paper?.id && (
+                                    <CardContent>
+                                        <PaperDiscussion
+                                            paperId={review.paper.id}
+                                            currentUserId={currentUserId}
+                                            anonymize={true}
+                                        />
+                                    </CardContent>
+                                )}
+                            </Card>
+                        </TabsContent>
+                    </Tabs>
+                </div>
+            </div>
         </div>
     )
 }

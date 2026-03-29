@@ -7,7 +7,6 @@ export type PaperStatus =
     | "WITHDRAWN"
     | "CAMERA_READY"
     | "PUBLISHED"
-    | "REVISION"
 
 export interface PaperResponse {
     id: number

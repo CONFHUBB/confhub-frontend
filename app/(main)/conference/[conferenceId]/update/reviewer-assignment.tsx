@@ -1885,10 +1885,10 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                     <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
                                                         <GraduationCap className="h-3 w-3" /> Academic Profiles
                                                     </p>
-                                                    {p.orcidId && (
+                                                    {p.orcid && (
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-xs text-muted-foreground w-32 shrink-0">ORCID:</span>
-                                                            <a href={`https://orcid.org/${p.orcidId}`} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline">{p.orcidId}</a>
+                                                            <a href={`https://orcid.org/${p.orcid}`} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline">{p.orcid}</a>
                                                         </div>
                                                     )}
                                                     {p.googleScholarLink && (
@@ -1909,7 +1909,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                             <span className="text-sm">{p.semanticScholarId}</span>
                                                         </div>
                                                     )}
-                                                    {!p.orcidId && !p.googleScholarLink && !p.dblpId && !p.semanticScholarId && (
+                                                    {!p.orcid && !p.googleScholarLink && !p.dblpId && !p.semanticScholarId && (
                                                         <p className="text-xs text-muted-foreground italic">No academic profiles linked.</p>
                                                     )}
                                                 </div>

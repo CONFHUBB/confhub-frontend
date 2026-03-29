@@ -44,6 +44,7 @@ export default function MyGlobalTicketsPage() {
             setPapers(pData || [])
         } catch (error) {
             console.error(error)
+            toast.error("Failed to load tickets. Please try again.")
         } finally {
             setLoading(false)
         }
@@ -54,7 +55,7 @@ export default function MyGlobalTicketsPage() {
             if (ticket.qrCode && !qrDataUrls[ticket.id]) {
                 QRCode.toDataURL(ticket.qrCode, { width: 180, margin: 2 })
                     .then(url => setQrDataUrls(prev => ({ ...prev, [ticket.id]: url })))
-                    .catch(() => {})
+                    .catch(() => { toast.error("Failed to generate QR code.") })
             }
         })
     }, [tickets, qrDataUrls])
