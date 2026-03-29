@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, type FormEvent } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import toast from "react-hot-toast"
 import { cn } from "@/lib/utils"
 import { V, validate } from "@/lib/validation"
@@ -26,6 +26,18 @@ export function LoginForm({
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Show session expired message if redirected from JWT interceptor
+  useEffect(() => {
+    if (searchParams.get('expired') === '1') {
+      toast('Your session has expired. Please log in again.', {
+        icon: '🔒',
+        duration: 5000,
+        id: 'session-expired-toast',
+      })
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()

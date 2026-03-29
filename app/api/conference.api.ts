@@ -143,3 +143,29 @@ export const importSubjectAreas = (conferenceId: number, file: File) => uploadFi
 export const downloadMemberTemplate = (conferenceId: number) => downloadBlob(`/conferences/${conferenceId}/members/import/template`)
 export const previewMemberImport = (conferenceId: number, file: File) => uploadFile(`/conferences/${conferenceId}/members/import/preview`, file).then(r => r.data)
 export const importMembers = (conferenceId: number, file: File) => uploadFile(`/conferences/${conferenceId}/members/import`, file).then(r => r.data)
+
+// ── Conference Stats ──
+export interface ConferenceStatsResponse {
+    totalPapers: number
+    submitted: number
+    underReview: number
+    accepted: number
+    rejected: number
+    totalReviews: number
+    completedReviews: number
+    totalRegistrations: number
+    checkedIn: number
+    acceptanceRate: number
+    reviewCompletionRate: number
+}
+
+export const getConferenceStats = async (conferenceId: number): Promise<ConferenceStatsResponse> => {
+    const response = await http.get<ConferenceStatsResponse>(`/conferences/${conferenceId}/stats`)
+    return response.data
+}
+
+// ── Export Attendees CSV ──
+export const exportAttendeesCsv = async (conferenceId: number): Promise<Blob> => {
+    const response = await http.get(`/conferences/${conferenceId}/export/attendees`, { responseType: 'blob' })
+    return new Blob([response.data], { type: 'text/csv' })
+}

@@ -135,7 +135,7 @@ function ActivateContent() {
                 websiteUrl: "",
                 dblpId: "",
                 googleScholarLink: "",
-                orcidId: "",
+                orcid: "",
                 semanticScholarId: "",
             }
             await createOrUpdateUserProfile(userId, profileData)

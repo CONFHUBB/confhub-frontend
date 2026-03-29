@@ -3,15 +3,16 @@
 // app/(main)/conference/[conferenceId]/update/attendees-management.tsx
 
 import { useState, useEffect, useCallback } from 'react'
-import { getAttendees, TicketResponse } from '@/app/api/registration.api'
+import { getAttendees, refundTicket, TicketResponse } from '@/app/api/registration.api'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Loader2, Users, CheckCircle2, Download, Search, Filter, ChevronLeft, ChevronRight, XCircle, Clock } from 'lucide-react'
+import { Users, CheckCircle2, Download, Search, ChevronLeft, ChevronRight, XCircle, Clock } from 'lucide-react'
 import { FilterPanel } from '@/components/ui/filter-panel'
+import { TableSkeleton } from '@/components/ui/table-skeleton'
+import { EmptyState } from '@/components/ui/empty-state'
 
 const PAGE_SIZE = 20
 
@@ -104,31 +105,58 @@ export default function AttendeesManagement({ conferenceId }: Props) {
   }, [fetchAttendees])
 
   const exportCsv = async () => {
-    // Export all pages (fetch size=1000 for export)
-    const allData = await getAttendees(conferenceId, {
-      page: 0,
-      size: 1000,
-      search: debouncedSearch || undefined,
-      status: statusFilter !== 'ALL' ? statusFilter : undefined,
-    })
-    const headers = ['Reg #', 'Name', 'Email', 'Ticket Type', 'Amount', 'Status', 'Checked In']
-    const rows = allData.content.map((a) => [
-      a.registrationNumber,
-      a.userName,
-      a.userEmail,
-      a.ticketTypeName,
-      a.price,
-      a.paymentStatus,
-      a.isCheckedIn ? 'Yes' : 'No',
-    ])
-    const csv = [headers, ...rows].map((r) => r.join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `attendees-conf-${conferenceId}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    try {
+      const { exportAttendeesCsv } = await import('@/app/api/conference.api')
+      const blob = await exportAttendeesCsv(conferenceId)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `attendees-conf-${conferenceId}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      // Fallback: client-side CSV export
+      try {
+        const allData = await getAttendees(conferenceId, {
+          page: 0,
+          size: 1000,
+          search: debouncedSearch || undefined,
+          status: statusFilter !== 'ALL' ? statusFilter : undefined,
+        })
+        const headers = ['Reg #', 'Name', 'Email', 'Ticket Type', 'Amount', 'Status', 'Checked In']
+        const rows = allData.content.map((a) => [
+          a.registrationNumber,
+          a.userName,
+          a.userEmail,
+          a.ticketTypeName,
+          a.price,
+          a.paymentStatus,
+          a.isCheckedIn ? 'Yes' : 'No',
+        ])
+        const csv = [headers, ...rows].map((r) => r.join(',')).join('\n')
+        const blob = new Blob([csv], { type: 'text/csv' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `attendees-conf-${conferenceId}.csv`
+        a.click()
+        URL.revokeObjectURL(url)
+      } catch {
+        toast.error('Failed to export attendees CSV')
+      }
+    }
+  }
+
+
+  const handleRefund = async (ticketId: number, name: string) => {
+    if (!window.confirm(`Are you sure you want to refund the ticket for ${name}?`)) return
+    try {
+      await refundTicket(conferenceId, ticketId)
+      toast.success('Ticket refunded successfully')
+      fetchAttendees()
+    } catch {
+      toast.error('Failed to refund ticket')
+    }
   }
 
   return (
@@ -185,13 +213,17 @@ export default function AttendeesManagement({ conferenceId }: Props) {
 
       {/* Table */}
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </div>
+        <TableSkeleton
+          rows={8}
+          headers={['#', 'Reg #', 'Name', 'Email', 'Ticket Type', 'Amount', 'Payment', 'Check-in', 'Actions']}
+          className="rounded-lg border overflow-hidden"
+        />
       ) : attendees.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">
-          {search || statusFilter !== 'ALL' ? 'No attendees match the current filter.' : 'No attendees registered yet.'}
-        </div>
+        <EmptyState
+          emoji={search || statusFilter !== 'ALL' ? '🔍' : '🎟️'}
+          title={search || statusFilter !== 'ALL' ? 'No attendees match the current filter' : 'No attendees yet'}
+          description={search || statusFilter !== 'ALL' ? 'Try adjusting your search or filter settings.' : 'Attendees will appear here once they register and complete payment.'}
+        />
       ) : (
         <div className="rounded-lg border overflow-hidden">
           <div className="overflow-x-auto">
@@ -206,6 +238,7 @@ export default function AttendeesManagement({ conferenceId }: Props) {
                 <TableHead>Amount</TableHead>
                 <TableHead className="w-28 text-center">Payment</TableHead>
                 <TableHead className="w-24 text-center">Check-in</TableHead>
+                <TableHead className="w-24 text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -235,6 +268,18 @@ export default function AttendeesManagement({ conferenceId }: Props) {
                       <Badge className="bg-gray-100 text-gray-500 border">
                         <XCircle className="w-3 h-3 mr-1" /> No
                       </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {a.paymentStatus === 'COMPLETED' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                        onClick={() => handleRefund(a.id, a.userName)}
+                      >
+                        Refund
+                      </Button>
                     )}
                   </TableCell>
                 </TableRow>

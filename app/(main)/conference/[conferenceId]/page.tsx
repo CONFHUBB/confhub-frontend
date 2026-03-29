@@ -16,6 +16,8 @@ import { Calendar, MapPin, ExternalLink, Loader2, ArrowLeft, Settings,
 import Link from 'next/link'
 import { isActivityOpen } from '@/lib/activity'
 import { useUserRoles } from '@/hooks/useUserConferenceRoles'
+import { ConferenceFeedback } from '@/components/conference-feedback'
+import http from '@/lib/http'
 import {
     Tooltip,
     TooltipContent,
@@ -37,6 +39,8 @@ export default function ConferenceDetailsPage() {
     const canManageConference = hasRoleInConference(conferenceId, 'CONFERENCE_CHAIR') || hasRoleInConference(conferenceId, 'PROGRAM_CHAIR')
     const [pendingInvitations, setPendingInvitations] = useState<any[]>([])
     const [actionLoading, setActionLoading] = useState(false)
+    const [isCheckedIn, setIsCheckedIn] = useState(false)
+    const [hasTicket, setHasTicket] = useState(false)
 
     useEffect(() => {
         const fetchData = async () => {
@@ -52,6 +56,21 @@ export default function ConferenceDetailsPage() {
                 setTracks(tracksData)
                 setActivities(activitiesData)
                 setPendingInvitations(userRoles.filter((r: any) => r.conferenceId === conferenceId && r.isAccepted === null))
+
+                // Check if user is checked in (for feedback form)
+                if (userId) {
+                    try {
+                        const ticketRes = await http.get(`/registration/my-tickets`)
+                        const myTickets = ticketRes.data as any[]
+                        const conferenceTicket = myTickets?.find((t: any) => t.conferenceId === conferenceId)
+                        if (conferenceTicket) {
+                            setHasTicket(true)
+                            if (conferenceTicket.isCheckedIn) {
+                                setIsCheckedIn(true)
+                            }
+                        }
+                    } catch { /* not registered */ }
+                }
             } catch (err: any) {
                 if (err.response?.status === 401 || err.response?.status === 403) {
                     setError('You must be logged in to view this conference.')
@@ -337,29 +356,38 @@ export default function ConferenceDetailsPage() {
                         return (
                             <TooltipProvider delayDuration={200}>
                                 <div className="flex gap-3 pt-4 flex-wrap">
-                                    {/* Register to Attend */}
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <span className="inline-flex" tabIndex={0} style={{ pointerEvents: 'auto' }}>
-                                                <Button
-                                                    size="lg"
-                                                    className="gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:pointer-events-none"
-                                                    disabled={!canRegister}
-                                                    onClick={() => canRegister && window.location.assign(`/conference/${conferenceId}/register`)}
-                                                >
-                                                    <Ticket className="h-5 w-5" />
-                                                    Register to Attend
-                                                </Button>
-                                            </span>
-                                        </TooltipTrigger>
-                                        {!canRegister && (
-                                            <TooltipContent side="bottom" className="max-w-xs">
-                                                {registrationActivity?.deadline && new Date(registrationActivity.deadline).getTime() < Date.now()
-                                                    ? 'Registration is closed.'
-                                                    : 'Registration is not open yet. Please wait until the Registration phase.'}
-                                            </TooltipContent>
-                                        )}
-                                    </Tooltip>
+                                    {/* Register to Attend or My Workspace */}
+                                    {hasTicket ? (
+                                        <Link href={`/conference/${conferenceId}/attendee`}>
+                                            <Button size="lg" className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+                                                <Ticket className="h-5 w-5" />
+                                                My Workspace
+                                            </Button>
+                                        </Link>
+                                    ) : (
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <span className="inline-flex" tabIndex={0} style={{ pointerEvents: 'auto' }}>
+                                                    <Button
+                                                        size="lg"
+                                                        className="gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:pointer-events-none"
+                                                        disabled={!canRegister}
+                                                        onClick={() => canRegister && window.location.assign(`/conference/${conferenceId}/register`)}
+                                                    >
+                                                        <Ticket className="h-5 w-5" />
+                                                        Register to Attend
+                                                    </Button>
+                                                </span>
+                                            </TooltipTrigger>
+                                            {!canRegister && (
+                                                <TooltipContent side="bottom" className="max-w-xs">
+                                                    {registrationActivity?.deadline && new Date(registrationActivity.deadline).getTime() < Date.now()
+                                                        ? 'Registration is closed.'
+                                                        : 'Registration is not open yet. Please wait until the Registration phase.'}
+                                                </TooltipContent>
+                                            )}
+                                        </Tooltip>
+                                    )}
 
                                     {/* View Program */}
                                     <Tooltip>
@@ -549,6 +577,12 @@ export default function ConferenceDetailsPage() {
                         })}
                     </div>
                 )}
+            </section>
+
+            {/* ── Conference Feedback / Reviews ── */}
+            <section className="mt-10">
+                <h2 className="text-2xl font-bold tracking-tight mb-6">Conference Reviews</h2>
+                <ConferenceFeedback conferenceId={conferenceId} isCheckedIn={isCheckedIn} />
             </section>
         </div>
     )

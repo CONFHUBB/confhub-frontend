@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { getProgram } from '@/app/api/program.api'
 import { getSessionBookmarks, addSessionBookmark, removeSessionBookmark } from '@/app/api/session-bookmark.api'
+import { rateSession as rateSessionApi } from '@/app/api/session.api'
 import { AdvancedProgram, ProgramSession } from '@/types/program'
 import { Calendar, MapPin, Bookmark, BookmarkCheck, User, Filter, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -47,6 +48,7 @@ export default function ProgramPage({ params }: { params: { conferenceId: string
         const bm = localStorage.getItem(`myBookmarks_${conferenceId}`)
         if (bm) { try { setBookmarks(JSON.parse(bm)) } catch {} }
       })
+    // Load ratings from localStorage as cache, will be overridden by server if available
     const rt = localStorage.getItem(`sessionRatings_${conferenceId}`)
     if (rt) { try { setRatings(JSON.parse(rt)) } catch {} }
     loadData()
@@ -70,10 +72,21 @@ export default function ProgramPage({ params }: { params: { conferenceId: string
     }
   }
 
-  const rateSession = (sessionId: string, rating: number) => {
-    const next = { ...ratings, [sessionId]: rating }
-    setRatings(next)
-    localStorage.setItem(`sessionRatings_${conferenceId}`, JSON.stringify(next))
+  const handleRateSession = async (sessionId: string, rating: number) => {
+    // Optimistic update
+    const prev = ratings[sessionId] || 0
+    setRatings(r => ({ ...r, [sessionId]: rating }))
+    // Persist to localStorage as fallback cache
+    try {
+      localStorage.setItem(`sessionRatings_${conferenceId}`, JSON.stringify({ ...ratings, [sessionId]: rating }))
+    } catch {}
+    // Sync to backend
+    try {
+      await rateSessionApi({ sessionId, conferenceId, rating })
+    } catch {
+      // Rollback if API fails
+      setRatings(r => ({ ...r, [sessionId]: prev }))
+    }
   }
 
   const toggleType = (id: string) => setActiveTypes(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
@@ -250,7 +263,7 @@ export default function ProgramPage({ params }: { params: { conferenceId: string
                             <div className="flex items-center gap-1.5 mt-4 pt-3 border-t border-gray-100">
                               <span className="text-xs text-gray-400 font-medium mr-1">Rate:</span>
                               {[1,2,3,4,5].map(star => (
-                                <button key={star} onClick={() => rateSession(session.id, star)}
+                                <button key={star} onClick={() => handleRateSession(session.id, star)}
                                   className={`transition-colors ${star <= myRating ? 'text-amber-400' : 'text-gray-300 hover:text-amber-300'}`}>
                                   <Star className={`w-4 h-4 ${star <= myRating ? 'fill-current' : ''}`} />
                                 </button>

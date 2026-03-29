@@ -141,7 +141,8 @@ export function NotificationBell() {
                         <div className="flex items-center gap-2">
                             <button
                                     onClick={handleMarkAllRead}
-                                    className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                                    style={{ color: '#4338ca', backgroundColor: '#e0e7ff' }}
+                                    className="text-xs hover:!bg-indigo-200 px-2.5 py-1 rounded-full font-medium flex items-center gap-1 cursor-pointer transition-colors border border-indigo-200"
                                 >
                                     <CheckCheck className="h-3 w-3" /> Mark all read
                                 </button>

@@ -1,11 +1,14 @@
 "use client"
 
+import { useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { AppNavbar } from "@/components/app-navbar"
 import { useUserRole } from "@/hooks/useUserRole"
 import { UserRolesProvider } from "@/hooks/useUserConferenceRoles"
+import { startTokenExpiryMonitor } from "@/lib/http"
+import toast from "react-hot-toast"
 import {
     SidebarInset,
     SidebarProvider,
@@ -24,6 +27,37 @@ export default function MainLayout({
     const isDashboard = pathname.startsWith("/dashboard")
     const isHomePage = pathname === "/"
     const { isAdminOrStaff, isLoading } = useUserRole()
+
+    // ── JWT token expiry monitor ──
+    useEffect(() => {
+        const cleanup = startTokenExpiryMonitor()
+
+        const handleExpiringSoon = (e: Event) => {
+            const remaining = (e as CustomEvent).detail?.remainingMs
+            const mins = Math.ceil(remaining / 60_000)
+            toast(`Session expires in ${mins} min. Please save your work.`, {
+                icon: '⏳',
+                duration: 10000,
+                id: 'token-expiry-warning',
+            })
+        }
+
+        const handleExpired = () => {
+            toast.error('Session expired. Redirecting to login...', {
+                duration: 3000,
+                id: 'token-expired',
+            })
+        }
+
+        window.addEventListener('auth:expiring-soon', handleExpiringSoon)
+        window.addEventListener('auth:expired', handleExpired)
+
+        return () => {
+            cleanup?.()
+            window.removeEventListener('auth:expiring-soon', handleExpiringSoon)
+            window.removeEventListener('auth:expired', handleExpired)
+        }
+    }, [])
 
     if (isLoading) {
         return (
@@ -66,3 +100,4 @@ export default function MainLayout({
         </UserRolesProvider>
     )
 }
+

@@ -1,6 +1,6 @@
 // ── Meta-Review Types ──
 
-export type Decision = "APPROVE" | "REJECT" | "REVISION"
+export type Decision = "APPROVE" | "REJECT"
 
 export interface MetaReviewRequest {
     paperId: number
