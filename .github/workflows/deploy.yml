@@ -19,7 +19,8 @@ jobs:
 
       - name: Build and Deploy via Docker Compose
         run: |
-          # Stop the old container
+          # Stop and forcefully remove the old container
+          docker rm -f confhub-frontend || true
           docker compose down || true
           
           # Force build a fresh Next.js image
