@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Loader2, MessageSquare, ChevronDown, ChevronRight, FileText, CheckCircle2, User } from 'lucide-react'
+import { Loader2, MessageSquare, ChevronDown, ChevronRight, FileText, CheckCircle2, User, AlertCircle } from 'lucide-react'
 import { PaperDiscussion } from '@/components/paper-discussion'
 import type { ReviewResponse } from '@/types/review'
 import { getReviewsByPaper, getAnswersByReview, getReviewQuestionsByTrack } from '@/app/api/review.api'
@@ -15,6 +15,7 @@ interface DiscussionTabProps {
     reviews: ReviewResponse[]
     conferenceId: number
     currentUserId: number | null
+    activities?: { activityType: string; isEnabled: boolean }[]
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -23,7 +24,8 @@ const STATUS_COLORS: Record<string, string> = {
     COMPLETED: 'bg-green-100 text-green-800',
 }
 
-export function DiscussionTab({ reviews, conferenceId, currentUserId }: DiscussionTabProps) {
+export function DiscussionTab({ reviews, conferenceId, currentUserId, activities = [] }: DiscussionTabProps) {
+    const isDiscussionEnabled = activities.some(a => a.activityType === 'REVIEW_DISCUSSION' && a.isEnabled)
     const [expandedPaper, setExpandedPaper] = useState<number | null>(null)
     const [paperReviews, setPaperReviews] = useState<Record<number, ReviewResponse[]>>({})
     const [loadingReviews, setLoadingReviews] = useState<Record<number, boolean>>({})
@@ -188,6 +190,7 @@ export function DiscussionTab({ reviews, conferenceId, currentUserId }: Discussi
                                                         paperId={paper.id}
                                                         currentUserId={currentUserId}
                                                         anonymize={false}
+                                                        discussionEnabled={isDiscussionEnabled}
                                                     />
                                                 ) : (
                                                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-indigo-500 my-10" />
