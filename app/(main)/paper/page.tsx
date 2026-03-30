@@ -294,7 +294,8 @@ export default function UserSubmissionsPage() {
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Paper Link</th>
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Conference / Track</th>
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Submitted</th>
-                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Status</th>
+                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Conf Status</th>
+                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Paper Status</th>
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -325,14 +326,28 @@ export default function UserSubmissionsPage() {
                                                 </div>
                                             </td>
                                             <td className="px-5 py-4">
+                                                <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${
+                                                    paper.track?.conference?.status === 'ONGOING' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                                    paper.track?.conference?.status === 'SCHEDULED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                    paper.track?.conference?.status === 'COMPLETED' ? 'bg-gray-50 text-gray-600 border-gray-200' :
+                                                    'bg-amber-50 text-amber-700 border-amber-200'
+                                                }`}>
+                                                    {paper.track?.conference?.status || 'UNKNOWN'}
+                                                </span>
+                                            </td>
+                                            <td className="px-5 py-4">
                                                 <StatusBadge status={paper.status} />
                                             </td>
-                                            <td className="px-5 py-4 text-right">
-                                                <Link href={`/paper/${paper.id}`}>
-                                                    <Button variant="outline" size="sm" className="gap-2 shrink-0 border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700">
-                                                        Open Workspace <ArrowRight className="h-4 w-4" />
-                                                    </Button>
-                                                </Link>
+                                            <td className="px-5 py-4">
+                                                <div className="flex justify-end gap-2">
+                                                    {paper.track?.conference?.id && (
+                                                        <Link href={`/conference/${paper.track.conference.id}/author`}>
+                                                            <Button size="sm" className="gap-1.5 h-8 text-[11px] font-semibold tracking-wide bg-indigo-600 hover:bg-indigo-700 text-white border-0">
+                                                                Open Workspace <ArrowRight className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        </Link>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     )

@@ -92,8 +92,20 @@ export function PaperManagement({ conferenceId, trackIds }: PaperManagementProps
     const [sheetPaperId, setSheetPaperId] = useState<number | null>(null)
     const [sheetDefaultTab, setSheetDefaultTab] = useState<"info" | "assignments" | "reviews" | "decision" | "conflicts">("info")
 
-    // Assuming we have user ID implicitly from auth token context
-    const userId = 0 
+    // Get user ID from auth token
+    const [userId, setUserId] = useState<number | null>(null)
+
+    useEffect(() => {
+        const token = localStorage.getItem("accessToken")
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split(".")[1]))
+                setUserId(Number(payload.userId || payload.id))
+            } catch (e) {
+                console.error("Failed to parse token", e)
+            }
+        }
+    }, [])
 
     const fetchAllData = useCallback(async () => {
         setIsLoading(true)

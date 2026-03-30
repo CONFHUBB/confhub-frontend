@@ -33,6 +33,7 @@ export interface ConferenceResponse {
     contactInformation: string
     paperDeadline: string
     cameraReadyDeadline: string
+    programSchedule?: string | Record<string, any>
 }
 
 export interface ConferenceListResponse {

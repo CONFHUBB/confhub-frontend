@@ -35,6 +35,11 @@ export const getAnswersByReview = async (reviewId: number): Promise<ReviewAnswer
     return response.data
 }
 
+export const getReviewVersions = async (reviewId: number): Promise<any[]> => {
+    const response = await http.get<any[]>(`/review/${reviewId}/versions`)
+    return response.data
+}
+
 export const submitAnswer = async (dto: ReviewAnswerRequest): Promise<ReviewAnswerResponse> => {
     const response = await http.post<ReviewAnswerResponse>('/review-answers', dto)
     return response.data
