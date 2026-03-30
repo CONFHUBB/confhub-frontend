@@ -283,9 +283,9 @@ export default function ReviewerConsole() {
             <div className="flex-1 w-full max-w-[1700px] mx-auto flex flex-col p-4 md:p-8 overflow-hidden">
                 {/* Header Area — Vibrant hero banner */}
                 <div className="mb-6 shrink-0">
-                    <Button variant="ghost" className="mb-3 -ml-2 gap-2" onClick={() => router.push('/conference/reviewer-select')}>
+                    <Button variant="ghost" className="mb-3 -ml-2 gap-2" onClick={() => router.push('/conference/reviewer-console')}>
                         <ArrowLeft className="h-4 w-4" />
-                        Back to Conferences
+                        Back to My Reviews
                     </Button>
                     <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-700 p-6 md:px-8 md:py-7 shadow-lg">
                         {/* Decorative circles */}

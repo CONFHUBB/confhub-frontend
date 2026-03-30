@@ -5,9 +5,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-    Menu, X, Search, LogOut, ChevronDown, User, FileText,
+    Menu, X, Search, LogOut, ChevronDown, User, FileText, Mail,
     Ticket, CreditCard, LayoutDashboard, BookOpen, Star,
-    Building2, GraduationCap, FlaskConical, Globe
+    Building2, GraduationCap, FlaskConical, Globe, ClipboardList
 } from 'lucide-react'
 import { useUserRoles } from '@/hooks/useUserConferenceRoles'
 import { getUserByEmail, getUserProfile } from '@/app/api/user.api'
@@ -28,11 +28,11 @@ const WORKSPACE_SECTIONS = [
         ],
     },
     {
-        label: 'Invitations',
+        label: 'As Reviewer',
         icon: <Star className="h-3.5 w-3.5" />,
         color: 'text-amber-600',
         items: [
-            { name: 'My Invitations',  path: '/my-profile/invitations',  icon: <FlaskConical className="h-4 w-4" /> },
+            { name: 'My Reviews',  path: '/conference/reviewer-console',  icon: <ClipboardList className="h-4 w-4" /> },
         ],
     },
     {
@@ -51,14 +51,6 @@ const WORKSPACE_SECTIONS = [
             { name: 'My Conferences',   path: '/conference/my-conference',    icon: <Building2 className="h-4 w-4" /> },
         ],
     },
-    {
-        label: 'As Attendee',
-        icon: <Ticket className="h-3.5 w-3.5" />,
-        color: 'text-purple-600',
-        items: [
-            { name: 'My Tickets & Workspaces', path: '/my-profile/tickets', icon: <Ticket className="h-4 w-4" /> },
-        ],
-    },
 ]
 
 // Paths that belong to the "My Workspace" group — used to highlight the dropdown trigger
@@ -67,8 +59,7 @@ const WORKSPACE_PATHS: { path: string; exact: boolean }[] = [
     { path: '/paper', exact: true },
     { path: '/conference/my-conference', exact: false },
     { path: '/conference/program-conference', exact: false },
-    { path: '/my-profile/invitations', exact: false },
-    { path: '/my-profile/tickets', exact: true },
+    { path: '/conference/reviewer-console', exact: false },
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -327,6 +318,13 @@ export function AppNavbar() {
                                             className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
                                         >
                                             <User className="h-4 w-4 text-gray-400" /> My Profile
+                                        </Link>
+                                        <Link
+                                            href="/my-profile/invitations"
+                                            onClick={() => setUserMenuOpen(false)}
+                                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                                        >
+                                            <Mail className="h-4 w-4 text-gray-400" /> My Invitations
                                         </Link>
                                         <Link
                                             href="/my-profile/tickets"
