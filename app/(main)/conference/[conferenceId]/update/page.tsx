@@ -219,12 +219,13 @@ export default function ConferenceUpdatePage() {
                 const token = localStorage.getItem('accessToken')
                 if (!token) return
                 const payload = JSON.parse(atob(token.split('.')[1]))
-                const userId: number = payload.userId || payload.id
+                const userId: number = Number(payload.userId || payload.id)
                 const data = await getConferenceUsersWithRoles(conferenceId, 0, 200)
                 const members: any[] = (data as any)?.content || data || []
-                const me = members.find((m: any) => (m.user?.id || m.userId || m.id) === userId)
+                const me = members.find((m: any) => Number(m.user?.id || m.userId || m.id) === userId)
                 if (!me) {
                     // User not found in members list but has page access — assume full chair
+                    console.warn(`[RoleDetector] User ID ${userId} not found in members array. Falling back to BOTH roles.`)
                     setUserRole('BOTH')
                     return
                 }
@@ -496,12 +497,19 @@ export default function ConferenceUpdatePage() {
         }
     }
 
-    const handleUpdateConference = async (data: ConferenceData) => {
+    const handleUpdateConference = async (data: ConferenceData, pendingBannerFile?: File) => {
         setIsUpdatingGeneral(true)
         try {
+            let bannerUrl = data.bannerImageUrl
+            // Upload banner file if pending
+            if (pendingBannerFile) {
+                const { uploadBannerImage } = await import('@/app/api/conference.api')
+                bannerUrl = await uploadBannerImage(conferenceId, pendingBannerFile)
+            }
             const updated = await updateConference(conferenceId, {
                 ...data,
                 id: conferenceId,
+                bannerImageUrl: bannerUrl.startsWith('[pending') ? '' : bannerUrl,
                 startDate: data.startDate ? new Date(data.startDate).toISOString() : "",
                 endDate: data.endDate ? new Date(data.endDate).toISOString() : "",
                 societySponsor: data.societySponsor.join(", "),
@@ -681,7 +689,7 @@ export default function ConferenceUpdatePage() {
                             <h2 className="text-xl font-bold mb-2">Config Review Form</h2>
                             <p className="text-sm text-muted-foreground">Configure the questions reviewers must answer for each track.</p>
                         </div>
-                        <ReviewQuestionsList conferenceId={conferenceId} />
+                        <ReviewQuestionsList conferenceId={conferenceId} isReadOnly={isViewOnly('forms-review')} />
                     </div>
                 )
 

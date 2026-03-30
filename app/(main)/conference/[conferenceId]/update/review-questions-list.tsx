@@ -12,9 +12,14 @@ import {
 } from "@/app/api/track.api"
 import type { TrackResponse, ReviewQuestionDTO } from "@/types/track"
 import { Button } from "@/components/ui/button"
-import { Loader2, Plus, Copy, Eye, Pencil, Trash2, ArrowUp, ArrowDown } from "lucide-react"
+import { Loader2, Plus, Copy, Eye, Pencil, Trash2, ArrowUp, ArrowDown, Send, BellRing } from "lucide-react"
 import toast from "react-hot-toast"
 import { Select } from "antd"
+
+import { getConference } from "@/app/api/conference.api"
+import { getConferenceMembers } from "@/app/api/user.api"
+import { sendBulkEmail } from "@/app/api/email.api"
+import { createNotification } from "@/app/api/notification.api"
 
 import { ReviewQuestionDialog } from "./review-question-dialog"
 import { ReviewQuestionsPreview } from "./review-questions-preview"
@@ -22,9 +27,10 @@ import { ReviewQuestionsCopyDialog } from "./review-questions-copy-dialog"
 
 interface ReviewQuestionsListProps {
     conferenceId: number
+    isReadOnly?: boolean
 }
 
-export function ReviewQuestionsList({ conferenceId }: ReviewQuestionsListProps) {
+export function ReviewQuestionsList({ conferenceId, isReadOnly = false }: ReviewQuestionsListProps) {
     const [tracks, setTracks] = useState<TrackResponse[]>([])
     const [selectedTrackId, setSelectedTrackId] = useState<number | null>(null)
     const [questions, setQuestions] = useState<ReviewQuestionDTO[]>([])
@@ -39,6 +45,8 @@ export function ReviewQuestionsList({ conferenceId }: ReviewQuestionsListProps) 
     const [showPreviewDialog, setShowPreviewDialog] = useState(false)
     const [showCopyDialog, setShowCopyDialog] = useState(false)
     const [editingQuestion, setEditingQuestion] = useState<ReviewQuestionDTO | null>(null)
+    const [isReminding, setIsReminding] = useState(false)
+    const [isNotifyingCC, setIsNotifyingCC] = useState(false)
 
     useEffect(() => {
         const fetchTracks = async () => {
@@ -156,6 +164,86 @@ export function ReviewQuestionsList({ conferenceId }: ReviewQuestionsListProps) 
         }
     }
 
+    const handleRemindPC = async () => {
+        try {
+            setIsReminding(true)
+            const conferenceRes = await getConference(conferenceId)
+            const members = await getConferenceMembers(conferenceId, 0, 100)
+            const pcs = (members.content || []).filter(m => m.roles?.some(r => r.assignedRole === 'PROGRAM_CHAIR'))
+
+            if (pcs.length === 0) {
+                toast.error("No Program Chairs found assigned to this conference.")
+                return
+            }
+
+            // Bulk Notification
+            const notifPromises = pcs.map(pc => createNotification({
+                userId: pc.user.id,
+                conferenceId,
+                title: "Action Required: Review Form Configuration",
+                message: `Please configure the Review Form for the conference "${conferenceRes.name}". This is required before we can proceed to the next phase.`,
+                type: "SYSTEM_ALERT",
+                link: `/conference/${conferenceId}/update`
+            }))
+            await Promise.all(notifPromises)
+
+            // Bulk Email
+            await sendBulkEmail({
+                conferenceId,
+                recipientGroup: "PROGRAM_CHAIR",
+                subject: "Action Required: Conference Setup (Review Form)",
+                body: `Dear Program Chair,\n\nPlease log in to ConfHub and configure the Review Form for the conference "${conferenceRes.name}". This is a mandatory step before we can start the Submission phase.\n\nThank you.`
+            })
+
+            toast.success("Reminder sent successfully to all Program Chairs via Email and In-app Notification.")
+        } catch (error) {
+            console.error(error)
+            toast.error("Failed to send reminder.")
+        } finally {
+            setIsReminding(false)
+        }
+    }
+
+    const handleNotifyCC = async () => {
+        try {
+            setIsNotifyingCC(true)
+            const conferenceRes = await getConference(conferenceId)
+            const members = await getConferenceMembers(conferenceId, 0, 100)
+            const ccs = (members.content || []).filter((m: any) => m.roles?.some((r: any) => r.assignedRole === 'CONFERENCE_CHAIR'))
+
+            if (ccs.length === 0) {
+                toast.error("No Conference Chairs found for this conference.")
+                return
+            }
+
+            // In-app notifications
+            const notifPromises = ccs.map((cc: any) => createNotification({
+                userId: cc.user.id,
+                conferenceId,
+                title: "Review Form Configuration Completed",
+                message: `The Review Form for "${conferenceRes.name}" has been configured and is ready. You can now proceed to the next phase.`,
+                type: "SYSTEM_ALERT",
+                link: `/conference/${conferenceId}/update`
+            }))
+            await Promise.all(notifPromises)
+
+            // Bulk email
+            await sendBulkEmail({
+                conferenceId,
+                recipientGroup: "CONFERENCE_CHAIR",
+                subject: "Review Form Configured — Ready to Proceed",
+                body: `Dear Conference Chair,\n\nThe Review Form for "${conferenceRes.name}" has been successfully configured by the Program Chair.\n\nYou can now proceed to the next phase in the conference workflow.\n\nBest regards,\nConfHub System`
+            })
+
+            toast.success("Conference Chairs have been notified via Email and In-app Notification.")
+        } catch (error) {
+            console.error(error)
+            toast.error("Failed to send notification.")
+        } finally {
+            setIsNotifyingCC(false)
+        }
+    }
+
     if (loadingTracks) {
         return (
             <div className="flex items-center justify-center min-h-[300px]">
@@ -187,13 +275,24 @@ export function ReviewQuestionsList({ conferenceId }: ReviewQuestionsListProps) 
                         options={tracks.map((t) => ({ label: t.name, value: t.id }))}
                     />
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3 mt-4 sm:mt-0">
                     <Button variant="outline" onClick={() => setShowPreviewDialog(true)}>
                         <Eye className="h-4 w-4 mr-2" /> Preview Form
                     </Button>
-                    {tracks.length > 1 && (
+                    {!isReadOnly && tracks.length > 1 && (
                         <Button variant="outline" onClick={() => setShowCopyDialog(true)}>
                             <Copy className="h-4 w-4 mr-2" /> Copy to Other Tracks
+                        </Button>
+                    )}
+                    {!isReadOnly && questions.length > 0 && (
+                        <Button
+                            variant="default"
+                            onClick={handleNotifyCC}
+                            disabled={isNotifyingCC}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                            <BellRing className="h-4 w-4 mr-2" />
+                            {isNotifyingCC ? "Notifying..." : "Notify Conference Chair"}
                         </Button>
                     )}
                 </div>
@@ -206,46 +305,62 @@ export function ReviewQuestionsList({ conferenceId }: ReviewQuestionsListProps) 
                 </div>
             ) : (
                 <div className="space-y-4">
-                    <div className="flex items-center justify-between border-b pb-4">
+                    <div className="flex flex-wrap items-center justify-between border-b pb-4 gap-4">
                         <h3 className="text-lg font-semibold">Review Questions ({questions.length})</h3>
-                        <Button onClick={() => { setEditingQuestion(null); setShowQuestionDialog(true); }}>
-                            <Plus className="h-4 w-4 mr-2" /> Add New Question
-                        </Button>
+                        {!isReadOnly && (
+                            <Button onClick={() => { setEditingQuestion(null); setShowQuestionDialog(true); }}>
+                                <Plus className="h-4 w-4 mr-2" /> Add New Question
+                            </Button>
+                        )}
                     </div>
 
                     {questions.length === 0 ? (
                         <div className="text-center py-12 border border-dashed rounded-lg bg-muted/20">
                             <p className="text-muted-foreground mb-4">No questions have been added to this track yet.</p>
-                            <Button variant="outline" onClick={() => { setEditingQuestion(null); setShowQuestionDialog(true); }}>
-                                Add First Question
-                            </Button>
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                                {!isReadOnly && (
+                                    <Button variant="outline" onClick={() => { setEditingQuestion(null); setShowQuestionDialog(true); }}>
+                                        <Plus className="h-4 w-4 mr-2" /> Add First Question
+                                    </Button>
+                                )}
+                                <Button
+                                    variant="secondary"
+                                    onClick={handleRemindPC}
+                                    disabled={isReminding}
+                                >
+                                    <Send className="w-4 h-4 mr-2" />
+                                    {isReminding ? "Sending Reminder..." : "Remind Program Chairs"}
+                                </Button>
+                            </div>
                         </div>
                     ) : (
                         <div className="space-y-3">
                             {questions.map((q, index) => (
                                 <div key={q.id} className="flex flex-col sm:flex-row gap-4 p-4 border rounded-xl bg-card shadow-sm hover:border-primary/50 transition-colors">
                                     {/* Order controls */}
-                                    <div className="flex sm:flex-col items-center justify-center gap-1 bg-muted/50 rounded-lg p-1 sm:w-10 overflow-hidden shrink-0">
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="h-8 w-8 text-muted-foreground hover:text-primary" 
-                                            disabled={index === 0}
-                                            onClick={() => handleReorder(index, 'up')}
-                                        >
-                                            <ArrowUp className="h-4 w-4" />
-                                        </Button>
-                                        <span className="text-xs font-semibold font-mono w-full text-center">{index + 1}</span>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="h-8 w-8 text-muted-foreground hover:text-primary" 
-                                            disabled={index === questions.length - 1}
-                                            onClick={() => handleReorder(index, 'down')}
-                                        >
-                                            <ArrowDown className="h-4 w-4" />
-                                        </Button>
-                                    </div>
+                                    {!isReadOnly && (
+                                        <div className="flex sm:flex-col items-center justify-center gap-1 bg-muted/50 rounded-lg p-1 sm:w-10 overflow-hidden shrink-0">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className="h-8 w-8 text-muted-foreground hover:text-primary" 
+                                                disabled={index === 0}
+                                                onClick={() => handleReorder(index, 'up')}
+                                            >
+                                                <ArrowUp className="h-4 w-4" />
+                                            </Button>
+                                            <span className="text-xs font-semibold font-mono w-full text-center">{index + 1}</span>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className="h-8 w-8 text-muted-foreground hover:text-primary" 
+                                                disabled={index === questions.length - 1}
+                                                onClick={() => handleReorder(index, 'down')}
+                                            >
+                                                <ArrowDown className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    )}
 
                                     {/* Question content */}
                                     <div className="flex-1 min-w-0 flex flex-col justify-center py-1">
@@ -270,14 +385,16 @@ export function ReviewQuestionsList({ conferenceId }: ReviewQuestionsListProps) 
                                     </div>
 
                                     {/* Actions */}
-                                    <div className="flex sm:flex-col justify-end gap-2 shrink-0">
-                                        <Button variant="outline" size="sm" onClick={() => { setEditingQuestion(q); setShowQuestionDialog(true); }}>
-                                            <Pencil className="h-4 w-4 mr-2" /> Edit
-                                        </Button>
-                                        <Button variant="destructive" size="sm" onClick={() => handleDeleteQuestion(q.id as number)}>
-                                            <Trash2 className="h-4 w-4 mr-2" /> Delete
-                                        </Button>
-                                    </div>
+                                    {!isReadOnly && (
+                                        <div className="flex sm:flex-col justify-end gap-2 shrink-0 border-t sm:border-t-0 sm:border-l border-border pt-4 sm:pt-0 sm:pl-4">
+                                            <Button variant="outline" size="sm" onClick={() => { setEditingQuestion(q); setShowQuestionDialog(true); }}>
+                                                <Pencil className="h-4 w-4 mr-2" /> Edit
+                                            </Button>
+                                            <Button variant="destructive" size="sm" onClick={() => handleDeleteQuestion(q.id as number)}>
+                                                <Trash2 className="h-4 w-4 mr-2" /> Delete
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
