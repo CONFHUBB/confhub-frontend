@@ -4,12 +4,11 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getConference, getConferenceActivities } from '@/app/api/conference.api'
-import { getBidsSummary } from '@/app/api/bidding.api'
 import { getReviewsByReviewerAndConference } from '@/app/api/review.api'
 import { getUserProfile, createOrUpdateUserProfile } from '@/app/api/user.api'
 import { getInterestsByReviewer } from '@/app/api/reviewer-interest.api'
 import type { ConferenceResponse, ConferenceActivityDTO } from '@/types/conference'
-import type { BidsSummary } from '@/types/bidding'
+
 import type { ReviewResponse } from '@/types/review'
 import type { UserProfile } from '@/types/user'
 import type { UserConflictResponse, UserConflictRequest } from '@/types/conflict'
@@ -114,7 +113,7 @@ export default function ReviewerConsole() {
 
     // Data states
     const [profile, setProfile] = useState<UserProfile | null>(null)
-    const [bidsSummary, setBidsSummary] = useState<BidsSummary | null>(null)
+    const [bidCounts, setBidCounts] = useState<Record<string, number>>({})
     const [reviews, setReviews] = useState<ReviewResponse[]>([])
     const [activities, setActivities] = useState<ConferenceActivityDTO[]>([])
     const [interestsCount, setInterestsCount] = useState(0)
@@ -146,15 +145,13 @@ export default function ReviewerConsole() {
             setConference(conf)
             setActivities(activitiesData)
 
-            const [profileData, summary, reviewsData, interests] = await Promise.all([
+            const [profileData, reviewsData, interests] = await Promise.all([
                 getUserProfile(reviewerId).catch(() => null),
-                getBidsSummary(reviewerId, conferenceId).catch(() => null),
                 getReviewsByReviewerAndConference(reviewerId, conferenceId).catch(() => []),
                 getInterestsByReviewer(reviewerId).catch(() => []),
             ])
 
             setProfile(profileData)
-            if (summary) setBidsSummary(summary)
             const reviewList = Array.isArray(reviewsData) ? reviewsData : (reviewsData as any)?.content || []
             setReviews(reviewList)
             setInterestsCount(Array.isArray(interests) ? interests.length : 0)
@@ -165,7 +162,7 @@ export default function ReviewerConsole() {
 
             // Compute workflow status
             const profileComplete = !!(profileData && profileData.institution) && (Array.isArray(interests) && interests.length > 0)
-            const biddingDone = summary ? summary.totalBids > 0 : false
+            const biddingDone = false // Will be updated via onBidCountsChanged callback from BiddingTab
             const reviewsDone = reviewList.length > 0 && reviewList.every((r: ReviewResponse) => r.status === 'COMPLETED')
 
             setWorkflowStatus({
@@ -183,6 +180,13 @@ export default function ReviewerConsole() {
     useEffect(() => {
         if (reviewerId) fetchData()
     }, [reviewerId, fetchData])
+
+    // Stable callback to sync bid counts from BiddingTab (no API calls)
+    const handleBidCountsChanged = useCallback((counts: Record<string, number>) => {
+        setBidCounts(counts)
+        const totalBids = Object.values(counts).reduce((sum, c) => sum + c, 0)
+        setWorkflowStatus(prev => ({ ...prev, 'bidding-done': totalBids > 0 }))
+    }, [])
 
     // Step access logic
     const allOrderedSteps = useMemo(() => {
@@ -236,7 +240,7 @@ export default function ReviewerConsole() {
             case 'dashboard':
                 return <DashboardTab
                     conference={conference}
-                    bidsSummary={bidsSummary}
+                    bidCounts={bidCounts}
                     reviews={reviews}
                     activities={activities}
                     workflowStatus={workflowStatus}
@@ -254,7 +258,15 @@ export default function ReviewerConsole() {
                     onSaved={() => fetchData()}
                 />
             case 'bidding':
-                return <BiddingTab conferenceId={conferenceId} reviewerId={reviewerId!} onDataChanged={() => fetchData()} />
+                return <BiddingTab
+                    conferenceId={conferenceId}
+                    reviewerId={reviewerId!}
+                    onDataChanged={(data) => {
+                        if (!data?.bidsUpdated) fetchData()
+                    }}
+                    bidCounts={bidCounts}
+                    onBidCountsChanged={handleBidCountsChanged}
+                />
             case 'reviews':
                 return <ReviewsTab
                     reviews={reviews}
@@ -625,10 +637,10 @@ function ReviewerPhaseStatusCard({
 
 // ──────────────────────────── Dashboard Tab ────────────────────────────
 function DashboardTab({
-    conference, bidsSummary, reviews, activities, workflowStatus, interestsCount, getDeadlineInfo, onNavigate
+    conference, bidCounts, reviews, activities, workflowStatus, interestsCount, getDeadlineInfo, onNavigate
 }: {
     conference: ConferenceResponse | null
-    bidsSummary: BidsSummary | null
+    bidCounts: Record<string, number>
     reviews: ReviewResponse[]
     activities: ConferenceActivityDTO[]
     workflowStatus: Record<string, boolean>
@@ -698,7 +710,10 @@ function DashboardTab({
                         <div>
                             <p className="text-sm font-semibold">Bidding</p>
                             <p className="text-xs text-muted-foreground">
-                                {bidsSummary ? `${bidsSummary?.totalBids}/${bidsSummary?.totalPapers} papers` : 'No bids yet'}
+                                {(() => {
+                                    const totalBids = Object.values(bidCounts).reduce((sum, c) => sum + c, 0)
+                                    return totalBids > 0 ? `${totalBids} papers bid` : 'No bids yet'
+                                })()}
                             </p>
                         </div>
                     </CardContent>
@@ -733,7 +748,7 @@ function DashboardTab({
             )}
 
             {/* Bidding summary */}
-            {bidsSummary && bidsSummary.totalBids > 0 && (
+            {Object.values(bidCounts).reduce((sum, c) => sum + c, 0) > 0 && (
                 <Card>
                     <CardHeader className="pb-3">
                         <CardTitle className="text-base">Bidding Summary</CardTitle>
@@ -743,7 +758,7 @@ function DashboardTab({
                             {Object.entries(BID_ICONS).map(([key, { icon, color, label }]) => (
                                 <div key={key} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 ${color}`}>
                                     {icon}
-                                    <span className="font-semibold">{bidsSummary?.bidCounts?.[key] || 0}</span>
+                                    <span className="font-semibold">{bidCounts?.[key] || 0}</span>
                                     <span className="text-sm text-gray-600">{label}</span>
                                 </div>
                             ))}
