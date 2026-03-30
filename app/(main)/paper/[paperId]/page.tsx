@@ -8,9 +8,11 @@ import { getUsers } from '@/app/api/user.api'
 import { getSubjectAreasByTrack } from '@/app/api/track.api'
 import { getAggregateByPaper, type ReviewAggregate } from '@/app/api/review-aggregate.api'
 import { getMetaReviewByPaper } from '@/app/api/meta-review.api'
+import { getReviewsByPaper, getAnswersByReview } from '@/app/api/review.api'
 import { getConferenceActivities } from '@/app/api/conference.api'
 import { ConferencePhaseTracker } from '@/components/conference-phase-tracker'
 import type { MetaReviewResponse } from '@/types/meta-review'
+import type { ReviewResponse, ReviewAnswerResponse } from '@/types/review'
 import type { ConferenceActivityDTO } from '@/types/conference'
 import type { PaperResponse, PaperFileResponse } from '@/types/paper'
 import type { SubjectAreaResponse } from '@/types/subject-area'
@@ -90,6 +92,8 @@ export default function PaperWorkspacePage() {
     // Review data
     const [aggregate, setAggregate] = useState<ReviewAggregate | null>(null)
     const [metaReview, setMetaReview] = useState<MetaReviewResponse | null>(null)
+    const [reviews, setReviews] = useState<ReviewResponse[]>([])
+    const [reviewAnswers, setReviewAnswers] = useState<Record<number, ReviewAnswerResponse[]>>({})
 
     const fetchUsers = async () => {
         try { setUsers(await getUsers()) } catch { toast.error('Failed to load available authors') }
@@ -123,9 +127,20 @@ export default function PaperWorkspacePage() {
 
                 await fetchFiles()
 
-                if (!['DRAFT', 'SUBMITTED'].includes(data.status)) {
+                if (!['DRAFT', 'SUBMITTED', 'WITHDRAWN'].includes(data.status)) {
                     try { setAggregate(await getAggregateByPaper(paperId)) } catch { /* ignore */ }
                     try { setMetaReview(await getMetaReviewByPaper(paperId)) } catch { /* ignore */ }
+                    try { 
+                        const paperReviews = await getReviewsByPaper(paperId)
+                        setReviews(paperReviews)
+                        const completedReviews = paperReviews.filter(r => r.status === 'COMPLETED')
+                        const answersMap: Record<number, ReviewAnswerResponse[]> = {}
+                        await Promise.all(completedReviews.map(async (r) => {
+                            const ans = await getAnswersByReview(r.id).catch(() => [])
+                            answersMap[r.id] = ans
+                        }))
+                        setReviewAnswers(answersMap)
+                    } catch { /* ignore */ }
                 }
             } catch {
                 toast.error('Failed to load paper details')
@@ -252,8 +267,8 @@ export default function PaperWorkspacePage() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
                 <p className="text-muted-foreground text-lg">Paper not found</p>
-                <Button onClick={() => router.push('/paper')} variant="outline">
-                    <ArrowLeft className="h-4 w-4 mr-2" /> Back to My Papers
+                <Button onClick={() => router.back()} variant="outline">
+                    <ArrowLeft className="h-4 w-4 mr-2" /> Back
                 </Button>
             </div>
         )
@@ -274,15 +289,14 @@ export default function PaperWorkspacePage() {
     const decision = metaReview?.finalDecision ? DECISION_STYLE[metaReview.finalDecision] : null
 
     // ── Separate Files ──
-    const CR_KEYS = ['camera-ready', 'cr_']
-    const isCrFile = (url: string) => CR_KEYS.some(k => url.toLowerCase().includes(k))
-    const manuscriptFiles = paperFiles.filter(pf => !isCrFile(pf.url))
-    const cameraReadyFiles = paperFiles.filter(pf => isCrFile(pf.url))
+    const manuscriptFiles = paperFiles.filter(pf => !pf.isCameraReady && pf.isActive)
+    const supplementaryFiles = paperFiles.filter(pf => !pf.isCameraReady && !pf.isActive)
+    const cameraReadyFiles = paperFiles.filter(pf => pf.isCameraReady)
 
     return (
         <div className="container mx-auto py-8 px-4 max-w-6xl space-y-6">
-            <Button variant="ghost" onClick={() => router.push('/paper')} className="-ml-2">
-                <ArrowLeft className="h-4 w-4 mr-2" /> Back to My Papers
+            <Button variant="ghost" onClick={() => router.back()} className="-ml-2">
+                <ArrowLeft className="h-4 w-4 mr-2" /> Back
             </Button>
 
             {/* ── Workspace Header ── */}
@@ -462,11 +476,9 @@ export default function PaperWorkspacePage() {
                                                             <a href={pf.url} target="_blank" rel="noopener noreferrer">
                                                                 <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-slate-600 hover:text-slate-900"><ExternalLink className="h-3.5 w-3.5" /> Open</Button>
                                                             </a>
-                                                            {isEditable && (
-                                                                <Button variant="ghost" size="sm" className="p-1 h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteFile(pf.id)}>
-                                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                                </Button>
-                                                            )}
+                                                            <Button variant="ghost" size="sm" className="p-1 h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteFile(pf.id)}>
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                            </Button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -478,6 +490,56 @@ export default function PaperWorkspacePage() {
                                 <p className="text-sm text-muted-foreground">No manuscript files uploaded yet.</p>
                             )}
                         </div>
+                        
+                        {/* Supplementary / Archived Files */}
+                        {supplementaryFiles.length > 0 && (
+                            <div className="space-y-3">
+                                <h2 className="text-lg font-semibold border-b pb-2 flex items-center gap-2"><FileText className="h-5 w-5 text-slate-500" /> Supplementary / Past Files</h2>
+                                <div className="border border-muted-foreground/20 rounded-lg overflow-hidden bg-white shadow-sm">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-muted/30">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-12">#</th>
+                                                <th className="px-4 py-3 text-left font-medium text-muted-foreground">File</th>
+                                                <th className="px-4 py-3 text-center font-medium text-muted-foreground w-24">Status</th>
+                                                <th className="px-4 py-3 text-right font-medium text-muted-foreground w-48">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border">
+                                            {supplementaryFiles.map((pf, idx) => (
+                                                <tr key={pf.id} className="hover:bg-muted/20">
+                                                    <td className="px-4 py-3 text-muted-foreground">{idx + 1}</td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            <FileText className="h-4 w-4 text-slate-400 shrink-0" />
+                                                            <span className="font-medium text-slate-600 truncate max-w-[250px]" title={pf.url.split('/').pop()}>
+                                                                {decodeURIComponent(pf.url.split('/').pop() || 'supplementary-file')}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <Badge variant="secondary" className="opacity-70 bg-slate-100 text-slate-600">Archived</Badge>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-slate-600 hover:text-indigo-600 hover:bg-indigo-50" onClick={() => setPreviewFileUrl(pf.url)}>
+                                                                <Eye className="h-3.5 w-3.5" /> Preview
+                                                            </Button>
+                                                            <a href={pf.url} target="_blank" rel="noopener noreferrer">
+                                                                <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-slate-600 hover:text-slate-900"><ExternalLink className="h-3.5 w-3.5" /> Open</Button>
+                                                            </a>
+                                                            <Button variant="ghost" size="sm" className="p-1 h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteFile(pf.id)}>
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Camera Ready Files */}
                         <div className="space-y-3">
@@ -516,11 +578,9 @@ export default function PaperWorkspacePage() {
                                                                 <a href={pf.url} target="_blank" rel="noopener noreferrer">
                                                                     <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100"><ExternalLink className="h-3.5 w-3.5" /> Open</Button>
                                                                 </a>
-                                                                {showCameraReadyUpload && (
-                                                                    <Button variant="ghost" size="sm" className="p-1 h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteFile(pf.id)}>
-                                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                                    </Button>
-                                                                )}
+                                                                <Button variant="ghost" size="sm" className="p-1 h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteFile(pf.id)}>
+                                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                                </Button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -648,37 +708,22 @@ export default function PaperWorkspacePage() {
                             </Dialog>
 
                             {/* Camera Ready */}
-                            <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" className="w-full justify-start gap-3 h-11 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-800 shadow-sm" disabled={!showCameraReadyUpload}>
-                                        <Camera className="h-4 w-4 text-emerald-600" /> Upload Camera Ready
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Upload Camera-Ready Manuscript</DialogTitle>
-                                        <DialogDescription>Upload your final accepted version with all corrections.</DialogDescription>
-                                    </DialogHeader>
-                                    <div className="space-y-4 py-4">
-                                        <label htmlFor="cr-file-upload" className="flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed border-emerald-300 bg-emerald-50/50 rounded-lg cursor-pointer hover:border-emerald-500 hover:bg-emerald-50">
-                                            <Camera className="h-8 w-8 text-emerald-500/70" />
-                                            <span className="text-sm font-medium text-emerald-900">{selectedFile ? selectedFile.name : 'Click to choose the final PDF'}</span>
-                                        </label>
-                                        <input id="cr-file-upload" type="file" accept=".pdf" className="hidden"
-                                            onChange={e => {
-                                                const f = e.target.files?.[0]
-                                                if (f) { if (f.type !== 'application/pdf') { toast.error('Please select a PDF file'); return }; setSelectedFile(f) }
-                                            }} />
-                                        <div className="flex justify-end pt-2">
-                                            <DialogTrigger asChild>
-                                                <Button onClick={handleUploadFile} disabled={uploading || !selectedFile} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
-                                                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} Upload Version
-                                                </Button>
-                                            </DialogTrigger>
-                                        </div>
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
+                            {/* Camera Ready */}
+                            <Button 
+                                variant="outline" 
+                                className="w-full justify-start gap-3 h-11 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-800 shadow-sm" 
+                                disabled={!showCameraReadyUpload}
+                                onClick={() => {
+                                    const confId = paper.conferenceId || paper.track?.conference?.id
+                                    if (confId) {
+                                        router.push(`/conference/${confId}/paper/${paper.id}/camera-ready`)
+                                    } else {
+                                        toast.error('Conference information not available')
+                                    }
+                                }}
+                            >
+                                <Camera className="h-4 w-4 text-emerald-600" /> Upload Camera Ready
+                            </Button>
 
                             {/* View Reviews */}
                             {showReviews && (
@@ -688,7 +733,7 @@ export default function PaperWorkspacePage() {
                                             <Star className="h-4 w-4 text-purple-600" /> View Reviews Result
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                                    <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
                                         <DialogHeader>
                                             <DialogTitle>Review Results</DialogTitle>
                                         </DialogHeader>
@@ -746,11 +791,82 @@ export default function PaperWorkspacePage() {
                                                         </Card>
                                                     )}
 
-                                                    {metaReview?.reason && (
-                                                        <Card>
-                                                            <CardHeader><CardTitle className="text-base">Chair's Comments</CardTitle></CardHeader>
-                                                            <CardContent>
-                                                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{metaReview.reason}</p>
+                                                    {/* Custom grouping logic for detailed answers */}
+                                                    {(() => {
+                                                        const completedReviews = reviews.filter(r => r.status === 'COMPLETED').sort((a,b) => a.id - b.id)
+                                                        if (completedReviews.length === 0) return null
+
+                                                        // Group by questionId
+                                                        const qMap: Record<number, { text: string; answers: { reviewerIndex: number; value: string; choice: string | null }[] }> = {}
+                                                        
+                                                        completedReviews.forEach((rev, index) => {
+                                                            const ansArr = reviewAnswers[rev.id] || []
+                                                            ansArr.forEach(ans => {
+                                                                if (!qMap[ans.questionId]) {
+                                                                    qMap[ans.questionId] = { text: ans.questionText || `Question ${ans.questionId}`, answers: [] }
+                                                                }
+                                                                qMap[ans.questionId].answers.push({
+                                                                    reviewerIndex: index + 1,
+                                                                    value: ans.answerValue || '',
+                                                                    choice: ans.selectedChoiceText || null
+                                                                })
+                                                            })
+                                                        })
+
+                                                        const questions = Object.values(qMap)
+                                                        if (questions.length === 0) return null
+
+                                                        return (
+                                                            <div className="space-y-4 mt-6">
+                                                                <h3 className="text-lg font-semibold flex items-center gap-2 border-b pb-2"><ClipboardList className="h-5 w-5 text-indigo-600" /> Detailed Reviewer Comments</h3>
+                                                                {questions.map((q, idx) => (
+                                                                    <Card key={idx} className="shadow-sm border-slate-200">
+                                                                        <CardHeader className="bg-slate-50/50 py-3 border-b">
+                                                                            <CardTitle className="text-sm font-medium leading-relaxed">{q.text}</CardTitle>
+                                                                        </CardHeader>
+                                                                        <CardContent className="p-0 divide-y">
+                                                                            {q.answers.map((ans, i) => (
+                                                                                <div key={i} className="p-4 flex gap-4 hover:bg-slate-50/50 transition-colors">
+                                                                                    <div className="shrink-0 pt-0.5">
+                                                                                        <Badge variant="outline" className="bg-white text-indigo-700 font-mono text-xs border-indigo-200 shadow-sm">Reviewer {ans.reviewerIndex}</Badge>
+                                                                                    </div>
+                                                                                    <div className="min-w-0">
+                                                                                        {ans.choice && <p className="text-sm font-semibold text-slate-800 mb-1.5"><span className="text-slate-500 font-normal">Selected:</span> {ans.choice}</p>}
+                                                                                        {ans.value ? (
+                                                                                            <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{ans.value}</p>
+                                                                                        ) : (
+                                                                                            !ans.choice && <p className="text-sm text-slate-400 italic">No comments provided.</p>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </CardContent>
+                                                                    </Card>
+                                                                ))}
+                                                            </div>
+                                                        )
+                                                    })()}
+
+                                                    {/* Program Chair Final Decision */}
+                                                    {metaReview && (
+                                                        <Card className={`border-l-4 ${decision ? decision.color.split(' ')[1].replace('text-', 'border-') : 'border-indigo-400'} shadow-md mt-6 overflow-hidden`}>
+                                                            <CardHeader className="bg-slate-50/80 pb-3 border-b sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                                                                <CardTitle className="text-base flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-indigo-600" /> Chair Final Decision</CardTitle>
+                                                                {decision && (
+                                                                    <Badge className={`${decision.color} px-3 py-1 shadow-sm text-sm gap-1`}>
+                                                                        {decision.icon} {decision.label}
+                                                                    </Badge>
+                                                                )}
+                                                            </CardHeader>
+                                                            <CardContent className="pt-4 bg-white">
+                                                                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Chair's Reason / Comments</h4>
+                                                                {metaReview.reason ? (
+                                                                    <div className="bg-slate-50/50 rounded-md p-4 border border-slate-100 shadow-inner">
+                                                                        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-medium">{metaReview.reason}</p>
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-sm text-slate-400 italic">No additional reasons or comments provided.</p>
+                                                                )}
                                                             </CardContent>
                                                         </Card>
                                                     )}

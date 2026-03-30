@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { getConference } from '@/app/api/conference.api'
 import { getUserByEmail } from '@/app/api/user.api'
 import { getPapersByAuthor } from '@/app/api/paper.api'
@@ -99,8 +99,23 @@ export default function AuthorDashboardPage() {
     const [reviewData, setReviewData] = useState<Record<number, ReviewAggregate | null>>({})
     const [metaReviews, setMetaReviews] = useState<Record<number, MetaReviewResponse | null>>({})
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState<AuthorTab>('overview')
+
+    const searchParams = useSearchParams()
+    const initialTab = (searchParams.get('tab') as AuthorTab) || 'overview'
+    const [activeTab, setActiveTab] = useState<AuthorTab>(initialTab)
     const [expandedGroups, setExpandedGroups] = useState<string[]>(TAB_GROUPS.map(g => g.title))
+
+    useEffect(() => {
+        const tab = searchParams.get('tab') as AuthorTab
+        if (tab && ['overview', 'my-papers', 'camera-ready', 'my-ticket', 'profile'].includes(tab)) {
+            setActiveTab(tab)
+            // Expand the group containing this tab
+            const group = TAB_GROUPS.find(g => g.items.some(i => i.key === tab))
+            if (group && !expandedGroups.includes(group.title)) {
+                setExpandedGroups(prev => [...prev, group.title])
+            }
+        }
+    }, [searchParams])
 
     const fetchData = useCallback(async () => {
         try {
@@ -144,7 +159,7 @@ export default function AuthorDashboardPage() {
     if (!conference) return (
         <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
             <p className="text-muted-foreground text-lg">Conference not found</p>
-            <Link href="/paper"><Button>Back to Papers</Button></Link>
+            <Button onClick={() => router.back()}>Back</Button>
         </div>
     )
 
@@ -162,13 +177,61 @@ export default function AuthorDashboardPage() {
     return (
         <div className="min-h-screen bg-transparent flex flex-col overflow-hidden">
             <div className="flex-1 w-full max-w-[1700px] mx-auto flex flex-col p-4 md:p-8 overflow-hidden">
-                {/* Header */}
+                {/* Header Area — Vibrant hero banner */}
                 <div className="mb-6 shrink-0">
-                    <Link href="/paper">
-                        <Button variant="ghost" className="mb-3 -ml-2"><ArrowLeft className="h-4 w-4 mr-2" />Back to My Papers</Button>
-                    </Link>
-                    <h1 className="text-2xl font-bold tracking-tight">{conference.name}</h1>
-                    <p className="text-sm text-muted-foreground mt-0.5">Author Workspace</p>
+                    <Button variant="ghost" className="mb-3 -ml-2 gap-2" onClick={() => router.back()}>
+                        <ArrowLeft className="h-4 w-4" />
+                        Back
+                    </Button>
+                    <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-700 p-6 md:px-8 md:py-7 shadow-lg">
+                        {/* Decorative circles */}
+                        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
+                        <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/5 blur-xl" />
+
+                        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                                {/* Acronym + Status */}
+                                <div className="flex items-center gap-2.5 mb-2">
+                                    {conference?.acronym && (
+                                        <span className="text-xs font-mono font-semibold tracking-wider text-white/70 bg-white/10 px-2.5 py-0.5 rounded-md">
+                                            {conference.acronym}
+                                        </span>
+                                    )}
+                                    <span className={`text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
+                                        conference?.status === 'ONGOING' ? 'bg-emerald-400/20 text-emerald-200' :
+                                        conference?.status === 'SCHEDULED' ? 'bg-blue-400/20 text-blue-200' :
+                                        conference?.status === 'COMPLETED' ? 'bg-gray-400/20 text-gray-300' :
+                                        'bg-amber-400/20 text-amber-200'
+                                    }`}>
+                                        {conference?.status || 'UNKNOWN'}
+                                    </span>
+                                </div>
+
+                                {/* Title */}
+                                <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight leading-tight">
+                                    {conference?.name || 'Conference'}
+                                </h1>
+
+                                <p className="text-white/60 text-sm mt-1.5 flex items-center gap-2 flex-wrap">
+                                    <FileText className="h-3.5 w-3.5 shrink-0" />
+                                    Author Workspace
+                                </p>
+                            </div>
+
+                            {/* Right: Role badge */}
+                            <div className="flex items-center gap-2.5 md:self-start">
+                                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/95 shadow-lg">
+                                    <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-indigo-100 text-indigo-600">
+                                        <User className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wider leading-none">Your Role</p>
+                                        <p className="text-sm font-bold leading-tight mt-0.5 text-indigo-700">Author</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Phase Tracker */}
@@ -544,8 +607,8 @@ function MyPapersTab({ papers, reviewData, metaReviews, conferenceId }: {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => setExpandedId(isExpanded ? null : paper.id)}>
-                                                            <Eye className="h-3.5 w-3.5 mr-2" /> View Details
+                                                        <DropdownMenuItem onClick={() => router.push(`/paper/${paper.id}`)}>
+                                                            <ExternalLink className="h-3.5 w-3.5 mr-2" /> Open Details / Edit
                                                         </DropdownMenuItem>
                                                         {(paper.status === 'ACCEPTED' || paper.status === 'CAMERA_READY') && (
                                                             <>

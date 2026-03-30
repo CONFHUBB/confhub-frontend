@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ChevronDown, ChevronUp, FileText, Search, ExternalLink } from "lucide-react"
+import { ChevronDown, ChevronUp, FileText, Search, ExternalLink, ArrowRight } from "lucide-react"
 import { toast } from "react-hot-toast"
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; dotColor: string }> = {
@@ -163,12 +163,11 @@ export default function MyAllPapersPage() {
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <Button 
-                                                variant="ghost" 
                                                 size="sm" 
-                                                className="h-8 gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                                                onClick={() => paper.conferenceId && router.push(`/conference/${paper.conferenceId}/author?tab=my-papers`)}
+                                                className="gap-1.5 h-8 text-[11px] font-semibold tracking-wide bg-indigo-600 hover:bg-indigo-700 text-white border-0 shrink-0"
+                                                onClick={() => paper.track?.conference?.id && router.push(`/conference/${paper.track.conference.id}/author?tab=my-papers`)}
                                             >
-                                                Workspace <ExternalLink className="h-3 w-3" />
+                                                Open Workspace <ArrowRight className="h-3.5 w-3.5" />
                                             </Button>
                                         </TableCell>
                                     </TableRow>

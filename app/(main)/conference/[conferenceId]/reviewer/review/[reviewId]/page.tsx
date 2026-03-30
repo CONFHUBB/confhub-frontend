@@ -270,6 +270,26 @@ export default function ReviewPaperPage() {
         }
     }
 
+    const handleEditReview = async () => {
+        if (!review) return
+        if (!confirm('This will unlock your review and allow you to make changes. Are you sure?')) return
+
+        setSubmitting(true)
+        try {
+            const updated = await updateReview(reviewId, {
+                paperId: review.paper.id,
+                reviewerId: review.reviewer.id,
+                status: 'IN_PROGRESS',
+            })
+            setReview(updated)
+            toast.success('Review unlocked for editing')
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Failed to unlock review')
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
     const answeredCount = questions.filter(q => {
         const ans = answers.get(q.id)
         if (!ans) return false
@@ -616,16 +636,30 @@ export default function ReviewPaperPage() {
 
             {/* Read-only notice */}
             {isReadOnly && (
-                <div className={`p-4 rounded-lg border text-center text-sm ${
+                <div className={`p-4 rounded-lg border flex flex-col items-center text-center text-sm ${
                     review.status === 'COMPLETED'
                         ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                         : 'bg-red-50 border-red-200 text-red-700'
                 }`}>
-                    {review.status === 'COMPLETED'
-                        ? '✅ Review has been submitted successfully. Contact the Chair if you need to make changes.'
-                        : '❌ Review has been declined.'}
-                    {review.totalScore != null && (
-                        <p className="mt-1 font-semibold">Total Score: {review.totalScore}</p>
+                    <div>
+                        {review.status === 'COMPLETED'
+                            ? '✅ Review has been submitted successfully.'
+                            : '❌ Review has been declined.'}
+                        {review.totalScore != null && (
+                            <p className="mt-1 font-semibold">Total Score: {review.totalScore}</p>
+                        )}
+                    </div>
+                    {review.status === 'COMPLETED' && !activityClosed && (
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="mt-4 border-emerald-300 text-emerald-700 hover:bg-emerald-100 min-w-[140px]"
+                            onClick={handleEditReview}
+                            disabled={submitting}
+                        >
+                            {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                            Edit Review
+                        </Button>
                     )}
                 </div>
             )}
