@@ -3,10 +3,10 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { getPapersForBidding, submitBid, getBidsSummary, deleteBid, getBidsByReviewerAndConference } from '@/app/api/bidding.api'
+import { getPapersForBidding, submitBid, deleteBid, getBidsByReviewerAndConference } from '@/app/api/bidding.api'
 import { getInterestsByReviewer } from '@/app/api/reviewer-interest.api'
 import { getConferenceActivities } from '@/app/api/conference.api'
-import type { PaperForBidding, BidValue, BidsSummary } from '@/types/bidding'
+import type { PaperForBidding, BidValue } from '@/types/bidding'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -30,7 +30,6 @@ export default function BiddingPage() {
     const conferenceId = Number(params.conferenceId)
 
     const [papers, setPapers] = useState<PaperForBidding[]>([])
-    const [summary, setSummary] = useState<BidsSummary | null>(null)
     const [loading, setLoading] = useState(true)
     const [needsSubjectAreas, setNeedsSubjectAreas] = useState(false)
     const [submitting, setSubmitting] = useState<number | null>(null)
@@ -88,14 +87,12 @@ export default function BiddingPage() {
                 return
             }
 
-            const [papersData, summaryData, bidsData] = await Promise.all([
+            const [papersData, bidsData] = await Promise.all([
                 getPapersForBidding(reviewerId, conferenceId),
-                getBidsSummary(reviewerId, conferenceId).catch(() => null),
                 getBidsByReviewerAndConference(reviewerId, conferenceId).catch(() => []),
             ])
             setPapers(papersData)
-            setSummary(summaryData)
-            // Build bidId map: paperId -> bidId
+            // Build bidId map: paperId -> bidId (needed for cancel/delete)
             const idMap: Record<number, number> = {}
             if (Array.isArray(bidsData)) {
                 bidsData.forEach(b => { idMap[b.paperId] = b.id })
@@ -123,14 +120,12 @@ export default function BiddingPage() {
         setSubmitting(paperId)
         try {
             const result = await submitBid({ paperId, reviewerId, bidValue })
+            // Optimistic update: update papers state and bidId map
             setPapers(prev => prev.map(p =>
                 p.paperId === paperId ? { ...p, currentBid: bidValue } : p
             ))
-            // Update bidId map
             setBidIdMap(prev => ({ ...prev, [paperId]: result.id }))
             setEditingBidPaperId(null)
-            const newSummary = await getBidsSummary(reviewerId, conferenceId).catch(() => null)
-            if (newSummary) setSummary(newSummary)
             toast.success('Bid submitted')
         } catch (err: any) {
             const msg = err?.response?.data?.message || 'Failed to submit bid'
@@ -159,8 +154,6 @@ export default function BiddingPage() {
                 return updated
             })
             setEditingBidPaperId(null)
-            const newSummary = await getBidsSummary(reviewerId, conferenceId).catch(() => null)
-            if (newSummary) setSummary(newSummary)
             toast.success('Bid cancelled')
         } catch (err: any) {
             toast.error(err?.response?.data?.message || 'Failed to cancel bid')
@@ -200,6 +193,15 @@ export default function BiddingPage() {
         })
 
     const bidCount = papers.filter(p => p.currentBid !== null).length
+
+    // Compute bid counts from papers state (no API call needed)
+    const bidCounts = useMemo(() => {
+        const counts: Record<string, number> = {}
+        for (const opt of BID_OPTIONS) {
+            counts[opt.value] = papers.filter(p => p.currentBid === opt.value).length
+        }
+        return counts
+    }, [papers])
 
     if (loading) {
         return (
@@ -281,12 +283,12 @@ export default function BiddingPage() {
             </div>
 
             {/* Summary bar */}
-            {summary && (
+            {papers.length > 0 && (
                 <div className="flex flex-wrap gap-2 p-3 rounded-lg bg-gray-50 border">
                     {BID_OPTIONS.map(opt => (
                         <div key={opt.value} className="flex items-center gap-1.5 text-sm">
                             {opt.icon}
-                            <span className="font-semibold">{summary.bidCounts?.[opt.value] || 0}</span>
+                            <span className="font-semibold">{bidCounts[opt.value] || 0}</span>
                             <span className="text-gray-500">{opt.shortLabel}</span>
                             <span className="text-gray-300 mx-1">|</span>
                         </div>

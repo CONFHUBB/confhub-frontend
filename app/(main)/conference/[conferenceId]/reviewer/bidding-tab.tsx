@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { getPapersForBidding, submitBid, getBidsSummary, deleteBid, getBidsByReviewerAndConference } from '@/app/api/bidding.api'
+import { getPapersForBidding, submitBid, deleteBid, getBidsByReviewerAndConference } from '@/app/api/bidding.api'
 import { getInterestsByReviewer } from '@/app/api/reviewer-interest.api'
 import { getConferenceActivities } from '@/app/api/conference.api'
-import type { PaperForBidding, BidValue, BidsSummary } from '@/types/bidding'
+import type { PaperForBidding, BidValue } from '@/types/bidding'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -27,12 +27,13 @@ type FilterBid = 'all' | BidValue | 'NOT_BID'
 interface BiddingTabProps {
     conferenceId: number
     reviewerId: number
-    onDataChanged: () => void
+    onDataChanged?: (data?: { bidsUpdated?: boolean }) => void
+    bidCounts?: Record<string, number>
+    onBidCountsChanged?: (counts: Record<string, number>) => void
 }
 
-export function BiddingTab({ conferenceId, reviewerId, onDataChanged }: BiddingTabProps) {
+export function BiddingTab({ conferenceId, reviewerId, onDataChanged, bidCounts: externalBidCounts, onBidCountsChanged }: BiddingTabProps) {
     const [papers, setPapers] = useState<PaperForBidding[]>([])
-    const [summary, setSummary] = useState<BidsSummary | null>(null)
     const [loading, setLoading] = useState(true)
     const [needsSubjectAreas, setNeedsSubjectAreas] = useState(false)
     const [submitting, setSubmitting] = useState<number | null>(null)
@@ -68,13 +69,11 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged }: BiddingT
             const interests = await getInterestsByReviewer(reviewerId).catch(() => [])
             if (!interests || interests.length === 0) { setNeedsSubjectAreas(true); setLoading(false); return }
 
-            const [papersData, summaryData, bidsData] = await Promise.all([
+            const [papersData, bidsData] = await Promise.all([
                 getPapersForBidding(reviewerId, conferenceId),
-                getBidsSummary(reviewerId, conferenceId).catch(() => null),
                 getBidsByReviewerAndConference(reviewerId, conferenceId).catch(() => []),
             ])
             setPapers(papersData)
-            setSummary(summaryData)
             const idMap: Record<number, number> = {}
             if (Array.isArray(bidsData)) { bidsData.forEach(b => { idMap[b.paperId] = b.id }) }
             setBidIdMap(idMap)
@@ -91,13 +90,13 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged }: BiddingT
         setSubmitting(paperId)
         try {
             const result = await submitBid({ paperId, reviewerId, bidValue })
+            // Optimistic update: update papers state and bidId map
             setPapers(prev => prev.map(p => p.paperId === paperId ? { ...p, currentBid: bidValue } : p))
             setBidIdMap(prev => ({ ...prev, [paperId]: result.id }))
             setEditingBidPaperId(null)
-            const newSummary = await getBidsSummary(reviewerId, conferenceId).catch(() => null)
-            if (newSummary) setSummary(newSummary)
             toast.success('Bid submitted')
-            onDataChanged()
+            // Notify parent to refresh workflow status (not full data)
+            onDataChanged?.({ bidsUpdated: true })
         } catch (err: any) { toast.error(err?.response?.data?.message || 'Failed to submit bid') }
         finally { setSubmitting(null) }
     }
@@ -108,13 +107,13 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged }: BiddingT
         setSubmitting(paperId)
         try {
             await deleteBid(bidId)
+            // Optimistic update: update papers state and bidId map
             setPapers(prev => prev.map(p => p.paperId === paperId ? { ...p, currentBid: null } : p))
             setBidIdMap(prev => { const u = { ...prev }; delete u[paperId]; return u })
             setEditingBidPaperId(null)
-            const newSummary = await getBidsSummary(reviewerId, conferenceId).catch(() => null)
-            if (newSummary) setSummary(newSummary)
             toast.success('Bid cancelled')
-            onDataChanged()
+            // Notify parent to refresh workflow status (not full data)
+            onDataChanged?.({ bidsUpdated: true })
         } catch (err: any) { toast.error(err?.response?.data?.message || 'Failed to cancel bid') }
         finally { setSubmitting(null) }
     }
@@ -142,6 +141,20 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged }: BiddingT
         })
 
     const bidCount = papers.filter(p => p.currentBid !== null).length
+
+    // Compute bid summary locally from papers state (no API call needed)
+    const bidCounts = useMemo(() => {
+        const counts: Record<string, number> = {}
+        for (const opt of BID_OPTIONS) {
+            counts[opt.value] = papers.filter(p => p.currentBid === opt.value).length
+        }
+        return counts
+    }, [papers])
+
+    // Sync bid counts to parent whenever they change
+    useEffect(() => {
+        onBidCountsChanged?.(bidCounts)
+    }, [bidCounts, onBidCountsChanged])
 
     const paginatedPapers = useMemo(() => {
         const start = currentPage * PAGE_SIZE
@@ -206,11 +219,11 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged }: BiddingT
                 <p className="text-sm text-muted-foreground mt-1">Rate your interest in reviewing each paper. Bid on <strong>{bidCount}</strong>/{papers.length} papers.</p>
             </div>
 
-            {summary && (
+            {papers.length > 0 && (
                 <div className="flex flex-wrap gap-2 p-3 rounded-lg bg-gray-50 border">
                     {BID_OPTIONS.map(opt => (
                         <div key={opt.value} className="flex items-center gap-1.5 text-sm">
-                            {opt.icon} <span className="font-semibold">{summary.bidCounts?.[opt.value] || 0}</span>
+                            {opt.icon} <span className="font-semibold">{bidCounts[opt.value] || 0}</span>
                             <span className="text-gray-500">{opt.shortLabel}</span><span className="text-gray-300 mx-1">|</span>
                         </div>
                     ))}
