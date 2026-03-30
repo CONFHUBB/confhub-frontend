@@ -93,13 +93,7 @@ export function ConferenceWorkflowTracker({
             }
 
             // Check form config
-            let hasSubmissionForm = false
-            if (formConfig && formConfig.definitionJson) {
-                try {
-                    const parsed = JSON.parse(formConfig.definitionJson)
-                    hasSubmissionForm = parsed.fields && parsed.fields.length > 0
-                } catch { hasSubmissionForm = false }
-            }
+            const hasSubmissionForm = !!(formConfig && formConfig.definitionJson)
 
             // Check members (more than just the chair)
             const hasMembers = (membersData as any).totalElements > 1

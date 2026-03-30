@@ -12,13 +12,16 @@ import {
 } from 'lucide-react'
 import { getPapersByConference } from '@/app/api/paper.api'
 import { getAggregatesByConference } from '@/app/api/review-aggregate.api'
-import { getConferenceActivities } from '@/app/api/conference.api'
+import { getConferenceActivities, getConference } from '@/app/api/conference.api'
 import { getTracksByConference, getSubjectAreasByTrack } from '@/app/api/track.api'
 import { getConferenceSubmissionForm } from '@/app/api/submission-form.api'
 import { getConferenceMembers } from '@/app/api/user.api'
 import { getReviewQuestionsByTrack } from '@/app/api/review.api'
 import { getTicketTypes } from '@/app/api/registration.api'
+import { sendBulkEmail } from '@/app/api/email.api'
+import { createNotification } from '@/app/api/notification.api'
 import type { ConferenceActivityDTO } from '@/types/conference'
+import { toast } from 'sonner'
 
 interface PaperSummary {
     id: number
@@ -170,7 +173,7 @@ const PHASES = [
 ]
 
 // ─── Checklist definitions per phase ─────────────────────────────────────────
-function getPhaseChecklist(phaseId: string, pd: PhaseData): { label: string; met: boolean; tab: string; blocking: boolean }[] {
+function getPhaseChecklist(phaseId: string, pd: PhaseData): { label: string; met: boolean; tab: string; blocking: boolean; requiresRole?: string }[] {
     switch (phaseId) {
         case 'setup':
             return [
@@ -179,7 +182,7 @@ function getPhaseChecklist(phaseId: string, pd: PhaseData): { label: string; met
                 { label: 'Members & roles assigned', met: pd.hasMembers, tab: 'features-members', blocking: true },
                 { label: 'Tickets & fees configured', met: pd.hasTickets, tab: 'reg-ticket-types', blocking: true },
                 { label: 'Submission form configured', met: pd.hasSubmissionForm, tab: 'forms-submission', blocking: true },
-                { label: 'Review form configured', met: pd.hasReviewForm, tab: 'forms-review', blocking: true },
+                { label: 'Review form configured', met: pd.hasReviewForm, tab: 'forms-review', blocking: true, requiresRole: 'PROGRAM_CHAIR' },
             ]
         case 'submission':
             return [
@@ -280,18 +283,61 @@ function detectActivePhaseIndex(activities: ConferenceActivityDTO[]): number {
 
 // ─── Phase Status Card ────────────────────────────────────────────────────────
 function PhaseStatusCard({
-    activities, papers, phaseData, onNavigate
+    conferenceId, activities, papers, phaseData, onNavigate, role
 }: {
+    conferenceId: number
     activities: ConferenceActivityDTO[]
     papers: PaperSummary[]
     phaseData: PhaseData
     onNavigate?: (tab: string) => void
+    role?: string
 }) {
     const now = new Date()
     const activePhaseIdx = detectActivePhaseIndex(activities)
     const activePhase = PHASES[activePhaseIdx]
     const c = COLOR_MAP[activePhase.color]
     const [checklistOpen, setChecklistOpen] = useState(true)
+    const [isReminding, setIsReminding] = useState(false)
+
+    const handleRemindPC = async () => {
+        try {
+            setIsReminding(true)
+            const conferenceRes = await getConference(conferenceId)
+            const members = await getConferenceMembers(conferenceId, 0, 100)
+            const pcs = (members.content || []).filter(m => m.roles?.some(r => r.assignedRole === 'PROGRAM_CHAIR'))
+
+            if (pcs.length === 0) {
+                toast.error("No Program Chairs found assigned to this conference.")
+                return
+            }
+
+            // Bulk Notification
+            const notifPromises = pcs.map(pc => createNotification({
+                userId: pc.user.id,
+                conferenceId,
+                title: "Action Required: Review Form Configuration",
+                message: `Please configure the Review Form for the conference "${conferenceRes.name}". This is required before we can proceed to the next phase.`,
+                type: "SYSTEM_ALERT",
+                link: `/conference/${conferenceId}/update`
+            }))
+            await Promise.all(notifPromises)
+
+            // Bulk Email
+            await sendBulkEmail({
+                conferenceId,
+                recipientGroup: "PROGRAM_CHAIR",
+                subject: "Action Required: Conference Setup (Review Form)",
+                body: `Dear Program Chair,\n\nPlease log in to ConfHub and configure the Review Form for the conference "${conferenceRes.name}". This is a mandatory step before we can start the Submission phase.\n\nThank you.`
+            })
+
+            toast.success("Reminder sent successfully to all Program Chairs via Email and In-app Notification.")
+        } catch (error) {
+            console.error(error)
+            toast.error("Failed to send reminder.")
+        } finally {
+            setIsReminding(false)
+        }
+    }
 
     // Nearest upcoming deadline
     const upcoming = activities
@@ -466,20 +512,33 @@ function PhaseStatusCard({
                                         Optional
                                     </Badge>
                                 )}
-                                {/* Inline action button — always visible */}
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className={`text-[11px] h-6 px-2.5 rounded-md shrink-0 font-semibold border ${
-                                        item.met
-                                            ? 'border-gray-200 text-gray-500 bg-white hover:bg-gray-50'
-                                            : `${c.border} ${c.text} bg-white hover:${c.light}`
-                                    }`}
-                                    onClick={(e) => { e.stopPropagation(); onNavigate?.(item.tab) }}
-                                >
-                                    {TAB_ACTION_LABELS[item.tab] || 'Configure'}
-                                    <ChevronRight className="w-3 h-3 ml-0.5" />
-                                </Button>
+                                {/* Inline action button */}
+                                {item.requiresRole === 'PROGRAM_CHAIR' && role === 'CONFERENCE_CHAIR' && !item.met ? (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-[11px] h-6 px-2.5 rounded-md shrink-0 font-semibold border border-indigo-200 text-indigo-700 bg-white hover:bg-indigo-50"
+                                        onClick={(e) => { e.stopPropagation(); handleRemindPC() }}
+                                        disabled={isReminding}
+                                    >
+                                        <Send className="w-3 h-3 mr-1" />
+                                        {isReminding ? 'Reminding...' : 'Remind PC'}
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className={`text-[11px] h-6 px-2.5 rounded-md shrink-0 font-semibold border ${
+                                            item.met
+                                                ? 'border-gray-200 text-gray-500 bg-white hover:bg-gray-50'
+                                                : `${c.border} ${c.text} bg-white hover:${c.light}`
+                                        }`}
+                                        onClick={(e) => { e.stopPropagation(); onNavigate?.(item.tab) }}
+                                    >
+                                        {TAB_ACTION_LABELS[item.tab] || 'Configure'}
+                                        <ChevronRight className="w-3 h-3 ml-0.5" />
+                                    </Button>
+                                )}
                             </div>
                         ))}
 
@@ -596,13 +655,7 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
             }
 
             // Submission form
-            let hasSubmissionForm = false
-            if (formConfig?.definitionJson) {
-                try {
-                    const parsed = JSON.parse(formConfig.definitionJson)
-                    hasSubmissionForm = Array.isArray(parsed.fields) && parsed.fields.length > 0
-                } catch { /**/ }
-            }
+            let hasSubmissionForm = !!formConfig?.definitionJson;
 
             // Activity helpers
             const getActivity = (type: string) => activitiesData.find((a: ConferenceActivityDTO) => a.activityType === type)
@@ -736,10 +789,12 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
 
             {/* Phase Status Card with Checklist */}
             <PhaseStatusCard
+                conferenceId={conferenceId}
                 activities={activities}
                 papers={papers}
                 phaseData={phaseData}
                 onNavigate={onNavigate}
+                role={role}
             />
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

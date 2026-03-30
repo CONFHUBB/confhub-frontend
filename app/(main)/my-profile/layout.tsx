@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
     User, FileText, Ticket, CreditCard,
-    ChevronDown, ChevronRight, Settings, LayoutDashboard
+    ChevronDown, ChevronRight, Settings, LayoutDashboard, Mail
 } from "lucide-react"
 import { useState } from "react"
 import { Card } from "@/components/ui/card"
@@ -18,6 +18,14 @@ const NAV_GROUPS = [
         accentColor: "text-indigo-600",
         items: [
             { name: "My Profile", path: "/my-profile", icon: <User className="h-4 w-4" /> },
+        ],
+    },
+    {
+        title: "Invitations",
+        icon: <Mail className="h-4 w-4" />,
+        accentColor: "text-amber-600",
+        items: [
+            { name: "My Invitations", path: "/my-profile/invitations", icon: <Mail className="h-4 w-4" /> },
         ],
     },
     {

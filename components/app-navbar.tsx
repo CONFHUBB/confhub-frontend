@@ -28,11 +28,11 @@ const WORKSPACE_SECTIONS = [
         ],
     },
     {
-        label: 'As Reviewer',
+        label: 'Invitations',
         icon: <Star className="h-3.5 w-3.5" />,
         color: 'text-amber-600',
         items: [
-            { name: 'My Reviews',       path: '/conference/reviewer-select',  icon: <FlaskConical className="h-4 w-4" /> },
+            { name: 'My Invitations',  path: '/my-profile/invitations',  icon: <FlaskConical className="h-4 w-4" /> },
         ],
     },
     {
@@ -67,7 +67,7 @@ const WORKSPACE_PATHS: { path: string; exact: boolean }[] = [
     { path: '/paper', exact: true },
     { path: '/conference/my-conference', exact: false },
     { path: '/conference/program-conference', exact: false },
-    { path: '/conference/reviewer-select', exact: false },
+    { path: '/my-profile/invitations', exact: false },
     { path: '/my-profile/tickets', exact: true },
 ]
 
