@@ -73,7 +73,11 @@ export default function MyInvitationsPage() {
         if (!userId) { setLoading(false); return }
         try {
             const rolesObj = await getUserRoleAssignments(userId)
-            const invitationRoles = rolesObj.filter((r: ConferenceUserTrackResponse) => r.invitedAt != null && r.isAccepted !== undefined)
+            // Only show roles that were actually invited (not self-created conferences)
+            // CONFERENCE_CHAIR is excluded because the chair creates their own conference
+            const invitationRoles = rolesObj.filter((r: ConferenceUserTrackResponse) =>
+                r.invitedAt != null && r.isAccepted !== undefined && r.assignedRole !== 'CONFERENCE_CHAIR'
+            )
 
             const grouped = new Map<number, { isAccepted: boolean | null; assignedAt: string; trackIds: number[], roles: Set<string> }>()
             for (const r of invitationRoles) {
