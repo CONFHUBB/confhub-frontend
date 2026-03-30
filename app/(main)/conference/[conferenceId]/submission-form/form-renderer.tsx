@@ -3,7 +3,7 @@
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
     DynamicField,
     FormDefinition,
@@ -18,6 +18,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, X } from "lucide-react"
+import toast from "react-hot-toast"
+
+const ABSTRACT_MAX_CHARS = 255
 
 export interface FormRendererProps {
     definitionJson: string
@@ -103,6 +106,25 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false }:
 
     const { formState: { errors } } = form
 
+    const [abstractCharCount, setAbstractCharCount] = useState(0)
+    const abstractToastShownRef = useRef(false)
+
+    // Watch abstract for character limit toast
+    useEffect(() => {
+        const subscription = form.watch((value) => {
+            const abstractVal = value.abstractField as string
+            const count = (abstractVal || "").length
+            setAbstractCharCount(count)
+            if (count > ABSTRACT_MAX_CHARS && !abstractToastShownRef.current) {
+                abstractToastShownRef.current = true
+                toast.error(`Abstract exceeds ${ABSTRACT_MAX_CHARS} characters (currently ${count} characters). Please shorten your abstract.`)
+            } else if (count <= ABSTRACT_MAX_CHARS) {
+                abstractToastShownRef.current = false
+            }
+        })
+        return () => subscription.unsubscribe()
+    }, [form])
+
     // ── Keywords helpers ──
     const addKeyword = () => {
         const trimmed = keywordInput.trim()
@@ -166,8 +188,18 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false }:
                     {...form.register("abstractField")}
                     placeholder="Paper abstract (between 20 and 250 words)"
                     className="min-h-[150px]"
+                    maxLength={ABSTRACT_MAX_CHARS + 100}
                 />
-                {errors.abstractField && <p className="text-sm text-destructive">{errors.abstractField.message as string}</p>}
+                <div className="flex justify-between items-center">
+                    {errors.abstractField ? (
+                        <p className="text-sm text-destructive">{errors.abstractField.message as string}</p>
+                    ) : (
+                        <span />
+                    )}
+                    <span className={`text-xs ${abstractCharCount > ABSTRACT_MAX_CHARS ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                        {abstractCharCount}/{ABSTRACT_MAX_CHARS} characters
+                    </span>
+                </div>
             </div>
 
             {/* ── Keywords — Tag Input ── */}
