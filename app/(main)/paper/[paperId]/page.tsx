@@ -9,6 +9,7 @@ import { getSubjectAreasByTrack } from '@/app/api/track.api'
 import { getAggregateByPaper, type ReviewAggregate } from '@/app/api/review-aggregate.api'
 import { getMetaReviewByPaper } from '@/app/api/meta-review.api'
 import { getConferenceActivities } from '@/app/api/conference.api'
+import { ConferencePhaseTracker } from '@/components/conference-phase-tracker'
 import type { MetaReviewResponse } from '@/types/meta-review'
 import type { ConferenceActivityDTO } from '@/types/conference'
 import type { PaperResponse, PaperFileResponse } from '@/types/paper'
@@ -315,40 +316,14 @@ export default function PaperWorkspacePage() {
                         </div>
                     )}
 
+                    {/* ── Conference Phase Tracker ── */}
+                    {(paper?.conferenceId || paper?.track?.conference?.id) && (
+                        <ConferencePhaseTracker conferenceId={paper.conferenceId ?? paper.track?.conference?.id!} />
+                    )}
+
                     {/* Paper Overview */}
                     <div className="space-y-6">
                         <h2 className="text-lg font-semibold border-b pb-2">Paper Details</h2>
-                        
-                        {/* ── Conference Timeline ── */}
-                        {activities && activities.length > 0 && (
-                            <div className="bg-slate-50 border rounded-lg p-4 mb-6">
-                                <h3 className="text-sm font-semibold flex items-center gap-2 mb-3"><Clock className="h-4 w-4 text-slate-500" /> Conference Timeline</h3>
-                                <div className="space-y-2">
-                                    {activities
-                                        .filter(a => ['PAPER_SUBMISSION', 'REVIEW', 'CAMERA_READY_SUBMISSION'].includes(a.activityType))
-                                        .map(a => {
-                                            const isActive = a.isEnabled && (!a.deadline || new Date(a.deadline) > new Date())
-                                            const isPast = a.deadline && new Date(a.deadline) < new Date()
-                                            return (
-                                                <div key={a.id} className="flex items-center justify-between text-sm py-1 border-b last:border-0 border-slate-200">
-                                                    <div className="flex items-center gap-2">
-                                                        {isActive ? <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> : isPast ? <span className="w-2 h-2 rounded-full bg-slate-300" /> : <span className="w-2 h-2 rounded-full bg-amber-500" />}
-                                                        <span className={`font-medium ${isActive ? 'text-green-700' : 'text-slate-600'}`}>
-                                                            {a.name}
-                                                        </span>
-                                                        {!a.isEnabled && <Badge variant="secondary" className="scale-75 text-[10px]">Disabled</Badge>}
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 text-slate-500">
-                                                        <CalendarDays className="h-3 w-3" />
-                                                        {a.deadline ? new Date(a.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'No deadline'}
-                                                    </div>
-                                                </div>
-                                            )
-                                        })
-                                    }
-                                </div>
-                            </div>
-                        )}
 
                         <div className="space-y-4">
                             <div>
@@ -664,11 +639,9 @@ export default function PaperWorkspacePage() {
                                                 if (f) { if (f.type !== 'application/pdf') { toast.error('Please select a PDF file'); return }; setSelectedFile(f) }
                                             }} />
                                         <div className="flex justify-end pt-2">
-                                            <DialogTrigger asChild>
                                                 <Button onClick={handleUploadFile} disabled={uploading || !selectedFile} className="gap-2">
-                                                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} Upload
+                                                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} {uploading ? 'Uploading...' : 'Upload'}
                                                 </Button>
-                                            </DialogTrigger>
                                         </div>
                                     </div>
                                 </DialogContent>

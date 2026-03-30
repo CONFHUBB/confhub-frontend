@@ -515,7 +515,7 @@ export default function ConferenceDetailsPage() {
                         {tracks.map((track) => {
                             const submissionOpen = isSubmissionOpen()
                             return (
-                                <Card key={track.id} className="hover:shadow-lg transition-shadow">
+                                <Card key={track.id} className="hover:shadow-lg transition-shadow flex flex-col">
                                     <CardHeader className="pb-3">
                                         <div className="flex items-start justify-between gap-2">
                                             <CardTitle className="text-lg leading-tight">
@@ -539,17 +539,14 @@ export default function ConferenceDetailsPage() {
                                             </div>
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="space-y-4">
+                                    <CardContent className="flex flex-col flex-1">
                                         {track.description && (
                                             <p className="text-sm text-muted-foreground line-clamp-3">
                                                 {track.description}
                                             </p>
                                         )}
 
-                                        <div className="space-y-2 text-xs text-muted-foreground">
-                                        </div>
-
-                                        <div className="pt-2">
+                                        <div className="mt-auto pt-4">
                                             {submissionOpen ? (
                                                 <Link href={`/track/${track.id}/submit?conferenceId=${conferenceId}`}>
                                                     <Button

@@ -11,8 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select as AntdSelect } from 'antd'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, ArrowLeft, Check, FileText, Users, Upload, Search, Trash2, Send, FileUp, Layers } from 'lucide-react'
+import { Loader2, ArrowLeft, Check, FileText, Users, Upload, Search, Trash2, Send, FileUp } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { createPaper, assignAuthorToPaper, getAuthorsByPaper, uploadPaperFile } from '@/app/api/paper.api'
@@ -610,29 +609,27 @@ export default function SubmitPaperPage() {
                         {/* Subject Area Selection */}
                         <div className="mb-0 space-y-6">
                             {/* Primary Subject Area */}
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                                 <Label htmlFor="primary-subject-area" className="text-base">Primary Subject Area <span className="text-destructive">*</span></Label>
                                 <p className="text-sm text-muted-foreground">Choose the primary area that best fits your submission.</p>
 
                                 {subjectAreas && subjectAreas.length > 0 ? (
-                                    <Select
-                                        value={primarySubjectAreaId || undefined}
-                                        onValueChange={(value) => setPrimarySubjectAreaId(value)}
-                                    >
-                                        <SelectTrigger id="primary-subject-area" className="bg-background">
-                                            <SelectValue placeholder="Select primary subject area" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {subjectAreas.map((sa) => (
-                                                <SelectItem key={sa.id} value={sa.id.toString()}>
-                                                    <div className="flex items-center gap-2">
-                                                        {sa.parentId !== null && <Layers className="h-3 w-3 text-muted-foreground ml-2" />}
-                                                        <span>{sa.name}</span>
-                                                    </div>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <AntdSelect
+                                        id="primary-subject-area"
+                                        showSearch
+                                        className="w-full"
+                                        style={{ height: 40 }}
+                                        placeholder="Select primary subject area"
+                                        value={primarySubjectAreaId ? Number(primarySubjectAreaId) : undefined}
+                                        onChange={(val) => setPrimarySubjectAreaId(val?.toString() || "")}
+                                        filterOption={(input, option) =>
+                                            (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
+                                        }
+                                        options={subjectAreas.map((sa) => ({
+                                            label: sa.name,
+                                            value: sa.id,
+                                        }))}
+                                    />
                                 ) : (
                                     <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-md border border-destructive/20 font-medium">
                                         No subject areas are available for this track. Please ask the organizer to create subject areas first.
@@ -642,21 +639,26 @@ export default function SubmitPaperPage() {
 
                             {/* Secondary Subject Areas */}
                             {subjectAreas && subjectAreas.length > 0 && (
-                                <div className="space-y-3">
+                                <div className="space-y-2">
                                     <Label htmlFor="secondary-subject-areas" className="text-base">Secondary Subject Areas</Label>
                                     <p className="text-sm text-muted-foreground">Optionally, choose other relevant areas.</p>
                                     <AntdSelect
+                                        id="secondary-subject-areas"
                                         mode="multiple"
-                                        className="w-full text-base"
+                                        showSearch
+                                        className="w-full"
+                                        style={{ minHeight: 40 }}
                                         placeholder="Select secondary subject areas"
                                         value={secondarySubjectAreaIds}
                                         onChange={(val) => setSecondarySubjectAreaIds(val)}
+                                        filterOption={(input, option) =>
+                                            (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
+                                        }
                                         options={subjectAreas
-                                            // Optional: Don't show primary area in secondary list
                                             .filter(sa => sa.id.toString() !== primarySubjectAreaId)
-                                            .map((sa) => ({ 
-                                                label: sa.name, 
-                                                value: sa.id 
+                                            .map((sa) => ({
+                                                label: sa.name,
+                                                value: sa.id,
                                             }))}
                                     />
                                 </div>
