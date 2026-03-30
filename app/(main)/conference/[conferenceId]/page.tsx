@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { getConference, getConferenceActivities } from '@/app/api/conference.api'
 import { getTracksByConference } from '@/app/api/track.api'
+import { getPapersByConference } from '@/app/api/paper.api'
 import { getUserRoleAssignments, acceptInvitation, declineInvitation } from '@/app/api/conference-user-track.api'
 import toast from 'react-hot-toast'
 import type { ConferenceActivityDTO, ConferenceResponse, TrackResponse } from '@/types/conference'
@@ -14,6 +15,13 @@ import { Calendar, MapPin, ExternalLink, Loader2, ArrowLeft, Settings,
     Globe, Phone, FileText, Clock, Send, Ticket, BookOpen
 } from 'lucide-react'
 import Link from 'next/link'
+import { ProgramViewer } from '@/components/program-viewer'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 import { isActivityOpen } from '@/lib/activity'
 import { useUserRoles } from '@/hooks/useUserConferenceRoles'
 import { ConferenceFeedback } from '@/components/conference-feedback'
@@ -41,6 +49,11 @@ export default function ConferenceDetailsPage() {
     const [actionLoading, setActionLoading] = useState(false)
     const [isCheckedIn, setIsCheckedIn] = useState(false)
     const [hasTicket, setHasTicket] = useState(false)
+
+    // For program popup
+    const [showProgramPopup, setShowProgramPopup] = useState(false)
+    const [programData, setProgramData] = useState<any>(null)
+    const [allPapers, setAllPapers] = useState<any[]>([])
 
     useEffect(() => {
         const fetchData = async () => {
@@ -70,6 +83,20 @@ export default function ConferenceDetailsPage() {
                             }
                         }
                     } catch { /* not registered */ }
+                }
+
+                // Load papers if program exists
+                if (conferenceData.programSchedule) {
+                    try {
+                        const parsed = typeof conferenceData.programSchedule === 'string' 
+                            ? JSON.parse(conferenceData.programSchedule) : conferenceData.programSchedule
+                        if (parsed?.published) {
+                            setProgramData(parsed.schedule ? parsed : null)
+                            // Fetch accepted papers for detail view with full DTOs
+                            const papersData = await getPapersByConference(conferenceId)
+                            setAllPapers(papersData.filter((p: any) => p.status === 'ACCEPTED'))
+                        }
+                    } catch (e) {}
                 }
             } catch (err: any) {
                 if (err.response?.status === 401 || err.response?.status === 403) {
@@ -351,7 +378,17 @@ export default function ConferenceDetailsPage() {
                         const registrationActivity = activities.find(a => a.activityType === 'REGISTRATION')
                         const eventDayActivity = activities.find(a => a.activityType === 'EVENT_DAY')
                         const canRegister = isActivityOpen(registrationActivity)
-                        const hasProgramAvailable = isActivityOpen(eventDayActivity)
+
+                        let isProgramPublished = false
+                        if (conference.programSchedule) {
+                            try {
+                                const parsed = typeof conference.programSchedule === 'string' 
+                                    ? JSON.parse(conference.programSchedule) 
+                                    : conference.programSchedule
+                                isProgramPublished = !!parsed?.published
+                            } catch (e) {}
+                        }
+                        const hasProgramAvailable = isProgramPublished || isActivityOpen(eventDayActivity)
 
                         return (
                             <TooltipProvider delayDuration={200}>
@@ -398,7 +435,11 @@ export default function ConferenceDetailsPage() {
                                                     variant="outline"
                                                     className="gap-2 disabled:pointer-events-none"
                                                     disabled={!hasProgramAvailable}
-                                                    onClick={() => hasProgramAvailable && window.location.assign(`/conference/${conferenceId}/program`)}
+                                                    onClick={() => {
+                                                        if (hasProgramAvailable) {
+                                                            setShowProgramPopup(true)
+                                                        }
+                                                    }}
                                                 >
                                                     <Calendar className="h-5 w-5" />
                                                     View Program
@@ -581,6 +622,24 @@ export default function ConferenceDetailsPage() {
                 <h2 className="text-2xl font-bold tracking-tight mb-6">Conference Reviews</h2>
                 <ConferenceFeedback conferenceId={conferenceId} isCheckedIn={isCheckedIn} />
             </section>
+
+            {/* ── Program Dialog Popup ── */}
+            <Dialog open={showProgramPopup} onOpenChange={setShowProgramPopup}>
+                <DialogContent className="!max-w-[95vw] sm:max-w-[95vw] !w-[95vw] max-h-[90vh] overflow-y-auto bg-[#f8fafc] sm:rounded-2xl border-none">
+                    <DialogHeader className="mb-6 sticky top-0 z-50 bg-[#f8fafc] py-2">
+                        <DialogTitle className="text-2xl font-black text-slate-800">
+                            Conference Program
+                        </DialogTitle>
+                    </DialogHeader>
+                    {programData ? (
+                        <ProgramViewer program={programData} allPapers={allPapers} />
+                    ) : (
+                        <div className="py-12 text-center text-slate-500">
+                            The detailed program could not be loaded. Please try again later.
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

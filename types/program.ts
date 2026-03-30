@@ -30,6 +30,8 @@ export interface SessionPaper {
     title: string
     authors: string
     order: number
+    presentationTypeId?: string   // per-paper presentation type override
+    allocatedMinutes?: number     // auto-calculated: (end-start) / totalPapers
 }
 
 export interface ProgramSession {

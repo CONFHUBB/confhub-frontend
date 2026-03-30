@@ -56,6 +56,28 @@ export interface ReviewAnswerResponse {
     updatedAt: string
 }
 
+// ── Review Versions (History) ──
+
+export interface ReviewVersionAnswerResponse {
+    id: number
+    reviewVersionId: number
+    questionId: number
+    questionText: string
+    questionType: string
+    answerValue: string | null
+    selectedChoiceId: number | null
+    selectedChoiceText: string | null
+}
+
+export interface ReviewVersionResponse {
+    id: number
+    reviewId: number
+    versionNumber: number
+    totalScore: number
+    submittedAt: string
+    answers: ReviewVersionAnswerResponse[]
+}
+
 // ── Reviewer Interest ──
 
 export interface ReviewerInterestRequest {

@@ -64,4 +64,6 @@ export interface PaperFileResponse {
     paperId: number
     url: string
     isActive: boolean
+    isCameraReady: boolean
+    uploadedAt: string
 }

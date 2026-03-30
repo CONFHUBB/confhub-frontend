@@ -22,7 +22,7 @@ import { PaperDiscussion } from "@/components/paper-discussion"
 import { createMetaReview, updateMetaReview } from "@/app/api/meta-review.api"
 import { manualAssign, removeAssignment, getCurrentAssignments, type AssignmentPreviewItem } from "@/app/api/assignment.api"
 import { getConferenceUsersWithRoles } from "@/app/api/conference-user-track.api"
-import { getReviewById, getAnswersByReview, getReviewQuestionsByTrack } from "@/app/api/review.api"
+import { getReviewById, getAnswersByReview, getReviewQuestionsByTrack, getReviewsByPaper, getReviewVersions } from "@/app/api/review.api"
 import Link from "next/link"
 
 // Types
@@ -291,15 +291,24 @@ function InfoTab({ paper, paperId }: { paper: EnrichedPaper; paperId: number }) 
 // ═══════════════════════════════════════════════
 function ReviewsTab({ paperId, paper, conferenceId }: { paperId: number; paper: EnrichedPaper; conferenceId: number }) {
     const [aggregate, setAggregate] = useState<ReviewAggregate | null>(null)
+    const [reviews, setReviews] = useState<ReviewResponse[]>([])
     const [loading, setLoading] = useState(true)
     const [expandedReviews, setExpandedReviews] = useState<Set<number>>(new Set())
-    const [reviewDetails, setReviewDetails] = useState<Record<number, { review: ReviewResponse; answers: ReviewAnswerResponse[]; questions: any[] }>>({})
+    
+    // Store versions for each reviewId
+    const [reviewVersions, setReviewVersions] = useState<Record<number, any[]>>({})
+    // Store selected version index for each reviewId
+    const [selectedVersionIdx, setSelectedVersionIdx] = useState<Record<number, number>>({})
 
     useEffect(() => {
         const fetch = async () => {
             setLoading(true)
-            const agg = await getAggregateByPaper(paperId).catch(() => null)
+            const [agg, revs] = await Promise.all([
+                getAggregateByPaper(paperId).catch(() => null),
+                getReviewsByPaper(paperId).catch(() => [])
+            ])
             setAggregate(agg)
+            setReviews(revs)
             setLoading(false)
         }
         fetch()
@@ -310,17 +319,14 @@ function ReviewsTab({ paperId, paper, conferenceId }: { paperId: number; paper: 
             setExpandedReviews(prev => { const n = new Set(prev); n.delete(reviewId); return n })
             return
         }
-        // Load review details
-        if (!reviewDetails[reviewId]) {
+        if (!reviewVersions[reviewId]) {
             try {
-                const [review, answers, questions] = await Promise.all([
-                    getReviewById(reviewId),
-                    getAnswersByReview(reviewId).catch(() => []),
-                    getReviewQuestionsByTrack(trackId).catch(() => []),
-                ])
-                setReviewDetails(prev => ({ ...prev, [reviewId]: { review, answers, questions } }))
+                // Also import getReviewVersions if needed, assume it's imported
+                const versions = await getReviewVersions(reviewId)
+                setReviewVersions(prev => ({ ...prev, [reviewId]: versions }))
+                setSelectedVersionIdx(prev => ({ ...prev, [reviewId]: versions.length > 0 ? versions.length - 1 : 0 }))
             } catch {
-                toast.error("Failed to load review details")
+                toast.error("Failed to load review versions")
                 return
             }
         }
@@ -386,6 +392,87 @@ function ReviewsTab({ paperId, paper, conferenceId }: { paperId: number; paper: 
                     ))}
                 </div>
             )}
+
+            {/* Individual Reviews */}
+            <div className="border-t pt-4 space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase">Individual Reviews ({reviews.length})</p>
+                {reviews.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No review assignments yet.</p>
+                )}
+                {reviews.map(rev => {
+                    const isExpanded = expandedReviews.has(rev.id)
+                    const versions = reviewVersions[rev.id] || []
+                    const activeIdx = selectedVersionIdx[rev.id] !== undefined ? selectedVersionIdx[rev.id] : versions.length - 1
+                    const activeVersion = versions[activeIdx]
+
+                    return (
+                        <div key={rev.id} className="border rounded-lg overflow-hidden flex flex-col">
+                            <button
+                                onClick={() => toggleReview(rev.id, paper.trackId || 0)}
+                                className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                            >
+                                <div className="text-left">
+                                    <p className="text-sm font-semibold">{rev.reviewer.firstName} {rev.reviewer.lastName}</p>
+                                    <p className="text-xs text-muted-foreground">{rev.status}</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    {rev.totalScore !== null && (
+                                        <Badge variant="secondary" className="font-mono">{rev.totalScore}</Badge>
+                                    )}
+                                </div>
+                            </button>
+
+                            {isExpanded && (
+                                <div className="p-4 bg-white border-t">
+                                    {versions.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground italic">No review versions submitted yet.</p>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {/* Version Selector */}
+                                            <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border">
+                                                <span className="text-xs font-medium text-slate-500 uppercase">Version History:</span>
+                                                <select
+                                                    value={activeIdx}
+                                                    onChange={e => setSelectedVersionIdx(prev => ({ ...prev, [rev.id]: Number(e.target.value) }))}
+                                                    className="text-sm border rounded p-1 flex-1 bg-white"
+                                                >
+                                                    {versions.map((v, i) => (
+                                                        <option key={v.id} value={i}>
+                                                            Version {v.versionNumber} ({new Date(v.submittedAt).toLocaleString()}) - Score: {v.totalScore}
+                                                            {i === versions.length - 1 ? ' (Latest)' : ''}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            {/* Answers for Selected Version */}
+                                            {activeVersion && (
+                                                <div className="space-y-3">
+                                                    {activeVersion.answers.map((ans: any, idx: number) => (
+                                                        <div key={ans.id} className="text-sm space-y-1 bg-white border rounded p-3">
+                                                            <p className="font-medium text-slate-800">
+                                                                <span className="text-slate-400 mr-2">Q{idx + 1}.</span>
+                                                                {ans.questionText}
+                                                            </p>
+                                                            <div className="pl-6 text-slate-600">
+                                                                {ans.questionType === 'COMMENT' && <p className="whitespace-pre-wrap">{ans.answerValue || "—"}</p>}
+                                                                {ans.questionType === 'AGREEMENT' && <p className="font-semibold">{ans.answerValue || "—"}</p>}
+                                                                {(ans.questionType === 'OPTIONS' || ans.questionType === 'OPTIONS_WITH_VALUE') && (
+                                                                    <p className="font-semibold text-indigo-600">{ans.selectedChoiceText || "—"}</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )
+                })}
+            </div>
 
             {/* Redirect to Review Management */}
             <div className="border-t pt-4">
@@ -558,8 +645,16 @@ function DecisionTab({
     }, [metaReview])
 
     const handleSave = async () => {
-        if (!decision || !reason.trim() || !userId) {
-            toast.error("Please select a decision and provide a reason")
+        if (!userId) {
+            toast.error("User session not found. Please refresh the page (F5).")
+            return
+        }
+        if (!decision) {
+            toast.error("Please select a final decision (Accept/Reject).")
+            return
+        }
+        if (!reason.trim()) {
+            toast.error("Please provide a reason or comments for this decision.")
             return
         }
         try {

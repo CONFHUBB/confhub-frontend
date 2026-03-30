@@ -378,8 +378,8 @@ export default function MyInvitationsPage() {
                                                         </Button>
                                                     </>
                                                 ) : inv.isAccepted === true ? (
-                                                    <Button variant="outline" size="sm" onClick={() => router.push(getRedirectUrl(inv.roles, inv.conferenceId))} className="gap-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700">
-                                                        Open Workspace <ArrowRight className="h-4 w-4" />
+                                                    <Button size="sm" onClick={() => router.push(getRedirectUrl(inv.roles, inv.conferenceId))} className="gap-1.5 h-8 text-[11px] font-semibold tracking-wide bg-indigo-600 hover:bg-indigo-700 text-white border-0 shrink-0">
+                                                        Open Workspace <ArrowRight className="h-3.5 w-3.5" />
                                                     </Button>
                                                 ) : (
                                                     <span className="text-xs text-muted-foreground italic">Declined</span>
