@@ -33,7 +33,7 @@ function ConferencesPageInner() {
     })
     const [searchQuery, setSearchQuery] = useState('')
     const [currentPage, setCurrentPage] = useState(0)
-    const PAGE_SIZE = 12
+    const PAGE_SIZE = 8
 
     // Sync status filter when URL param changes (user navigates via nav)
     useEffect(() => {
@@ -273,11 +273,11 @@ function ConferencesPageInner() {
                     </div>
 
                     {/* Pagination */}
-                    {filtered.length > PAGE_SIZE && (
-                        <div className="flex items-center justify-between mt-8">
-                            <p className="text-sm text-muted-foreground">
-                                Showing {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
-                            </p>
+                    <div className="flex flex-col sm:flex-row items-center justify-between mt-8 pt-6 border-t gap-4">
+                        <p className="text-sm text-muted-foreground font-medium">
+                            Showing <span className="text-foreground">{currentPage * PAGE_SIZE + 1}</span> to <span className="text-foreground">{Math.min((currentPage + 1) * PAGE_SIZE, filtered.length)}</span> of <span className="text-foreground">{filtered.length}</span> conferences
+                        </p>
+                        {totalPages > 1 && (
                             <div className="flex items-center gap-1">
                                 <Button
                                     variant="outline"
@@ -285,6 +285,7 @@ function ConferencesPageInner() {
                                     className="h-8 w-8 p-0"
                                     disabled={currentPage === 0}
                                     onClick={() => setCurrentPage(p => p - 1)}
+                                    title="Previous page"
                                 >
                                     <ChevronLeft className="h-4 w-4" />
                                 </Button>
@@ -308,12 +309,13 @@ function ConferencesPageInner() {
                                     className="h-8 w-8 p-0"
                                     disabled={currentPage >= totalPages - 1}
                                     onClick={() => setCurrentPage(p => p + 1)}
+                                    title="Next page"
                                 >
                                     <ChevronRight className="h-4 w-4" />
                                 </Button>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </>
             )}
         </div>

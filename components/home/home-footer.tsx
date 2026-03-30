@@ -9,7 +9,7 @@ const FOOTER_LINKS = {
         { name: "Browse Conferences", path: "/conference" },
         { name: "Create Conference", path: "/conference/create" },
         { name: "My Papers", path: "/paper" },
-        { name: "My Reviews", path: "/conference/reviewer-select" },
+        { name: "My Invitations", path: "/my-profile/invitations" },
     ],
     Resources: [
         { name: "Getting Started", path: "/conference" },

@@ -23,17 +23,39 @@ export default function CreateConferencePage() {
     }, [router])
 
 
-    const handleConferenceSubmit = async (data: ConferenceData) => {
+    const handleConferenceSubmit = async (data: ConferenceData, pendingBannerFile?: File) => {
         setIsSubmitting(true)
 
         try {
+            // Create conference first (without banner if file is pending)
             const conferenceResult = await createConference({
                 ...data,
+                bannerImageUrl: pendingBannerFile ? '' : data.bannerImageUrl,
                 startDate: data.startDate ? new Date(data.startDate).toISOString() : "",
                 endDate: data.endDate ? new Date(data.endDate).toISOString() : "",
                 societySponsor: data.societySponsor.join(", "),
             })
             const conferenceId = conferenceResult.id
+
+            // Upload banner after conference is created (now we have an ID)
+            if (pendingBannerFile && conferenceId) {
+                try {
+                    const { uploadBannerImage, updateConference } = await import('@/app/api/conference.api')
+                    const bannerUrl = await uploadBannerImage(conferenceId, pendingBannerFile)
+                    await updateConference(conferenceId, {
+                        ...data,
+                        id: conferenceId,
+                        bannerImageUrl: bannerUrl,
+                        startDate: data.startDate ? new Date(data.startDate).toISOString() : "",
+                        endDate: data.endDate ? new Date(data.endDate).toISOString() : "",
+                        societySponsor: data.societySponsor.join(", "),
+                    })
+                } catch {
+                    // Non-critical: conference created, banner upload failed
+                    toast.error("Conference created but banner upload failed. You can re-upload later.")
+                }
+            }
+
             toast.success("Conference created! Proceeding to configuration...")
             router.push(`/conference/${conferenceId}/update`)
         } catch (error) {
