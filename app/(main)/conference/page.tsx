@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Calendar, MapPin, Loader2, CheckCircle, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
+import Image from 'next/image'
 import toast from 'react-hot-toast'
 import { ConferenceFilterBar, filterConferences, type FilterValues } from './conference-filter-bar'
 
@@ -208,10 +209,13 @@ function ConferencesPageInner() {
                                     {/* Banner Image */}
                                     <div className="relative w-full aspect-[16/9] bg-gradient-to-br from-indigo-500 to-purple-600 overflow-hidden">
                                         {conference.bannerImageUrl ? (
-                                            <img
+                                            <Image
                                                 src={conference.bannerImageUrl}
                                                 alt={conference.name}
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                fill
+                                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                                                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                                loading="lazy"
                                             />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center">
