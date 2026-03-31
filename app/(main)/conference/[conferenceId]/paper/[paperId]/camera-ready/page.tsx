@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { getConference } from '@/app/api/conference.api'
 import { getPaperById, deletePaperFile } from '@/app/api/paper.api'
-import { uploadCameraReady, getFilesByPaper, type CameraReadyFile } from '@/app/api/camera-ready.api'
+import { uploadCameraReady, uploadCopyrightSubmission, getFilesByPaper, type CameraReadyFile } from '@/app/api/camera-ready.api'
 import {
     getTicketTypes, getMyTicket, registerForConference, retryPayment,
     type TicketTypeResponse, type TicketResponse
@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge'
 import toast from 'react-hot-toast'
 import {
     Loader2, ArrowLeft, Upload, FileCheck, ExternalLink, Ticket, CreditCard,
-    CheckCircle2, AlertTriangle, ShieldCheck, RefreshCw, Layers, Eye, Trash2, FileText, Check
+    CheckCircle2, AlertTriangle, ShieldCheck, RefreshCw, Layers, Eye, Trash2, FileText, Check, Scale
 } from 'lucide-react'
 
 // ── Types ──
@@ -27,7 +27,7 @@ type Step = 'loading' | 'register' | 'pending-payment' | 'upload'
 function Stepper({ currentStep }: { currentStep: number }) {
     const steps = [
         { label: 'Register & Payment', icon: Ticket },
-        { label: 'Upload Camera-Ready', icon: Upload },
+        { label: 'Upload Submissions', icon: Upload },
     ]
 
     return (
@@ -80,8 +80,10 @@ export default function DedicatedCameraReadyPage() {
     const [conference, setConference] = useState<ConferenceResponse | null>(null)
     const [paper, setPaper] = useState<PaperResponse | null>(null)
     const [cameraReadyFiles, setCameraReadyFiles] = useState<CameraReadyFile[]>([])
+    const [copyrightFiles, setCopyrightFiles] = useState<CameraReadyFile[]>([])
     const [loading, setLoading] = useState(true)
-    const [uploading, setUploading] = useState(false)
+    const [uploadingCR, setUploadingCR] = useState(false)
+    const [uploadingCopyright, setUploadingCopyright] = useState(false)
 
     // Registration state
     const [userId, setUserId] = useState<number | null>(null)
@@ -124,9 +126,10 @@ export default function DedicatedCameraReadyPage() {
                 return
             }
 
-            // Load camera-ready files
+            // Load all files and separate them
             const files = await getFilesByPaper(paperId).catch(() => [])
             setCameraReadyFiles(files.filter(f => f.isCameraReady))
+            setCopyrightFiles(files.filter(f => f.isCopyrightSubmission))
 
             // Check registration status
             try {
@@ -164,7 +167,7 @@ export default function DedicatedCameraReadyPage() {
                 toast.success('Redirecting to payment gateway...')
                 window.location.href = result.paymentUrl
             } else if (result.ticket.paymentStatus === 'COMPLETED') {
-                toast.success('Registration complete! You can now upload camera-ready files.')
+                toast.success('Registration complete! You can now upload files.')
                 setCurrentStep('upload')
             } else {
                 setCurrentStep('pending-payment')
@@ -205,7 +208,7 @@ export default function DedicatedCameraReadyPage() {
         }
     }
 
-    const handleUpload = async () => {
+    const handleUploadCameraReady = async () => {
         if (!userId || !paperId) return
         const input = document.createElement('input')
         input.type = 'file'
@@ -214,24 +217,50 @@ export default function DedicatedCameraReadyPage() {
             const file = (e.target as HTMLInputElement).files?.[0]
             if (!file) return
             try {
-                setUploading(true)
+                setUploadingCR(true)
                 const uploaded = await uploadCameraReady(conferenceId, paperId, userId, file)
                 setCameraReadyFiles(prev => [...prev, uploaded])
                 toast.success('Camera-ready file uploaded successfully!')
             } catch (err: any) {
                 toast.error(err?.response?.data?.message || 'Upload failed. Please try again.')
             } finally {
-                setUploading(false)
+                setUploadingCR(false)
             }
         }
         input.click()
     }
 
-    const handleDeleteFile = async (fileId: number) => {
+    const handleUploadCopyright = async () => {
+        if (!userId || !paperId) return
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = '.pdf,.doc,.docx,.jpg,.jpeg,.png'
+        input.onchange = async (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0]
+            if (!file) return
+            try {
+                setUploadingCopyright(true)
+                const uploaded = await uploadCopyrightSubmission(conferenceId, paperId, userId, file)
+                setCopyrightFiles(prev => [...prev, uploaded])
+                toast.success('Copyright submission uploaded successfully!')
+            } catch (err: any) {
+                toast.error(err?.response?.data?.message || 'Upload failed. Please try again.')
+            } finally {
+                setUploadingCopyright(false)
+            }
+        }
+        input.click()
+    }
+
+    const handleDeleteFile = async (fileId: number, type: 'cr' | 'copyright') => {
         if (!confirm('Are you sure you want to delete this file?')) return;
         try {
             await deletePaperFile(fileId);
-            setCameraReadyFiles((prev) => prev.filter((f) => f.id !== fileId));
+            if (type === 'cr') {
+                setCameraReadyFiles((prev) => prev.filter((f) => f.id !== fileId));
+            } else {
+                setCopyrightFiles((prev) => prev.filter((f) => f.id !== fileId));
+            }
             toast.success('File deleted successfully.');
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to delete file.');
@@ -263,7 +292,7 @@ export default function DedicatedCameraReadyPage() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
             {/* ── Header ── */}
             <div className="space-y-3">
                 <Button variant="ghost" className="gap-2 -ml-2 text-indigo-700 hover:text-indigo-900" onClick={() => router.back()}>
@@ -271,9 +300,9 @@ export default function DedicatedCameraReadyPage() {
                     Back
                 </Button>
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Camera-Ready Wizard</h1>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Submission Wizard</h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        {conference?.name} — Complete the pre-requisites and upload your final manuscript
+                        {conference?.name} — Complete registration, then upload Camera-Ready & Copyright documents
                     </p>
                 </div>
             </div>
@@ -296,7 +325,7 @@ export default function DedicatedCameraReadyPage() {
                                 <div className="p-2 bg-indigo-100 rounded-lg"><Ticket className="h-5 w-5 text-indigo-600" /></div>
                                 <div>
                                     <h3 className="text-lg font-semibold text-gray-900">Select Registration Ticket</h3>
-                                    <p className="text-sm text-muted-foreground">You must have an active Registration to submit camera-ready papers.</p>
+                                    <p className="text-sm text-muted-foreground">You must have an active Registration to submit camera-ready and copyright files.</p>
                                 </div>
                             </div>
 
@@ -384,7 +413,7 @@ export default function DedicatedCameraReadyPage() {
                             </div>
                             <h3 className="text-2xl font-bold text-amber-900">Payment Pending</h3>
                             <p className="text-amber-800 max-w-md">
-                                We found an incomplete payment for your ticket. You must complete the payment before you can upload the camera-ready file.
+                                We found an incomplete payment for your ticket. You must complete the payment before you can upload files.
                             </p>
                             
                             <div className="flex flex-col sm:flex-row gap-3 mt-4">
@@ -398,9 +427,10 @@ export default function DedicatedCameraReadyPage() {
                 </div>
             )}
 
-            {/* ── STEP 2: UPLOAD CAMERA-READY ── */}
+            {/* ── STEP 2: UPLOAD CAMERA-READY + COPYRIGHT ── */}
             {currentStep === 'upload' && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+                    {/* Registration Verified Banner */}
                     <Card className="border-emerald-200 bg-emerald-50/30 overflow-hidden shadow-sm">
                         <div className="bg-emerald-600 px-6 py-4 flex items-center justify-between text-white">
                             <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -410,64 +440,160 @@ export default function DedicatedCameraReadyPage() {
                                 TICKET #{myTicket?.id}
                             </Badge>
                         </div>
-                        <CardContent className="p-8">
-                            <div className="flex flex-col border-2 border-dashed border-emerald-300 bg-white rounded-xl py-12 px-6 hover:border-emerald-500 hover:bg-emerald-50/50 transition-colors cursor-pointer text-center max-w-2xl mx-auto" onClick={handleUpload}>
-                                {uploading ? (
-                                    <>
-                                        <Loader2 className="h-12 w-12 animate-spin text-emerald-500 mx-auto mb-4" />
-                                        <p className="font-medium text-emerald-900 text-lg">Uploading and verifying PDF...</p>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                            <Upload className="h-10 w-10 text-emerald-600" />
-                                        </div>
-                                        <h3 className="text-xl font-bold text-gray-900 mb-2">Upload Camera-Ready PDF</h3>
-                                        <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                                            Click here to browse for the final prepared manuscript. Ensure it aligns strictly with IEEE/conference templates without page numbers.
-                                        </p>
-                                    </>
-                                )}
-                            </div>
-                        </CardContent>
                     </Card>
 
-                    {cameraReadyFiles.length > 0 && (
-                        <div>
-                            <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-800">
-                                <FileCheck className="h-5 w-5 text-emerald-600" /> Uploaded Camera-Ready Files
-                            </h3>
-                            <div className="space-y-3">
-                                {cameraReadyFiles.map((file, idx) => (
-                                    <div key={file.id} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-emerald-300 transition-colors">
-                                        <div className="flex items-center gap-4 min-w-0">
-                                            <div className="p-2.5 bg-emerald-50 rounded-lg shrink-0">
-                                                <FileText className="h-6 w-6 text-emerald-600" />
-                                            </div>
-                                            <div className="min-w-0 pr-4">
-                                                <p className="font-semibold text-slate-900 truncate" title={decodeURIComponent(file.url.split('/').pop() || '')}>
-                                                    {decodeURIComponent(file.url.split('/').pop() || 'camera-ready.pdf')}
-                                                </p>
-                                                <div className="text-xs text-slate-500 font-mono mt-1 w-fit flex items-center gap-1.5">
-                                                    <Badge variant="outline" className="font-normal border-emerald-200 bg-emerald-50/50 text-emerald-700">Ver. {idx + 1}</Badge> {file.id.toString()}
+                    {/* Two Upload Cards Side by Side */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* ── Camera-Ready Card ── */}
+                        <div className="space-y-4">
+                            <Card className="border-emerald-200 overflow-hidden shadow-sm">
+                                <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-5 py-3 flex items-center gap-2 text-white">
+                                    <Upload className="h-4 w-4" />
+                                    <h3 className="font-semibold text-sm">Camera-Ready Manuscript</h3>
+                                </div>
+                                <CardContent className="p-5">
+                                    <div
+                                        className="flex flex-col border-2 border-dashed border-emerald-300 bg-emerald-50/30 rounded-xl py-10 px-4 hover:border-emerald-500 hover:bg-emerald-50 transition-colors cursor-pointer text-center"
+                                        onClick={handleUploadCameraReady}
+                                    >
+                                        {uploadingCR ? (
+                                            <>
+                                                <Loader2 className="h-10 w-10 animate-spin text-emerald-500 mx-auto mb-3" />
+                                                <p className="font-medium text-emerald-900 text-sm">Uploading manuscript...</p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                    <Upload className="h-7 w-7 text-emerald-600" />
                                                 </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <Button variant="ghost" size="sm" className="h-9 w-9 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteFile(file.id)}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                            <a href={file.url} target="_blank" rel="noopener noreferrer">
-                                                <Button variant="outline" size="sm" className="gap-2 h-9 border-slate-200">
-                                                    <ExternalLink className="h-4 w-4 text-emerald-600" /> <span className="hidden sm:inline">View</span>
-                                                </Button>
-                                            </a>
-                                        </div>
+                                                <h4 className="text-base font-bold text-gray-900 mb-1">Upload Camera-Ready PDF</h4>
+                                                <p className="text-muted-foreground text-xs max-w-xs mx-auto">
+                                                    Final prepared manuscript aligned with conference templates.
+                                                </p>
+                                            </>
+                                        )}
                                     </div>
-                                ))}
-                            </div>
+
+                                    {/* Camera-Ready File List */}
+                                    {cameraReadyFiles.length > 0 && (
+                                        <div className="mt-4 space-y-2">
+                                            <h4 className="text-xs font-semibold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
+                                                <FileCheck className="h-3.5 w-3.5" /> Uploaded ({cameraReadyFiles.length})
+                                            </h4>
+                                            {cameraReadyFiles.map((file, idx) => (
+                                                <div key={file.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-emerald-300 transition-colors">
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <div className="p-1.5 bg-emerald-50 rounded-md shrink-0">
+                                                            <FileText className="h-4 w-4 text-emerald-600" />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="font-medium text-slate-900 text-sm truncate" title={decodeURIComponent(file.url.split('/').pop() || '')}>
+                                                                {decodeURIComponent(file.url.split('/').pop() || 'camera-ready.pdf')}
+                                                            </p>
+                                                            <Badge variant="outline" className="font-normal border-emerald-200 bg-emerald-50/50 text-emerald-700 text-[10px] mt-0.5">Ver. {idx + 1}</Badge>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteFile(file.id, 'cr')}>
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                        <a href={file.url} target="_blank" rel="noopener noreferrer">
+                                                            <Button variant="outline" size="sm" className="gap-1.5 h-7 text-xs border-slate-200">
+                                                                <ExternalLink className="h-3 w-3 text-emerald-600" /> View
+                                                            </Button>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
                         </div>
-                    )}
+
+                        {/* ── Copyright Submission Card ── */}
+                        <div className="space-y-4">
+                            <Card className="border-indigo-200 overflow-hidden shadow-sm">
+                                <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-5 py-3 flex items-center gap-2 text-white">
+                                    <Scale className="h-4 w-4" />
+                                    <h3 className="font-semibold text-sm">Copyright Submission</h3>
+                                </div>
+                                <CardContent className="p-5">
+                                    <div
+                                        className="flex flex-col border-2 border-dashed border-indigo-300 bg-indigo-50/30 rounded-xl py-10 px-4 hover:border-indigo-500 hover:bg-indigo-50 transition-colors cursor-pointer text-center"
+                                        onClick={handleUploadCopyright}
+                                    >
+                                        {uploadingCopyright ? (
+                                            <>
+                                                <Loader2 className="h-10 w-10 animate-spin text-indigo-500 mx-auto mb-3" />
+                                                <p className="font-medium text-indigo-900 text-sm">Uploading copyright form...</p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="w-14 h-14 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                    <Scale className="h-7 w-7 text-indigo-600" />
+                                                </div>
+                                                <h4 className="text-base font-bold text-gray-900 mb-1">Upload Copyright Form</h4>
+                                                <p className="text-muted-foreground text-xs max-w-xs mx-auto">
+                                                    Signed copyright transfer agreement or license form.
+                                                </p>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {/* Copyright File List */}
+                                    {copyrightFiles.length > 0 && (
+                                        <div className="mt-4 space-y-2">
+                                            <h4 className="text-xs font-semibold text-indigo-700 uppercase tracking-wider flex items-center gap-1.5">
+                                                <FileCheck className="h-3.5 w-3.5" /> Uploaded ({copyrightFiles.length})
+                                            </h4>
+                                            {copyrightFiles.map((file, idx) => (
+                                                <div key={file.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-indigo-300 transition-colors">
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <div className="p-1.5 bg-indigo-50 rounded-md shrink-0">
+                                                            <Scale className="h-4 w-4 text-indigo-600" />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="font-medium text-slate-900 text-sm truncate" title={decodeURIComponent(file.url.split('/').pop() || '')}>
+                                                                {decodeURIComponent(file.url.split('/').pop() || 'copyright.pdf')}
+                                                            </p>
+                                                            <Badge variant="outline" className="font-normal border-indigo-200 bg-indigo-50/50 text-indigo-700 text-[10px] mt-0.5">Ver. {idx + 1}</Badge>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteFile(file.id, 'copyright')}>
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                        <a href={file.url} target="_blank" rel="noopener noreferrer">
+                                                            <Button variant="outline" size="sm" className="gap-1.5 h-7 text-xs border-slate-200">
+                                                                <ExternalLink className="h-3 w-3 text-indigo-600" /> View
+                                                            </Button>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+
+                    {/* Submit & Complete Button */}
+                    <div className="flex justify-end pt-4">
+                        <Button 
+                            size="lg" 
+                            className="w-full sm:w-auto px-8 gap-2 shadow-md bg-emerald-600 hover:bg-emerald-700" 
+                            disabled={cameraReadyFiles.length === 0}
+                            onClick={() => {
+                                toast.success('Camera-Ready submission completed!');
+                                router.push(`/conference/${conferenceId}/paper/${paperId}?tab=camera-ready`);
+                            }}
+                        >
+                            <CheckCircle2 className="h-5 w-5" />
+                            Submit & Complete
+                        </Button>
+                    </div>
                 </div>
             )}
         </div>

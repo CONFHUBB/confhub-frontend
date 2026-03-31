@@ -18,7 +18,7 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import toast from 'react-hot-toast'
-import { FileCheck, Camera, Calendar, Layers, ExternalLink, Activity, CheckCircle2, Search, Loader2, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react'
+import { FileCheck, Camera, Calendar, Layers, ExternalLink, Activity, CheckCircle2, Search, Loader2, BookOpen, ChevronLeft, ChevronRight, Scale } from 'lucide-react'
 
 export default function CameraReadyDashboardTab() {
     const params = useParams()
@@ -27,6 +27,7 @@ export default function CameraReadyDashboardTab() {
 
     const [papers, setPapers] = useState<PaperResponse[]>([])
     const [cameraReadyFiles, setCameraReadyFiles] = useState<Record<number, CameraReadyFile[]>>({})
+    const [copyrightFiles, setCopyrightFiles] = useState<Record<number, CameraReadyFile[]>>({})
     const [loading, setLoading] = useState(true)
 
     // Table state
@@ -57,15 +58,18 @@ export default function CameraReadyDashboardTab() {
             )
             setPapers(eligible)
 
-            // Load camera-ready files
-            const filesMap: Record<number, CameraReadyFile[]> = {}
+            // Load files and separate camera-ready vs copyright
+            const crMap: Record<number, CameraReadyFile[]> = {}
+            const cpMap: Record<number, CameraReadyFile[]> = {}
             await Promise.all(
                 eligible.map(async (p) => {
                     const files = await getFilesByPaper(p.id).catch(() => [])
-                    filesMap[p.id] = files.filter(f => f.isCameraReady)
+                    crMap[p.id] = files.filter(f => f.isCameraReady)
+                    cpMap[p.id] = files.filter(f => f.isCopyrightSubmission)
                 })
             )
-            setCameraReadyFiles(filesMap)
+            setCameraReadyFiles(crMap)
+            setCopyrightFiles(cpMap)
 
         } catch (err) {
             console.error('Failed to load camera-ready dashboard:', err)
@@ -90,9 +94,9 @@ export default function CameraReadyDashboardTab() {
         <div className="space-y-8">
             {/* Header */}
             <div>
-                <h2 className="text-xl font-bold mb-1">Camera-Ready Submissions</h2>
+                <h2 className="text-xl font-bold mb-1">Camera-Ready & Copyright Submissions</h2>
                 <p className="text-sm text-muted-foreground">
-                    Manage final publication-ready manuscripts and corresponding registrations.
+                    Manage final publication-ready manuscripts and copyright transfer documents.
                 </p>
             </div>
 
@@ -147,14 +151,17 @@ export default function CameraReadyDashboardTab() {
                                     <TableRow className="bg-muted/30">
                                         <TableHead className="w-12 text-center">#</TableHead>
                                         <TableHead>Paper Details</TableHead>
-                                        <TableHead className="w-48">Status</TableHead>
-                                        <TableHead className="w-40 text-center">Action</TableHead>
+                                        <TableHead className="w-36">Camera-Ready</TableHead>
+                                        <TableHead className="w-36">Copyright</TableHead>
+                                        <TableHead className="w-36 text-center">Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {paginatedPapers.map((p, idx) => {
-                                        const files = cameraReadyFiles[p.id] || []
-                                        const hasUploaded = files.length > 0
+                                        const crFiles = cameraReadyFiles[p.id] || []
+                                        const cpFiles = copyrightFiles[p.id] || []
+                                        const hasCR = crFiles.length > 0
+                                        const hasCopyright = cpFiles.length > 0
                                         const isPublished = p.status === 'PUBLISHED'
 
                                         return (
@@ -164,7 +171,7 @@ export default function CameraReadyDashboardTab() {
                                                 </TableCell>
                                                 
                                                 <TableCell>
-                                                    <div className="flex flex-col gap-1 py-1 pr-6 max-w-[500px]">
+                                                    <div className="flex flex-col gap-1 py-1 pr-6 max-w-[400px]">
                                                         <p className="font-semibold text-sm line-clamp-2 leading-relaxed" title={p.title}>{p.title}</p>
                                                         <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
                                                             <span className="flex items-center gap-1.5"><Layers className="h-3.5 w-3.5" /> {p.track?.name || 'Main Track'}</span>
@@ -173,19 +180,37 @@ export default function CameraReadyDashboardTab() {
                                                     </div>
                                                 </TableCell>
 
+                                                {/* Camera-Ready Status */}
                                                 <TableCell>
                                                     <div className="flex flex-col items-start gap-1.5 py-1">
                                                         {isPublished ? (
                                                             <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 uppercase text-[10px]"><CheckCircle2 className="h-3 w-3 mr-1" /> Published</Badge>
-                                                        ) : hasUploaded ? (
-                                                            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 uppercase text-[10px]"><FileCheck className="h-3 w-3 mr-1" /> CR Uploaded</Badge>
+                                                        ) : hasCR ? (
+                                                            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 uppercase text-[10px]"><FileCheck className="h-3 w-3 mr-1" /> Uploaded</Badge>
                                                         ) : (
-                                                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 uppercase text-[10px]"><Activity className="h-3 w-3 mr-1" /> CR Required</Badge>
+                                                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 uppercase text-[10px]"><Activity className="h-3 w-3 mr-1" /> Required</Badge>
                                                         )}
 
-                                                        {files.length > 0 && (
-                                                            <a href={files[files.length - 1].url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 font-medium hover:underline">
-                                                                <ExternalLink className="h-3 w-3" /> View latest file
+                                                        {crFiles.length > 0 && (
+                                                            <a href={crFiles[crFiles.length - 1].url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 font-medium hover:underline">
+                                                                <ExternalLink className="h-3 w-3" /> View file
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+
+                                                {/* Copyright Status */}
+                                                <TableCell>
+                                                    <div className="flex flex-col items-start gap-1.5 py-1">
+                                                        {hasCopyright ? (
+                                                            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 uppercase text-[10px]"><Scale className="h-3 w-3 mr-1" /> Uploaded</Badge>
+                                                        ) : (
+                                                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 uppercase text-[10px]"><Activity className="h-3 w-3 mr-1" /> Required</Badge>
+                                                        )}
+
+                                                        {cpFiles.length > 0 && (
+                                                            <a href={cpFiles[cpFiles.length - 1].url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 font-medium hover:underline">
+                                                                <ExternalLink className="h-3 w-3" /> View file
                                                             </a>
                                                         )}
                                                     </div>
@@ -196,11 +221,11 @@ export default function CameraReadyDashboardTab() {
                                                         <Button
                                                             size="sm"
                                                             onClick={() => router.push(`/conference/${conferenceId}/paper/${p.id}/camera-ready`)}
-                                                            variant={hasUploaded ? 'outline' : 'default'}
-                                                            className={`h-8 w-28 gap-1.5 shadow-sm mx-auto ${!hasUploaded && 'bg-emerald-600 hover:bg-emerald-700 text-white'}`}
+                                                            variant={(hasCR && hasCopyright) ? 'outline' : 'default'}
+                                                            className={`h-8 w-28 gap-1.5 shadow-sm mx-auto ${!(hasCR && hasCopyright) && 'bg-emerald-600 hover:bg-emerald-700 text-white'}`}
                                                         >
                                                             <Camera className="h-3.5 w-3.5" />
-                                                            {hasUploaded ? 'Manage' : 'Proceed'}
+                                                            {(hasCR || hasCopyright) ? 'Manage' : 'Proceed'}
                                                         </Button>
                                                     ) : (
                                                         <Button size="sm" variant="ghost" disabled className="text-emerald-700 h-8 w-28 mx-auto opacity-100 font-medium bg-emerald-50/50">

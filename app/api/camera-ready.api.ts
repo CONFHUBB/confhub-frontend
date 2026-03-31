@@ -7,6 +7,7 @@ export interface CameraReadyFile {
     isActive: boolean
     isCameraReady: boolean
     isRevision: boolean
+    isCopyrightSubmission: boolean
 }
 
 export const uploadCameraReady = async (conferenceId: number, paperId: number, userId: number, file: File): Promise<CameraReadyFile> => {
@@ -17,6 +18,19 @@ export const uploadCameraReady = async (conferenceId: number, paperId: number, u
     formData.append('file', file)
 
     const response = await http.post<CameraReadyFile>('/paper-file/upload-camera-ready', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data
+}
+
+export const uploadCopyrightSubmission = async (conferenceId: number, paperId: number, userId: number, file: File): Promise<CameraReadyFile> => {
+    const formData = new FormData()
+    formData.append('conferenceId', conferenceId.toString())
+    formData.append('paperId', paperId.toString())
+    formData.append('userId', userId.toString())
+    formData.append('file', file)
+
+    const response = await http.post<CameraReadyFile>('/paper-file/upload-copyright', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
     })
     return response.data

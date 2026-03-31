@@ -466,6 +466,8 @@ export default function ConferenceDetailsPage() {
                             <img
                                 src={conference.bannerImageUrl}
                                 alt={conference.name}
+                                fetchPriority="high"
+                                decoding="async"
                                 className="w-full object-cover"
                             />
                         ) : (

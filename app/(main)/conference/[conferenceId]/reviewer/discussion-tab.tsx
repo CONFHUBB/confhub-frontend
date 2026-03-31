@@ -1,13 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Loader2, MessageSquare, ChevronDown, ChevronRight, FileText, CheckCircle2, User, AlertCircle } from 'lucide-react'
 import { PaperDiscussion } from '@/components/paper-discussion'
 import type { ReviewResponse } from '@/types/review'
+import type { TrackReviewSetting } from '@/types/track'
 import { getReviewsByPaper, getAnswersByReview, getReviewQuestionsByTrack } from '@/app/api/review.api'
+import { getPapersByConference } from '@/app/api/paper.api'
+import type { PaperResponse } from '@/types/paper'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 
@@ -16,6 +19,7 @@ interface DiscussionTabProps {
     conferenceId: number
     currentUserId: number | null
     activities?: { activityType: string; isEnabled: boolean }[]
+    settings?: TrackReviewSetting
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -24,8 +28,9 @@ const STATUS_COLORS: Record<string, string> = {
     COMPLETED: 'bg-green-100 text-green-800',
 }
 
-export function DiscussionTab({ reviews, conferenceId, currentUserId, activities = [] }: DiscussionTabProps) {
+export function DiscussionTab({ reviews, conferenceId, currentUserId, activities = [], settings }: DiscussionTabProps) {
     const isDiscussionEnabled = activities.some(a => a.activityType === 'REVIEW_DISCUSSION' && a.isEnabled)
+    const shouldAnonymize = !(settings?.showReviewerIdentityToOtherReviewer)
     const [expandedPaper, setExpandedPaper] = useState<number | null>(null)
     const [paperReviews, setPaperReviews] = useState<Record<number, ReviewResponse[]>>({})
     const [loadingReviews, setLoadingReviews] = useState<Record<number, boolean>>({})
@@ -35,6 +40,48 @@ export function DiscussionTab({ reviews, conferenceId, currentUserId, activities
     const [detailsLoading, setDetailsLoading] = useState(false)
     const [questions, setQuestions] = useState<any[]>([])
     const [answers, setAnswers] = useState<Record<number, any>>({})
+
+    // #9: Fetch all conference papers when allowDiscussNonAssignedPapers is enabled
+    const [allPapers, setAllPapers] = useState<PaperResponse[]>([])
+    const [loadingAllPapers, setLoadingAllPapers] = useState(false)
+
+    useEffect(() => {
+        if (settings?.allowDiscussNonAssignedPapers && conferenceId) {
+            setLoadingAllPapers(true)
+            getPapersByConference(conferenceId)
+                .then(papers => setAllPapers(papers || []))
+                .catch(() => setAllPapers([]))
+                .finally(() => setLoadingAllPapers(false))
+        }
+    }, [settings?.allowDiscussNonAssignedPapers, conferenceId])
+
+    // Build discussion paper list: assigned papers + non-assigned (if setting enabled)
+    const assignedPaperIds = new Set(reviews.map(r => r.paper?.id).filter(Boolean))
+    const discussionPapers = useMemo(() => {
+        // Start with assigned papers from reviews
+        const assigned = reviews.map(r => ({
+            paperId: r.paper?.id || 0,
+            title: r.paper?.title || `Paper #${r.paper?.id}`,
+            trackId: r.paper?.trackId,
+            myReview: r,
+            isAssigned: true,
+        })).filter(p => p.paperId > 0)
+
+        if (!settings?.allowDiscussNonAssignedPapers) return assigned
+
+        // Add non-assigned papers
+        const extra = allPapers
+            .filter(p => !assignedPaperIds.has(p.id) && p.status !== 'WITHDRAWN' && p.status !== 'DRAFT')
+            .map(p => ({
+                paperId: p.id,
+                title: p.title || `Paper #${p.id}`,
+                trackId: p.trackId,
+                myReview: null as ReviewResponse | null,
+                isAssigned: false,
+            }))
+
+        return [...assigned, ...extra]
+    }, [reviews, allPapers, settings?.allowDiscussNonAssignedPapers, assignedPaperIds])
 
     const handleExpand = async (paperId: number) => {
         if (expandedPaper === paperId) {
@@ -80,13 +127,21 @@ export function DiscussionTab({ reviews, conferenceId, currentUserId, activities
         }
     }
 
-    if (reviews.length === 0) {
+    if (reviews.length === 0 && !settings?.allowDiscussNonAssignedPapers) {
         return (
             <EmptyState
                 emoji="💬"
                 title="No papers assigned for discussion"
                 description="You have not been assigned any papers. Discussion will appear here once you have papers to review."
             />
+        )
+    }
+
+    if (loadingAllPapers) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
         )
     }
 
@@ -100,15 +155,15 @@ export function DiscussionTab({ reviews, conferenceId, currentUserId, activities
             </div>
 
             <div className="space-y-3">
-                {reviews.map(myReview => {
-                    const paper = myReview.paper
-                    if (!paper) return null
+                {discussionPapers.map((dp, dpIdx) => {
+                    const paper = { id: dp.paperId, title: dp.title, trackId: dp.trackId }
+                    const myReview = dp.myReview
                     const isExpanded = expandedPaper === paper.id
                     const isFetching = loadingReviews[paper.id]
                     const otherReviews = (paperReviews[paper.id] || []).filter(r => r.reviewer.id !== currentUserId)
 
                     return (
-                        <Card key={myReview.id} className={`overflow-hidden transition-all ${isExpanded ? 'border-indigo-300 ring-1 ring-indigo-300 shadow-md' : 'hover:border-indigo-200'}`}>
+                        <Card key={`dp-${dp.paperId}-${dpIdx}`} className={`overflow-hidden transition-all ${isExpanded ? 'border-indigo-300 ring-1 ring-indigo-300 shadow-md' : 'hover:border-indigo-200'}`}>
                             <div 
                                 className={`p-4 flex items-center justify-between cursor-pointer transition-colors ${isExpanded ? 'bg-indigo-50/50' : 'hover:bg-gray-50'}`}
                                 onClick={() => handleExpand(paper.id)}
@@ -119,10 +174,16 @@ export function DiscussionTab({ reviews, conferenceId, currentUserId, activities
                                     </h3>
                                     <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
                                         {paper.trackId && <Badge variant="outline" className="font-normal text-[10px] bg-white border-gray-200">Track #{paper.trackId}</Badge>}
-                                        <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> My Score: {myReview.totalScore != null ? myReview.totalScore : '—'}</span>
-                                        <Badge className={`font-normal text-[10px] border ${STATUS_COLORS[myReview.status] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
-                                            {myReview.status}
-                                        </Badge>
+                                        {myReview ? (
+                                            <>
+                                                <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> My Score: {myReview.totalScore != null ? myReview.totalScore : '—'}</span>
+                                                <Badge className={`font-normal text-[10px] border ${STATUS_COLORS[myReview.status] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+                                                    {myReview.status}
+                                                </Badge>
+                                            </>
+                                        ) : (
+                                            <Badge variant="outline" className="font-normal text-[10px] bg-slate-50 border-slate-200 text-slate-500">Not Assigned</Badge>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="shrink-0 flex items-center gap-3">
@@ -149,7 +210,7 @@ export function DiscussionTab({ reviews, conferenceId, currentUserId, activities
                                                     <div className="p-8 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-indigo-500" /></div>
                                                 ) : otherReviews.length > 0 ? (
                                                     otherReviews.map((r, i) => {
-                                                        const rName = r.reviewer?.firstName ? `${r.reviewer.firstName} ${r.reviewer.lastName}` : `Reviewer ${i + 1}`;
+                                                        const rName = shouldAnonymize ? `Reviewer ${i + 1}` : (r.reviewer?.firstName ? `${r.reviewer.firstName} ${r.reviewer.lastName}` : `Reviewer ${i + 1}`);
                                                         return (
                                                         <div key={r.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                                                             <div>
@@ -189,7 +250,7 @@ export function DiscussionTab({ reviews, conferenceId, currentUserId, activities
                                                     <PaperDiscussion
                                                         paperId={paper.id}
                                                         currentUserId={currentUserId}
-                                                        anonymize={false}
+                                                        anonymize={shouldAnonymize}
                                                         discussionEnabled={isDiscussionEnabled}
                                                     />
                                                 ) : (

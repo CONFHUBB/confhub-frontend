@@ -3,18 +3,27 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-    Search, Users, Calendar, BookOpen,
-    ChevronLeft, ChevronRight, ExternalLink, FileText, Loader2
+    Search, Users, Calendar, BookOpen, Tag, Layers,
+    ChevronLeft, ChevronRight, ExternalLink, FileText, Loader2,
+    Eye, Download, X, ArrowUpRight
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { getPublishedPapers, type PublishedPaperDTO } from '@/app/api/paper.api'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import { getPublishedPapers, getPaperFilesByPaperId, type PublishedPaperDTO } from '@/app/api/paper.api'
+import type { PaperFileResponse } from '@/types/paper'
 import toast from 'react-hot-toast'
+import Link from 'next/link'
 
 // ─── Paper Card ───────────────────────────────────────────────────────
-function PaperCard({ paper, onViewDetail }: { paper: PublishedPaperDTO; onViewDetail: () => void }) {
+function PaperCard({ paper, onReadPaper }: { paper: PublishedPaperDTO; onReadPaper: () => void }) {
     const formatDate = (iso?: string) => {
         if (!iso) return '—'
         try {
@@ -27,7 +36,7 @@ function PaperCard({ paper, onViewDetail }: { paper: PublishedPaperDTO; onViewDe
         : 'Unknown authors'
 
     return (
-        <Card className="flex flex-col h-full border border-gray-200 rounded-xl shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 bg-white overflow-hidden">
+        <Card className="flex flex-col h-full border border-gray-200 rounded-xl shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 bg-white overflow-hidden group">
             {/* Top accent bar */}
             <div className="h-1 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500" />
 
@@ -56,6 +65,18 @@ function PaperCard({ paper, onViewDetail }: { paper: PublishedPaperDTO; onViewDe
                         {authorDisplay}
                     </span>
                 </div>
+                {paper.keywords && paper.keywords.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                        {paper.keywords.slice(0, 3).map((kw, i) => (
+                            <span key={i} className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md">
+                                {kw}
+                            </span>
+                        ))}
+                        {paper.keywords.length > 3 && (
+                            <span className="text-[10px] text-gray-400">+{paper.keywords.length - 3}</span>
+                        )}
+                    </div>
+                )}
                 <div className="flex items-center gap-2 text-xs text-gray-400">
                     <Calendar className="h-3.5 w-3.5 shrink-0" />
                     <span>{formatDate(paper.submissionTime)}</span>
@@ -64,24 +85,220 @@ function PaperCard({ paper, onViewDetail }: { paper: PublishedPaperDTO; onViewDe
 
             <CardFooter className="px-5 pb-4 pt-0 flex items-center gap-2">
                 <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 h-8 text-xs gap-1.5 border-gray-200 text-gray-600 hover:text-indigo-700 hover:border-indigo-200 hover:bg-indigo-50"
-                    onClick={onViewDetail}
-                >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    View Detail
-                </Button>
-                <Button
                     size="sm"
                     className="flex-1 h-8 text-xs gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
-                    onClick={onViewDetail}
+                    onClick={onReadPaper}
                 >
-                    <FileText className="h-3.5 w-3.5" />
-                    Read Abstract
+                    <Eye className="h-3.5 w-3.5" />
+                    Read Paper
                 </Button>
+                <Link href={`/conference/${paper.conferenceId}`}>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs gap-1.5 border-gray-200 text-gray-600 hover:text-indigo-700 hover:border-indigo-200 hover:bg-indigo-50"
+                    >
+                        <ArrowUpRight className="h-3.5 w-3.5" />
+                        Conference
+                    </Button>
+                </Link>
             </CardFooter>
         </Card>
+    )
+}
+
+// ─── Paper Detail Dialog ──────────────────────────────────────────────
+function PaperDetailDialog({
+    paper,
+    open,
+    onClose,
+}: {
+    paper: PublishedPaperDTO | null
+    open: boolean
+    onClose: () => void
+}) {
+    const [files, setFiles] = useState<PaperFileResponse[]>([])
+    const [loadingFiles, setLoadingFiles] = useState(false)
+
+    useEffect(() => {
+        if (open && paper) {
+            setLoadingFiles(true)
+            getPaperFilesByPaperId(paper.id)
+                .then((data) => setFiles(data))
+                .catch(() => setFiles([]))
+                .finally(() => setLoadingFiles(false))
+        } else {
+            setFiles([])
+        }
+    }, [open, paper])
+
+    if (!paper) return null
+
+    const cameraReadyFile = files.find(f => f.isCameraReady && f.isActive)
+    const latestFile = cameraReadyFile || files.find(f => f.isActive) || files[0]
+
+    const formatDate = (iso?: string) => {
+        if (!iso) return '—'
+        try {
+            return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        } catch { return '—' }
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={onClose}>
+            <DialogContent className="!max-w-3xl max-h-[90vh] overflow-y-auto sm:rounded-2xl">
+                <DialogHeader className="pb-4 border-b">
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 space-y-2">
+                            {paper.conferenceName && (
+                                <Link href={`/conference/${paper.conferenceId}`}>
+                                    <Badge
+                                        variant="outline"
+                                        className="w-fit text-xs px-2.5 py-0.5 border-indigo-200 text-indigo-700 bg-indigo-50 font-medium hover:bg-indigo-100 transition-colors cursor-pointer"
+                                    >
+                                        {paper.conferenceName}
+                                    </Badge>
+                                </Link>
+                            )}
+                            <DialogTitle className="text-xl font-bold text-gray-900 leading-tight">
+                                {paper.title}
+                            </DialogTitle>
+                        </div>
+                    </div>
+                </DialogHeader>
+
+                <div className="space-y-6 py-4">
+                    {/* Authors */}
+                    {paper.authorNames && paper.authorNames.length > 0 && (
+                        <div>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+                                <Users className="h-3.5 w-3.5" /> Authors
+                            </h4>
+                            <div className="flex flex-wrap gap-2">
+                                {paper.authorNames.map((name, i) => (
+                                    <div key={i} className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5">
+                                        <div className="h-6 w-6 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                                            {name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                                        </div>
+                                        <span className="text-sm font-medium text-gray-700">{name}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Track & Date */}
+                    <div className="grid grid-cols-2 gap-4">
+                        {paper.trackName && (
+                            <div className="bg-gray-50 rounded-lg p-3">
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1 flex items-center gap-1.5">
+                                    <Layers className="h-3 w-3" /> Track
+                                </h4>
+                                <p className="text-sm font-medium text-gray-700">{paper.trackName}</p>
+                            </div>
+                        )}
+                        <div className="bg-gray-50 rounded-lg p-3">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1 flex items-center gap-1.5">
+                                <Calendar className="h-3 w-3" /> Published
+                            </h4>
+                            <p className="text-sm font-medium text-gray-700">{formatDate(paper.submissionTime)}</p>
+                        </div>
+                    </div>
+
+                    {/* Keywords */}
+                    {paper.keywords && paper.keywords.length > 0 && (
+                        <div>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+                                <Tag className="h-3.5 w-3.5" /> Keywords
+                            </h4>
+                            <div className="flex flex-wrap gap-1.5">
+                                {paper.keywords.map((kw, i) => (
+                                    <Badge key={i} variant="secondary" className="text-xs font-normal bg-indigo-50 text-indigo-700 border-indigo-200">
+                                        {kw}
+                                    </Badge>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Abstract */}
+                    {paper.abstractField && (
+                        <div>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+                                <FileText className="h-3.5 w-3.5" /> Abstract
+                            </h4>
+                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                                    {paper.abstractField}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Camera-Ready File */}
+                    <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5">
+                            <BookOpen className="h-3.5 w-3.5" /> Camera-Ready Paper
+                        </h4>
+                        {loadingFiles ? (
+                            <div className="flex items-center justify-center py-6">
+                                <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
+                                <span className="ml-2 text-sm text-gray-400">Loading files...</span>
+                            </div>
+                        ) : latestFile ? (
+                            <div className="border border-gray-200 rounded-xl overflow-hidden">
+                                {/* PDF Preview */}
+                                <div className="bg-gray-100 border-b">
+                                    <iframe
+                                        src={latestFile.url}
+                                        className="w-full h-[500px]"
+                                        title={`${paper.title} - PDF`}
+                                    />
+                                </div>
+                                {/* Download bar */}
+                                <div className="flex items-center justify-between px-4 py-3 bg-white">
+                                    <div className="flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-red-500" />
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-700">
+                                                {cameraReadyFile ? 'Camera-Ready Version' : 'Submitted Manuscript'}
+                                            </p>
+                                            <p className="text-xs text-gray-400">
+                                                Uploaded {formatDate(latestFile.uploadedAt)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <a href={latestFile.url} target="_blank" rel="noopener noreferrer">
+                                        <Button size="sm" variant="outline" className="gap-1.5 text-xs">
+                                            <Download className="h-3.5 w-3.5" />
+                                            Download PDF
+                                        </Button>
+                                    </a>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                <FileText className="h-10 w-10 text-gray-200 mb-2" />
+                                <p className="text-sm text-gray-400">No file available for this paper yet.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between pt-4 border-t">
+                    <Link href={`/conference/${paper.conferenceId}`}>
+                        <Button variant="outline" size="sm" className="gap-1.5 text-sm">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            View Conference
+                        </Button>
+                    </Link>
+                    <Button variant="ghost" size="sm" className="text-sm text-gray-500" onClick={onClose}>
+                        Close
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
     )
 }
 
@@ -103,8 +320,6 @@ function PaperCardSkeleton() {
 
 // ─── Main Client Component ─────────────────────────────────────────────
 export default function PublishedPapersClient() {
-    const router = useRouter()
-
     const [papers, setPapers] = useState<PublishedPaperDTO[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [currentPage, setCurrentPage] = useState(0)
@@ -113,6 +328,10 @@ export default function PublishedPapersClient() {
     const [searchQuery, setSearchQuery] = useState('')
     const [inputValue, setInputValue] = useState('')
     const PAGE_SIZE = 12
+
+    // Dialog state
+    const [selectedPaper, setSelectedPaper] = useState<PublishedPaperDTO | null>(null)
+    const [dialogOpen, setDialogOpen] = useState(false)
 
     const fetchPapers = useCallback(async (page: number, search: string) => {
         try {
@@ -150,6 +369,11 @@ export default function PublishedPapersClient() {
         setSearchQuery(inputValue)
         setCurrentPage(0)
         fetchPapers(0, inputValue)
+    }
+
+    const handleReadPaper = (paper: PublishedPaperDTO) => {
+        setSelectedPaper(paper)
+        setDialogOpen(true)
     }
 
     return (
@@ -216,7 +440,7 @@ export default function PublishedPapersClient() {
                             <PaperCard
                                 key={paper.id}
                                 paper={paper}
-                                onViewDetail={() => router.push(`/conference/${paper.conferenceId}`)}
+                                onReadPaper={() => handleReadPaper(paper)}
                             />
                         ))}
                     </div>
@@ -262,6 +486,13 @@ export default function PublishedPapersClient() {
                     </div>
                 )}
             </div>
+
+            {/* ── Paper Detail Dialog ── */}
+            <PaperDetailDialog
+                paper={selectedPaper}
+                open={dialogOpen}
+                onClose={() => setDialogOpen(false)}
+            />
         </div>
     )
 }

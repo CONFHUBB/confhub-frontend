@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { getConference, getConferenceActivities } from '@/app/api/conference.api'
 import type { ConferenceResponse, ConferenceActivityDTO } from '@/types/conference'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -16,7 +16,7 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { SubmissionFormManager } from '../submission-form/submission-form-manager'
 import { getTracksByConference, getSubjectAreasByTrack, getTrackReviewSettings } from '@/app/api/track.api'
-import { getConferenceMembers } from '@/app/api/user.api'
+import { getConferenceMembers, getUserByEmail } from '@/app/api/user.api'
 import { getConferenceUsersWithRoles } from "@/app/api/conference-user-track.api"
 import { getPapersByConference } from '@/app/api/paper.api'
 import { saveConferenceSubmissionForm, getConferenceSubmissionForm } from '@/app/api/submission-form.api'
@@ -191,12 +191,14 @@ const TAB_GROUPS: TabGroupDef[] = [
 export default function ConferenceUpdatePage() {
     const params = useParams()
     const router = useRouter()
+    const searchParams = useSearchParams()
     const conferenceId = Number(params.conferenceId)
 
     const [conference, setConference] = useState<ConferenceResponse | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [activeTab, setActiveTab] = useState<SettingsTab>('dashboard')
+    const initialTab = (searchParams.get('tab') as SettingsTab) || 'dashboard'
+    const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab)
     const [expandedGroups, setExpandedGroups] = useState<string[]>(['Overview', 'General Settings', 'User Management', 'Forms & Templates', 'Activity Timeline', 'Paper & Review', 'Registration', 'Event'])
     const [isUpdatingGeneral, setIsUpdatingGeneral] = useState(false)
 
@@ -220,13 +222,25 @@ export default function ConferenceUpdatePage() {
                 if (!token) return
                 const payload = JSON.parse(atob(token.split('.')[1]))
                 const userId: number = Number(payload.userId || payload.id)
-                const data = await getConferenceUsersWithRoles(conferenceId, 0, 200)
-                const members: any[] = (data as any)?.content || data || []
-                const me = members.find((m: any) => Number(m.user?.id || m.userId || m.id) === userId)
+                const myId = Number(payload.sub ? (await getUserByEmail(payload.sub))?.id : payload.userId || payload.id)
+                let me = null;
+                let page = 0;
+                let hasMore = true;
+
+                while (!me && hasMore) {
+                    const data = await getConferenceUsersWithRoles(conferenceId, page, 100)
+                    const members: any[] = (data as any)?.content || data || []
+                    
+                    me = members.find((m: any) => Number(m.user?.id || m.userId || m.id) === myId)
+                    
+                    const totalPages = (data as any)?.totalPages || 1
+                    page++;
+                    if (page >= totalPages) hasMore = false;
+                }
+
                 if (!me) {
-                    // User not found in members list but has page access — assume full chair
-                    console.warn(`[RoleDetector] User ID ${userId} not found in members array. Falling back to BOTH roles.`)
-                    setUserRole('BOTH')
+                    toast.error('Access Denied. You are not a member of this conference.')
+                    router.push('/')
                     return
                 }
                 const roles: string[] = (me.roles || []).map((r: any) => r.assignedRole)
@@ -256,13 +270,14 @@ export default function ConferenceUpdatePage() {
                         .filter(Boolean)
                     setChairTrackIds(trackIds.length > 0 ? trackIds : null)
                 }
-            } catch {
-                // API error — assume full access since user navigated here
-                setUserRole('BOTH')
+            } catch (err) {
+                console.error("[RoleDetector] Error checking permissions:", err);
+                toast.error('Failed to verify access permissions.')
+                router.push('/')
             }
         }
         detectRole()
-    }, [conferenceId])
+    }, [conferenceId, router])
 
     // Workflow completion status
     const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus>({})
