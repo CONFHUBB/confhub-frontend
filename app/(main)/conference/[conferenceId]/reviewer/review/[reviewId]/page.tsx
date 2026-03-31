@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { getReviewById, updateReview, getAnswersByReview, submitAnswer, getReviewQuestionsByTrack } from '@/app/api/review.api'
+import { getReviewById, updateReview, getAnswersByReview, submitAnswer, getReviewQuestionsByTrack, getReviewsByPaper } from '@/app/api/review.api'
 import { getReviewerPaperFiles } from '@/app/api/paper.api'
 import { getConferenceActivities } from '@/app/api/conference.api'
 import type { ReviewResponse, ReviewAnswerResponse, ReviewAnswerRequest } from '@/types/review'
@@ -16,6 +16,7 @@ import { Loader2, ArrowLeft, FileText, Check, X, AlertTriangle, Save, Eye, Exter
 import toast from 'react-hot-toast'
 import { PaperDiscussion } from '@/components/paper-discussion'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { useTrackSettings } from '@/hooks/useTrackSettings'
 
 interface ReviewQuestion {
     id: number
@@ -56,6 +57,16 @@ export default function ReviewPaperPage() {
     const [showDiscussion, setShowDiscussion] = useState(false)
     const [discussionEnabled, setDiscussionEnabled] = useState(false)
     const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+
+    // #5: Other reviews state
+    const [otherReviews, setOtherReviews] = useState<any[]>([])
+    const [otherReviewsLoading, setOtherReviewsLoading] = useState(false)
+    const [otherReviewAnswers, setOtherReviewAnswers] = useState<Record<number, any[]>>({})
+    const [expandedOtherReview, setExpandedOtherReview] = useState<number | null>(null)
+
+    // Track settings for #6 and #7
+    const { settings } = useTrackSettings(conferenceId, review?.paper?.trackId)
+    const canEditDuringDiscussion = !discussionEnabled || settings.allowReviewUpdateDuringDiscussion
 
     // Get userId from JWT
     useEffect(() => {
@@ -465,10 +476,28 @@ export default function ReviewPaperPage() {
                 {/* RIGHT COLUMN: Review Form & Discussion */}
                 <div className="pb-20">
                     <Tabs defaultValue="review" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 mb-6 h-12 bg-gray-100 p-1 rounded-xl">
+                        <TabsList className={`grid w-full mb-6 h-12 bg-gray-100 p-1 rounded-xl ${settings.allowOthersReviewAccessAfterSubmit ? 'grid-cols-3' : 'grid-cols-2'}`}>
                             <TabsTrigger value="review" className="text-sm font-semibold h-full flex items-center gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
                                 <Check className="h-4 w-4" /> Review Form
                             </TabsTrigger>
+                            {settings.allowOthersReviewAccessAfterSubmit && (
+                                <TabsTrigger
+                                    value="other-reviews"
+                                    className="text-sm font-semibold h-full flex items-center gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
+                                    onClick={async () => {
+                                        if (review?.paper?.id && otherReviews.length === 0 && review.status === 'COMPLETED') {
+                                            setOtherReviewsLoading(true)
+                                            try {
+                                                const allReviews = await getReviewsByPaper(review.paper.id)
+                                                setOtherReviews(allReviews.filter((r: any) => r.id !== reviewId))
+                                            } catch { /* ignore */ }
+                                            finally { setOtherReviewsLoading(false) }
+                                        }
+                                    }}
+                                >
+                                    <Eye className="h-4 w-4" /> Other Reviews
+                                </TabsTrigger>
+                            )}
                             <TabsTrigger value="discussion" className="text-sm font-semibold h-full flex items-center gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
                                 <MessageSquare className="h-4 w-4" /> Discussion
                             </TabsTrigger>
@@ -650,21 +679,111 @@ export default function ReviewPaperPage() {
                         )}
                     </div>
                     {review.status === 'COMPLETED' && !activityClosed && (
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="mt-4 border-emerald-300 text-emerald-700 hover:bg-emerald-100 min-w-[140px]"
-                            onClick={handleEditReview}
-                            disabled={submitting}
-                        >
-                            {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                            Edit Review
-                        </Button>
+                        canEditDuringDiscussion ? (
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="mt-4 border-emerald-300 text-emerald-700 hover:bg-emerald-100 min-w-[140px]"
+                                onClick={handleEditReview}
+                                disabled={submitting}
+                            >
+                                {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                                Edit Review
+                            </Button>
+                        ) : (
+                            <div className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium">
+                                <Lock className="h-4 w-4 shrink-0" />
+                                Review editing is locked during Discussion phase
+                            </div>
+                        )
                     )}
                 </div>
             )}
 
                         </TabsContent>
+
+                        {/* #5: Other Reviews Tab */}
+                        {settings.allowOthersReviewAccessAfterSubmit && (
+                            <TabsContent value="other-reviews" className="space-y-4">
+                                {review.status !== 'COMPLETED' ? (
+                                    <Card className="border-amber-200 bg-amber-50/50">
+                                        <CardContent className="p-6 text-center">
+                                            <Lock className="h-8 w-8 text-amber-400 mx-auto mb-3" />
+                                            <p className="font-semibold text-amber-800">Submit your review first</p>
+                                            <p className="text-sm text-amber-600 mt-1">You can view other reviewers' submissions after completing your own review.</p>
+                                        </CardContent>
+                                    </Card>
+                                ) : otherReviewsLoading ? (
+                                    <div className="flex items-center justify-center py-12">
+                                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                    </div>
+                                ) : otherReviews.length === 0 ? (
+                                    <Card>
+                                        <CardContent className="p-6 text-center text-muted-foreground">
+                                            <p className="text-sm">No other reviews available for this paper yet.</p>
+                                        </CardContent>
+                                    </Card>
+                                ) : (
+                                    otherReviews.map((or, idx) => {
+                                        const rName = !settings.showReviewerIdentityToOtherReviewer
+                                            ? `Reviewer ${idx + 1}`
+                                            : (or.reviewer?.firstName ? `${or.reviewer.firstName} ${or.reviewer.lastName}` : `Reviewer ${idx + 1}`)
+                                        const isExpOther = expandedOtherReview === or.id
+                                        return (
+                                            <Card key={or.id} className={`transition-all ${isExpOther ? 'border-indigo-300 ring-1 ring-indigo-200' : ''}`}>
+                                                <div
+                                                    className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+                                                    onClick={async () => {
+                                                        if (isExpOther) { setExpandedOtherReview(null); return }
+                                                        setExpandedOtherReview(or.id)
+                                                        if (!otherReviewAnswers[or.id]) {
+                                                            try {
+                                                                const ans = await getAnswersByReview(or.id)
+                                                                setOtherReviewAnswers(prev => ({ ...prev, [or.id]: Array.isArray(ans) ? ans : [] }))
+                                                            } catch { /* ignore */ }
+                                                        }
+                                                    }}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                                                            <span className="text-xs font-bold text-indigo-700">{idx + 1}</span>
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-semibold text-sm text-gray-900">{rName}</p>
+                                                            <Badge variant="outline" className={`text-[10px] mt-0.5 ${or.status === 'COMPLETED' ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : 'text-gray-500'}`}>
+                                                                {or.status}
+                                                            </Badge>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-xs text-gray-500">Score</p>
+                                                        <p className="font-mono font-semibold text-indigo-600">{or.totalScore != null ? or.totalScore : '—'}</p>
+                                                    </div>
+                                                </div>
+                                                {isExpOther && (
+                                                    <div className="border-t bg-gray-50/50 p-4 space-y-3">
+                                                        {!otherReviewAnswers[or.id] ? (
+                                                            <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-indigo-500" /></div>
+                                                        ) : otherReviewAnswers[or.id].length === 0 ? (
+                                                            <p className="text-sm text-muted-foreground text-center py-4">No answers available.</p>
+                                                        ) : (
+                                                            otherReviewAnswers[or.id].map((ans: any, aIdx: number) => (
+                                                                <div key={ans.id || aIdx} className="p-3 bg-white rounded-lg border">
+                                                                    <p className="text-xs font-medium text-gray-500 mb-1">Q{aIdx + 1}</p>
+                                                                    <p className="text-sm text-gray-800">
+                                                                        {ans.selectedChoice?.text || ans.answerValue || ans.value || <span className="italic text-gray-400">No answer</span>}
+                                                                    </p>
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </Card>
+                                        )
+                                    })
+                                )}
+                            </TabsContent>
+                        )}
 
                         <TabsContent value="discussion">
                             <Card className="border-t-4 border-t-indigo-500 shadow-sm">
@@ -686,7 +805,7 @@ export default function ReviewPaperPage() {
                                         <PaperDiscussion
                                             paperId={review.paper.id}
                                             currentUserId={currentUserId}
-                                            anonymize={true}
+                                            anonymize={!settings.showReviewerIdentityToOtherReviewer}
                                             discussionEnabled={discussionEnabled}
                                         />
                                     </CardContent>

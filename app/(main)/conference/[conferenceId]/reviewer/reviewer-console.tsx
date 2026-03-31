@@ -30,6 +30,7 @@ import { ReviewsTab } from './reviews-tab'
 import { DiscussionTab } from './discussion-tab'
 import { FieldError } from '@/components/ui/field'
 import { V } from '@/lib/validation'
+import { useTrackSettings } from '@/hooks/useTrackSettings'
 
 // ──────────────────────────── Types ────────────────────────────
 type ReviewerTab =
@@ -102,6 +103,8 @@ export default function ReviewerConsole() {
     const params = useParams()
     const router = useRouter()
     const conferenceId = Number(params.conferenceId)
+
+    const { settings } = useTrackSettings(conferenceId)
 
     const [conference, setConference] = useState<ConferenceResponse | null>(null)
     const [loading, setLoading] = useState(true)
@@ -215,6 +218,13 @@ export default function ReviewerConsole() {
         return map
     }, [allOrderedSteps, workflowStatus])
 
+    const visibleReviews = useMemo(() => {
+        if (settings.doNotShowWithdrawnPapers) {
+            return reviews.filter(r => r.paper?.status !== 'WITHDRAWN')
+        }
+        return reviews
+    }, [reviews, settings.doNotShowWithdrawnPapers])
+
     // Deadline helpers
     const getDeadlineInfo = (activityType: string) => {
         const activity = activities.find(a => a.activityType === activityType)
@@ -241,7 +251,7 @@ export default function ReviewerConsole() {
                 return <DashboardTab
                     conference={conference}
                     bidCounts={bidCounts}
-                    reviews={reviews}
+                    reviews={visibleReviews}
                     activities={activities}
                     workflowStatus={workflowStatus}
                     interestsCount={interestsCount}
@@ -269,15 +279,16 @@ export default function ReviewerConsole() {
                 />
             case 'reviews':
                 return <ReviewsTab
-                    reviews={reviews}
+                    reviews={visibleReviews}
                     conferenceId={conferenceId}
                 />
             case 'discussion':
                 return <DiscussionTab
-                    reviews={reviews}
+                    reviews={visibleReviews}
                     conferenceId={conferenceId}
                     currentUserId={reviewerId}
                     activities={activities}
+                    settings={settings}
                 />
             default:
                 return null

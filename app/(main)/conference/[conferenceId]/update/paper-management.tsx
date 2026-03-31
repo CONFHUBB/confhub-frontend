@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { 
     FileText, Search, Shield, Filter, ChevronDown, Check,
     Download, UserPlus, Eye, Gavel, Loader2
@@ -26,6 +27,7 @@ import { toast } from "sonner"
 import { getPapersByConference, batchNotifyDecisions, updatePaperStatus, getAuthorsByPaper, type PaperAuthorItem } from "@/app/api/paper.api"
 import { getAggregatesByConference } from "@/app/api/review-aggregate.api"
 import { getTracksByConference } from "@/app/api/track.api"
+import { useTrackSettings } from "@/hooks/useTrackSettings"
 import { getConflictsByConference } from "@/app/api/conflict.api"
 import { getMetaReviewsByConference } from "@/app/api/meta-review.api"
 
@@ -33,7 +35,7 @@ import type { PaperResponse, PaperStatus } from "@/types/paper"
 import type { TrackResponse } from "@/types/track"
 import type { MetaReviewResponse, Decision } from "@/types/meta-review"
 import type { PaperConflictResponse } from "@/types/conflict"
-import { PaperDetailSheet } from "./paper-detail-sheet"
+// PaperDetailSheet removed — navigation now goes to /conference/:conferenceId/paper/:paperId
 import { UnifiedDataTable, type DataTableColumn } from "@/components/ui/unified-data-table"
 
 const STATUS_CONFIG: Record<string, { label: string, color: string }> = {
@@ -67,6 +69,8 @@ interface PaperManagementProps {
 }
 
 export function PaperManagement({ conferenceId, trackIds }: PaperManagementProps) {
+    const router = useRouter()
+    const { settings } = useTrackSettings(conferenceId)
     const [papers, setPapers] = useState<PaperResponse[]>([])
     const [tracks, setTracks] = useState<TrackResponse[]>([])
     const [aggregates, setAggregates] = useState<Record<number, any>>({})
@@ -88,9 +92,7 @@ export function PaperManagement({ conferenceId, trackIds }: PaperManagementProps
     const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
     const [isNotifying, setIsNotifying] = useState(false)
 
-    // Sheet / Detail State
-    const [sheetPaperId, setSheetPaperId] = useState<number | null>(null)
-    const [sheetDefaultTab, setSheetDefaultTab] = useState<"info" | "assignments" | "reviews" | "decision" | "conflicts">("info")
+    // Navigation to dedicated Paper Detail page
 
     // Get user ID from auth token
     const [userId, setUserId] = useState<number | null>(null)
@@ -210,9 +212,8 @@ export function PaperManagement({ conferenceId, trackIds }: PaperManagementProps
         document.body.removeChild(link)
     }
 
-    const openSheet = (id: number, tab: "info" | "assignments" | "reviews" | "decision" | "conflicts" = "info") => {
-        setSheetDefaultTab(tab)
-        setSheetPaperId(id)
+    const navigateToPaper = (id: number, tab: string = "info") => {
+        router.push(`/conference/${conferenceId}/paper/${id}?tab=${tab}`)
     }
 
     const handleSort = (column: SortColumn) => {
@@ -356,9 +357,9 @@ export function PaperManagement({ conferenceId, trackIds }: PaperManagementProps
             accessorKey: "trackName",
             className: "text-xs text-muted-foreground"
         },
-        {
+        ...(settings.showAggregateColumns ? [{
             header: <span className="cursor-pointer group flex items-center gap-1 w-full justify-center" onClick={() => handleSort("reviewProgress")}>Reviews <SortIcon columnKey="reviewProgress" /></span>,
-            cell: (paper) => {
+            cell: (paper: EnrichedPaper) => {
                 const reviewPct = (paper.reviewCount ?? 0) > 0
                     ? Math.round(((paper.completedReviewCount ?? 0) / paper.reviewCount) * 100)
                     : 0
@@ -383,7 +384,7 @@ export function PaperManagement({ conferenceId, trackIds }: PaperManagementProps
         },
         {
             header: <span className="cursor-pointer group flex items-center gap-1 w-full justify-center" onClick={() => handleSort("avgScore")}>Score <SortIcon columnKey="avgScore" /></span>,
-            cell: (paper) => {
+            cell: (paper: EnrichedPaper) => {
                 if (paper.averageTotalScore !== null) {
                     return (
                         <div className="text-center w-full text-[13px]">
@@ -399,7 +400,7 @@ export function PaperManagement({ conferenceId, trackIds }: PaperManagementProps
                 return <div className="text-center w-full text-muted-foreground text-xs">—</div>
             },
             className: "text-center w-24"
-        },
+        }] : []),
         {
             header: <div className="flex items-center justify-center gap-1 w-full"><Shield className="h-3 w-3" /> Conflicts</div>,
             cell: (paper) => (
@@ -428,16 +429,16 @@ export function PaperManagement({ conferenceId, trackIds }: PaperManagementProps
 
     const renderRowActions = (paper: EnrichedPaper) => (
         <>
-            <DropdownMenuItem onClick={() => openSheet(paper.id, "info")}>
+            <DropdownMenuItem onClick={() => navigateToPaper(paper.id, "info")}>
                 <Eye className="h-3.5 w-3.5 mr-2 text-slate-500" /> View Details
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => openSheet(paper.id, "assignments")}>
+            <DropdownMenuItem onClick={() => navigateToPaper(paper.id, "assignments")}>
                 <UserPlus className="h-3.5 w-3.5 mr-2 text-indigo-500" /> Assignments
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => openSheet(paper.id, "decision")}>
+            <DropdownMenuItem onClick={() => navigateToPaper(paper.id, "decision")}>
                 <Gavel className="h-3.5 w-3.5 mr-2 text-amber-500" /> Decision
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => openSheet(paper.id, "conflicts")}>
+            <DropdownMenuItem onClick={() => navigateToPaper(paper.id, "conflicts")}>
                 <Shield className="h-3.5 w-3.5 mr-2 text-rose-500" /> Conflicts
             </DropdownMenuItem>
         </>
@@ -580,17 +581,7 @@ export function PaperManagement({ conferenceId, trackIds }: PaperManagementProps
                 }}
             />
 
-            {/* Background Sheet / Detail view trigger */}
-            <PaperDetailSheet
-                paperId={sheetPaperId}
-                conferenceId={conferenceId}
-                userId={userId}
-                defaultTab={sheetDefaultTab}
-                enrichedPaper={sheetPaperId ? enrichedPapers.find(p => p.id === sheetPaperId) || null : null}
-                metaReview={sheetPaperId ? metaReviewMap[sheetPaperId] || null : null}
-                onClose={() => setSheetPaperId(null)}
-                onDataChanged={() => fetchAllData()}
-            />
+            {/* Navigation now goes to /conference/:conferenceId/paper/:paperId */}
         </div>
     )
 }

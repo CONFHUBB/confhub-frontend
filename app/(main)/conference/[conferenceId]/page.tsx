@@ -15,7 +15,6 @@ import { Calendar, MapPin, ExternalLink, Loader2, ArrowLeft, Settings,
     Globe, Phone, FileText, Clock, Send, Ticket, BookOpen
 } from 'lucide-react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { ProgramViewer } from '@/components/program-viewer'
 import {
     Dialog,
@@ -464,16 +463,13 @@ export default function ConferenceDetailsPage() {
                 <div className="lg:col-span-3 pt-9">
                     <div className="sticky rounded-xl overflow-hidden border shadow-sm">
                         {conference.bannerImageUrl ? (
-                            <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
-                                <Image
-                                    src={conference.bannerImageUrl}
-                                    alt={conference.name}
-                                    fill
-                                    sizes="(max-width: 1024px) 100vw, 60vw"
-                                    className="object-cover"
-                                    priority
-                                />
-                            </div>
+                            <img
+                                src={conference.bannerImageUrl}
+                                alt={conference.name}
+                                fetchPriority="high"
+                                decoding="async"
+                                className="w-full object-cover"
+                            />
                         ) : (
                             <div className="w-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                                 <span className="text-white/60 text-5xl font-bold tracking-wider">
