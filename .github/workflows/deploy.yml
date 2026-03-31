@@ -6,7 +6,11 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    strategy:
+      matrix:
+        server: [server-110, server-111]
+      fail-fast: false
+    runs-on: [self-hosted, '${{ matrix.server }}']
 
     steps:
       - name: Checkout code
