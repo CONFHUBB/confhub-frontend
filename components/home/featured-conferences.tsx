@@ -6,7 +6,6 @@ import { getConferences } from "@/app/api/conference.api"
 import type { ConferenceListResponse } from "@/types/conference"
 import { Calendar, MapPin, ArrowRight, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import Image from "next/image"
 
 export function FeaturedConferences() {
     const [conferences, setConferences] = useState<ConferenceListResponse[]>([])
@@ -69,13 +68,12 @@ export function FeaturedConferences() {
                                 {/* Banner */}
                                 <div className="relative w-full aspect-[16/9] bg-gradient-to-br from-indigo-500 to-purple-600 overflow-hidden">
                                     {conf.bannerImageUrl ? (
-                                        <Image
+                                        <img
                                             src={conf.bannerImageUrl}
                                             alt={conf.name}
-                                            fill
-                                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                                            className="object-cover group-hover:scale-105 transition-transform duration-500"
                                             loading="lazy"
+                                            decoding="async"
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                         />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center">
