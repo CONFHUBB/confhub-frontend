@@ -72,11 +72,18 @@ export function ExcelImport({
             if (result.success) {
                 toast.success(`${entityName} imported successfully!`)
                 onImportSuccess?.(result)
+            } else {
+                toast.error(`Import failed: ${result.errors?.length || 0} error(s) found`)
             }
         } catch (e: any) {
             const data = e.response?.data
-            if (data?.errors) setImportResult(data)
-            else toast.error(data?.detail || "Import failed")
+            if (data?.errors) {
+                setImportResult(data)
+                toast.error(`Import failed: ${data.errors.length} error(s) found`)
+            } else {
+                const msg = data?.detail || data?.message || "Import failed. Please check the file and try again."
+                toast.error(msg)
+            }
         } finally { setIsLoading(false) }
     }
 
@@ -225,7 +232,35 @@ export function ExcelImport({
                         {importResult.conferenceName && ` — ${importResult.conferenceName}`}
                         {importResult.tracksCreated > 0 && ` — ${importResult.tracksCreated} tracks`}
                         {importResult.subjectAreasCreated > 0 && ` — ${importResult.subjectAreasCreated} subject areas`}
+                        {importResult.membersCreated !== undefined && importResult.membersCreated > 0 && ` — ${importResult.membersCreated} members`}
                     </p>
+                </div>
+            )}
+
+            {/* Import Errors */}
+            {importResult && !importResult.success && importResult.errors?.length > 0 && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                    <h4 className="text-sm font-semibold text-red-800 mb-2">Import Errors</h4>
+                    <div className="overflow-auto max-h-48">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b bg-red-100/50">
+                                    <th className="px-3 py-1 text-left text-red-700">Row</th>
+                                    <th className="px-3 py-1 text-left text-red-700">Column</th>
+                                    <th className="px-3 py-1 text-left text-red-700">Error</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {importResult.errors.map((e, i) => (
+                                    <tr key={i} className="border-b last:border-0">
+                                        <td className="px-3 py-1">{e.row}</td>
+                                        <td className="px-3 py-1 font-mono text-xs">{e.column}</td>
+                                        <td className="px-3 py-1 text-red-700">{e.message}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
         </div>
