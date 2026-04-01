@@ -198,7 +198,16 @@ export default function ConferenceUpdatePage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const initialTab = (searchParams.get('tab') as SettingsTab) || 'dashboard'
-    const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab)
+    const [activeTab, setActiveTabState] = useState<SettingsTab>(initialTab)
+
+    // Sync tab state with URL query parameter
+    const setActiveTab = useCallback((tab: SettingsTab) => {
+        setActiveTabState(tab)
+        const newUrl = tab === 'dashboard'
+            ? `/conference/${conferenceId}/update`
+            : `/conference/${conferenceId}/update?tab=${tab}`
+        window.history.replaceState(null, '', newUrl)
+    }, [conferenceId])
     const [expandedGroups, setExpandedGroups] = useState<string[]>(['Overview', 'General Settings', 'User Management', 'Forms & Templates', 'Activity Timeline', 'Paper & Review', 'Registration', 'Event'])
     const [isUpdatingGeneral, setIsUpdatingGeneral] = useState(false)
 

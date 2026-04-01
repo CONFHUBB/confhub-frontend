@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { getConferenceActivities, updateConferenceActivities, getActivityAuditLogs } from "@/app/api/conference.api"
 import type { ConferenceActivityDTO, ActivityAuditLogDTO } from "@/types/conference"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Loader2, Calendar, Info, ExternalLink, ChevronDown, ChevronUp, Clock, User, ArrowRight, ToggleLeft, ToggleRight, CalendarClock, Settings, History, Search, Filter, ChevronLeft, ChevronRight, Download, Check } from "lucide-react"
+import { Loader2, Calendar, Info, ExternalLink, ChevronDown, ChevronUp, Clock, User, ArrowRight, ToggleLeft, ToggleRight, CalendarClock, Settings, History, Search, Filter, ChevronLeft, ChevronRight, Download, Check, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
@@ -222,6 +222,41 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
         )
     }
 
+    // ── Client-side deadline validation ──
+    const validationErrors: Record<string, string> = {}
+    const now = new Date()
+    
+    // Rule 1: Deadlines must be in strict chronological order
+    const deadlineEntries: { type: string; date: Date; label: string }[] = []
+    for (const type of ACTIVITY_ORDER) {
+        const act = activities.find(a => a.activityType === type)
+        if (act?.deadline) {
+            const d = new Date(act.deadline)
+            if (!isNaN(d.getTime())) {
+                deadlineEntries.push({ type, date: d, label: ACTIVITY_LABELS[type] || type })
+            }
+        }
+    }
+    for (let i = 0; i < deadlineEntries.length - 1; i++) {
+        const curr = deadlineEntries[i]
+        const next = deadlineEntries[i + 1]
+        if (curr.date >= next.date) {
+            validationErrors[next.type] = `Deadline must be after "${curr.label}" (${curr.date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })})`
+        }
+    }
+    
+    // Rule 2: Newly set deadlines must be in the future
+    for (const act of activities) {
+        if (act.deadline) {
+            const d = new Date(act.deadline)
+            if (!isNaN(d.getTime()) && d < now && !validationErrors[act.activityType]) {
+                validationErrors[act.activityType] = 'Deadline cannot be in the past'
+            }
+        }
+    }
+    
+    const hasValidationErrors = Object.keys(validationErrors).length > 0
+
     // Process logs for table
     const filteredLogs = auditLogs.filter(log => {
         if (logActionFilter !== 'ALL' && log.action !== logActionFilter) return false
@@ -393,14 +428,26 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
 
                                         <div className="flex items-center gap-3 pl-11 sm:pl-0 shrink-0 flex-wrap sm:flex-nowrap">
                                             {/* Deadline input — w-56 prevents AM/PM cut-off */}
-                                            <div className="sm:w-56 relative">
-                                                <Input 
-                                                    type="datetime-local" 
-                                                    value={formattedDate}
-                                                    onChange={(e) => handleDateChange(activity.id, e.target.value)}
-                                                    className="text-sm cursor-pointer w-full text-foreground/90 pl-8"
-                                                />
-                                                <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                            <div className="sm:w-56">
+                                                <div className="relative">
+                                                    <Input 
+                                                        type="datetime-local" 
+                                                        value={formattedDate}
+                                                        onChange={(e) => handleDateChange(activity.id, e.target.value)}
+                                                        className={`text-sm cursor-pointer w-full text-foreground/90 pl-8 ${
+                                                            validationErrors[activity.activityType]
+                                                                ? 'border-red-400 bg-red-50/50 focus-visible:ring-red-400'
+                                                                : ''
+                                                        }`}
+                                                    />
+                                                    <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                                </div>
+                                                {validationErrors[activity.activityType] && (
+                                                    <p className="mt-1.5 text-[11px] text-red-600 font-medium flex items-start gap-1">
+                                                        <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                                                        {validationErrors[activity.activityType]}
+                                                    </p>
+                                                )}
                                             </div>
                                             {/* Toggle */}
                                             <Switch 
@@ -432,8 +479,15 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
                     )}
                 </div>
 
-                <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t py-4 -mx-8 px-8 md:-mx-12 md:px-12 flex justify-end">
-                    <Button onClick={handleSave} disabled={saving || activities.length === 0}>
+                <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t py-4 -mx-8 px-8 md:-mx-12 md:px-12 flex items-center justify-between gap-4">
+                    {hasValidationErrors && (
+                        <p className="text-sm text-red-600 font-medium flex items-center gap-1.5">
+                            <AlertTriangle className="h-4 w-4" />
+                            Fix deadline errors before saving
+                        </p>
+                    )}
+                    {!hasValidationErrors && <div />}
+                    <Button onClick={handleSave} disabled={saving || activities.length === 0 || hasValidationErrors}>
                         {saving ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
