@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { HeroSection } from "@/components/hero-section"
+import { AIChatWidget } from "@/components/ai-chat-widget"
 import { Loader2 } from "lucide-react"
 
 export default function MainLayout({
@@ -83,6 +84,7 @@ export default function MainLayout({
                         {children}
                     </div>
                 </SidebarInset>
+                <AIChatWidget />
             </SidebarProvider>
         )
     }
@@ -96,6 +98,7 @@ export default function MainLayout({
                 <main>
                     {children}
                 </main>
+                <AIChatWidget />
             </div>
         </UserRolesProvider>
     )
