@@ -5,20 +5,23 @@ import { Loader2, FileText, ExternalLink, Paperclip, Camera, Upload } from 'luci
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { getPaperFilesByPaperId } from '@/app/api/paper.api'
+import { getPaperFilesByPaperId, uploadPaperFile } from '@/app/api/paper.api'
+import toast from 'react-hot-toast'
 import { getFilesByPaper, type CameraReadyFile } from '@/app/api/camera-ready.api'
 import type { PaperFileResponse } from '@/types/paper'
 
 interface FilesTabProps {
     paperId: number
     conferenceId: number
+    isAuthor?: boolean
 }
 
-export function FilesTab({ paperId, conferenceId }: FilesTabProps) {
+export function FilesTab({ paperId, conferenceId, isAuthor = false }: FilesTabProps) {
     const [manuscriptFiles, setManuscriptFiles] = useState<PaperFileResponse[]>([])
     const [cameraReadyFiles, setCameraReadyFiles] = useState<CameraReadyFile[]>([])
     const [copyrightFiles, setCopyrightFiles] = useState<CameraReadyFile[]>([])
     const [loading, setLoading] = useState(true)
+    const [uploading, setUploading] = useState(false)
 
     useEffect(() => {
         const fetch = async () => {
@@ -40,16 +43,57 @@ export function FilesTab({ paperId, conferenceId }: FilesTabProps) {
         fetch()
     }, [paperId])
 
+    const handleUploadManuscript = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        if (file.type !== 'application/pdf') {
+            toast.error('Please select a PDF file')
+            return
+        }
+
+        try {
+            setUploading(true)
+            await uploadPaperFile(conferenceId, paperId, file)
+            toast.success('Manuscript uploaded successfully!')
+            // Refresh files
+            const newFiles = await getPaperFilesByPaperId(paperId)
+            setManuscriptFiles((newFiles || []).filter(f => !f.isCameraReady))
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Failed to upload manuscript')
+        } finally {
+            setUploading(false)
+            e.target.value = '' // reset input
+        }
+    }
+
     if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
 
     const hasAnyFiles = manuscriptFiles.length > 0 || cameraReadyFiles.length > 0 || copyrightFiles.length > 0
 
     if (!hasAnyFiles) {
         return (
-            <div className="text-center py-16 text-muted-foreground">
-                <Paperclip className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                <p className="text-sm font-medium">No files uploaded yet.</p>
-                <p className="text-xs mt-1">Manuscript, camera-ready, and copyright files will appear here.</p>
+            <div className="text-center py-16 px-4 border rounded-lg bg-muted/10 border-dashed">
+                <Paperclip className="h-10 w-10 mx-auto mb-3 opacity-40 text-muted-foreground" />
+                <p className="text-lg font-medium text-foreground">No files uploaded yet.</p>
+                <p className="text-sm mt-1 text-muted-foreground max-w-sm mx-auto mb-6">
+                    Manuscript, camera-ready, and copyright files will appear here once submitted.
+                </p>
+                
+                {isAuthor && (
+                    <div className="flex justify-center">
+                        <label className={`flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md cursor-pointer hover:bg-primary/90 transition-colors ${uploading ? 'opacity-70 pointer-events-none' : ''}`}>
+                            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                            {uploading ? 'Uploading...' : 'Upload Manuscript (PDF)'}
+                            <input 
+                                type="file" 
+                                className="hidden" 
+                                accept=".pdf" 
+                                onChange={handleUploadManuscript}
+                                disabled={uploading}
+                            />
+                        </label>
+                    </div>
+                )}
             </div>
         )
     }
@@ -58,13 +102,28 @@ export function FilesTab({ paperId, conferenceId }: FilesTabProps) {
         <div className="space-y-6">
             {/* Manuscript Files */}
             <div className="rounded-lg border bg-card p-5">
-                <div className="flex items-center gap-2 mb-4">
-                    <div className="p-1.5 bg-indigo-50 rounded-md">
-                        <FileText className="h-4 w-4 text-indigo-600" />
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-indigo-50 rounded-md">
+                            <FileText className="h-4 w-4 text-indigo-600" />
+                        </div>
+                        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            Manuscript Files ({manuscriptFiles.length})
+                        </h3>
                     </div>
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        Manuscript Files ({manuscriptFiles.length})
-                    </h3>
+                    {isAuthor && (
+                        <label className={`flex items-center gap-1.5 px-3 py-1.5 border border-indigo-200 text-indigo-600 rounded-md cursor-pointer hover:bg-indigo-50 transition-colors text-xs font-medium ${uploading ? 'opacity-70 pointer-events-none' : ''}`}>
+                            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                            {uploading ? 'Uploading...' : 'Upload New Ver'}
+                            <input 
+                                type="file" 
+                                className="hidden" 
+                                accept=".pdf" 
+                                onChange={handleUploadManuscript}
+                                disabled={uploading}
+                            />
+                        </label>
+                    )}
                 </div>
                 {manuscriptFiles.length === 0 ? (
                     <p className="text-sm text-muted-foreground py-4 text-center">No manuscript files uploaded.</p>

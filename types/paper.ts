@@ -46,6 +46,9 @@ export interface PaperResponse {
     status: PaperStatus
     authorNames?: string[]
     isDoubleBlind?: boolean
+    plagiarismScore?: number | null
+    plagiarismStatus?: 'PENDING' | 'CHECKING' | 'COMPLETED' | 'FAILED' | null
+    plagiarismDetailsJson?: string | null
 }
 
 export interface CreatePaperRequest {
@@ -65,5 +68,6 @@ export interface PaperFileResponse {
     url: string
     isActive: boolean
     isCameraReady: boolean
+    isSupplementary?: boolean
     uploadedAt: string
 }

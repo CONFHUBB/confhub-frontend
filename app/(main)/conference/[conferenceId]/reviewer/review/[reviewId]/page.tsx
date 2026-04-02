@@ -12,11 +12,12 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { FieldError } from '@/components/ui/field'
-import { Loader2, ArrowLeft, FileText, Check, X, AlertTriangle, Save, Eye, ExternalLink, FileDown, MessageSquare, Lock } from 'lucide-react'
+import { Loader2, ArrowLeft, FileText, Check, X, AlertTriangle, Save, Eye, ExternalLink, FileDown, MessageSquare, Lock, Sparkles, ThumbsUp, ThumbsDown, BookOpen } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { PaperDiscussion } from '@/components/paper-discussion'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useTrackSettings } from '@/hooks/useTrackSettings'
+import { summarizePaper, analyzeStrengthsWeaknesses, type PaperSummaryResponse, type StrengthWeaknessResponse } from '@/app/api/ai-assistant.api'
 
 interface ReviewQuestion {
     id: number
@@ -67,6 +68,14 @@ export default function ReviewPaperPage() {
     // Track settings for #6 and #7
     const { settings } = useTrackSettings(conferenceId, review?.paper?.trackId)
     const canEditDuringDiscussion = !discussionEnabled || settings.allowReviewUpdateDuringDiscussion
+
+    // AI Assistant states
+    const [aiSummary, setAiSummary] = useState<PaperSummaryResponse | null>(null)
+    const [aiSW, setAiSW] = useState<StrengthWeaknessResponse | null>(null)
+    const [loadingSummary, setLoadingSummary] = useState(false)
+    const [loadingSW, setLoadingSW] = useState(false)
+    const [showSummary, setShowSummary] = useState(false)
+    const [showSW, setShowSW] = useState(false)
 
     // Get userId from JWT
     useEffect(() => {
@@ -425,6 +434,109 @@ export default function ReviewPaperPage() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* AI Assistant Tools */}
+            {review.paper?.id && (
+                <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-amber-500" />
+                        AI Assistant
+                    </h3>
+
+                    {/* AI Summary Button */}
+                    <Button
+                        variant="outline"
+                        className="w-full justify-start gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                        disabled={loadingSummary}
+                        onClick={async () => {
+                            if (aiSummary) { setShowSummary(!showSummary); return }
+                            setLoadingSummary(true)
+                            try {
+                                const result = await summarizePaper(review.paper!.id)
+                                setAiSummary(result)
+                                setShowSummary(true)
+                            } catch { toast.error('Failed to generate summary') }
+                            finally { setLoadingSummary(false) }
+                        }}
+                    >
+                        {loadingSummary ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
+                        {loadingSummary ? 'Generating Summary...' : aiSummary ? (showSummary ? 'Hide AI Summary' : 'Show AI Summary') : '📖 AI Paper Summary'}
+                    </Button>
+                    {showSummary && aiSummary && (
+                        <Card className="border-indigo-200 bg-indigo-50/30">
+                            <CardContent className="p-4 space-y-3">
+                                <p className="text-sm text-gray-700 leading-relaxed">{aiSummary.summary}</p>
+                                {aiSummary.keyContributions.length > 0 && (
+                                    <div>
+                                        <p className="text-xs font-semibold text-indigo-600 uppercase mb-1">Key Contributions</p>
+                                        <ul className="text-sm text-gray-700 space-y-1">
+                                            {aiSummary.keyContributions.map((c, i) => (
+                                                <li key={i} className="flex items-start gap-2">
+                                                    <span className="text-indigo-400 mt-0.5">•</span>{c}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                                {aiSummary.methodology && (
+                                    <div>
+                                        <p className="text-xs font-semibold text-indigo-600 uppercase mb-1">Methodology</p>
+                                        <p className="text-sm text-gray-700">{aiSummary.methodology}</p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* AI Strengths & Weaknesses Button */}
+                    <Button
+                        variant="outline"
+                        className="w-full justify-start gap-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                        disabled={loadingSW}
+                        onClick={async () => {
+                            if (aiSW) { setShowSW(!showSW); return }
+                            setLoadingSW(true)
+                            try {
+                                const result = await analyzeStrengthsWeaknesses(review.paper!.id)
+                                setAiSW(result)
+                                setShowSW(true)
+                            } catch { toast.error('Failed to analyze') }
+                            finally { setLoadingSW(false) }
+                        }}
+                    >
+                        {loadingSW ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
+                        {loadingSW ? 'Analyzing...' : aiSW ? (showSW ? 'Hide Analysis' : 'Show Analysis') : '🔎 Strengths & Weaknesses'}
+                    </Button>
+                    {showSW && aiSW && (
+                        <Card className="border-emerald-200">
+                            <CardContent className="p-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <p className="text-xs font-semibold text-emerald-600 uppercase flex items-center gap-1">
+                                            <ThumbsUp className="h-3.5 w-3.5" /> Strengths
+                                        </p>
+                                        {aiSW.strengths.map((s, i) => (
+                                            <div key={i} className="p-2 bg-emerald-50 rounded text-sm text-emerald-800 flex items-start gap-2">
+                                                <span className="text-emerald-400 mt-0.5">✓</span>{s}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <p className="text-xs font-semibold text-red-600 uppercase flex items-center gap-1">
+                                            <ThumbsDown className="h-3.5 w-3.5" /> Weaknesses
+                                        </p>
+                                        {aiSW.weaknesses.map((w, i) => (
+                                            <div key={i} className="p-2 bg-red-50 rounded text-sm text-red-800 flex items-start gap-2">
+                                                <span className="text-red-400 mt-0.5">✗</span>{w}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+            )}
 
             {/* Manuscript Files */}
             {paperFiles.length > 0 && (() => {

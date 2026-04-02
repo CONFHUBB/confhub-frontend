@@ -35,8 +35,8 @@ import type { PaperResponse, PaperStatus } from "@/types/paper"
 import type { TrackResponse } from "@/types/track"
 import type { MetaReviewResponse, Decision } from "@/types/meta-review"
 import type { PaperConflictResponse } from "@/types/conflict"
-// PaperDetailSheet removed — navigation now goes to /conference/:conferenceId/paper/:paperId
 import { UnifiedDataTable, type DataTableColumn } from "@/components/ui/unified-data-table"
+import { PlagiarismBadge } from "@/components/plagiarism-badge"
 
 const STATUS_CONFIG: Record<string, { label: string, color: string }> = {
     DRAFT: { label: "Draft", color: "bg-slate-100 text-slate-700" },
@@ -401,6 +401,14 @@ export function PaperManagement({ conferenceId, trackIds }: PaperManagementProps
             },
             className: "text-center w-24"
         }] : []),
+        {
+            header: <div className="flex items-center justify-center gap-1 w-full"><Filter className="h-3 w-3" /> Plagiarism</div>,
+            cell: (paper) => (
+                <div className="flex justify-center w-full">
+                    <PlagiarismBadge paperId={paper.id} score={paper.plagiarismScore} status={paper.plagiarismStatus} />
+                </div>
+            )
+        },
         {
             header: <div className="flex items-center justify-center gap-1 w-full"><Shield className="h-3 w-3" /> Conflicts</div>,
             cell: (paper) => (
