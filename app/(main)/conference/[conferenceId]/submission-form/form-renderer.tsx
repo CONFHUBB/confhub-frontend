@@ -17,12 +17,15 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, X } from "lucide-react"
+import { Loader2, X, Sparkles, PenLine, AlertCircle, CheckCircle2, Target } from "lucide-react"
+import { suggestKeywords, checkWriting, checkTrackFit, type WritingSuggestion } from "@/app/api/ai-assistant.api"
+import toast from "react-hot-toast"
 
 export interface FormRendererProps {
     definitionJson: string
     onSubmit: (fixedData: any, extraAnswersJson: string) => void
     isSubmitting?: boolean
+    trackId?: number
 }
 
 // ─── Schema generation ────────────────────────────────────────────────────────
@@ -65,10 +68,17 @@ const generateSchema = (fields: DynamicField[]) => {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false }: FormRendererProps) {
+export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false, trackId }: FormRendererProps) {
     const [keywords, setKeywords] = useState<string[]>([])
     const [keywordInput, setKeywordInput] = useState("")
     const [keywordError, setKeywordError] = useState("")
+    const [suggestingKeywords, setSuggestingKeywords] = useState(false)
+    const [checkingWriting, setCheckingWriting] = useState(false)
+    const [writingSuggestions, setWritingSuggestions] = useState<WritingSuggestion[]>([])
+    const [writingAssessment, setWritingAssessment] = useState("") 
+    
+    const [checkingTrackFit, setCheckingTrackFit] = useState(false)
+    const [trackFitResult, setTrackFitResult] = useState<{ matchScore: number, explanation: string, suggestedTrack: string | null } | null>(null)
 
     // Parse form definition
     let formDef: FormDefinition = { fields: [] }
@@ -120,6 +130,84 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false }:
         if (e.key === "Enter") { e.preventDefault(); addKeyword() }
     }
 
+    // ── AI: Suggest Keywords ──
+    const handleSuggestKeywords = async () => {
+        const abstractText = form.getValues("abstractField") as string
+        if (!abstractText || abstractText.trim().length < 50) {
+            toast.error("Please write at least 50 characters in the abstract first")
+            return
+        }
+        setSuggestingKeywords(true)
+        try {
+            const result = await suggestKeywords({ abstractText: abstractText.trim() })
+            if (result.keywords && result.keywords.length > 0) {
+                const newKeywords = result.keywords.filter(kw => !keywords.includes(kw))
+                const addable = newKeywords.slice(0, kwMax - keywords.length)
+                setKeywords(prev => [...prev, ...addable])
+                toast.success(`Added ${addable.length} AI-suggested keywords`)
+            } else {
+                toast.error("AI could not extract keywords. Try rephrasing your abstract.")
+            }
+        } catch {
+            toast.error("Failed to suggest keywords. Please try again.")
+        } finally {
+            setSuggestingKeywords(false)
+        }
+    }
+
+    // ── AI: Check Academic Writing ──
+    const handleCheckWriting = async () => {
+        const abstractText = form.getValues("abstractField") as string
+        const title = form.getValues("title") as string
+        if (!abstractText || abstractText.trim().length < 50) {
+            toast.error("Please write at least 50 characters in the abstract first")
+            return
+        }
+        setCheckingWriting(true)
+        setWritingSuggestions([])
+        setWritingAssessment("")
+        try {
+            const result = await checkWriting({ title: title?.trim(), abstractText: abstractText.trim() })
+            setWritingSuggestions(result.suggestions || [])
+            setWritingAssessment(result.overallAssessment || "")
+            if (result.suggestions.length === 0) {
+                toast.success("Your writing looks great! No issues found.")
+            }
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || "Failed to check writing. Please try again.")
+        } finally {
+            setCheckingWriting(false)
+        }
+    }
+
+    // ── AI: Check Track Fit ──
+    const handleCheckTrackFit = async () => {
+        if (!trackId) {
+            toast.error("Track ID not available")
+            return
+        }
+        const abstractText = form.getValues("abstractField") as string
+        if (!abstractText || abstractText.trim().length < 50) {
+            toast.error("Please write at least 50 characters in the abstract first")
+            return
+        }
+        
+        setCheckingTrackFit(true)
+        setTrackFitResult(null)
+        try {
+            const result = await checkTrackFit({ 
+                trackId, 
+                abstractText: abstractText.trim(),
+                keywords: keywords.join(', ')
+            })
+            setTrackFitResult(result)
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || "Failed to check track fit. Please try again.")
+        } finally {
+            setCheckingTrackFit(false)
+        }
+    }
+
     // ── Submit ──
     const handleSubmit = (data: FormData) => {
         if (kwRequired && keywords.length === 0) {
@@ -168,6 +256,93 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false }:
                     className="min-h-[150px]"
                 />
                 {errors.abstractField && <p className="text-sm text-destructive">{errors.abstractField.message as string}</p>}
+                
+                {/* AI Tools */}
+                <div className="flex gap-2 pt-1 flex-wrap">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCheckWriting}
+                        disabled={checkingWriting}
+                        className="gap-2 text-violet-600 border-violet-200 hover:bg-violet-50 hover:text-violet-700"
+                    >
+                        {checkingWriting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PenLine className="h-3.5 w-3.5" />}
+                        {checkingWriting ? "Analyzing Writing..." : "✨ Check Academic Writing"}
+                    </Button>
+                    
+                    {trackId && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleCheckTrackFit}
+                            disabled={checkingTrackFit}
+                            className="gap-2 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                        >
+                            {checkingTrackFit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}
+                            {checkingTrackFit ? "Matching..." : "🎯 AI Track Matcher"}
+                        </Button>
+                    )}
+                </div>
+
+                {/* Track Fit Result Panel */}
+                {trackFitResult && (
+                    <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-4 space-y-3 mt-3">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-blue-700 font-medium text-sm">
+                                <Target className="h-4 w-4" />
+                                Track Fit Analysis
+                            </div>
+                            <Badge variant={trackFitResult.matchScore >= 70 ? "default" : trackFitResult.matchScore >= 40 ? "secondary" : "destructive"}>
+                                Match Score: {trackFitResult.matchScore}%
+                            </Badge>
+                        </div>
+                        <p className="text-sm text-gray-700 bg-white p-3 rounded border">{trackFitResult.explanation}</p>
+                        {trackFitResult.suggestedTrack && (
+                            <div className="flex items-center gap-2 p-2.5 rounded bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+                                <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                                <span>Suggested better track: <strong>{trackFitResult.suggestedTrack}</strong></span>
+                            </div>
+                        )}
+                    </div>
+                )}
+                {/* Writing Suggestions Panel */}
+                {writingSuggestions.length > 0 && (
+                    <div className="rounded-lg border border-violet-200 bg-violet-50/50 p-4 space-y-3">
+                        <div className="flex items-center gap-2 text-violet-700 font-medium text-sm">
+                            <PenLine className="h-4 w-4" />
+                            Writing Suggestions ({writingSuggestions.length})
+                        </div>
+                        {writingSuggestions.map((s, i) => (
+                            <div key={i} className="p-3 bg-white rounded-lg border space-y-1.5 text-sm">
+                                <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className={`text-[10px] ${
+                                        s.type === 'SPELLING' ? 'text-orange-600 border-orange-200 bg-orange-50' :
+                                        s.type === 'GRAMMAR' ? 'text-red-600 border-red-200 bg-red-50' :
+                                        s.type === 'TONE' ? 'text-amber-600 border-amber-200 bg-amber-50' :
+                                        'text-blue-600 border-blue-200 bg-blue-50'
+                                    }`}>{s.type}</Badge>
+                                    <span className="text-xs text-gray-500">{s.reason}</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                    <span className="line-through text-red-500">{s.original}</span>
+                                    <span className="text-gray-400">→</span>
+                                    <span className="text-emerald-700 font-medium">{s.suggested}</span>
+                                </div>
+                            </div>
+                        ))}
+                        {writingAssessment && (
+                            <p className="text-xs text-violet-600 italic pt-1">📝 {writingAssessment}</p>
+                        )}
+                    </div>
+                )}
+                {writingSuggestions.length === 0 && writingAssessment && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
+                        <CheckCircle2 className="h-4 w-4" />
+                        {writingAssessment}
+                    </div>
+                )}
             </div>
 
             {/* ── Keywords — Tag Input ── */}
@@ -206,6 +381,16 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false }:
                     />
                     <Button type="button" variant="outline" onClick={addKeyword} className="shrink-0" disabled={keywords.length >= kwMax}>
                         Add
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleSuggestKeywords}
+                        disabled={suggestingKeywords || keywords.length >= kwMax}
+                        className="shrink-0 gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700"
+                    >
+                        {suggestingKeywords ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                        {suggestingKeywords ? "Suggesting..." : "AI Suggest"}
                     </Button>
                 </div>
                 {keywordError && <p className="text-sm text-destructive">{keywordError}</p>}

@@ -9,6 +9,7 @@ import type { ConferenceResponse } from '@/types/conference'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Loader2, FileText, ArrowLeft } from 'lucide-react'
+import { BackButton } from '@/components/shared/back-button'
 import Link from 'next/link'
 
 export default function TracksPage() {
@@ -79,12 +80,7 @@ export default function TracksPage() {
     return (
         <div className="container mx-auto py-8 px-4">
             <div className="mb-8">
-                <Link href={`/conference/${conferenceId}`}>
-                    <Button variant="ghost" className="mb-4">
-                        <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back to Conference
-                    </Button>
-                </Link>
+                <BackButton fallbackUrl={`/conference/${conferenceId}`} className="mb-4" />
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">
                         {conference?.name} - Tracks

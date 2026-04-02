@@ -45,6 +45,8 @@ interface PhaseData {
     hasTickets: boolean
     hasSubmissionForm: boolean
     hasReviewForm: boolean
+    hasReviewSettings: boolean
+    hasConflictSettings: boolean
     // Submission
     submissionEnabled: boolean
     submissionDeadlineSet: boolean
@@ -182,6 +184,8 @@ function getPhaseChecklist(phaseId: string, pd: PhaseData): { label: string; met
                 { label: 'Members & roles assigned', met: pd.hasMembers, tab: 'features-members', blocking: true },
                 { label: 'Tickets & fees configured', met: pd.hasTickets, tab: 'reg-ticket-types', blocking: true },
                 { label: 'Submission form configured', met: pd.hasSubmissionForm, tab: 'forms-submission', blocking: true },
+                { label: 'Review settings configured', met: pd.hasReviewSettings, tab: 'features-review-settings', blocking: true, requiresRole: 'PROGRAM_CHAIR' },
+                { label: 'Conflict settings configured', met: pd.hasConflictSettings, tab: 'features-conflict-settings', blocking: false, requiresRole: 'PROGRAM_CHAIR' },
                 { label: 'Review form configured', met: pd.hasReviewForm, tab: 'forms-review', blocking: true, requiresRole: 'PROGRAM_CHAIR' },
             ]
         case 'submission':
@@ -318,7 +322,7 @@ function PhaseStatusCard({
                 title: "Action Required: Review Form Configuration",
                 message: `Please configure the Review Form for the conference "${conferenceRes.name}". This is required before we can proceed to the next phase.`,
                 type: "SYSTEM_ALERT",
-                link: `/conference/${conferenceId}/update`
+                link: `/conference/${conferenceId}/update?tab=forms-review`
             }))
             await Promise.all(notifPromises)
 
@@ -601,6 +605,8 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
         hasMembers: false,
         hasTickets: false,
         hasSubmissionForm: false,
+        hasReviewSettings: false,
+        hasConflictSettings: false,
         hasReviewForm: false,
         submissionEnabled: false,
         submissionDeadlineSet: false,
@@ -642,16 +648,43 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                 getTicketTypes(conferenceId, false).catch(() => []),
             ])
 
-            // Review questions & subject areas — check first track
+            // Review questions, settings & subject areas — check first track
             let hasReviewForm = false
             let hasSubjectAreas = false
+            let hasReviewSettings = false
+            let hasConflictSettings = false
             if (tracksData.length > 0) {
-                const [questions, areas] = await Promise.all([
+                const { getTrackReviewSettings } = await import('@/app/api/track.api')
+                const [questions, areas, reviewSettings] = await Promise.all([
                     getReviewQuestionsByTrack(tracksData[0].id).catch(() => []),
                     getSubjectAreasByTrack(tracksData[0].id).catch(() => []),
+                    getTrackReviewSettings(tracksData[0].id).catch(() => null),
                 ])
                 hasReviewForm = Array.isArray(questions) && questions.length > 0
                 hasSubjectAreas = Array.isArray(areas) && areas.length > 0
+                
+                if (reviewSettings) {
+                    const s = reviewSettings as any
+                    hasReviewSettings = !!(
+                        s.isDoubleBlind ||
+                        s.allowReviewerQuota ||
+                        s.allowOthersReviewAccessAfterSubmit ||
+                        s.allowReviewUpdateDuringDiscussion ||
+                        s.showReviewerIdentityToOtherReviewer ||
+                        s.showAggregateColumns ||
+                        s.allowReviewerSeeStatusBeforeNotification ||
+                        s.enableAllPapersForDiscussion ||
+                        s.allowDiscussNonAssignedPapers ||
+                        s.allowAuthorDiscuss ||
+                        s.doNotShowWithdrawnPapers ||
+                        (s.reviewerInstructions && s.reviewerInstructions.trim() !== '') ||
+                        (s.reviewerInviteExpirationDays !== null && s.reviewerInviteExpirationDays !== 7)
+                    )
+                    hasConflictSettings = (
+                        s.enableDomainConflict === false ||
+                        s.allowAuthorConfigureConflict === true
+                    )
+                }
             }
 
             // Submission form
@@ -714,6 +747,8 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                 hasMembers: (membersData as any).totalElements > 1,
                 hasTickets: Array.isArray(ticketTypes) && ticketTypes.length > 0,
                 hasSubmissionForm,
+                hasReviewSettings,
+                hasConflictSettings,
                 hasReviewForm,
                 submissionEnabled: isEnabled('PAPER_SUBMISSION'),
                 submissionDeadlineSet: hasDeadline('PAPER_SUBMISSION'),

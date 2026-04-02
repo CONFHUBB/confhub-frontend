@@ -146,7 +146,7 @@ export default function PaperDetailPage() {
             case 'info':
                 return <InfoTab paper={paper} paperId={paperId} authors={authors} isChair={isChair} />
             case 'files':
-                return <FilesTab paperId={paperId} conferenceId={conferenceId} />
+                return <FilesTab paperId={paperId} conferenceId={conferenceId} isAuthor={isAuthor} />
             case 'reviews':
                 return <ReviewsTab paperId={paperId} paper={paper} conferenceId={conferenceId} isChair={isChair} isAuthor={isAuthor} isDoubleBlind={isDoubleBlind} />
             case 'assignments':

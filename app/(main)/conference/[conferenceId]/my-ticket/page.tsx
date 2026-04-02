@@ -181,11 +181,32 @@ function MyTicketContent() {
           {ticket.paymentStatus === 'PENDING' && (
             <div className="border-t pt-4 mt-4 text-center">
               <p className="text-sm text-yellow-700 mb-3">Your payment is pending. Please complete payment to activate your ticket.</p>
-              <Link href={`/conference/${conferenceId}/register`}>
-                <Button variant="outline" size="sm">
-                  <ExternalLink className="w-4 h-4 mr-2" /> Return to Registration
+              <div className="flex justify-center gap-3">
+                <Link href={`/conference/${conferenceId}/register`}>
+                  <Button variant="default" size="sm">
+                    <ExternalLink className="w-4 h-4 mr-2" /> Resume Payment
+                  </Button>
+                </Link>
+                <Button variant="outline" size="sm" onClick={async () => {
+                   if (confirm("Are you sure you want to cancel this pending registration? This will allow you to select a different ticket category.")) {
+                     try {
+                        const { cancelPendingTicket } = await import('@/app/api/registration.api');
+                        const token = localStorage.getItem('accessToken');
+                        if (!token) return;
+                        const payload = JSON.parse(atob(token.split('.')[1]));
+                        const { getUserByEmail } = await import('@/app/api/user.api');
+                        const user = await getUserByEmail(payload.sub);
+                        await cancelPendingTicket(conferenceId, user.id);
+                        toast.success("Cancelled successfully. You can now register again.");
+                        window.location.href = `/conference/${conferenceId}/register`;
+                     } catch(e) {
+                        toast.error("Failed to cancel ticket.");
+                     }
+                   }
+                }}>
+                  <XCircle className="w-4 h-4 mr-2" /> Cancel Registration
                 </Button>
-              </Link>
+              </div>
             </div>
           )}
         </div>

@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import {
     Loader2, FileText, Users, Gavel, Shield, MessageSquare, Eye,
-    Check, X, ChevronDown, ChevronRight, Plus, Trash2, Send, Reply, UserPlus, ExternalLink
+    Check, X, ChevronDown, ChevronRight, Plus, Trash2, Send, Reply, UserPlus, ExternalLink, Sparkles
 } from "lucide-react"
 import toast from "react-hot-toast"
 
@@ -23,6 +23,7 @@ import { createMetaReview, updateMetaReview } from "@/app/api/meta-review.api"
 import { manualAssign, removeAssignment, getCurrentAssignments, type AssignmentPreviewItem } from "@/app/api/assignment.api"
 import { getConferenceUsersWithRoles } from "@/app/api/conference-user-track.api"
 import { getReviewById, getAnswersByReview, getReviewQuestionsByTrack, getReviewsByPaper, getReviewVersions } from "@/app/api/review.api"
+import { analyzeReviewConsensus, type ConsensusResponse } from "@/app/api/ai-assistant.api"
 import Link from "next/link"
 
 // Types
@@ -638,6 +639,9 @@ function DecisionTab({
     const [decision, setDecision] = useState<Decision | "">(metaReview?.finalDecision || "")
     const [reason, setReason] = useState(metaReview?.reason || "")
     const [saving, setSaving] = useState(false)
+    const [consensus, setConsensus] = useState<ConsensusResponse | null>(null)
+    const [loadingConsensus, setLoadingConsensus] = useState(false)
+    const [showConsensus, setShowConsensus] = useState(false)
 
     useEffect(() => {
         setDecision(metaReview?.finalDecision || "")
@@ -690,6 +694,78 @@ function DecisionTab({
                         <span>Avg Score: <strong>{paper.averageTotalScore.toFixed(1)}</strong></span>
                     )}
                 </div>
+            </div>
+
+            {/* AI Review Consensus */}
+            <div className="rounded-lg border p-4 bg-amber-50/30 border-amber-200">
+                <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-amber-700 uppercase flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        AI Review Consensus
+                    </p>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={loadingConsensus || (paper.completedReviewCount || 0) === 0}
+                        className="gap-1.5 text-xs text-amber-600 border-amber-200 hover:bg-amber-100"
+                        onClick={async () => {
+                            if (consensus) { setShowConsensus(!showConsensus); return }
+                            setLoadingConsensus(true)
+                            try {
+                                const result = await analyzeReviewConsensus(paperId)
+                                setConsensus(result)
+                                setShowConsensus(true)
+                            } catch { toast.error('Failed to analyze consensus') }
+                            finally { setLoadingConsensus(false) }
+                        }}
+                    >
+                        {loadingConsensus ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                        {loadingConsensus ? 'Analyzing...' : consensus ? (showConsensus ? 'Hide' : 'Show') : 'Analyze'}
+                    </Button>
+                </div>
+                {showConsensus && consensus && (
+                    <div className="mt-3 space-y-3">
+                        {/* Agreement Score */}
+                        <div className="flex items-center gap-3">
+                            <div className="flex-1 h-2.5 rounded-full bg-gray-200 overflow-hidden">
+                                <div
+                                    className={`h-full rounded-full transition-all duration-500 ${
+                                        consensus.agreementScore >= 70 ? 'bg-emerald-500' :
+                                        consensus.agreementScore >= 40 ? 'bg-amber-500' : 'bg-red-500'
+                                    }`}
+                                    style={{ width: `${consensus.agreementScore}%` }}
+                                />
+                            </div>
+                            <span className="text-sm font-bold text-gray-700">{consensus.agreementScore}%</span>
+                        </div>
+                        {/* Recommendation */}
+                        <div className="p-2.5 rounded-lg bg-white border text-sm text-gray-700">
+                            <p className="text-[10px] font-semibold text-amber-600 uppercase mb-0.5">AI Recommendation</p>
+                            {consensus.recommendation}
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <p className="text-[10px] font-semibold text-emerald-600 uppercase mb-1">Agreements</p>
+                                {consensus.agreements.map((a, i) => (
+                                    <div key={i} className="p-1.5 text-xs text-emerald-800 bg-emerald-50 rounded mb-1 flex items-start gap-1.5">
+                                        <Check className="h-3 w-3 mt-0.5 shrink-0 text-emerald-500" />{a}
+                                    </div>
+                                ))}
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-semibold text-red-600 uppercase mb-1">Disagreements</p>
+                                {consensus.disagreements.map((d, i) => (
+                                    <div key={i} className="p-1.5 text-xs text-red-800 bg-red-50 rounded mb-1 flex items-start gap-1.5">
+                                        <X className="h-3 w-3 mt-0.5 shrink-0 text-red-500" />{d}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {(paper.completedReviewCount || 0) === 0 && (
+                    <p className="text-[10px] text-amber-500 mt-1">Requires at least 1 completed review</p>
+                )}
             </div>
 
             {/* Decision selection */}

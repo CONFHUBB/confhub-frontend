@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select as AntdSelect } from 'antd'
 import { Loader2, ArrowLeft, Check, FileText, Users, Upload, Search, Trash2, Send, FileUp } from 'lucide-react'
+import { BackButton } from '@/components/shared/back-button'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { createPaper, assignAuthorToPaper, getAuthorsByPaper, uploadPaperFile } from '@/app/api/paper.api'
@@ -22,6 +23,8 @@ import type { ConferenceActivityDTO } from '@/types/conference'
 import { isActivityOpen } from '@/lib/activity'
 import { getUserByEmail } from '@/app/api/user.api'
 import { FormRenderer } from '@/app/(main)/conference/[conferenceId]/submission-form/form-renderer'
+import { getPlagiarismResult, type PlagiarismResult } from '@/app/api/plagiarism.api'
+import { PlagiarismBadge } from '@/components/plagiarism-badge'
 
 const getCurrentUserEmail = (): string | null => {
     if (typeof window === 'undefined') return null
@@ -246,6 +249,40 @@ function StepUploadManuscript({
     const [uploaded, setUploaded] = useState(false)
     const [showPreview, setShowPreview] = useState(false)
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+    const [plagiarismResult, setPlagiarismResult] = useState<PlagiarismResult | null>(null)
+    const [checkingPlagiarism, setCheckingPlagiarism] = useState(false)
+
+    const handleCheckPlagiarism = async () => {
+        setCheckingPlagiarism(true)
+        try {
+            let res = await getPlagiarismResult(paperId)
+            setPlagiarismResult(res)
+
+            if (res.status === 'CHECKING' || res.status === 'PENDING') {
+                let attempts = 0
+                const pollInterval = setInterval(async () => {
+                    try {
+                        attempts++
+                        const newRes = await getPlagiarismResult(paperId)
+                        setPlagiarismResult(newRes)
+                        
+                        if (newRes.status === 'COMPLETED' || newRes.status === 'FAILED' || attempts > 20) {
+                            clearInterval(pollInterval)
+                            setCheckingPlagiarism(false)
+                        }
+                    } catch (error) {
+                        clearInterval(pollInterval)
+                        setCheckingPlagiarism(false)
+                    }
+                }, 3000)
+                return // Will naturally end when polling finishes
+            }
+        } catch (err: any) {
+            toast.error("Failed to fetch plagiarism status")
+            console.error(err)
+        }
+        setCheckingPlagiarism(false)
+    }
 
     // Generate local preview URL when file is selected
     const handleFileSelect = (file: File) => {
@@ -400,15 +437,44 @@ function StepUploadManuscript({
                                 </Button>
                             </>
                         ) : (
-                            <>
-                                <Button onClick={() => router.push(`/track?conferenceId=${conferenceId}`)} className="gap-2">
-                                    <Check className="h-4 w-4" />
-                                    Done — Go to Tracks
-                                </Button>
-                                <Button variant="outline" onClick={() => { handleClearFile(); setUploaded(false) }}>
-                                    Upload a Different File
-                                </Button>
-                            </>
+                            <div className="w-full space-y-4">
+                                <div className="p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50 flex flex-col gap-3">
+                                    <div>
+                                        <h4 className="text-sm font-semibold">Plagiarism Analysis</h4>
+                                        <p className="text-xs text-muted-foreground mt-1">Our system automatically checks your manuscript for originality.</p>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        {plagiarismResult ? (
+                                            <PlagiarismBadge 
+                                                paperId={paperId} 
+                                                score={plagiarismResult.score} 
+                                                status={plagiarismResult.status} 
+                                            />
+                                        ) : (
+                                            <span className="text-sm font-medium text-slate-500 italic">Check not started yet</span>
+                                        )}
+                                        <Button 
+                                            variant="secondary" 
+                                            size="sm" 
+                                            onClick={handleCheckPlagiarism}
+                                            disabled={checkingPlagiarism}
+                                            className="ml-auto"
+                                        >
+                                            {checkingPlagiarism ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
+                                            {plagiarismResult ? "Refresh Status" : "Check Plagiarism Status"}
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="flex gap-3 mt-4">
+                                    <Button onClick={() => router.push(`/track?conferenceId=${conferenceId}`)} className="gap-2">
+                                        <Check className="h-4 w-4" />
+                                        Done — Go to Tracks
+                                    </Button>
+                                    <Button variant="outline" onClick={() => { handleClearFile(); setUploaded(false); setPlagiarismResult(null); }}>
+                                        Upload a Different File
+                                    </Button>
+                                </div>
+                            </div>
                         )}
                     </div>
                 </CardContent>
@@ -580,12 +646,7 @@ export default function SubmitPaperPage() {
     return (
         <div className="container mx-auto py-8 px-4 max-w-4xl">
             {/* Back button */}
-            <Link href={`/track?conferenceId=${conferenceId}`}>
-                <Button variant="ghost" className="mb-4">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Tracks
-                </Button>
-            </Link>
+            <BackButton fallbackUrl={`/track?conferenceId=${conferenceId}`} className="mb-4" />
 
             {/* Page header */}
             <Card className="mb-6">
@@ -674,6 +735,7 @@ export default function SubmitPaperPage() {
                                 definitionJson={definitionJson}
                                 onSubmit={handleFormSubmit}
                                 isSubmitting={submitting}
+                                trackId={trackId}
                             />
                         ) : (
                             subjectAreas && subjectAreas.length > 0 && (

@@ -203,3 +203,20 @@ export const getPublishedPapers = async (
 export const deletePaperFile = async (fileId: number): Promise<void> => {
     await http.delete(`/paper-file/${fileId}`)
 }
+
+export const setActiveFile = async (fileId: number): Promise<any> => {
+    const response = await http.put(`/paper-file/${fileId}/set-active`)
+    return response.data
+}
+
+export const uploadSupplementaryFile = async (conferenceId: number, paperId: number, file: File): Promise<any> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await http.post(`/paper-file/upload-supplementary`, formData, {
+        params: { conferenceId, paperId },
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    })
+    return response.data
+}

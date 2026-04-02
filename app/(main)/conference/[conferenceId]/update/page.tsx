@@ -203,9 +203,7 @@ export default function ConferenceUpdatePage() {
     // Sync tab state with URL query parameter
     const setActiveTab = useCallback((tab: SettingsTab) => {
         setActiveTabState(tab)
-        const newUrl = tab === 'dashboard'
-            ? `/conference/${conferenceId}/update`
-            : `/conference/${conferenceId}/update?tab=${tab}`
+        const newUrl = `/conference/${conferenceId}/update?tab=${tab}`
         window.history.replaceState(null, '', newUrl)
     }, [conferenceId])
     const [expandedGroups, setExpandedGroups] = useState<string[]>(['Overview', 'General Settings', 'User Management', 'Forms & Templates', 'Activity Timeline', 'Paper & Review', 'Registration', 'Event'])
