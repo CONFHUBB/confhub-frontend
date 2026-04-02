@@ -114,6 +114,10 @@ export const retryPayment = async (conferenceId: number, userId: number): Promis
   return res.data
 }
 
+export const cancelPendingTicket = async (conferenceId: number, userId: number): Promise<void> => {
+  await http.delete(`/conferences/${conferenceId}/cancel-pending?userId=${userId}`)
+}
+
 export const refundTicket = async (conferenceId: number, ticketId: number): Promise<void> => {
   await http.post(`/conferences/${conferenceId}/refund?ticketId=${ticketId}`)
 }
