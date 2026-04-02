@@ -202,11 +202,11 @@ function ConferencesPageInner() {
                             <Link
                                 key={conference.id}
                                 href={`/conference/${conference.id}`}
-                                className="group block"
+                                className="group block h-full"
                             >
-                                <div className="rounded-xl overflow-hidden border bg-card shadow-sm hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1">
+                                <div className="h-full flex flex-col rounded-xl overflow-hidden border bg-card shadow-sm hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1">
                                     {/* Banner Image */}
-                                    <div className="relative w-full aspect-[16/9] bg-gradient-to-br from-indigo-500 to-purple-600 overflow-hidden">
+                                    <div className="relative w-full aspect-[16/9] bg-gradient-to-br from-indigo-500 to-purple-600 overflow-hidden shrink-0">
                                         {conference.bannerImageUrl ? (
                                             <img
                                                 src={conference.bannerImageUrl}
@@ -230,7 +230,7 @@ function ConferencesPageInner() {
                                     </div>
 
                                     {/* Card Body */}
-                                    <div className="p-4 space-y-3">
+                                    <div className="p-4 flex flex-col flex-grow">
                                         <div>
                                             <h3 className="font-bold text-base leading-tight line-clamp-2 group-hover:text-indigo-600 transition-colors">
                                                 {conference.name}
@@ -240,12 +240,12 @@ function ConferencesPageInner() {
                                             </p>
                                         </div>
 
-                                        <p className="text-sm text-muted-foreground line-clamp-2">
+                                        <p className="text-sm text-muted-foreground line-clamp-2 mt-3">
                                             {conference.description}
                                         </p>
 
-                                        <div className="space-y-1.5 pt-1">
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        <div className="space-y-1.5 pt-1 mt-auto overflow-hidden">
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-4">
                                                 <Calendar className="h-3.5 w-3.5 shrink-0" />
                                                 <span>{formatDate(conference.startDate)} – {formatDate(conference.endDate)}</span>
                                             </div>
@@ -257,7 +257,7 @@ function ConferencesPageInner() {
 
                                         {isStaff && conference.status.toUpperCase() === 'PENDING' && (
                                             <Button
-                                                className="w-full mt-1 gap-2 bg-green-600 hover:bg-green-700 text-white text-sm h-9"
+                                                className="w-full mt-4 gap-2 bg-green-600 hover:bg-green-700 text-white text-sm h-9 shrink-0"
                                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleApprove(conference.id) }}
                                                 disabled={approvingId === conference.id}
                                             >

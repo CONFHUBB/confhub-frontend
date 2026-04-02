@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { assignAuthorToPaper, getAuthorsByPaper, deleteAuthorFromPaper, getPaperById, getPaperFilesByPaperId, updatePaper, updatePaperFile, withdrawPaper, restorePaper, deletePaperFile } from '@/app/api/paper.api'
+import { assignAuthorToPaper, getAuthorsByPaper, deleteAuthorFromPaper, getPaperById, getPaperFilesByPaperId, updatePaper, updatePaperFile, withdrawPaper, restorePaper, deletePaperFile, uploadSupplementaryFile, setActiveFile } from '@/app/api/paper.api'
 import type { PaperAuthorItem } from '@/app/api/paper.api'
 import { getUsers } from '@/app/api/user.api'
 import { getSubjectAreasByTrack } from '@/app/api/track.api'
@@ -11,6 +11,7 @@ import { getMetaReviewByPaper } from '@/app/api/meta-review.api'
 import { getReviewsByPaper, getAnswersByReview } from '@/app/api/review.api'
 import { getConferenceActivities } from '@/app/api/conference.api'
 import { ConferencePhaseTracker } from '@/components/conference-phase-tracker'
+import { PlagiarismBadge } from '@/components/plagiarism-badge'
 import type { MetaReviewResponse } from '@/types/meta-review'
 import type { ReviewResponse, ReviewAnswerResponse } from '@/types/review'
 import type { ConferenceActivityDTO } from '@/types/conference'
@@ -41,6 +42,7 @@ import {
     Star, BarChart3, CheckCircle2, XCircle, ClipboardList, Camera, Users
 } from 'lucide-react'
 import { Select as AntdSelect } from 'antd'
+import { BackButton } from '@/components/shared/back-button'
 import toast from 'react-hot-toast'
 
 // ── Status Configuration ──
@@ -230,6 +232,16 @@ export default function PaperWorkspacePage() {
         }
     }
 
+    const handleSetActive = async (fileId: number) => {
+        try {
+            await setActiveFile(fileId)
+            toast.success('Active version updated!')
+            await fetchFiles()
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to set active file')
+        }
+    }
+
     const handleAssignAuthor = async () => {
         if (!selectedUser) { toast.error('Please select a user'); return }
         if (authors.some(a => a.user.id === Number(selectedUser))) { toast.error('This author is already added.'); return }
@@ -267,9 +279,7 @@ export default function PaperWorkspacePage() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
                 <p className="text-muted-foreground text-lg">Paper not found</p>
-                <Button onClick={() => router.back()} variant="outline">
-                    <ArrowLeft className="h-4 w-4 mr-2" /> Back
-                </Button>
+                <BackButton fallbackUrl={'/conference'} />
             </div>
         )
     }
@@ -289,15 +299,13 @@ export default function PaperWorkspacePage() {
     const decision = metaReview?.finalDecision ? DECISION_STYLE[metaReview.finalDecision] : null
 
     // ── Separate Files ──
-    const manuscriptFiles = paperFiles.filter(pf => !pf.isCameraReady && pf.isActive)
-    const supplementaryFiles = paperFiles.filter(pf => !pf.isCameraReady && !pf.isActive)
+    const manuscriptFiles = paperFiles.filter(pf => !pf.isCameraReady && !pf.isSupplementary).sort((a, b) => a.id - b.id)
+    const supplementaryFiles = paperFiles.filter(pf => !pf.isCameraReady && pf.isSupplementary)
     const cameraReadyFiles = paperFiles.filter(pf => pf.isCameraReady)
 
     return (
         <div className="container mx-auto py-8 px-4 max-w-6xl space-y-6">
-            <Button variant="ghost" onClick={() => router.back()} className="-ml-2">
-                <ArrowLeft className="h-4 w-4 mr-2" /> Back
-            </Button>
+            <BackButton fallbackUrl={`/conference/${paper.conferenceId || paper.track?.conference?.id}/update`} className="-ml-2" />
 
             {/* ── Workspace Header ── */}
             <div className="flex items-start justify-between gap-4">
@@ -307,6 +315,7 @@ export default function PaperWorkspacePage() {
                         <Badge className={`px-2.5 py-0.5 text-white ${STATUS_COLOR[paper.status] || 'bg-gray-500'}`}>
                             {paper.status.replace(/_/g, ' ')}
                         </Badge>
+                        <PlagiarismBadge paperId={paper.id} score={paper.plagiarismScore} status={paper.plagiarismStatus} />
                         <span>·</span>
                         <span className="font-mono">#{paper.id}</span>
                         <span>·</span>
@@ -490,56 +499,68 @@ export default function PaperWorkspacePage() {
                                 <p className="text-sm text-muted-foreground">No manuscript files uploaded yet.</p>
                             )}
                         </div>
-                        
-                        {/* Supplementary / Archived Files */}
-                        {supplementaryFiles.length > 0 && (
-                            <div className="space-y-3">
-                                <h2 className="text-lg font-semibold border-b pb-2 flex items-center gap-2"><FileText className="h-5 w-5 text-slate-500" /> Supplementary / Past Files</h2>
-                                <div className="border border-muted-foreground/20 rounded-lg overflow-hidden bg-white shadow-sm">
-                                    <table className="w-full text-sm">
-                                        <thead className="bg-muted/30">
-                                            <tr>
-                                                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-12">#</th>
-                                                <th className="px-4 py-3 text-left font-medium text-muted-foreground">File</th>
-                                                <th className="px-4 py-3 text-center font-medium text-muted-foreground w-24">Status</th>
-                                                <th className="px-4 py-3 text-right font-medium text-muted-foreground w-48">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-border">
-                                            {supplementaryFiles.map((pf, idx) => (
-                                                <tr key={pf.id} className="hover:bg-muted/20">
-                                                    <td className="px-4 py-3 text-muted-foreground">{idx + 1}</td>
-                                                    <td className="px-4 py-3">
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                            <FileText className="h-4 w-4 text-slate-400 shrink-0" />
-                                                            <span className="font-medium text-slate-600 truncate max-w-[250px]" title={pf.url.split('/').pop()}>
-                                                                {decodeURIComponent(pf.url.split('/').pop() || 'supplementary-file')}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center">
-                                                        <Badge variant="secondary" className="opacity-70 bg-slate-100 text-slate-600">Archived</Badge>
-                                                    </td>
-                                                    <td className="px-4 py-3 text-right">
-                                                        <div className="flex items-center justify-end gap-1">
-                                                            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-slate-600 hover:text-indigo-600 hover:bg-indigo-50" onClick={() => setPreviewFileUrl(pf.url)}>
-                                                                <Eye className="h-3.5 w-3.5" /> Preview
-                                                            </Button>
-                                                            <a href={pf.url} target="_blank" rel="noopener noreferrer">
-                                                                <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-slate-600 hover:text-slate-900"><ExternalLink className="h-3.5 w-3.5" /> Open</Button>
-                                                            </a>
-                                                            <Button variant="ghost" size="sm" className="p-1 h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteFile(pf.id)}>
-                                                                <Trash2 className="h-3.5 w-3.5" />
-                                                            </Button>
-                                                        </div>
-                                                    </td>
+
+                        {/* Supplementary Files — Separate Section */}
+                        <Card className="border-blue-200/50 shadow-sm bg-gradient-to-b from-blue-50/30 to-transparent">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                    <FileText className="h-5 w-5 text-blue-500" /> Supplementary Files
+                                    <Badge variant="outline" className="ml-auto text-blue-600 border-blue-200">{supplementaryFiles.length} file(s)</Badge>
+                                </CardTitle>
+                                <p className="text-xs text-muted-foreground">Additional supporting materials — datasets, appendices, code, etc.</p>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                                {supplementaryFiles.length > 0 ? (
+                                    <div className="border border-blue-100 rounded-lg overflow-hidden bg-white">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-blue-50/60">
+                                                <tr>
+                                                    <th className="px-4 py-2.5 text-left font-medium text-blue-800 w-12">#</th>
+                                                    <th className="px-4 py-2.5 text-left font-medium text-blue-800">File</th>
+                                                    <th className="px-4 py-2.5 text-right font-medium text-blue-800 w-44">Actions</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
+                                            </thead>
+                                            <tbody className="divide-y divide-blue-50">
+                                                {supplementaryFiles.map((pf, idx) => (
+                                                    <tr key={pf.id} className="hover:bg-blue-50/40 transition-colors">
+                                                        <td className="px-4 py-2.5 text-blue-500 font-mono text-xs">{idx + 1}</td>
+                                                        <td className="px-4 py-2.5">
+                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                <FileText className="h-4 w-4 text-blue-400 shrink-0" />
+                                                                <span className="font-medium text-sm truncate max-w-[300px]" title={pf.url.split('/').pop()}>
+                                                                    {decodeURIComponent(pf.url.split('/').pop() || 'supplementary-file')}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-2.5 text-right">
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                <Button variant="ghost" size="sm" className="gap-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-100/50 h-7" onClick={() => setPreviewFileUrl(pf.url)}>
+                                                                    <Eye className="h-3.5 w-3.5" /> Preview
+                                                                </Button>
+                                                                <a href={pf.url} target="_blank" rel="noopener noreferrer">
+                                                                    <Button variant="ghost" size="sm" className="gap-1 text-xs h-7"><ExternalLink className="h-3.5 w-3.5" /></Button>
+                                                                </a>
+                                                                {isEditable && (
+                                                                    <Button variant="ghost" size="sm" className="p-1 h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteFile(pf.id)}>
+                                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed border-blue-200 rounded-lg bg-blue-50/20">
+                                        <FileText className="h-8 w-8 text-blue-300 mb-2" />
+                                        <p className="text-sm text-muted-foreground">No supplementary files uploaded yet.</p>
+                                        <p className="text-xs text-muted-foreground mt-0.5">Use the "Upload Supplementary" button in Actions to add files.</p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
 
                         {/* Camera Ready Files */}
                         <div className="space-y-3">
@@ -702,6 +723,50 @@ export default function PaperWorkspacePage() {
                                                 <Button onClick={handleUploadFile} disabled={uploading || !selectedFile} className="gap-2">
                                                     {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} {uploading ? 'Uploading...' : 'Upload'}
                                                 </Button>
+                                        </div>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+
+                            {/* Upload Supplementary */}
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" className="w-full justify-start gap-3 h-11 bg-white hover:bg-blue-50 hover:text-blue-800" disabled={!isEditable}>
+                                        <FileUp className="h-4 w-4 text-blue-500" /> Upload Supplementary
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Upload Supplementary File</DialogTitle>
+                                        <DialogDescription>Upload additional supporting files (datasets, appendices, etc.)</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                        <label htmlFor="supplementary-upload" className="flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed border-blue-200 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/30">
+                                            <FileUp className="h-8 w-8 text-blue-400" />
+                                            <span className="text-sm font-medium">{selectedFile ? selectedFile.name : 'Click to choose a file'}</span>
+                                        </label>
+                                        <input id="supplementary-upload" type="file" accept=".pdf,.doc,.docx,.zip,.rar" className="hidden"
+                                            onChange={e => {
+                                                const f = e.target.files?.[0]
+                                                if (f) setSelectedFile(f)
+                                            }} />
+                                        <div className="flex justify-end pt-2">
+                                            <Button onClick={async () => {
+                                                if (!selectedFile) { toast.error('Please select a file'); return }
+                                                try {
+                                                    setUploading(true)
+                                                    const conferenceId = paper?.conferenceId ?? paper?.track?.conference?.id
+                                                    if (!conferenceId) { toast.error('Conference information not available'); return }
+                                                    await uploadSupplementaryFile(conferenceId, paperId, selectedFile)
+                                                    toast.success('Supplementary file uploaded!')
+                                                    setSelectedFile(null)
+                                                    await fetchFiles()
+                                                } catch (error: any) {
+                                                    toast.error(error.response?.data?.message || 'Failed to upload')
+                                                } finally { setUploading(false) }
+                                            }} disabled={uploading || !selectedFile} className="gap-2">
+                                                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} {uploading ? 'Uploading...' : 'Upload'}
+                                            </Button>
                                         </div>
                                     </div>
                                 </DialogContent>

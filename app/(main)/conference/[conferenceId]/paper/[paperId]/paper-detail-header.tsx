@@ -75,19 +75,15 @@ export function PaperDetailHeader({
             {/* Breadcrumb Navigation */}
             <nav className="flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap">
                 <button
-                    onClick={() => router.push(`/conference/${conferenceId}/update`)}
-                    className="hover:text-foreground transition-colors flex items-center gap-1"
+                    onClick={() => router.back()}
+                    className="hover:text-foreground transition-colors flex items-center font-medium"
+                    title="Go back"
                 >
-                    <ArrowLeft className="h-3.5 w-3.5" />
-                    {conferenceName || 'Workspace'}
+                    <ArrowLeft className="h-4 w-4 mr-1.5" />
+                    Back
                 </button>
-                <span className="text-muted-foreground/50">/</span>
-                <button
-                    onClick={() => router.push(`/conference/${conferenceId}/update?tab=features-paper-management`)}
-                    className="hover:text-foreground transition-colors"
-                >
-                    Papers
-                </button>
+                <span className="text-muted-foreground/30 mx-1">|</span>
+                <span className="truncate max-w-[200px] sm:max-w-xs">{conferenceName || 'Conference Workspace'}</span>
                 <span className="text-muted-foreground/50">/</span>
                 <span className="font-medium text-foreground">Paper #{paper.id}</span>
             </nav>

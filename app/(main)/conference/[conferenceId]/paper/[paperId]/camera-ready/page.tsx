@@ -16,6 +16,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import toast from 'react-hot-toast'
+import { BackButton } from '@/components/shared/back-button'
 import {
     Loader2, ArrowLeft, Upload, FileCheck, ExternalLink, Ticket, CreditCard,
     CheckCircle2, AlertTriangle, ShieldCheck, RefreshCw, Layers, Eye, Trash2, FileText, Check, Scale

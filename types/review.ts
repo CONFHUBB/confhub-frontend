@@ -23,6 +23,8 @@ export interface ReviewResponse {
         trackId?: number
         authorNames?: string[]
         isDoubleBlind?: boolean
+        plagiarismScore?: number | null
+        plagiarismStatus?: 'PENDING' | 'CHECKING' | 'COMPLETED' | 'FAILED' | null
     }
     reviewer: {
         id: number
