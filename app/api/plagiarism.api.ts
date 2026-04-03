@@ -45,12 +45,41 @@ export interface PlagiarismResult {
     details: PlagiarismDetails | null
 }
 
+// Raw API response uses detailsJson (string), we parse it into details (object)
+interface PlagiarismApiResponse {
+    paperId: number
+    score: number | null
+    status: 'PENDING' | 'CHECKING' | 'COMPLETED' | 'FAILED' | null
+    detailsJson: string | null
+}
+
+function parseApiResponse(raw: PlagiarismApiResponse): PlagiarismResult {
+    let details: PlagiarismDetails | null = null
+    if (raw.detailsJson) {
+        try {
+            details = JSON.parse(raw.detailsJson)
+        } catch {
+            details = null
+        }
+    }
+    return {
+        paperId: raw.paperId,
+        score: raw.score,
+        status: raw.status,
+        details,
+    }
+}
+
 export const getPlagiarismResult = async (paperId: number): Promise<PlagiarismResult> => {
-    const response = await http.get<PlagiarismResult>(`/plagiarism/paper/${paperId}`)
-    return response.data
+    const response = await http.get<PlagiarismApiResponse>(`/plagiarism/paper/${paperId}`)
+    return parseApiResponse(response.data)
 }
 
 export const recheckPlagiarism = async (paperId: number): Promise<PlagiarismResult> => {
-    const response = await http.post<PlagiarismResult>(`/plagiarism/paper/${paperId}/recheck`)
-    return response.data
+    const response = await http.post<PlagiarismApiResponse>(`/plagiarism/paper/${paperId}/recheck`)
+    return parseApiResponse(response.data)
+}
+
+export const resetPlagiarism = async (paperId: number): Promise<void> => {
+    await http.delete(`/plagiarism/paper/${paperId}`)
 }

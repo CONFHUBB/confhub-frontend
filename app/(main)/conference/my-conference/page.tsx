@@ -170,23 +170,33 @@ export default function MyConferencesPage() {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-            {/* ── Header ──────────────────────────────────── */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2.5">
-                        <Building2 className="h-6 w-6 text-indigo-600" />
-                        My Conferences
-                    </h1>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Manage conferences where you serve as Conference Chair
-                    </p>
+            {/* ── Eye-catching Header ──────────────────────────────────── */}
+            <div className="relative mb-4 p-8 sm:p-10 bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-sm border border-slate-200/80 dark:border-slate-800">
+                {/* Decorative background blobs */}
+                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-br from-indigo-500/10 to-purple-500/10 dark:from-indigo-500/20 dark:to-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-gradient-to-tr from-blue-500/10 to-teal-500/10 dark:from-blue-500/20 dark:to-teal-500/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3 pointer-events-none"></div>
+
+                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+                    <div>
+                        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-4">
+                            <div className="hidden sm:flex p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl">
+                                <Building2 className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+                            </div>
+                            <div>
+                                My <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">Conferences</span>
+                            </div>
+                        </h1>
+                        <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300 font-medium">
+                            Manage conferences where you serve as Conference Chair
+                        </p>
+                    </div>
+                    <Link href="/conference/create" className="shrink-0">
+                        <Button size="lg" className="gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 rounded-xl font-semibold px-6">
+                            <Plus className="h-5 w-5" />
+                            New Conference
+                        </Button>
+                    </Link>
                 </div>
-                <Link href="/conference/create">
-                    <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-sm">
-                        <Plus className="h-4 w-4" />
-                        New Conference
-                    </Button>
-                </Link>
             </div>
 
             {/* ── Stats Cards ────────────────────────────── */}

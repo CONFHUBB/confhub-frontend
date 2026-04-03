@@ -10,6 +10,7 @@ import { getAggregateByPaper, type ReviewAggregate } from '@/app/api/review-aggr
 import { getMetaReviewByPaper } from '@/app/api/meta-review.api'
 import { getReviewsByPaper, getAnswersByReview } from '@/app/api/review.api'
 import { getConferenceActivities } from '@/app/api/conference.api'
+import { recheckPlagiarism } from '@/app/api/plagiarism.api'
 import { ConferencePhaseTracker } from '@/components/conference-phase-tracker'
 import { PlagiarismBadge } from '@/components/plagiarism-badge'
 import type { MetaReviewResponse } from '@/types/meta-review'
@@ -39,7 +40,8 @@ import { V } from '@/lib/validation'
 import {
     Loader2, ArrowLeft, Upload, FileUp, FileText, Trash2, Save, ExternalLink,
     UserPlus, Layers, X, AlertTriangle, RotateCcw, Eye, Lock, Clock, CalendarDays,
-    Star, BarChart3, CheckCircle2, XCircle, ClipboardList, Camera, Users
+    Star, BarChart3, CheckCircle2, XCircle, ClipboardList, Camera, Users, ShieldCheck,
+    Calendar, Folder, Download, AlertCircle
 } from 'lucide-react'
 import { Select as AntdSelect } from 'antd'
 import { BackButton } from '@/components/shared/back-button'
@@ -81,6 +83,8 @@ export default function PaperWorkspacePage() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [withdrawing, setWithdrawing] = useState(false)
     const [previewFileUrl, setPreviewFileUrl] = useState<string | null>(null)
+    const [checkingPlagiarism, setCheckingPlagiarism] = useState(false)
+    const [plagiarismKey, setPlagiarismKey] = useState(0)
 
     const [subjectAreas, setSubjectAreas] = useState<SubjectAreaResponse[]>([])
     const [primarySubjectAreaId, setPrimarySubjectAreaId] = useState<string>('')
@@ -229,6 +233,35 @@ export default function PaperWorkspacePage() {
             await fetchFiles()
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to delete file')
+        }
+    }
+
+    const handleCheckPlagiarism = async () => {
+        setCheckingPlagiarism(true)
+        try {
+            const result = await recheckPlagiarism(paperId)
+            const score = result.score ?? 0
+            const status = result.status ?? 'COMPLETED'
+            // Update paper state so badge refreshes
+            setPaper(prev => prev ? { ...prev, plagiarismScore: score, plagiarismStatus: status } : prev)
+            setPlagiarismKey(k => k + 1)
+            
+            // Show detailed toast
+            const details = result.details
+            if (details) {
+                const label = score <= 20 ? '✅ Low' : score <= 40 ? '⚠️ Moderate' : '🚨 High'
+                toast.success(
+                    `Plagiarism Check Complete!\n${label} Similarity: ${score.toFixed(1)}%\n` +
+                    `Internal: ${(details.internalScore ?? 0).toFixed(1)}% | Web: ${(details.webSearchScore ?? 0).toFixed(1)}% | AI: ${(details.externalScore ?? 0).toFixed(1)}%`,
+                    { duration: 6000 }
+                )
+            } else {
+                toast.success(`Plagiarism check completed. Score: ${score.toFixed(1)}%`)
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Plagiarism check failed')
+        } finally {
+            setCheckingPlagiarism(false)
         }
     }
 
@@ -497,6 +530,33 @@ export default function PaperWorkspacePage() {
                                 </div>
                             ) : (
                                 <p className="text-sm text-muted-foreground">No manuscript files uploaded yet.</p>
+                            )}
+
+                            {/* Check Plagiarism Button */}
+                            {manuscriptFiles.length > 0 && (
+                                <div className="flex items-center gap-3 pt-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-2 border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-800 shadow-sm"
+                                        onClick={handleCheckPlagiarism}
+                                        disabled={checkingPlagiarism}
+                                    >
+                                        {checkingPlagiarism ? (
+                                            <><Loader2 className="h-4 w-4 animate-spin" /> Checking Plagiarism...</>
+                                        ) : (
+                                            <><ShieldCheck className="h-4 w-4" /> Check Plagiarism</>
+                                        )}
+                                    </Button>
+                                    {paper && (
+                                        <PlagiarismBadge
+                                            key={plagiarismKey}
+                                            paperId={paper.id}
+                                            score={paper.plagiarismScore}
+                                            status={paper.plagiarismStatus}
+                                        />
+                                    )}
+                                </div>
                             )}
                         </div>
 

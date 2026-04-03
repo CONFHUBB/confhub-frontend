@@ -379,42 +379,48 @@ export default function PublishedPapersClient() {
     return (
         <div className="min-h-screen bg-gray-50">
             {/* ── Hero / Search Header ── */}
-            <div className="bg-gradient-to-br from-[#1e1b4b] via-[#272463] to-[#312e81] py-14 px-4">
-                <div className="max-w-3xl mx-auto text-center space-y-5">
-                    <div className="flex items-center justify-center gap-2.5 mb-1">
-                        <BookOpen className="h-8 w-8 text-indigo-300" />
-                        <h1 className="text-4xl font-extrabold text-white tracking-tight">
-                            Published Papers
-                        </h1>
-                    </div>
-                    <p className="text-indigo-200 text-base">
-                        Browse accepted &amp; published research across all conferences on Confhub
-                    </p>
+            <div className="pt-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+                <div className="relative mb-2 p-10 sm:p-14 bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-sm border border-slate-200/80 dark:border-slate-800 text-center">
+                    {/* Decorative background blobs */}
+                    <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-gradient-to-br from-indigo-500/15 to-purple-500/15 dark:from-indigo-500/20 dark:to-purple-500/10 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/4 pointer-events-none"></div>
+                    <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-gradient-to-tr from-blue-500/15 to-teal-500/15 dark:from-blue-500/20 dark:to-teal-500/10 rounded-full blur-3xl translate-y-1/3 translate-x-1/4 pointer-events-none"></div>
 
-                    {/* Search bar */}
-                    <form onSubmit={handleSearch} className="relative max-w-xl mx-auto mt-6">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
-                        <Input
-                            value={inputValue}
-                            onChange={e => setInputValue(e.target.value)}
-                            placeholder="Search by title or keyword..."
-                            className="pl-11 pr-4 h-12 rounded-xl text-base border-0 shadow-lg focus-visible:ring-2 focus-visible:ring-indigo-400 bg-white"
-                        />
-                        <Button
-                            type="submit"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 px-4 text-sm bg-indigo-600 hover:bg-indigo-700 rounded-lg"
-                        >
-                            Search
-                        </Button>
-                    </form>
-
-                    {/* Result count */}
-                    {!isLoading && (
-                        <p className="text-indigo-200/70 text-sm pt-1">
-                            {totalElements.toLocaleString()} paper{totalElements !== 1 ? 's' : ''} found
-                            {searchQuery && <span> for &quot;<strong className="text-white">{searchQuery}</strong>&quot;</span>}
+                    <div className="relative z-10 max-w-2xl mx-auto space-y-6">
+                        <div className="flex flex-col items-center justify-center gap-2 mb-1">
+                            <BookOpen className="h-12 w-12 text-indigo-500 mb-2" />
+                            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                                Published <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">Papers</span>
+                            </h1>
+                        </div>
+                        <p className="text-lg text-slate-600 dark:text-slate-300 font-medium">
+                            Browse accepted &amp; published research across all conferences on Confhub
                         </p>
-                    )}
+
+                        {/* Search bar */}
+                        <form onSubmit={handleSearch} className="relative max-w-xl mx-auto mt-8 shadow-sm">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                            <Input
+                                value={inputValue}
+                                onChange={e => setInputValue(e.target.value)}
+                                placeholder="Search by title or keyword..."
+                                className="pl-11 pr-24 h-14 rounded-2xl text-base border-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 bg-white"
+                            />
+                            <Button
+                                type="submit"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 h-10 px-5 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 rounded-xl"
+                            >
+                                Search
+                            </Button>
+                        </form>
+
+                        {/* Result count */}
+                        {!isLoading && (
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium pt-2">
+                                {totalElements.toLocaleString()} paper{totalElements !== 1 ? 's' : ''} found
+                                {searchQuery && <span> for <strong className="text-indigo-600 dark:text-indigo-400">&quot;{searchQuery}&quot;</strong></span>}
+                            </p>
+                        )}
+                    </div>
                 </div>
             </div>
 
