@@ -30,26 +30,11 @@ const getMonthEnd = () => {
 export type DatePreset = 'all' | 'today' | 'tomorrow' | 'weekend' | 'month'
 
 export interface FilterValues {
-    datePreset: DatePreset
+    filterStartDate?: string
+    filterEndDate?: string
     location: string
     area: string
     status: string
-}
-
-interface ConferenceFilterBarProps {
-    locations: string[]
-    areas: string[]
-    isStaff: boolean
-    filters: FilterValues
-    onFiltersChange: (filters: FilterValues) => void
-}
-
-const datePresetLabel: Record<DatePreset, string> = {
-    all: 'All dates',
-    today: 'Today',
-    tomorrow: 'Tomorrow',
-    weekend: 'This weekend',
-    month: 'This month',
 }
 
 export function filterConferences<T extends {
@@ -57,17 +42,18 @@ export function filterConferences<T extends {
 }>(items: T[], filters: FilterValues): T[] {
     let result = items
 
-    if (filters.datePreset !== 'all') {
-        result = result.filter(c => {
-            const start = new Date(c.startDate)
-            const end = new Date(c.endDate)
-            if (filters.datePreset === 'today') { const t = getToday(); return start <= t && end >= t }
-            if (filters.datePreset === 'tomorrow') { const t = getTomorrow(); return start <= t && end >= t }
-            if (filters.datePreset === 'weekend') { const w = getWeekend(); return start <= w.end && end >= w.start }
-            if (filters.datePreset === 'month') { const t = getToday(); const me = getMonthEnd(); return start <= me && end >= t }
-            return true
-        })
+    if (filters.filterStartDate) {
+        const queryStart = new Date(filters.filterStartDate).getTime()
+        result = result.filter(c => new Date(c.startDate).getTime() >= queryStart)
     }
+    
+    if (filters.filterEndDate) {
+        const queryEnd = new Date(filters.filterEndDate).getTime()
+        // we can filter such that the conference's start date is <= queryEnd 
+        // to show conferences that start before the "End Date" chosen
+        result = result.filter(c => new Date(c.startDate).getTime() <= queryEnd)
+    }
+
     if (filters.location !== 'all') result = result.filter(c => c.location === filters.location)
     if (filters.area !== 'all') result = result.filter(c => c.area === filters.area)
     if (filters.status !== 'all') result = result.filter(c => c.status?.toUpperCase() === filters.status.toUpperCase())
