@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { cn } from "@/lib/utils"
-import { ShieldCheck, ShieldAlert, ShieldX, Loader2, RefreshCw, AlertTriangle, Globe, FileText, ExternalLink } from "lucide-react"
+import { ShieldCheck, ShieldAlert, ShieldX, Loader2, RefreshCw, AlertTriangle, Globe, FileText, ExternalLink, CheckCircle2, Search } from "lucide-react"
 import {
     Dialog,
     DialogContent,
@@ -55,12 +55,17 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
     const [details, setDetails] = useState<PlagiarismDetails | null>(null)
     const [loading, setLoading] = useState(false)
     const [rechecking, setRechecking] = useState(false)
+    // Local score that updates from API results
+    const [localScore, setLocalScore] = useState<number | null>(null)
+    const [localStatus, setLocalStatus] = useState<string | null>(null)
 
     const loadDetails = async () => {
         setLoading(true)
         try {
             const res = await getPlagiarismResult(paperId)
             setDetails(parseDetails(res.details))
+            if (res.score != null) setLocalScore(res.score)
+            if (res.status) setLocalStatus(res.status)
         } catch {
             toast.error("Failed to load plagiarism details")
         } finally {
@@ -72,17 +77,30 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
         setRechecking(true)
         try {
             const res = await recheckPlagiarism(paperId)
-            setDetails(parseDetails(res.details))
-            toast.success("Plagiarism re-check completed!")
+            const parsed = parseDetails(res.details)
+            setDetails(parsed)
+            if (res.score != null) setLocalScore(res.score)
+            if (res.status) setLocalStatus(res.status)
+
+            const s = res.score ?? 0
+            const label = s <= 20 ? '✅ Low' : s <= 40 ? '⚠️ Moderate' : '🚨 High'
+            toast.success(
+                `Plagiarism Check Complete!\n${label} Similarity: ${s.toFixed(1)}%` +
+                (parsed ? `\nInternal: ${(parsed.internalScore ?? 0).toFixed(1)}% | Web: ${(parsed.webSearchScore ?? 0).toFixed(1)}% | AI: ${(parsed.externalScore ?? 0).toFixed(1)}%` : ''),
+                { duration: 6000 }
+            )
         } catch {
-            toast.error("Re-check failed")
+            toast.error("Re-check failed. Please try again.")
         } finally {
             setRechecking(false)
         }
     }
 
+    const effectiveStatus = localStatus ?? status
+    const effectiveScore = localScore ?? score ?? 0
+
     // Status-based rendering
-    if (!status || status === "PENDING") {
+    if (!effectiveStatus || effectiveStatus === "PENDING") {
         return (
             <Badge variant="outline" className={cn("gap-1 text-muted-foreground", className)}>
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -91,7 +109,7 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
         )
     }
 
-    if (status === "CHECKING") {
+    if (effectiveStatus === "CHECKING") {
         return (
             <Badge variant="outline" className={cn("gap-1 text-blue-600", className)}>
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -100,7 +118,7 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
         )
     }
 
-    if (status === "FAILED") {
+    if (effectiveStatus === "FAILED") {
         return (
             <Badge variant="outline" className={cn("gap-1 text-muted-foreground", className)}>
                 <AlertTriangle className="h-3 w-3" />
@@ -110,7 +128,7 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
     }
 
     // COMPLETED
-    const displayScore = score ?? 0
+    const displayScore = effectiveScore
     const colors = getScoreColor(displayScore)
 
     const badge = (
@@ -131,46 +149,62 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
 
     if (!showDetail) return badge
 
+    // Use details score if available, otherwise API-level score, then prop score
+    // details.finalScore may be undefined for old pre-refactor data
+    const dialogScore = (details?.finalScore != null && details.finalScore > 0) ? details.finalScore : displayScore
+    const isStaleData = details != null && details.checkedAt == null
+
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>{badge}</DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto overflow-x-hidden">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        {getScoreIcon(displayScore)}
+                        {getScoreIcon(dialogScore)}
                         Plagiarism Report
                     </DialogTitle>
                     <DialogDescription>
-                        {getScoreLabel(displayScore)} — {displayScore.toFixed(1)}% similarity detected
+                        {getScoreLabel(dialogScore)} — {dialogScore.toFixed(1)}% similarity detected
                     </DialogDescription>
                 </DialogHeader>
 
                 {loading ? (
-                    <div className="flex justify-center py-8">
+                    <div className="flex flex-col items-center justify-center py-8 gap-2">
                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Loading details...</p>
                     </div>
                 ) : details ? (
                     <div className="space-y-5">
-                        {/* Score Summary */}
-                        <div className="grid grid-cols-4 gap-2">
+                        {/* Stale data warning */}
+                        {isStaleData && (
+                            <div className="flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2.5">
+                                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="font-medium text-amber-800 dark:text-amber-300">Outdated results</p>
+                                    <p className="text-xs text-amber-700 dark:text-amber-400">This data is from an older check engine. Click <strong>Re-check</strong> to run the latest 3-layer analysis.</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Score Summary Cards */}
+                        <div className="grid grid-cols-3 gap-3">
                             <ScoreCard label="Internal" score={details.internalScore} />
                             <ScoreCard label="Web Search" score={details.webSearchScore} />
-                            <ScoreCard label="AI Analysis" score={details.externalScore} />
                             <ScoreCard label="Final" score={details.finalScore} highlight />
                         </div>
 
-                        {/* Internal Matches */}
-                        {details.internalMatches && details.internalMatches.length > 0 && (
-                            <div>
-                                <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                                    <FileText className="h-4 w-4 text-indigo-500" />
-                                    Similar Papers in System
-                                </h4>
+                        {/* ═══ Internal Matches ═══ */}
+                        <div>
+                            <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                                <FileText className="h-4 w-4 text-indigo-500" />
+                                Internal Database Check
+                            </h4>
+                            {details.internalMatches && details.internalMatches.length > 0 ? (
                                 <div className="space-y-2">
                                     {details.internalMatches.map((m, i) => (
                                         <div key={i} className="text-sm bg-muted/50 rounded-lg px-3 py-2.5 space-y-1">
-                                            <div className="flex items-center justify-between">
-                                                <span className="truncate flex-1 mr-2 font-medium" title={m.title}>
+                                            <div className="flex items-start justify-between gap-3">
+                                                <span className="flex-1 font-medium leading-relaxed" title={m.title}>
                                                     #{m.paperId} — {m.title}
                                                 </span>
                                                 <span className={cn("font-mono text-xs font-bold shrink-0",
@@ -187,24 +221,29 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
                                         </div>
                                     ))}
                                 </div>
-                            </div>
-                        )}
+                            ) : (
+                                <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50/50 dark:bg-green-950/20 rounded-lg px-3 py-2.5 border border-green-100 dark:border-green-900">
+                                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                    No similar papers found in the system database.
+                                </div>
+                            )}
+                        </div>
 
-                        {/* Web Search Matches */}
-                        {details.webSearchMatches && details.webSearchMatches.length > 0 && (
-                            <div>
-                                <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                                    <Globe className="h-4 w-4 text-blue-500" />
-                                    Similar Content Found Online
-                                </h4>
+                        {/* ═══ Web Search Results ═══ */}
+                        <div>
+                            <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                                <Globe className="h-4 w-4 text-blue-500" />
+                                Web Search Results
+                            </h4>
+                            {details.webSearchMatches && details.webSearchMatches.length > 0 ? (
                                 <div className="space-y-2">
                                     {details.webSearchMatches.map((wm, i) => (
                                         <div key={i} className="text-sm bg-blue-50/50 dark:bg-blue-950/20 rounded-lg px-3 py-2.5 space-y-1 border border-blue-100 dark:border-blue-900">
-                                            <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-start justify-between gap-3">
                                                 <a href={wm.url} target="_blank" rel="noopener noreferrer"
-                                                    className="text-blue-700 dark:text-blue-400 font-medium truncate hover:underline flex items-center gap-1">
-                                                    {wm.title}
-                                                    <ExternalLink className="h-3 w-3 shrink-0" />
+                                                    className="flex-1 text-blue-700 dark:text-blue-400 font-medium hover:underline leading-relaxed flex items-start gap-1 mt-0.5">
+                                                    <span className="break-words">{wm.title}</span>
+                                                    <ExternalLink className="h-3.5 w-3.5 shrink-0 mt-1" />
                                                 </a>
                                                 <span className={cn("font-mono text-xs font-bold shrink-0",
                                                     (wm.similarity ?? 0) > 60 ? "text-red-600" : "text-yellow-600"
@@ -216,69 +255,20 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
                                         </div>
                                     ))}
                                 </div>
-                            </div>
-                        )}
+                            ) : (
+                                <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50/50 dark:bg-green-950/20 rounded-lg px-3 py-2.5 border border-green-100 dark:border-green-900">
+                                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                    No similar content found on the web.
+                                </div>
+                            )}
+                        </div>
 
-                        {/* External AI Analysis */}
-                        {details.externalAnalysis && (
-                            <div>
-                                <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                                    <ShieldAlert className="h-4 w-4 text-purple-500" />
-                                    AI Originality Analysis
-                                </h4>
-                                <p className="text-sm text-muted-foreground bg-muted/50 rounded-lg px-3 py-2.5 leading-relaxed">
-                                    {details.externalAnalysis.summary}
-                                </p>
 
-                                {details.externalAnalysis.flaggedSections?.length > 0 && (
-                                    <div className="mt-3 space-y-2">
-                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Flagged Sections</p>
-                                        {details.externalAnalysis.flaggedSections.map((fs, i) => (
-                                            <div key={i} className="text-sm border rounded-lg overflow-hidden">
-                                                <div className="bg-red-50/50 dark:bg-red-950/20 px-3 py-2 border-b border-red-100 dark:border-red-900">
-                                                    <p className="text-red-800 dark:text-red-300 font-medium text-xs">
-                                                        ⚠ {typeof fs === 'string' ? fs : fs.text}
-                                                    </p>
-                                                </div>
-                                                {typeof fs !== 'string' && (
-                                                    <div className="px-3 py-2 space-y-1 bg-white dark:bg-transparent">
-                                                        {fs.reason && (
-                                                            <p className="text-xs text-muted-foreground">
-                                                                <span className="font-medium">Reason:</span> {fs.reason}
-                                                            </p>
-                                                        )}
-                                                        {fs.source && (
-                                                            <p className="text-xs text-muted-foreground">
-                                                                <span className="font-medium">Source:</span> {fs.source}
-                                                            </p>
-                                                        )}
-                                                        {fs.confidence > 0 && (
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-xs font-medium text-muted-foreground">Confidence:</span>
-                                                                <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                                                    <div
-                                                                        className={cn("h-full rounded-full",
-                                                                            fs.confidence > 70 ? "bg-red-500" : fs.confidence > 40 ? "bg-yellow-500" : "bg-green-500"
-                                                                        )}
-                                                                        style={{ width: `${fs.confidence}%` }}
-                                                                    />
-                                                                </div>
-                                                                <span className="text-xs font-mono text-muted-foreground">{fs.confidence}%</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
 
-                        {/* Checked at */}
+                        {/* Checked At + Re-check */}
                         <div className="flex items-center justify-between pt-2 border-t">
                             <span className="text-xs text-muted-foreground">
-                                Checked: {details.checkedAt ? new Date(details.checkedAt).toLocaleString() : "N/A"}
+                                Checked: {details.checkedAt ? new Date(details.checkedAt).toLocaleString() : "Not yet checked with latest engine"}
                             </span>
                             <Button variant="outline" size="sm" onClick={handleRecheck} disabled={rechecking}>
                                 <RefreshCw className={cn("h-3.5 w-3.5 mr-1", rechecking && "animate-spin")} />
@@ -287,7 +277,14 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
                         </div>
                     </div>
                 ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">No details available</p>
+                    <div className="flex flex-col items-center justify-center py-8 gap-3">
+                        <Search className="h-8 w-8 text-muted-foreground/50" />
+                        <p className="text-sm text-muted-foreground">No plagiarism check results yet.</p>
+                        <Button variant="outline" size="sm" onClick={handleRecheck} disabled={rechecking}>
+                            <RefreshCw className={cn("h-3.5 w-3.5 mr-1", rechecking && "animate-spin")} />
+                            {rechecking ? "Checking..." : "Run Plagiarism Check"}
+                        </Button>
+                    </div>
                 )}
             </DialogContent>
         </Dialog>

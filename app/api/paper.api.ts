@@ -200,6 +200,7 @@ export const getPublishedPapers = async (
     return response.data
 }
 
+
 export const deletePaperFile = async (fileId: number): Promise<void> => {
     await http.delete(`/paper-file/${fileId}`)
 }

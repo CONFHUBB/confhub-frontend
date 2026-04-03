@@ -11,11 +11,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select as AntdSelect } from 'antd'
-import { Loader2, ArrowLeft, Check, FileText, Users, Upload, Search, Trash2, Send, FileUp } from 'lucide-react'
+import { Loader2, ArrowLeft, Check, FileText, Users, Upload, Search, Trash2, Send, FileUp, Eye } from 'lucide-react'
 import { BackButton } from '@/components/shared/back-button'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { createPaper, assignAuthorToPaper, getAuthorsByPaper, uploadPaperFile } from '@/app/api/paper.api'
+import { createPaper, assignAuthorToPaper, getAuthorsByPaper, uploadPaperFile, deletePaperFile, getPaperFilesByPaperId } from '@/app/api/paper.api'
 import type { PaperAuthorItem } from '@/app/api/paper.api'
 import { getConferenceSubmissionForm } from '@/app/api/submission-form.api'
 import { getConferenceActivities } from '@/app/api/conference.api'
@@ -23,7 +23,7 @@ import type { ConferenceActivityDTO } from '@/types/conference'
 import { isActivityOpen } from '@/lib/activity'
 import { getUserByEmail } from '@/app/api/user.api'
 import { FormRenderer } from '@/app/(main)/conference/[conferenceId]/submission-form/form-renderer'
-import { getPlagiarismResult, type PlagiarismResult } from '@/app/api/plagiarism.api'
+import { getPlagiarismResult, resetPlagiarism, type PlagiarismResult } from '@/app/api/plagiarism.api'
 import { PlagiarismBadge } from '@/components/plagiarism-badge'
 
 const getCurrentUserEmail = (): string | null => {
@@ -252,6 +252,34 @@ function StepUploadManuscript({
     const [plagiarismResult, setPlagiarismResult] = useState<PlagiarismResult | null>(null)
     const [checkingPlagiarism, setCheckingPlagiarism] = useState(false)
 
+    // Track existing uploaded file from server
+    const [existingFile, setExistingFile] = useState<{ id: number; url: string } | null>(null)
+    const [loadingFiles, setLoadingFiles] = useState(true)
+    const [deleting, setDeleting] = useState(false)
+
+    // On mount: check if files already exist for this paper
+    useEffect(() => {
+        const fetchExistingFiles = async () => {
+            try {
+                setLoadingFiles(true)
+                const files = await getPaperFilesByPaperId(paperId)
+                // Find active manuscript file (not supplementary, not camera-ready)
+                const activeManuscript = files.find(
+                    (f: any) => f.isActive && !f.isSupplementary && !f.isCameraReady
+                )
+                if (activeManuscript) {
+                    setExistingFile({ id: activeManuscript.id, url: activeManuscript.url })
+                    setUploaded(true)
+                }
+            } catch (err) {
+                console.error('Error checking existing files:', err)
+            } finally {
+                setLoadingFiles(false)
+            }
+        }
+        fetchExistingFiles()
+    }, [paperId])
+
     const handleCheckPlagiarism = async () => {
         setCheckingPlagiarism(true)
         try {
@@ -265,7 +293,7 @@ function StepUploadManuscript({
                         attempts++
                         const newRes = await getPlagiarismResult(paperId)
                         setPlagiarismResult(newRes)
-                        
+
                         if (newRes.status === 'COMPLETED' || newRes.status === 'FAILED' || attempts > 20) {
                             clearInterval(pollInterval)
                             setCheckingPlagiarism(false)
@@ -275,7 +303,7 @@ function StepUploadManuscript({
                         setCheckingPlagiarism(false)
                     }
                 }, 3000)
-                return // Will naturally end when polling finishes
+                return
             }
         } catch (err: any) {
             toast.error("Failed to fetch plagiarism status")
@@ -288,7 +316,6 @@ function StepUploadManuscript({
     const handleFileSelect = (file: File) => {
         setSelectedFile(file)
         setUploaded(false)
-        // Revoke old URL to avoid memory leak
         if (previewUrl) URL.revokeObjectURL(previewUrl)
         const url = URL.createObjectURL(file)
         setPreviewUrl(url)
@@ -313,12 +340,52 @@ function StepUploadManuscript({
             await uploadPaperFile(conferenceId, paperId, selectedFile)
             toast.success('Manuscript uploaded successfully!')
             setUploaded(true)
+            // Refresh existing file info
+            const files = await getPaperFilesByPaperId(paperId)
+            const activeManuscript = files.find(
+                (f: any) => f.isActive && !f.isSupplementary && !f.isCameraReady
+            )
+            if (activeManuscript) {
+                setExistingFile({ id: activeManuscript.id, url: activeManuscript.url })
+            }
         } catch (err: any) {
             toast.error(err.response?.data?.message || 'Failed to upload manuscript')
             console.error('Error uploading:', err)
         } finally {
             setUploading(false)
         }
+    }
+
+    const handleDeleteFile = async () => {
+        if (!existingFile) return
+        const confirmed = window.confirm('Are you sure you want to delete this manuscript? Plagiarism data will also be reset.')
+        if (!confirmed) return
+        try {
+            setDeleting(true)
+            await deletePaperFile(existingFile.id)
+            // Reset plagiarism data
+            try { await resetPlagiarism(paperId) } catch { /* ignore if fails */ }
+            setExistingFile(null)
+            setPlagiarismResult(null)
+            setUploaded(false)
+            setSelectedFile(null)
+            setShowPreview(false)
+            if (previewUrl) URL.revokeObjectURL(previewUrl)
+            setPreviewUrl(null)
+            toast.success('Manuscript deleted. You can now upload a new file.')
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to delete file')
+        } finally {
+            setDeleting(false)
+        }
+    }
+
+    if (loadingFiles) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+        )
     }
 
     return (
@@ -343,142 +410,170 @@ function StepUploadManuscript({
                 </p>
             </div>
 
-            {/* Upload success banner */}
-            {uploaded && (
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
-                    <Check className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
-                    <p className="text-sm text-green-700 dark:text-green-300">
-                        Manuscript uploaded successfully! You can preview it below or go back to the tracks page.
-                    </p>
-                </div>
-            )}
-
-            {/* Upload Card */}
-            <Card>
-                <CardContent className="pt-6 space-y-4">
-                    <Label>File Name</Label>
-                    <div className="flex gap-3 items-center">
-                        <div className="flex-1">
-                            <label
-                                htmlFor="file-upload"
-                                className="flex items-center gap-3 p-3 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-all"
-                            >
-                                <FileUp className="h-5 w-5 text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">
-                                    {selectedFile ? selectedFile.name : 'Choose file or drag and drop here'}
-                                </span>
-                            </label>
-                            <input
-                                id="file-upload"
-                                type="file"
-                                accept=".pdf"
-                                className="hidden"
-                                onChange={(e) => {
-                                    const file = e.target.files?.[0]
-                                    if (file) {
-                                        if (file.type !== 'application/pdf') {
-                                            toast.error('Please select a PDF file')
-                                            return
-                                        }
-                                        handleFileSelect(file)
-                                    }
-                                }}
-                            />
-                        </div>
+            {/* ALREADY UPLOADED — show existing file + delete option */}
+            {uploaded && existingFile ? (
+                <div className="space-y-4">
+                    {/* Upload success banner */}
+                    <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+                        <Check className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+                        <p className="text-sm text-green-700 dark:text-green-300">
+                            Manuscript uploaded successfully! To re-submit, delete the current file first.
+                        </p>
                     </div>
 
-                    {selectedFile && (
-                        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                            <div className="flex items-center gap-2 text-sm">
-                                <FileText className="h-4 w-4 text-primary" />
-                                <span className="font-medium">{selectedFile.name}</span>
-                                <span className="text-muted-foreground">({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                    {/* Current file info */}
+                    <Card>
+                        <CardContent className="pt-6 space-y-4">
+                            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                <div className="flex items-center gap-2 text-sm">
+                                    <FileText className="h-4 w-4 text-primary" />
+                                    <span className="font-medium truncate max-w-[200px] sm:max-w-md" title={decodeURIComponent(existingFile.url.split('/').pop() || 'manuscript.pdf')}>
+                                        {decodeURIComponent(existingFile.url.split('/').pop() || 'manuscript.pdf')}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-xs gap-1.5"
+                                        onClick={() => window.open(existingFile.url, '_blank')}
+                                    >
+                                        <Eye className="h-3.5 w-3.5" />
+                                        Preview
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleDeleteFile}
+                                        disabled={deleting}
+                                        className="text-destructive hover:text-destructive"
+                                    >
+                                        {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                    </Button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-1">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setShowPreview(!showPreview)}
-                                    className="text-xs gap-1.5"
+
+                            {/* Plagiarism section */}
+                            <div className="p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50 flex flex-col gap-3">
+                                <div>
+                                    <h4 className="text-sm font-semibold">Plagiarism Analysis</h4>
+                                    <p className="text-xs text-muted-foreground mt-1">Our system automatically checks your manuscript for originality.</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    {plagiarismResult ? (
+                                        <PlagiarismBadge
+                                            paperId={paperId}
+                                            score={plagiarismResult.score}
+                                            status={plagiarismResult.status}
+                                        />
+                                    ) : (
+                                        <span className="text-sm font-medium text-slate-500 italic">Check not started yet</span>
+                                    )}
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={handleCheckPlagiarism}
+                                        disabled={checkingPlagiarism}
+                                        className="ml-auto"
+                                    >
+                                        {checkingPlagiarism ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
+                                        {plagiarismResult ? "Refresh Status" : "Check Plagiarism Status"}
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <div className="flex gap-3 mt-2">
+                        <Button onClick={() => router.push(`/paper/${paperId}`)} className="gap-2 bg-indigo-600 hover:bg-indigo-700">
+                            <Check className="h-4 w-4" />
+                            Complete — Go to Paper Workspace
+                        </Button>
+                    </div>
+                </div>
+            ) : (
+                /* NO FILE UPLOADED — show upload form */
+                <Card>
+                    <CardContent className="pt-6 space-y-4">
+                        <Label>File Name</Label>
+                        <div className="flex gap-3 items-center">
+                            <div className="flex-1">
+                                <label
+                                    htmlFor="file-upload"
+                                    className="flex items-center gap-3 p-3 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-all"
                                 >
-                                    <FileText className="h-3.5 w-3.5" />
-                                    {showPreview ? 'Hide Preview' : 'Preview'}
-                                </Button>
-                                {!uploaded && (
+                                    <FileUp className="h-5 w-5 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        {selectedFile ? selectedFile.name : 'Choose file or drag and drop here'}
+                                    </span>
+                                </label>
+                                <input
+                                    id="file-upload"
+                                    type="file"
+                                    accept=".pdf"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0]
+                                        if (file) {
+                                            if (file.type !== 'application/pdf') {
+                                                toast.error('Please select a PDF file')
+                                                return
+                                            }
+                                            handleFileSelect(file)
+                                        }
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        {selectedFile && (
+                            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                <div className="flex items-center gap-2 text-sm">
+                                    <FileText className="h-4 w-4 text-primary" />
+                                    <span className="font-medium">{selectedFile.name}</span>
+                                    <span className="text-muted-foreground">({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setShowPreview(!showPreview)}
+                                        className="text-xs gap-1.5"
+                                    >
+                                        <FileText className="h-3.5 w-3.5" />
+                                        {showPreview ? 'Hide Preview' : 'Preview'}
+                                    </Button>
                                     <Button variant="ghost" size="sm" onClick={handleClearFile}>
                                         <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* PDF Preview */}
-                    {showPreview && previewUrl && (
-                        <div className="rounded-lg border overflow-hidden bg-gray-100 dark:bg-gray-900">
-                            <iframe
-                                src={previewUrl}
-                                className="w-full border-0"
-                                style={{ height: '600px' }}
-                                title="Manuscript PDF Preview"
-                            />
-                        </div>
-                    )}
-
-                    <div className="flex gap-3 pt-2">
-                        {!uploaded ? (
-                            <>
-                                <Button onClick={handleUpload} disabled={uploading || !selectedFile} className="gap-2">
-                                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                                    {uploading ? 'Uploading...' : 'Upload PDF'}
-                                </Button>
-                                <Button variant="outline" onClick={() => router.push(`/track?conferenceId=${conferenceId}`)}>
-                                    Skip for now
-                                </Button>
-                            </>
-                        ) : (
-                            <div className="w-full space-y-4">
-                                <div className="p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50 flex flex-col gap-3">
-                                    <div>
-                                        <h4 className="text-sm font-semibold">Plagiarism Analysis</h4>
-                                        <p className="text-xs text-muted-foreground mt-1">Our system automatically checks your manuscript for originality.</p>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        {plagiarismResult ? (
-                                            <PlagiarismBadge 
-                                                paperId={paperId} 
-                                                score={plagiarismResult.score} 
-                                                status={plagiarismResult.status} 
-                                            />
-                                        ) : (
-                                            <span className="text-sm font-medium text-slate-500 italic">Check not started yet</span>
-                                        )}
-                                        <Button 
-                                            variant="secondary" 
-                                            size="sm" 
-                                            onClick={handleCheckPlagiarism}
-                                            disabled={checkingPlagiarism}
-                                            className="ml-auto"
-                                        >
-                                            {checkingPlagiarism ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
-                                            {plagiarismResult ? "Refresh Status" : "Check Plagiarism Status"}
-                                        </Button>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3 mt-4">
-                                    <Button onClick={() => router.push(`/track?conferenceId=${conferenceId}`)} className="gap-2">
-                                        <Check className="h-4 w-4" />
-                                        Done — Go to Tracks
-                                    </Button>
-                                    <Button variant="outline" onClick={() => { handleClearFile(); setUploaded(false); setPlagiarismResult(null); }}>
-                                        Upload a Different File
                                     </Button>
                                 </div>
                             </div>
                         )}
-                    </div>
-                </CardContent>
-            </Card>
+
+                        {/* PDF Preview */}
+                        {showPreview && previewUrl && (
+                            <div className="rounded-lg border overflow-hidden bg-gray-100 dark:bg-gray-900">
+                                <iframe
+                                    src={previewUrl}
+                                    className="w-full border-0"
+                                    style={{ height: '600px' }}
+                                    title="Manuscript PDF Preview"
+                                />
+                            </div>
+                        )}
+
+                        <div className="flex gap-3 pt-2">
+                            <Button onClick={handleUpload} disabled={uploading || !selectedFile} className="gap-2">
+                                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                                {uploading ? 'Uploading...' : 'Upload PDF'}
+                            </Button>
+                            <Button variant="outline" onClick={() => router.push(`/track?conferenceId=${conferenceId}`)}>
+                                Skip for now
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     )
 }

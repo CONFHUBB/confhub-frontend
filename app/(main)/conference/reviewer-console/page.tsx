@@ -141,15 +141,27 @@ export default function ReviewerConsolePage() {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-            {/* ── Header ──────────────────────────────────── */}
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2.5">
-                    <ClipboardList className="h-6 w-6 text-amber-600" />
-                    My Reviews
-                </h1>
-                <p className="mt-1 text-sm text-muted-foreground">
-                    Conferences where you serve as a Reviewer
-                </p>
+            {/* ── Eye-catching Header ──────────────────────────────────── */}
+            <div className="relative mb-4 p-8 sm:p-10 bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-sm border border-slate-200/80 dark:border-slate-800">
+                {/* Decorative background blobs */}
+                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-br from-amber-500/10 to-orange-500/10 dark:from-amber-500/20 dark:to-orange-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-gradient-to-tr from-yellow-500/10 to-amber-500/10 dark:from-yellow-500/20 dark:to-amber-500/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3 pointer-events-none"></div>
+
+                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-4">
+                            <div className="hidden sm:flex p-3 bg-amber-50 dark:bg-amber-900/30 rounded-2xl">
+                                <ClipboardList className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+                            </div>
+                            <div>
+                                My <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-orange-600 dark:from-amber-400 dark:to-orange-400">Reviews</span>
+                            </div>
+                        </h1>
+                        <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300 font-medium">
+                            Conferences where you serve as a Reviewer
+                        </p>
+                    </div>
+                </div>
             </div>
 
             {/* ── Stats Cards ────────────────────────────── */}
