@@ -10,7 +10,7 @@ import { Calendar, MapPin, Loader2, CheckCircle, Search, ChevronLeft, ChevronRig
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { ConferenceFilterBar, filterConferences, type FilterValues } from './conference-filter-bar'
+import { filterConferences, type FilterValues } from './conference-filter-bar'
 
 // Inner component that uses useSearchParams (must be inside Suspense)
 function ConferencesPageInner() {
@@ -302,7 +302,7 @@ function ConferencesPageInner() {
                         </Link>
                     ) : (
                         <Button variant="outline" className="mt-4" onClick={() => {
-                            setFilters({ datePreset: 'all', location: 'all', area: 'all', status: 'all' })
+                            setFilters({ filterStartDate: '', filterEndDate: '', location: 'all', area: 'all', status: 'all' })
                             setSearchQuery('')
                         }}>
                             Clear all filters
