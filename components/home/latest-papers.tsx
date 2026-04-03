@@ -1,124 +1,167 @@
 "use client"
 
-import { FileText, ArrowRight, Lock } from "lucide-react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-
-// Mock published papers data
-const SAMPLE_PAPERS = [
-    {
-        id: 1,
-        title: "Deep Learning Approaches for Natural Language Understanding in Low-Resource Languages",
-        authors: "J. Smith, A. Chen, M. Park",
-        conference: "EMNLP 2025",
-        abstract: "This paper explores novel deep learning techniques for improving NLP performance in low-resource language settings, demonstrating significant improvements over baseline models...",
-    },
-    {
-        id: 2,
-        title: "Scalable Microservices Architecture for Real-Time Data Processing Pipelines",
-        authors: "R. Kumar, S. Williams, T. Nguyen",
-        conference: "ICSE 2025",
-        abstract: "We present a scalable microservices architecture designed for real-time data processing, addressing latency challenges and fault tolerance in distributed systems...",
-    },
-    {
-        id: 3,
-        title: "Federated Learning with Differential Privacy: Balancing Accuracy and User Privacy",
-        authors: "L. Zhang, K. Johnson, P. Lee",
-        conference: "NeurIPS 2025",
-        abstract: "This work proposes a novel federated learning framework that incorporates differential privacy guarantees while maintaining competitive model accuracy across heterogeneous data distributions...",
-    },
-    {
-        id: 4,
-        title: "Quantum-Inspired Optimization Algorithms for Combinatorial Problems",
-        authors: "D. Brown, H. Tanaka, E. Silva",
-        conference: "AAAI 2025",
-        abstract: "We introduce quantum-inspired optimization algorithms that leverage superposition-like exploration strategies for solving NP-hard combinatorial problems efficiently on classical hardware...",
-    },
-    {
-        id: 5,
-        title: "Sustainable Computing: Energy-Efficient AI Model Training Strategies",
-        authors: "F. Anderson, C. Wu, B. García",
-        conference: "ISCA 2025",
-        abstract: "Addressing the growing energy consumption of AI training, this paper presents novel energy-efficient strategies that reduce carbon footprint while maintaining model performance...",
-    },
-    {
-        id: 6,
-        title: "Human-AI Collaboration Frameworks for Complex Decision Making",
-        authors: "M. Taylor, Y. Okamoto, A. Patel",
-        conference: "CHI 2025",
-        abstract: "We develop and evaluate collaborative frameworks where AI systems augment human decision-making processes, focusing on transparency, explainability, and trust calibration...",
-    },
-]
+import { getPublishedPapers, type PublishedPaperDTO } from "@/app/api/paper.api"
+import { ArrowRight, BookOpen, Loader2 } from "lucide-react"
 
 export function LatestPapers() {
+    const [papers, setPapers] = useState<PublishedPaperDTO[]>([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        const fetchPapers = async () => {
+            try {
+                const data = await getPublishedPapers(0, 6)
+                setPapers(data.content)
+            } catch (e) {
+                // silently fail
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchPapers()
+    }, [])
+
+    const statusColors: Record<string, string> = {
+        ACCEPTED: "bg-green-500/10 text-green-400",
+        PUBLISHED: "bg-indigo-500/10 text-indigo-400",
+        WITHDRAWN: "bg-red-500/10 text-red-400",
+    }
+
     return (
-        <section className="py-24 bg-white">
+        <section className="bg-gray-50 dark:bg-gray-900 py-16">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
                 <div className="flex items-end justify-between mb-10">
                     <div>
-                        <span className="text-sm font-semibold text-indigo-600 uppercase tracking-wider">Research Library</span>
-                        <h2 className="text-3xl font-extrabold text-gray-900 mt-2">Latest Published Papers</h2>
-                        <p className="text-gray-500 mt-2 max-w-lg">Access cutting-edge research from top conferences. Sign in to read full papers.</p>
+                        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                            Latest Publications
+                        </h2>
+                        <p className="mt-2 text-gray-500 dark:text-gray-400 max-w-lg">
+                            Browse recently published research papers from conferences worldwide.
+                        </p>
                     </div>
-                    <Link href="/paper" className="hidden md:inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
-                        Browse Library
-                        <ArrowRight className="h-4 w-4" />
+                    <Link
+                        href="/paper"
+                        className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors"
+                    >
+                        View all <ArrowRight className="h-4 w-4" aria-hidden="true" />
                     </Link>
                 </div>
 
-                {/* Papers Grid */}
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {SAMPLE_PAPERS.map((paper) => (
-                        <div
-                            key={paper.id}
-                            className="group bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-lg hover:border-gray-200 transition-all duration-300"
-                        >
-                            {/* Conference badge */}
-                            <div className="flex items-center justify-between mb-4">
-                                <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
-                                    {paper.conference}
-                                </span>
-                                <FileText className="h-4 w-4 text-gray-300" />
-                            </div>
+                {/* Loading */}
+                {loading && (
+                    <div className="flex items-center justify-center py-20">
+                        <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" aria-hidden="true" />
+                    </div>
+                )}
 
-                            {/* Title */}
-                            <h3 className="font-bold text-gray-900 leading-snug line-clamp-2 group-hover:text-indigo-600 transition-colors">
-                                {paper.title}
-                            </h3>
+                {/* Empty */}
+                {!loading && papers.length === 0 && (
+                    <div className="text-center py-20">
+                        <BookOpen className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" aria-hidden="true" />
+                        <p className="text-gray-500 dark:text-gray-400">No published papers yet.</p>
+                    </div>
+                )}
 
-                            {/* Authors */}
-                            <p className="text-xs text-gray-400 mt-2">{paper.authors}</p>
+                {/* Paper list */}
+                {!loading && papers.length > 0 && (
+                    <div className="space-y-4">
+                        {papers.map((paper) => (
+                            <Link
+                                key={paper.id}
+                                href={`/paper/${paper.id}`}
+                                className="block bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-600 transition-all group"
+                            >
+                                <div className="flex items-start gap-4">
+                                    {/* Icon */}
+                                    <div className="shrink-0 w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center mt-0.5">
+                                        <BookOpen className="h-5 w-5 text-indigo-600 dark:text-indigo-400" aria-hidden="true" />
+                                    </div>
 
-                            {/* Abstract */}
-                            <p className="text-sm text-gray-500 mt-3 line-clamp-3 leading-relaxed">
-                                {paper.abstract}
-                            </p>
+                                    {/* Content */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                            <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded">
+                                                {paper.conferenceName}
+                                            </span>
+                                            {paper.trackName && (
+                                                <span className="text-xs text-gray-400">
+                                                    · {paper.trackName}
+                                                </span>
+                                            )}
+                                            <span
+                                                className={`ml-auto text-xs font-semibold px-2 py-0.5 rounded ${
+                                                    statusColors[paper.status] ?? "bg-gray-500/10 text-gray-400"
+                                                }`}
+                                            >
+                                                {paper.status}
+                                            </span>
+                                        </div>
 
-                            {/* Read button */}
-                            <div className="mt-5 flex items-center gap-2">
-                                <Link
-                                    href="/auth/login"
-                                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
-                                >
-                                    <Lock className="h-3.5 w-3.5" />
-                                    Sign in to read
-                                    <ArrowRight className="h-3.5 w-3.5" />
-                                </Link>
-                            </div>
+                                        <h3 className="text-base font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
+                                            {paper.title}
+                                        </h3>
+
+                                        <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+                                            {paper.abstractField}
+                                        </p>
+
+                                        {/* Footer meta */}
+                                        <div className="mt-3 flex items-center gap-4 text-xs text-gray-400 flex-wrap">
+                                            {paper.authorNames.length > 0 && (
+                                                <span>
+                                                    By{" "}
+                                                    <span className="text-gray-600 dark:text-gray-300">
+                                                        {paper.authorNames.slice(0, 3).join(", ")}
+                                                        {paper.authorNames.length > 3 &&
+                                                            ` +${paper.authorNames.length - 3}`}
+                                                    </span>
+                                                </span>
+                                            )}
+                                            {paper.keywords && paper.keywords.length > 0 && (
+                                                <span className="flex items-center gap-1 flex-wrap">
+                                                    {paper.keywords.slice(0, 3).map((kw) => (
+                                                        <span
+                                                            key={kw}
+                                                            className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-gray-500 dark:text-gray-400"
+                                                        >
+                                                            {kw}
+                                                        </span>
+                                                    ))}
+                                                </span>
+                                            )}
+                                            <span className="ml-auto text-gray-400">
+                                                {new Date(paper.submissionTime).toLocaleDateString("en-US", {
+                                                    month: "short",
+                                                    day: "numeric",
+                                                    year: "numeric",
+                                                })}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Arrow */}
+                                    <ArrowRight
+                                        className="shrink-0 h-4 w-4 text-gray-300 dark:text-gray-600 group-hover:text-indigo-400 transition-colors mt-2"
+                                        aria-hidden="true"
+                                    />
+                                </div>
+                            </Link>
+                        ))}
+
+                        {/* Mobile CTA */}
+                        <div className="sm:hidden mt-6 text-center">
+                            <Link
+                                href="/paper"
+                                className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600"
+                            >
+                                View all publications <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                            </Link>
                         </div>
-                    ))}
-                </div>
-
-                {/* Mobile CTA */}
-                <div className="mt-8 text-center md:hidden">
-                    <Link href="/paper">
-                        <Button variant="outline" className="rounded-full px-6">
-                            Browse Library
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                    </Link>
-                </div>
+                    </div>
+                )}
             </div>
         </section>
     )

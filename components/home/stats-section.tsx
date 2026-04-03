@@ -37,7 +37,9 @@ function AnimatedCounter({ target, suffix }: { target: number; suffix: string })
             { threshold: 0.3 }
         )
         if (ref.current) observer.observe(ref.current)
-        return () => observer.disconnect()
+        return () => {
+            observer.disconnect()
+        }
     }, [target])
 
     const formatNumber = (n: number) => {
@@ -54,10 +56,10 @@ export function StatsSection() {
         <section className="relative -mt-1 bg-gray-900 border-t border-gray-800">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                    {STATS.map((stat, i) => (
-                        <div key={i} className="text-center group">
+                    {STATS.map((stat) => (
+                        <div key={stat.label} className="text-center group">
                             <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 mb-3 group-hover:bg-indigo-500/20 transition-colors">
-                                {stat.icon}
+                                <span aria-hidden="true">{stat.icon}</span>
                             </div>
                             <div className="text-3xl font-extrabold text-white tracking-tight">
                                 <AnimatedCounter target={stat.value} suffix={stat.suffix} />
