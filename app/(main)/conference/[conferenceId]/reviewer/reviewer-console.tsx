@@ -23,7 +23,7 @@ import {
     Building2, Mail, Globe, GraduationCap, Phone,
     ChevronUp, XCircle, ArrowRight, MessageSquare
 } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { SubjectAreasTab } from './subject-areas-tab'
 import { BiddingTab } from './bidding-tab'
 import { ReviewsTab } from './reviews-tab'
@@ -31,6 +31,7 @@ import { DiscussionTab } from './discussion-tab'
 import { FieldError } from '@/components/ui/field'
 import { V } from '@/lib/validation'
 import { useTrackSettings } from '@/hooks/useTrackSettings'
+import { reviewStatusClass } from '@/lib/constants/status'
 
 // ──────────────────────────── Types ────────────────────────────
 type ReviewerTab =
@@ -84,12 +85,7 @@ const TAB_GROUPS: StepGroup[] = [
     }
 ]
 
-const STATUS_COLORS: Record<string, string> = {
-    ASSIGNED: 'bg-indigo-100 text-indigo-800',
-    IN_PROGRESS: 'bg-amber-100 text-amber-800',
-    COMPLETED: 'bg-green-100 text-green-800',
-    DECLINED: 'bg-red-100 text-red-800',
-}
+
 
 const BID_ICONS: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
     EAGER: { icon: <Zap className="h-4 w-4" />, color: 'text-emerald-600', label: 'Eager' },
@@ -791,7 +787,7 @@ function DashboardTab({
                                     <div className="min-w-0 flex-1 mr-3">
                                         <p className="text-sm font-medium truncate">{r.paper?.title || `Paper #${r.paper?.id}`}</p>
                                     </div>
-                                    <Badge className={STATUS_COLORS[r.status] || 'bg-gray-100 text-gray-800'}>
+                                    <Badge className={reviewStatusClass(r.status)}>
                                         {r.status}
                                     </Badge>
                                 </div>

@@ -22,7 +22,7 @@ import {
     Loader2, Mail, Users, History, Send, RefreshCw,
     Clock, CheckCircle2, XCircle, AlertCircle
 } from "lucide-react"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { V } from "@/lib/validation"
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {

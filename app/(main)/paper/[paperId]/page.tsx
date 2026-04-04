@@ -45,23 +45,10 @@ import {
 } from 'lucide-react'
 import { Select as AntdSelect } from 'antd'
 import { BackButton } from '@/components/shared/back-button'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
+import { getPaperStatus, DECISION_CONFIG } from '@/lib/constants/status'
 
-// ── Status Configuration ──
-const STATUS_COLOR: Record<string, string> = {
-    DRAFT: 'bg-amber-500',
-    SUBMITTED: 'bg-indigo-600',
-    UNDER_REVIEW: 'bg-purple-600',
-    ACCEPTED: 'bg-green-600',
-    REJECTED: 'bg-red-600',
-    WITHDRAWN: 'bg-gray-500',
-    CAMERA_READY: 'bg-indigo-600',
-    PUBLISHED: 'bg-emerald-600',
-}
-const DECISION_STYLE: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-    APPROVE: { label: 'Accepted', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <CheckCircle2 className="h-3 w-3" /> },
-    REJECT: { label: 'Rejected', color: 'bg-red-100 text-red-700 border-red-200', icon: <XCircle className="h-3 w-3" /> },
-}
+
 
 export default function PaperWorkspacePage() {
     const params = useParams()
@@ -329,7 +316,7 @@ export default function PaperWorkspacePage() {
     const showReviews = ['ACCEPTED', 'REJECTED', 'CAMERA_READY', 'PUBLISHED'].includes(paper.status) || aggregate?.reviewCount! > 0
     const showCameraReadyUpload = ['ACCEPTED'].includes(paper.status) && isCameraReadyOpen
     const canWithdraw = ['SUBMITTED', 'UNDER_REVIEW'].includes(paper.status)
-    const decision = metaReview?.finalDecision ? DECISION_STYLE[metaReview.finalDecision] : null
+    const decision = metaReview?.finalDecision ? DECISION_CONFIG[metaReview.finalDecision as keyof typeof DECISION_CONFIG] : null
 
     // ── Separate Files ──
     const manuscriptFiles = paperFiles.filter(pf => !pf.isCameraReady && !pf.isSupplementary).sort((a, b) => a.id - b.id)
@@ -345,8 +332,8 @@ export default function PaperWorkspacePage() {
                 <div className="flex-1 min-w-0">
                     <h1 className="text-3xl font-bold tracking-tight line-clamp-2">{paper.title}</h1>
                     <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-muted-foreground">
-                        <Badge className={`px-2.5 py-0.5 text-white ${STATUS_COLOR[paper.status] || 'bg-gray-500'}`}>
-                            {paper.status.replace(/_/g, ' ')}
+                        <Badge className={`px-2.5 py-0.5 text-white ${getPaperStatus(paper.status).dot}`}>
+                            {getPaperStatus(paper.status).label}
                         </Badge>
                         <PlagiarismBadge paperId={paper.id} score={paper.plagiarismScore} status={paper.plagiarismStatus} />
                         <span>·</span>
@@ -889,8 +876,8 @@ export default function PaperWorkspacePage() {
                                                         {decision && (
                                                             <Card className="border-0 shadow-sm bg-muted/30">
                                                                 <CardContent className="p-4 flex flex-col items-center justify-center h-full">
-                                                                    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full border ${decision.color}`}>
-                                                                        {decision.icon} {decision.label}
+                                                                    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full border ${decision.bg} ${decision.text} ${decision.border}`}>
+                                                                        {decision.label}
                                                                     </span>
                                                                 </CardContent>
                                                             </Card>
@@ -974,12 +961,12 @@ export default function PaperWorkspacePage() {
 
                                                     {/* Program Chair Final Decision */}
                                                     {metaReview && (
-                                                        <Card className={`border-l-4 ${decision ? decision.color.split(' ')[1].replace('text-', 'border-') : 'border-indigo-400'} shadow-md mt-6 overflow-hidden`}>
+                                                        <Card className={`border-l-4 ${decision ? `border-l-${decision.border.replace('border-', '')}` : 'border-indigo-400'} shadow-md mt-6 overflow-hidden`}>
                                                             <CardHeader className="bg-slate-50/80 pb-3 border-b sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                                                                 <CardTitle className="text-base flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-indigo-600" /> Chair Final Decision</CardTitle>
                                                                 {decision && (
-                                                                    <Badge className={`${decision.color} px-3 py-1 shadow-sm text-sm gap-1`}>
-                                                                        {decision.icon} {decision.label}
+                                                                    <Badge className={`${decision.bg} ${decision.text} ${decision.border} px-3 py-1 shadow-sm text-sm gap-1`}>
+                                                                        {decision.label}
                                                                     </Badge>
                                                                 )}
                                                             </CardHeader>

@@ -6,7 +6,7 @@ import { getConference, getConferenceActivities } from '@/app/api/conference.api
 import { getTracksByConference } from '@/app/api/track.api'
 import { getPapersByConference } from '@/app/api/paper.api'
 import { getUserRoleAssignments, acceptInvitation, declineInvitation } from '@/app/api/conference-user-track.api'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import type { ConferenceActivityDTO, ConferenceResponse, TrackResponse } from '@/types/conference'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'

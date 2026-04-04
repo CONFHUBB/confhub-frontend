@@ -3,7 +3,7 @@
 import { useState, useRef, type ChangeEvent, type DragEvent } from "react"
 import { Button } from "@/components/ui/button"
 import type { ImportResult, ImportError } from "@/app/api/conference.api"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 
 interface ExcelImportProps {
     entityName: string

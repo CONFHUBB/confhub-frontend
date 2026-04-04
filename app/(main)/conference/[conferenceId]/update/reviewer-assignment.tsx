@@ -42,7 +42,7 @@ import {
     ChevronDown, ChevronLeft, ChevronRight, Building2, Phone, GraduationCap
 } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { ReviewDetailDialog } from "./review-detail-dialog"
 
 interface ReviewerAssignmentProps {

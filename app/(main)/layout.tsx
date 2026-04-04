@@ -8,7 +8,7 @@ import { AppNavbar } from "@/components/app-navbar"
 import { useUserRole } from "@/hooks/useUserRole"
 import { UserRolesProvider } from "@/hooks/useUserConferenceRoles"
 import { startTokenExpiryMonitor } from "@/lib/http"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import {
     SidebarInset,
     SidebarProvider,

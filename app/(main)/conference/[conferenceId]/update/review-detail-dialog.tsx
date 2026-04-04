@@ -13,6 +13,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { Loader2, FileText, Check, X, AlertTriangle } from "lucide-react"
+import { reviewStatusClass, getReviewStatus } from '@/lib/constants/status'
 
 interface ReviewQuestion {
     id: number
@@ -26,19 +27,7 @@ interface ReviewQuestion {
     choices?: { id: number; text: string; value: number; orderIndex: number }[]
 }
 
-const STATUS_COLORS: Record<string, string> = {
-    ASSIGNED: "bg-indigo-100 text-indigo-800",
-    IN_PROGRESS: "bg-amber-100 text-amber-800",
-    COMPLETED: "bg-green-100 text-green-800",
-    DECLINED: "bg-red-100 text-red-800",
-}
 
-const STATUS_LABELS: Record<string, string> = {
-    ASSIGNED: "Assigned",
-    IN_PROGRESS: "In Progress",
-    COMPLETED: "Reviewed",
-    DECLINED: "Declined",
-}
 
 interface ReviewDetailDialogProps {
     reviewId: number | null
@@ -112,8 +101,8 @@ export function ReviewDetailDialog({ reviewId, open, onClose }: ReviewDetailDial
                     <div className="flex items-center gap-3">
                         <DialogTitle className="text-lg">Review Detail</DialogTitle>
                         {review && (
-                            <Badge className={STATUS_COLORS[review.status]}>
-                                {STATUS_LABELS[review.status] || review.status}
+                            <Badge className={reviewStatusClass(review.status)}>
+                                {getReviewStatus(review.status).label}
                             </Badge>
                         )}
                     </div>

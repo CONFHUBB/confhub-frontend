@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { ChevronDown, ChevronUp, Download, Loader2, Ticket } from "lucide-react"
 import QRCode from "qrcode"
 import { downloadAcceptanceLetter, downloadCertificate, downloadInvoice } from "@/app/api/document.api"
-import { toast } from "react-hot-toast"
+import { toast } from 'sonner'
 
 export default function MyGlobalTicketsPage() {
     const router = useRouter()

@@ -8,7 +8,7 @@ import { sendInvitationEmail } from "@/app/api/email.api"
 import type { User, ConferenceUserTrack, MemberWithRoles } from "@/types/user"
 import type { TrackResponse } from "@/types/track"
 import type { ConferenceResponse } from "@/types/conference"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"

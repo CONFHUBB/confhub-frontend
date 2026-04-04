@@ -9,7 +9,7 @@ import { createMetaReview, updateMetaReview } from '@/app/api/meta-review.api'
 import type { MetaReviewResponse, Decision } from '@/types/meta-review'
 import type { ReviewAggregate } from '@/app/api/review-aggregate.api'
 import type { PaperResponse } from '@/types/paper'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 interface DecisionTabProps {
     paperId: number

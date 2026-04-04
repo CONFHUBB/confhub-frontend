@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { SubmissionFormManager } from '../submission-form/submission-form-manager'
 import { getTracksByConference, getSubjectAreasByTrack, getTrackReviewSettings } from '@/app/api/track.api'
 import { getConferenceMembers, getUserByEmail } from '@/app/api/user.api'

@@ -7,7 +7,7 @@ import { PaperResponse } from '@/types/paper'
 import { AdvancedProgram, DEFAULT_PROGRAM } from '@/types/program'
 import { Button } from '@/components/ui/button'
 import { Save, Eye, EyeOff } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { GridBuilderPanel } from './grid-builder-panel'
 
 interface ProgramBuilderProps {

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Calendar, MapPin, Loader2, CheckCircle, Search, ChevronLeft, ChevronRight, Filter } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { filterConferences, type FilterValues } from './conference-filter-bar'
 
 // Inner component that uses useSearchParams (must be inside Suspense)

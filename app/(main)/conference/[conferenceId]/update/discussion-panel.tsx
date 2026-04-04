@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Loader2, MessageSquare, Send, Trash2, Reply, ChevronDown, ChevronRight } from "lucide-react"
 import { Select } from "antd"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { V } from "@/lib/validation"
 
 interface DiscussionPanelProps {

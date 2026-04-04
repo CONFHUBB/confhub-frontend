@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, X, Sparkles, PenLine, AlertCircle, CheckCircle2, Target } from "lucide-react"
 import { suggestKeywords, checkWriting, checkTrackFit, type WritingSuggestion } from "@/app/api/ai-assistant.api"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 
 export interface FormRendererProps {
     definitionJson: string

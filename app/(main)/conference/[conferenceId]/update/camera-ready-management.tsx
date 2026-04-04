@@ -13,7 +13,7 @@ import {
 } from "lucide-react"
 import { FilterPanel } from "@/components/ui/filter-panel"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { TableSkeleton } from "@/components/ui/table-skeleton"
 import { EmptyState } from "@/components/ui/empty-state"
 

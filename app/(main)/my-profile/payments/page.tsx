@@ -7,7 +7,7 @@ import { getUserByEmail } from "@/app/api/user.api"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, CreditCard } from "lucide-react"
-import { toast } from "react-hot-toast"
+import { toast } from 'sonner'
 
 export default function GlobalPaymentHistoryPage() {
     const router = useRouter()

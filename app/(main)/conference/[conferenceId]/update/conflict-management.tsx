@@ -17,7 +17,7 @@ import { Select as ShadSelect, SelectContent, SelectItem, SelectTrigger, SelectV
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { FilterPanel } from "@/components/ui/filter-panel"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 
 interface ConflictManagementProps {
     conferenceId: number

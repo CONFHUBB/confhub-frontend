@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/field"
 import { V, validate as validateField } from "@/lib/validation"
 import { ArrowLeft, Copy, FileText, Info, Mail, Plus, Trash2, Type } from "lucide-react"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { Textarea } from "@/components/ui/textarea"
 
 interface ConferenceTemplateProps {

@@ -12,11 +12,12 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { FieldError } from '@/components/ui/field'
-import { Loader2, ArrowLeft, FileText, Check, X, AlertTriangle, Save, Eye, ExternalLink, FileDown, MessageSquare, Lock, Sparkles, ThumbsUp, ThumbsDown, BookOpen } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { Loader2, ArrowLeft, FileText, Check, X, AlertTriangle, Save, Eye, ExternalLink, FileDown, MessageSquare, Lock, Sparkles, ThumbsUp, ThumbsDown, BookOpen, ChevronDown, ChevronUp } from 'lucide-react'
+import { toast } from 'sonner'
 import { PaperDiscussion } from '@/components/paper-discussion'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useTrackSettings } from '@/hooks/useTrackSettings'
+import { reviewStatusClass } from '@/lib/constants/status'
 import { summarizePaper, analyzeStrengthsWeaknesses, type PaperSummaryResponse, type StrengthWeaknessResponse } from '@/app/api/ai-assistant.api'
 
 interface ReviewQuestion {
@@ -31,12 +32,7 @@ interface ReviewQuestion {
     choices?: { id: number; text: string; value: number; orderIndex: number }[]
 }
 
-const STATUS_COLORS: Record<string, string> = {
-    ASSIGNED: 'bg-indigo-100 text-indigo-800',
-    IN_PROGRESS: 'bg-amber-100 text-amber-800',
-    COMPLETED: 'bg-green-100 text-green-800',
-    DECLINED: 'bg-red-100 text-red-800',
-}
+
 
 export default function ReviewPaperPage() {
     const params = useParams()
@@ -76,6 +72,7 @@ export default function ReviewPaperPage() {
     const [loadingSW, setLoadingSW] = useState(false)
     const [showSummary, setShowSummary] = useState(false)
     const [showSW, setShowSW] = useState(false)
+    const [showInstructions, setShowInstructions] = useState(true)
 
     // Get userId from JWT
     useEffect(() => {
@@ -347,7 +344,7 @@ export default function ReviewPaperPage() {
                 <div className="flex-1">
                     <div className="flex items-center gap-3">
                         <h1 className="text-2xl font-bold text-gray-900">Review Paper</h1>
-                        <Badge className={STATUS_COLORS[review.status]}>
+                        <Badge className={reviewStatusClass(review.status)}>
                             {review.status === 'ASSIGNED' ? 'Assigned' :
                              review.status === 'IN_PROGRESS' ? 'In Progress' :
                              review.status === 'COMPLETED' ? 'Completed' : 'Declined'}
@@ -616,6 +613,33 @@ export default function ReviewPaperPage() {
                         </TabsList>
 
                         <TabsContent value="review" className="space-y-6">
+                            {/* #2: Reviewer Instructions Banner */}
+                            {settings.reviewerInstructions && settings.reviewerInstructions.trim() !== '' && (
+                                <Card className="border-blue-200 bg-blue-50/50">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowInstructions(!showInstructions)}
+                                        className="w-full p-4 flex items-center justify-between text-left hover:bg-blue-50 transition-colors rounded-t-lg"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <BookOpen className="h-4 w-4 text-blue-600" />
+                                            <span className="text-sm font-semibold text-blue-800">Reviewer Instructions</span>
+                                        </div>
+                                        {showInstructions ? (
+                                            <ChevronUp className="h-4 w-4 text-blue-500" />
+                                        ) : (
+                                            <ChevronDown className="h-4 w-4 text-blue-500" />
+                                        )}
+                                    </button>
+                                    {showInstructions && (
+                                        <CardContent className="pt-0 pb-4 px-4">
+                                            <p className="text-sm text-blue-900 leading-relaxed whitespace-pre-wrap">
+                                                {settings.reviewerInstructions}
+                                            </p>
+                                        </CardContent>
+                                    )}
+                                </Card>
+                            )}
                             {/* Review Questions */}
                     {questions.length === 0 ? (
                 <Card>

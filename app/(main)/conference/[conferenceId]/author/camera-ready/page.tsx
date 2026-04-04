@@ -17,7 +17,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { FileCheck, Camera, Calendar, Layers, ExternalLink, Activity, CheckCircle2, Search, Loader2, BookOpen, ChevronLeft, ChevronRight, Scale } from 'lucide-react'
 
 export default function CameraReadyDashboardTab() {

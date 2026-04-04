@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Loader2, Copy, Save } from "lucide-react"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { Select } from "antd"
 import { V } from "@/lib/validation"
 

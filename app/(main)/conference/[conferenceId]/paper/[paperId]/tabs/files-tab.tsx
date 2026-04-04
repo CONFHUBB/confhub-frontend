@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getPaperFilesByPaperId, uploadPaperFile } from '@/app/api/paper.api'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { getFilesByPaper, type CameraReadyFile } from '@/app/api/camera-ready.api'
 import type { PaperFileResponse } from '@/types/paper'
 

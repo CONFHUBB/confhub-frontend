@@ -10,7 +10,7 @@ import {
     Loader2, FileText, Users, Gavel, Shield, MessageSquare, Eye,
     Check, X, ChevronDown, ChevronRight, Plus, Trash2, Send, Reply, UserPlus, ExternalLink, Sparkles
 } from "lucide-react"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 
 // APIs
 import { getAuthorsByPaper, type PaperAuthorItem } from "@/app/api/paper.api"
@@ -25,6 +25,7 @@ import { getConferenceUsersWithRoles } from "@/app/api/conference-user-track.api
 import { getReviewById, getAnswersByReview, getReviewQuestionsByTrack, getReviewsByPaper, getReviewVersions } from "@/app/api/review.api"
 import { analyzeReviewConsensus, type ConsensusResponse } from "@/app/api/ai-assistant.api"
 import Link from "next/link"
+import { paperStatusClass, getPaperStatus } from '@/lib/constants/status'
 
 // Types
 import type { BiddingResponse } from "@/types/bidding"
@@ -57,15 +58,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
     { key: "discussion", label: "Discussion", icon: <MessageSquare className="h-3.5 w-3.5" /> },
 ]
 
-const STATUS_COLORS: Record<string, string> = {
-    DRAFT: "bg-gray-100 text-gray-700",
-    SUBMITTED: "bg-indigo-100 text-indigo-700",
-    UNDER_REVIEW: "bg-amber-100 text-amber-700",
-    ACCEPTED: "bg-emerald-100 text-emerald-700",
-    REJECTED: "bg-red-100 text-red-700",
-    WITHDRAWN: "bg-gray-100 text-gray-500",
-    PUBLISHED: "bg-teal-100 text-teal-700",
-}
+
 
 export function PaperDetailSheet({
     paperId, conferenceId, userId, defaultTab,
@@ -88,8 +81,8 @@ export function PaperDetailSheet({
                             #{enrichedPaper?.id} — {enrichedPaper?.title || "Paper Detail"}
                         </SheetTitle>
                         {enrichedPaper && (
-                            <Badge className={`shrink-0 text-[10px] ${STATUS_COLORS[enrichedPaper.status] || ""}`}>
-                                {enrichedPaper.status.replace("_", " ")}
+                            <Badge className={`shrink-0 text-[10px] ${paperStatusClass(enrichedPaper.status)}`}>
+                                {getPaperStatus(enrichedPaper.status).label}
                             </Badge>
                         )}
                     </div>

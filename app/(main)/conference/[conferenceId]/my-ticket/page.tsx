@@ -12,7 +12,7 @@ import QRCode from 'qrcode'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { downloadAcceptanceLetter, downloadInvoice, downloadCertificate } from '@/app/api/document.api'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 const STATUS_CONFIG = {
   COMPLETED: {

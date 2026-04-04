@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Plus, Trash2, Calendar, Eye, Copy, Edit2, ChevronUp, ChevronDown, Download, LayoutGrid, FileText } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 // Pixels per minute at scale
 const PX_PER_MIN = 2.0

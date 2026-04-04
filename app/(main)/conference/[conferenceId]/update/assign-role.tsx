@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { getUsers } from "@/app/api/user.api"
 import type { User } from "@/types/user"
 import type { RoleAssignmentData } from "@/types/conference-form"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"

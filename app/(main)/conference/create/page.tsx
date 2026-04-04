@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { ConferenceForm } from "./conference-form"
 import { ConferenceImport } from "./conference-import"
 import { createConference } from "@/app/api/conference.api"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import type { ConferenceData } from "@/types/conference-form"
 
 type TabMode = "form" | "import"
