@@ -1,77 +1,107 @@
 "use client"
 
-import { Upload, Search, Trophy, ArrowRight } from "lucide-react"
+import { FileInput, SendHorizontal, Users, Trophy, CheckCircle2, ArrowRight } from "lucide-react"
 
 const STEPS = [
     {
-        icon: <Upload className="h-7 w-7" />,
-        title: "Submit Papers",
-        description: "Authors upload their research papers to conferences with customizable submission forms.",
-        color: "from-blue-500 to-cyan-500",
-        bgColor: "bg-indigo-50",
-        iconColor: "text-indigo-600",
+        icon: FileInput,
+        title: "Submit Your Paper",
+        description: "Upload your research paper in PDF format. Our system supports LaTeX and Word templates.",
+        color: "bg-blue-500/10 text-blue-500",
     },
     {
-        icon: <Search className="h-7 w-7" />,
+        icon: SendHorizontal,
         title: "Peer Review",
-        description: "Expert reviewers evaluate submissions. Chairs manage assignments and track progress.",
-        color: "from-purple-500 to-indigo-500",
-        bgColor: "bg-purple-50",
-        iconColor: "text-purple-600",
+        description: "Your paper is assigned to expert reviewers in your field who evaluate it rigorously and confidentially.",
+        color: "bg-purple-500/10 text-purple-500",
     },
     {
-        icon: <Trophy className="h-7 w-7" />,
+        icon: Users,
+        title: "Present & Discuss",
+        description: "Accepted papers are presented at the conference. Engage with the community through Q&A sessions.",
+        color: "bg-pink-500/10 text-pink-500",
+    },
+    {
+        icon: Trophy,
         title: "Get Published",
-        description: "Accepted papers are published and accessible to the research community worldwide.",
-        color: "from-amber-500 to-orange-500",
-        bgColor: "bg-amber-50",
-        iconColor: "text-amber-600",
+        description: "Accepted and presented papers are published in conference proceedings with DOI assignment.",
+        color: "bg-amber-500/10 text-amber-500",
     },
 ]
 
 export function HowItWorks() {
     return (
-        <section className="py-24 bg-white">
+        <section className="bg-white dark:bg-gray-950 py-16">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
-                <div className="text-center max-w-2xl mx-auto mb-16">
-                    <span className="text-sm font-semibold text-indigo-600 uppercase tracking-wider">Simple Process</span>
-                    <h2 className="text-3xl font-extrabold text-gray-900 mt-2">How It Works</h2>
-                    <p className="text-gray-500 mt-3">
-                        From submission to publication — our streamlined workflow makes conference management effortless.
+                <div className="text-center mb-14">
+                    <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                        How It Works
+                    </h2>
+                    <p className="mt-3 text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
+                        From submission to publication in four simple steps. We&apos;ve streamlined the entire process so you can focus on what matters most — your research.
                     </p>
                 </div>
 
                 {/* Steps */}
-                <div className="grid md:grid-cols-3 gap-8 relative">
-                    {/* Connector line (desktop) */}
-                    <div className="hidden md:block absolute top-16 left-[20%] right-[20%] h-0.5 bg-gradient-to-r from-blue-200 via-purple-200 to-amber-200" />
+                <div className="relative">
+                    {/* Connector line spanning the full width */}
+                    <div
+                        className="hidden lg:block absolute top-10 left-0 right-0 pointer-events-none"
+                        aria-hidden="true"
+                    >
+                        <div className="mx-[60px] h-px border-t-2 border-dashed border-gray-300 dark:border-gray-600" />
+                    </div>
 
-                    {STEPS.map((step, i) => (
-                        <div key={i} className="relative text-center group">
-                            {/* Step number circle */}
-                            <div className="relative inline-flex mx-auto mb-6">
-                                <div className={`w-16 h-16 rounded-2xl ${step.bgColor} flex items-center justify-center ${step.iconColor} group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
-                                    {step.icon}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                        {STEPS.map((step, index) => {
+                            const Icon = step.icon
+                            return (
+                                <div
+                                    key={step.title}
+                                    className="relative flex flex-col items-center text-center"
+                                >
+                                    {/* Icon + number */}
+                                    <div className="relative mb-5 z-10">
+                                        <div className="bg-white dark:bg-gray-950 p-1 rounded-2xl">
+                                            <div
+                                                className={`inline-flex items-center justify-center w-20 h-20 rounded-2xl ${step.color}`}
+                                            >
+                                                <Icon className="h-8 w-8 text-current" aria-hidden="true" />
+                                            </div>
+                                        </div>
+                                        <span className="absolute -top-1 -right-1 flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold z-20">
+                                            {index + 1}
+                                        </span>
+                                    </div>
+
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                                        {step.title}
+                                    </h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                                        {step.description}
+                                    </p>
                                 </div>
-                                <span className={`absolute -top-2 -right-2 w-7 h-7 rounded-full bg-gradient-to-br ${step.color} text-white text-xs font-bold flex items-center justify-center shadow-lg`}>
-                                    {i + 1}
-                                </span>
-                            </div>
+                            )
+                        })}
+                    </div>
+                </div>
 
-                            <h3 className="text-lg font-bold text-gray-900 mb-2">{step.title}</h3>
-                            <p className="text-sm text-gray-500 max-w-xs mx-auto leading-relaxed">
-                                {step.description}
-                            </p>
-
-                            {/* Arrow between steps (mobile) */}
-                            {i < STEPS.length - 1 && (
-                                <div className="md:hidden flex justify-center my-4">
-                                    <ArrowRight className="h-5 w-5 text-gray-300 rotate-90" />
-                                </div>
-                            )}
-                        </div>
-                    ))}
+                {/* CTA */}
+                <div className="mt-14 flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <a
+                        href="/conference"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
+                    >
+                        Browse Conferences <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </a>
+                    <a
+                        href="/conference/create"
+                        className="inline-flex items-center gap-2 px-6 py-3 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    >
+                        <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                        Create Your Conference
+                    </a>
                 </div>
             </div>
         </section>
