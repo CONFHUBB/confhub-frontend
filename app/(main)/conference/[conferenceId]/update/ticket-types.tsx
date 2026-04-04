@@ -365,7 +365,12 @@ export default function TicketTypesConfig({ conferenceId }: Props) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Price</Label>
-                <Input type="number" min={0} value={form.price} onChange={e => setForm(f => ({ ...f, price: Number(e.target.value) }))} />
+                <Input
+                  type="number"
+                  min={0}
+                  value={!editing && form.price === 0 ? '' : form.price}
+                  onChange={e => setForm(f => ({ ...f, price: e.target.value === '' ? 0 : Number(e.target.value) }))}
+                />
               </div>
               <div>
                 <Label>Currency</Label>

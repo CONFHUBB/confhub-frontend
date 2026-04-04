@@ -8,12 +8,83 @@ import { createConference } from "@/app/api/conference.api"
 import toast from "react-hot-toast"
 import type { ConferenceData } from "@/types/conference-form"
 
+const FRIENDLY_FIELD_LABEL: Record<string, string> = {
+    startDate: "Start date",
+    endDate: "End date",
+    websiteUrl: "Website URL",
+    bannerImageUrl: "Banner image URL",
+    acronym: "Short name",
+    chairEmails: "Chair emails",
+    contactInformation: "Contact information",
+}
+
+const normalizeFieldKey = (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) return ""
+    return trimmed.includes(".") ? trimmed.split(".").pop() || trimmed : trimmed
+}
+
+const humanizeField = (field: string) => {
+    if (!field) return "Field"
+    if (FRIENDLY_FIELD_LABEL[field]) return FRIENDLY_FIELD_LABEL[field]
+    return field
+        .replace(/([A-Z])/g, " $1")
+        .replace(/^./, (c) => c.toUpperCase())
+}
+
+const parseConferenceCreateError = (error: any): { message: string; fieldErrors: Record<string, string> } => {
+    const data = error?.response?.data
+    const message = data?.message || data?.detail || data?.error || ""
+    const fieldErrors: Record<string, string> = {}
+
+    const appendFieldError = (field: string, msg: string) => {
+        const key = normalizeFieldKey(field)
+        if (!key || !msg || fieldErrors[key]) return
+        fieldErrors[key] = msg
+    }
+
+    if (Array.isArray(data?.errors)) {
+        for (const item of data.errors) {
+            const field = item?.field || item?.name || item?.property || ""
+            const msg = item?.defaultMessage || item?.message || item?.reason || ""
+            appendFieldError(field, msg)
+        }
+    }
+
+    if (data?.fieldErrors && typeof data.fieldErrors === "object") {
+        for (const [field, msg] of Object.entries(data.fieldErrors)) {
+            if (typeof msg === "string") appendFieldError(field, msg)
+        }
+    }
+
+    if (Object.keys(fieldErrors).length === 0 && typeof message === "string" && message) {
+        const regex = /on field '([^']+)'.*?default message \[([^\]]+)\]/g
+        let match: RegExpExecArray | null
+        while ((match = regex.exec(message)) !== null) {
+            appendFieldError(match[1], match[2])
+        }
+    }
+
+    const firstFieldError = Object.entries(fieldErrors)[0]
+    if (firstFieldError) {
+        const [field, msg] = firstFieldError
+        return { message: `${humanizeField(field)}: ${msg}`, fieldErrors }
+    }
+
+    if (typeof message === "string" && message.trim()) {
+        return { message: message.trim(), fieldErrors }
+    }
+
+    return { message: "Failed to create conference. Please review your input and try again.", fieldErrors }
+}
+
 type TabMode = "form" | "import"
 
 export default function CreateConferencePage() {
     const router = useRouter()
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [activeTab, setActiveTab] = useState<TabMode>("form")
+    const [backendFieldErrors, setBackendFieldErrors] = useState<Record<string, string>>({})
 
     useEffect(() => {
         const token = localStorage.getItem('accessToken')
@@ -25,6 +96,7 @@ export default function CreateConferencePage() {
 
     const handleConferenceSubmit = async (data: ConferenceData, pendingBannerFile?: File) => {
         setIsSubmitting(true)
+        setBackendFieldErrors({})
 
         try {
             // Create conference first (without banner if file is pending)
@@ -58,9 +130,11 @@ export default function CreateConferencePage() {
 
             toast.success("Conference created! Proceeding to configuration...")
             router.push(`/conference/${conferenceId}/update`)
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to create conference:", error)
-            toast.error("Something went wrong. Please try again.")
+            const parsed = parseConferenceCreateError(error)
+            setBackendFieldErrors(parsed.fieldErrors)
+            toast.error(parsed.message)
         } finally {
             setIsSubmitting(false)
         }
@@ -124,6 +198,7 @@ export default function CreateConferencePage() {
                             initialData={null}
                             onSubmit={handleConferenceSubmit}
                             isSubmitting={isSubmitting}
+                            backendErrors={backendFieldErrors}
                         />
                     ) : (
                         <ConferenceImport />
