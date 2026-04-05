@@ -159,3 +159,36 @@
     background-color: var(--muted-foreground);
   }
 }
+
+/* ── Accessibility: Reduced Motion ──────────────────────────────────────────
+   Disables all non-essential animations for users who prefer reduced motion.
+   WCAG 2.1 Success Criterion 2.3.3 (AAA) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Accessibility: Custom Focus Ring ───────────────────────────────────────
+   Replaces default browser outline with a visible, high-contrast indigo ring.
+   Matches the primary color for brand consistency. */
+@layer base {
+  *:focus-visible {
+    outline: 2px solid var(--primary, #4f46e5);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+/* ── Success Celebration: SVG Draw Animations ──────────────────────────── */
+@keyframes drawCircle {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes drawCheck {
+  to { stroke-dashoffset: 0; }
+}

@@ -53,6 +53,7 @@ import { createTemplate } from '@/app/api/template.api'
 import { updateConference } from '@/app/api/conference.api'
 import { ConferenceForm } from '../../create/conference-form'
 import type { ConferenceData } from '@/types/conference-form'
+import { getCurrentUserId, getCurrentUserEmail } from '@/lib/auth'
 
 import type { DynamicField, FormDefinition } from '@/types/submission-form'
 import type {
@@ -206,7 +207,19 @@ export default function ConferenceUpdatePage() {
         const newUrl = `/conference/${conferenceId}/update?tab=${tab}`
         window.history.replaceState(null, '', newUrl)
     }, [conferenceId])
-    const [expandedGroups, setExpandedGroups] = useState<string[]>(['Overview', 'General Settings', 'User Management', 'Forms & Templates', 'Activity Timeline', 'Paper & Review', 'Registration', 'Event'])
+    // Progressive Disclosure: Only expand Overview + group containing active tab by default
+    const getInitialExpandedGroups = useCallback(() => {
+        const groups = ['Overview']
+        // Always expand the group that contains the active tab
+        for (const group of TAB_GROUPS) {
+            if (group.items.some(i => i.key === initialTab)) {
+                if (!groups.includes(group.title)) groups.push(group.title)
+                break
+            }
+        }
+        return groups
+    }, [initialTab])
+    const [expandedGroups, setExpandedGroups] = useState<string[]>(getInitialExpandedGroups)
     const [isUpdatingGeneral, setIsUpdatingGeneral] = useState(false)
 
     // ── Role detection state ──────────────────────────────
@@ -225,11 +238,10 @@ export default function ConferenceUpdatePage() {
     useEffect(() => {
         const detectRole = async () => {
             try {
-                const token = localStorage.getItem('accessToken')
-                if (!token) return
-                const payload = JSON.parse(atob(token.split('.')[1]))
-                const userId: number = Number(payload.userId || payload.id)
-                const myId = Number(payload.sub ? (await getUserByEmail(payload.sub))?.id : payload.userId || payload.id)
+                const userId = getCurrentUserId()
+                if (!userId) return
+                const email = getCurrentUserEmail()
+                const myId = email ? Number((await getUserByEmail(email))?.id) : userId
                 let me = null;
                 let page = 0;
                 let hasMore = true;
@@ -288,6 +300,28 @@ export default function ConferenceUpdatePage() {
 
     // Workflow completion status
     const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus>({})
+
+    // Auto-expand groups that need attention when workflow status loads
+    useEffect(() => {
+        if (Object.keys(workflowStatus).length === 0) return
+        setExpandedGroups(prev => {
+            const next = new Set(prev)
+            next.add('Overview')
+            for (const group of TAB_GROUPS) {
+                const hasIncomplete = group.items.some(item =>
+                    item.completionKey && !workflowStatus[item.completionKey]
+                )
+                if (hasIncomplete) next.add(group.title)
+            }
+            for (const group of TAB_GROUPS) {
+                if (group.items.some(i => i.key === activeTab)) {
+                    next.add(group.title)
+                    break
+                }
+            }
+            return Array.from(next)
+        })
+    }, [workflowStatus, activeTab])
 
     // ── Role-based tab filtering ─────────────────────────────────────
     const getTabPermission = useCallback((item: TabItemDef): TabPermission => {

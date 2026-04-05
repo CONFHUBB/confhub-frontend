@@ -7,6 +7,7 @@ import { ConferenceImport } from "./conference-import"
 import { createConference } from "@/app/api/conference.api"
 import { toast } from 'sonner'
 import type { ConferenceData } from "@/types/conference-form"
+import { getToken } from '@/lib/auth'
 
 type TabMode = "form" | "import"
 
@@ -16,8 +17,7 @@ export default function CreateConferencePage() {
     const [activeTab, setActiveTab] = useState<TabMode>("form")
 
     useEffect(() => {
-        const token = localStorage.getItem('accessToken')
-        if (!token) {
+        if (!getToken()) {
             router.push('/auth/login')
         }
     }, [router])

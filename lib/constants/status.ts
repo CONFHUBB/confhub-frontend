@@ -9,15 +9,15 @@
 // ── Paper Status ─────────────────────────────────────────────────────────────
 
 export const PAPER_STATUS = {
-    DRAFT:        { label: 'Draft',        bg: 'bg-slate-100',   text: 'text-slate-700',   dot: 'bg-slate-500',   border: 'border-slate-300' },
-    SUBMITTED:    { label: 'Submitted',    bg: 'bg-blue-100',    text: 'text-blue-700',    dot: 'bg-blue-500',    border: 'border-blue-300' },
-    UNDER_REVIEW: { label: 'Under Review', bg: 'bg-purple-100',  text: 'text-purple-700',  dot: 'bg-purple-500',  border: 'border-purple-300' },
-    AWAITING_DECISION: { label: 'Awaiting Decision', bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500', border: 'border-amber-300' },
-    ACCEPTED:     { label: 'Accepted',     bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500', border: 'border-emerald-300' },
-    REJECTED:     { label: 'Rejected',     bg: 'bg-red-100',     text: 'text-red-700',     dot: 'bg-red-500',     border: 'border-red-300' },
-    WITHDRAWN:    { label: 'Withdrawn',    bg: 'bg-gray-100',    text: 'text-gray-500',    dot: 'bg-gray-400',    border: 'border-gray-300' },
-    CAMERA_READY: { label: 'Camera Ready', bg: 'bg-teal-100',    text: 'text-teal-700',    dot: 'bg-teal-500',    border: 'border-teal-300' },
-    PUBLISHED:    { label: 'Published',    bg: 'bg-cyan-100',    text: 'text-cyan-700',    dot: 'bg-cyan-500',    border: 'border-cyan-300' },
+    DRAFT:        { label: 'Draft',        bg: 'bg-slate-100',   text: 'text-slate-700',   dot: 'bg-slate-500',   border: 'border-slate-300',   icon: 'FileEdit' },
+    SUBMITTED:    { label: 'Submitted',    bg: 'bg-blue-100',    text: 'text-blue-700',    dot: 'bg-blue-500',    border: 'border-blue-300',    icon: 'Send' },
+    UNDER_REVIEW: { label: 'Under Review', bg: 'bg-purple-100',  text: 'text-purple-700',  dot: 'bg-purple-500',  border: 'border-purple-300',  icon: 'Eye' },
+    AWAITING_DECISION: { label: 'Awaiting Decision', bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500', border: 'border-amber-300', icon: 'Clock' },
+    ACCEPTED:     { label: 'Accepted',     bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500', border: 'border-emerald-300', icon: 'CheckCircle' },
+    REJECTED:     { label: 'Rejected',     bg: 'bg-red-100',     text: 'text-red-700',     dot: 'bg-red-500',     border: 'border-red-300',     icon: 'XCircle' },
+    WITHDRAWN:    { label: 'Withdrawn',    bg: 'bg-gray-100',    text: 'text-gray-500',    dot: 'bg-gray-400',    border: 'border-gray-300',    icon: 'MinusCircle' },
+    CAMERA_READY: { label: 'Camera Ready', bg: 'bg-teal-100',    text: 'text-teal-700',    dot: 'bg-teal-500',    border: 'border-teal-300',    icon: 'FileCheck' },
+    PUBLISHED:    { label: 'Published',    bg: 'bg-cyan-100',    text: 'text-cyan-700',    dot: 'bg-cyan-500',    border: 'border-cyan-300',    icon: 'Globe' },
 } as const
 
 export type PaperStatusKey = keyof typeof PAPER_STATUS

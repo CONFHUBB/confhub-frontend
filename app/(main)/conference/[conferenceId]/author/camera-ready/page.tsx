@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table"
 import { toast } from 'sonner'
 import { FileCheck, Camera, Calendar, Layers, ExternalLink, Activity, CheckCircle2, Search, Loader2, BookOpen, ChevronLeft, ChevronRight, Scale } from 'lucide-react'
+import { getCurrentUserEmail } from '@/lib/auth'
 
 export default function CameraReadyDashboardTab() {
     const params = useParams()
@@ -42,11 +43,10 @@ export default function CameraReadyDashboardTab() {
     const fetchData = async () => {
         try {
             setLoading(true)
-            const token = localStorage.getItem('accessToken')
-            if (!token) { router.push('/auth/login'); return }
+            const email = getCurrentUserEmail()
+            if (!email) { router.push('/auth/login'); return }
 
-            const payload = JSON.parse(atob(token.split('.')[1]))
-            const user = await getUserByEmail(payload.sub)
+            const user = await getUserByEmail(email)
             if (!user?.id) { router.push('/auth/login'); return }
 
             const allPapers = await getPapersByAuthor(user.id)

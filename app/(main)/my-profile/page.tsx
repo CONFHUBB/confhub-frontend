@@ -7,6 +7,7 @@ import type { UserProfile, UserProfileRequest } from "@/types/user"
 import { ProfileForm } from "./profile-form"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { getCurrentUserEmail } from '@/lib/auth'
 
 export default function MyProfilePage() {
     const router = useRouter()
@@ -24,17 +25,9 @@ export default function MyProfilePage() {
     const fetchProfile = async () => {
         try {
             setLoading(true)
-            const token = localStorage.getItem("accessToken")
-            if (!token) {
-                setError("You must be logged in to view your profile.")
-                setTimeout(() => router.push("/auth/login"), 2000)
-                return
-            }
-
-            const payload = JSON.parse(atob(token.split(".")[1]))
-            const email = payload.sub
+            const email = getCurrentUserEmail()
             if (!email) {
-                setError("Invalid token. Please log in again.")
+                setError("You must be logged in to view your profile.")
                 setTimeout(() => router.push("/auth/login"), 2000)
                 return
             }

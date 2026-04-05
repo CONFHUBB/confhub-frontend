@@ -13,6 +13,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { Loader2, FileText, Check, X, AlertTriangle } from "lucide-react"
+import { UserLink } from '@/components/shared/user-link'
 import { reviewStatusClass, getReviewStatus } from '@/lib/constants/status'
 
 interface ReviewQuestion {
@@ -109,7 +110,7 @@ export function ReviewDetailDialog({ reviewId, open, onClose }: ReviewDetailDial
                     {review && (
                         <>
                             <p className="text-sm text-muted-foreground mt-1">
-                                Reviewer: <span className="font-medium text-foreground">{review.reviewer.firstName} {review.reviewer.lastName}</span>
+                                Reviewer: <UserLink userId={review.reviewer.id} name={`${review.reviewer.firstName} ${review.reviewer.lastName}`} className="font-medium" />
                                 {" "}({review.reviewer.email})
                             </p>
                             {review.totalScore != null && (

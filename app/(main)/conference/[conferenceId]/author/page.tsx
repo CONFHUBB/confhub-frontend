@@ -34,6 +34,8 @@ import Link from 'next/link'
 import { AuthorPhaseTracker } from './author-phase-tracker'
 import dynamic from 'next/dynamic'
 import { getPaperStatus, PAPER_STATUS } from '@/lib/constants/status'
+import { getCurrentUserEmail } from '@/lib/auth'
+import { Breadcrumb } from '@/components/shared/breadcrumb'
 
 const CameraReadyPage = dynamic(() => import('./camera-ready/page'), {
     loading: () => <div className="flex items-center justify-center py-20"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>
@@ -112,10 +114,9 @@ export default function AuthorDashboardPage() {
     const fetchData = useCallback(async () => {
         try {
             setLoading(true)
-            const token = localStorage.getItem('accessToken')
-            if (!token) { router.push('/auth/login'); return }
-            const payload = JSON.parse(atob(token.split('.')[1]))
-            const user = await getUserByEmail(payload.sub)
+            const email = getCurrentUserEmail()
+            if (!email) { router.push('/auth/login'); return }
+            const user = await getUserByEmail(email)
             if (!user?.id) { router.push('/auth/login'); return }
             setUserInfo({ id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email })
 
@@ -169,12 +170,15 @@ export default function AuthorDashboardPage() {
     return (
         <div className="min-h-screen bg-transparent flex flex-col overflow-hidden">
             <div className="flex-1 w-full max-w-[1700px] mx-auto flex flex-col p-4 md:p-8 overflow-hidden">
+                {/* Breadcrumb Navigation */}
+                <Breadcrumb items={[
+                    { label: 'Conferences', href: '/conference' },
+                    { label: conference?.acronym || 'Conference', href: `/conference/${conferenceId}` },
+                    { label: 'Author Workspace' },
+                ]} />
+
                 {/* Header Area — Vibrant hero banner */}
                 <div className="mb-6 shrink-0">
-                    <Button variant="ghost" className="mb-3 -ml-2 gap-2" onClick={() => router.back()}>
-                        <ArrowLeft className="h-4 w-4" />
-                        Back
-                    </Button>
                     <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-700 p-6 md:px-8 md:py-7 shadow-lg">
                         {/* Decorative circles */}
                         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/5 blur-2xl" />

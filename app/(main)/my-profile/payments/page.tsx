@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Loader2, CreditCard } from "lucide-react"
 import { toast } from 'sonner'
+import { getCurrentUserEmail } from '@/lib/auth'
 
 export default function GlobalPaymentHistoryPage() {
     const router = useRouter()
@@ -20,10 +21,8 @@ export default function GlobalPaymentHistoryPage() {
 
     const fetchData = async () => {
         try {
-            const token = localStorage.getItem("accessToken")
-            if (!token) return router.push("/auth/login")
-            const payload = JSON.parse(atob(token.split(".")[1]))
-            const email = payload.sub
+            const email = getCurrentUserEmail()
+            if (!email) return router.push("/auth/login")
             const user = await getUserByEmail(email)
             if (!user || !user.id) return
             

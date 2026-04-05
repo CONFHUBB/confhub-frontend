@@ -13,6 +13,7 @@ import { useUserRoles } from '@/hooks/useUserConferenceRoles'
 import { getUserByEmail, getUserProfile } from '@/app/api/user.api'
 import { getConference } from '@/app/api/conference.api'
 import { NotificationBell } from '@/components/notification-bell'
+import { getCurrentUserEmail, clearToken } from '@/lib/auth'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Sub-menu data for "My Workspace" dropdown
@@ -113,10 +114,7 @@ export function AppNavbar() {
     React.useEffect(() => {
         const fetchUserData = async () => {
             try {
-                const token = localStorage.getItem('accessToken')
-                if (!token) return
-                const payload = JSON.parse(atob(token.split('.')[1]))
-                const email = payload.sub
+                const email = getCurrentUserEmail()
                 if (!email) return
                 const user = await getUserByEmail(email)
                 if (user?.fullName) setUserName(user.fullName)
@@ -136,7 +134,7 @@ export function AppNavbar() {
         : 'U'
 
     const handleLogout = () => {
-        localStorage.removeItem('accessToken')
+        clearToken()
         window.location.href = '/'
     }
 
@@ -312,6 +310,11 @@ export function AppNavbar() {
                                             <p className="text-sm font-semibold text-gray-900 truncate">{userName || 'User'}</p>
                                             <p className="text-xs text-gray-500 mt-0.5">Manage your account</p>
                                         </div>
+
+                                        {/* ── Account ── */}
+                                        <div className="px-4 pt-2 pb-1">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Account</p>
+                                        </div>
                                         <Link
                                             href="/my-profile"
                                             onClick={() => setUserMenuOpen(false)}
@@ -319,6 +322,12 @@ export function AppNavbar() {
                                         >
                                             <User className="h-4 w-4 text-gray-400" /> My Profile
                                         </Link>
+
+                                        {/* ── Activity ── */}
+                                        <div className="border-t border-gray-100 mt-1" />
+                                        <div className="px-4 pt-2 pb-1">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Activity</p>
+                                        </div>
                                         <Link
                                             href="/my-profile/invitations"
                                             onClick={() => setUserMenuOpen(false)}
@@ -340,6 +349,7 @@ export function AppNavbar() {
                                         >
                                             <CreditCard className="h-4 w-4 text-gray-400" /> Payment History
                                         </Link>
+
                                         <div className="border-t border-gray-100 mt-1 pt-1">
                                             <button
                                                 onClick={() => { setUserMenuOpen(false); handleLogout() }}

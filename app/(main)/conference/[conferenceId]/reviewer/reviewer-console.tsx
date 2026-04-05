@@ -32,6 +32,9 @@ import { FieldError } from '@/components/ui/field'
 import { V } from '@/lib/validation'
 import { useTrackSettings } from '@/hooks/useTrackSettings'
 import { reviewStatusClass } from '@/lib/constants/status'
+import { getCurrentUserId } from '@/lib/auth'
+import { Breadcrumb } from '@/components/shared/breadcrumb'
+import { DeadlineBanner } from '@/components/shared/deadline-banner'
 
 // ──────────────────────────── Types ────────────────────────────
 type ReviewerTab =
@@ -123,13 +126,7 @@ export default function ReviewerConsole() {
 
     // Get userId from JWT
     useEffect(() => {
-        try {
-            const token = localStorage.getItem('accessToken')
-            if (token) {
-                const payload = JSON.parse(atob(token.split('.')[1]))
-                setReviewerId(payload.userId || payload.id)
-            }
-        } catch { /* ignore */ }
+        setReviewerId(getCurrentUserId())
     }, [])
 
     // Fetch all data
@@ -300,12 +297,26 @@ export default function ReviewerConsole() {
     return (
         <div className="min-h-screen bg-transparent flex flex-col overflow-hidden">
             <div className="flex-1 w-full max-w-[1700px] mx-auto flex flex-col p-4 md:p-8 overflow-hidden">
+                {/* Breadcrumb Navigation */}
+                <Breadcrumb items={[
+                    { label: 'Conferences', href: '/conference' },
+                    { label: conference?.acronym || 'Conference', href: `/conference/${conferenceId}` },
+                    { label: 'Reviewer Console' },
+                ]} />
+
+                {/* Deadline Banner — shows most relevant deadline */}
+                {(() => {
+                    const reviewDeadline = activities.find(a => a.activityType === 'REVIEW_SUBMISSION')
+                    const biddingDeadline = activities.find(a => a.activityType === 'REVIEWER_BIDDING')
+                    const relevantActivity = reviewDeadline?.isEnabled ? reviewDeadline : biddingDeadline?.isEnabled ? biddingDeadline : null
+                    const deadlineLabel = relevantActivity?.activityType === 'REVIEW_SUBMISSION' ? 'Review Submission' : 'Reviewer Bidding'
+                    return relevantActivity ? (
+                        <DeadlineBanner deadline={relevantActivity.deadline} label={deadlineLabel} className="mb-4" />
+                    ) : null
+                })()}
+
                 {/* Header Area — Vibrant hero banner */}
                 <div className="mb-6 shrink-0">
-                    <Button variant="ghost" className="mb-3 -ml-2 gap-2" onClick={() => router.push('/conference/reviewer-console')}>
-                        <ArrowLeft className="h-4 w-4" />
-                        Back to My Reviews
-                    </Button>
                     <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-700 p-6 md:px-8 md:py-7 shadow-lg">
                         {/* Decorative circles */}
                         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/5 blur-2xl" />

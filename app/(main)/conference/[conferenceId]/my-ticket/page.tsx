@@ -13,6 +13,7 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 import { downloadAcceptanceLetter, downloadInvoice, downloadCertificate } from '@/app/api/document.api'
 import { toast } from 'sonner'
+import { getCurrentUserEmail } from '@/lib/auth'
 
 const STATUS_CONFIG = {
   COMPLETED: {
@@ -66,10 +67,9 @@ function MyTicketContent() {
     const init = async () => {
       try {
         // Get userId from JWT token (VNPay callback doesn't pass userId in URL)
-        const token = localStorage.getItem('accessToken')
-        if (!token) { setError('Please log in first.'); setLoading(false); return }
-        const payload = JSON.parse(atob(token.split('.')[1]))
-        const user = await getUserByEmail(payload.sub)
+        const email = getCurrentUserEmail()
+        if (!email) { setError('Please log in first.'); setLoading(false); return }
+        const user = await getUserByEmail(email)
         if (!user?.id) { setError('User not found.'); setLoading(false); return }
 
         const t = await getMyTicket(conferenceId, user.id)
@@ -191,11 +191,10 @@ function MyTicketContent() {
                    if (confirm("Are you sure you want to cancel this pending registration? This will allow you to select a different ticket category.")) {
                      try {
                         const { cancelPendingTicket } = await import('@/app/api/registration.api');
-                        const token = localStorage.getItem('accessToken');
-                        if (!token) return;
-                        const payload = JSON.parse(atob(token.split('.')[1]));
+                        const email = getCurrentUserEmail();
+                        if (!email) return;
                         const { getUserByEmail } = await import('@/app/api/user.api');
-                        const user = await getUserByEmail(payload.sub);
+                        const user = await getUserByEmail(email);
                         await cancelPendingTicket(conferenceId, user.id);
                         toast.success("Cancelled successfully. You can now register again.");
                         window.location.href = `/conference/${conferenceId}/register`;

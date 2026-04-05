@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, ArrowLeft, Star, CheckSquare, Square } from 'lucide-react'
 import { toast } from 'sonner'
+import { getCurrentUserId } from '@/lib/auth'
 
 interface InterestSelection {
     subjectAreaId: number
@@ -31,13 +32,7 @@ export default function ReviewerInterestsPage() {
     const [reviewerId, setReviewerId] = useState<number | null>(null)
 
     useEffect(() => {
-        try {
-            const token = localStorage.getItem('accessToken')
-            if (token) {
-                const payload = JSON.parse(atob(token.split('.')[1]))
-                setReviewerId(payload.userId || payload.id)
-            }
-        } catch { /* ignore */ }
+        setReviewerId(getCurrentUserId())
     }, [])
 
     const fetchData = async () => {

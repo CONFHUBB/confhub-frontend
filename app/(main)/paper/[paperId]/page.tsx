@@ -45,6 +45,7 @@ import {
 } from 'lucide-react'
 import { Select as AntdSelect } from 'antd'
 import { BackButton } from '@/components/shared/back-button'
+import { UserLink } from '@/components/shared/user-link'
 import { toast } from 'sonner'
 import { getPaperStatus, DECISION_CONFIG } from '@/lib/constants/status'
 
@@ -452,7 +453,7 @@ export default function PaperWorkspacePage() {
                                         <tr><td colSpan={3} className="px-4 py-4 text-center text-sm text-muted-foreground">No co-authors added yet</td></tr>
                                     ) : authors.map(item => (
                                         <tr key={item.paperAuthorId} className="border-b last:border-0 hover:bg-muted/20">
-                                            <td className="px-4 py-3 font-medium">{item.user.fullName}</td>
+                                            <td className="px-4 py-3 font-medium"><UserLink userId={item.user.id} name={item.user.fullName || item.user.email} className="font-medium" /></td>
                                             <td className="px-4 py-3 text-muted-foreground">{item.user.email}</td>
                                             <td className="px-4 py-3 text-right">
                                                 {isEditable && (

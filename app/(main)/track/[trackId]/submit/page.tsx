@@ -12,6 +12,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select as AntdSelect } from 'antd'
 import { Loader2, ArrowLeft, Check, FileText, Users, Upload, Search, Trash2, Send, FileUp, Eye } from 'lucide-react'
+import { SuccessCelebration } from '@/components/shared/success-celebration'
+import { UploadProgress } from '@/components/shared/upload-progress'
+import { UserLink } from '@/components/shared/user-link'
 import { BackButton } from '@/components/shared/back-button'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -25,19 +28,7 @@ import { getUserByEmail } from '@/app/api/user.api'
 import { FormRenderer } from '@/app/(main)/conference/[conferenceId]/submission-form/form-renderer'
 import { getPlagiarismResult, resetPlagiarism, type PlagiarismResult } from '@/app/api/plagiarism.api'
 import { PlagiarismBadge } from '@/components/plagiarism-badge'
-
-const getCurrentUserEmail = (): string | null => {
-    if (typeof window === 'undefined') return null
-    const token = localStorage.getItem('accessToken')
-    if (!token) return null
-    try {
-        const payload = JSON.parse(atob(token.split('.')[1]))
-        return payload.sub || null
-    } catch (error) {
-        console.error('Error decoding token:', error)
-        return null
-    }
-}
+import { getCurrentUserEmail } from '@/lib/auth'
 
 function Stepper({ currentStep }: { currentStep: number }) {
     const steps = [
@@ -192,7 +183,7 @@ function StepAddAuthors({
                                         authors.map((item, idx) => (
                                             <tr key={item.paperAuthorId} className="hover:bg-muted/30 transition-colors">
                                                 <td className="px-4 py-3">{idx + 1}</td>
-                                                <td className="px-4 py-3 font-medium">{item.user.fullName}</td>
+                                                <td className="px-4 py-3 font-medium"><UserLink userId={item.user.id} name={item.user.fullName || item.user.email} className="font-medium text-sm" /></td>
                                                 <td className="px-4 py-3 text-muted-foreground">{item.user.email}</td>
                                             </tr>
                                         ))
@@ -249,6 +240,8 @@ function StepUploadManuscript({
     const [uploaded, setUploaded] = useState(false)
     const [showPreview, setShowPreview] = useState(false)
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+    const [showSuccess, setShowSuccess] = useState(false)
+    const [uploadPercent, setUploadPercent] = useState(0)
     const [plagiarismResult, setPlagiarismResult] = useState<PlagiarismResult | null>(null)
     const [checkingPlagiarism, setCheckingPlagiarism] = useState(false)
 
@@ -337,7 +330,11 @@ function StepUploadManuscript({
         }
         try {
             setUploading(true)
-            await uploadPaperFile(conferenceId, paperId, selectedFile)
+            setUploadPercent(0)
+            await uploadPaperFile(conferenceId, paperId, selectedFile, (percent) => {
+                setUploadPercent(percent)
+            })
+            setUploadPercent(100)
             toast.success('Manuscript uploaded successfully!')
             setUploaded(true)
             // Refresh existing file info
@@ -484,12 +481,24 @@ function StepUploadManuscript({
                         </CardContent>
                     </Card>
 
-                    <div className="flex gap-3 mt-2">
-                        <Button onClick={() => router.push(`/paper/${paperId}`)} className="gap-2 bg-indigo-600 hover:bg-indigo-700">
-                            <Check className="h-4 w-4" />
-                            Complete — Go to Paper Workspace
-                        </Button>
-                    </div>
+                    {showSuccess ? (
+                        <SuccessCelebration
+                            title="Paper Submitted Successfully!"
+                            message={`Your paper "${paperTitle}" has been submitted with manuscript uploaded.`}
+                            detail="You can track your paper status in the Paper Workspace."
+                            ctaLabel="Go to Paper Workspace"
+                            ctaUrl={`/paper/${paperId}`}
+                            autoRedirectUrl={`/paper/${paperId}`}
+                            autoRedirectDelay={8}
+                        />
+                    ) : (
+                        <div className="flex gap-3 mt-2">
+                            <Button onClick={() => setShowSuccess(true)} className="gap-2 bg-indigo-600 hover:bg-indigo-700">
+                                <Check className="h-4 w-4" />
+                                Complete Submission
+                            </Button>
+                        </div>
+                    )}
                 </div>
             ) : (
                 /* NO FILE UPLOADED — show upload form */
@@ -562,14 +571,23 @@ function StepUploadManuscript({
                             </div>
                         )}
 
-                        <div className="flex gap-3 pt-2">
-                            <Button onClick={handleUpload} disabled={uploading || !selectedFile} className="gap-2">
-                                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                                {uploading ? 'Uploading...' : 'Upload PDF'}
-                            </Button>
-                            <Button variant="outline" onClick={() => router.push(`/track?conferenceId=${conferenceId}`)}>
-                                Skip for now
-                            </Button>
+                        <div className="flex flex-col gap-3 pt-2">
+                            {uploading && selectedFile && (
+                                <UploadProgress
+                                    percent={uploadPercent}
+                                    fileName={selectedFile.name}
+                                    fileSize={`${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`}
+                                />
+                            )}
+                            <div className="flex gap-3">
+                                <Button onClick={handleUpload} disabled={uploading || !selectedFile} className="gap-2">
+                                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                                    {uploading ? 'Uploading...' : 'Upload PDF'}
+                                </Button>
+                                <Button variant="outline" onClick={() => router.push(`/track?conferenceId=${conferenceId}`)}>
+                                    Skip for now
+                                </Button>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>

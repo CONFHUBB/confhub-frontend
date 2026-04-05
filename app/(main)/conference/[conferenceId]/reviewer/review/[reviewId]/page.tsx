@@ -14,11 +14,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { FieldError } from '@/components/ui/field'
 import { Loader2, ArrowLeft, FileText, Check, X, AlertTriangle, Save, Eye, ExternalLink, FileDown, MessageSquare, Lock, Sparkles, ThumbsUp, ThumbsDown, BookOpen, ChevronDown, ChevronUp } from 'lucide-react'
 import { toast } from 'sonner'
+import { SuccessCelebration } from '@/components/shared/success-celebration'
 import { PaperDiscussion } from '@/components/paper-discussion'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useTrackSettings } from '@/hooks/useTrackSettings'
 import { reviewStatusClass } from '@/lib/constants/status'
 import { summarizePaper, analyzeStrengthsWeaknesses, type PaperSummaryResponse, type StrengthWeaknessResponse } from '@/app/api/ai-assistant.api'
+import { getCurrentUserId } from '@/lib/auth'
 
 interface ReviewQuestion {
     id: number
@@ -54,6 +56,7 @@ export default function ReviewPaperPage() {
     const [showDiscussion, setShowDiscussion] = useState(false)
     const [discussionEnabled, setDiscussionEnabled] = useState(false)
     const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+    const [showSuccess, setShowSuccess] = useState(false)
 
     // #5: Other reviews state
     const [otherReviews, setOtherReviews] = useState<any[]>([])
@@ -76,13 +79,7 @@ export default function ReviewPaperPage() {
 
     // Get userId from JWT
     useEffect(() => {
-        try {
-            const token = localStorage.getItem('accessToken')
-            if (token) {
-                const payload = JSON.parse(atob(token.split('.')[1]))
-                setCurrentUserId(payload.userId || payload.id)
-            }
-        } catch { /* ignore */ }
+        setCurrentUserId(getCurrentUserId())
     }, [])
 
     const fetchData = useCallback(async () => {
@@ -261,6 +258,7 @@ export default function ReviewPaperPage() {
                 status: 'COMPLETED',
             })
             setReview(updated)
+            setShowSuccess(true)
             toast.success('✅ Review submitted successfully!')
         } catch (err: any) {
             toast.error(err?.response?.data?.message || 'Failed to submit review')
@@ -799,8 +797,21 @@ export default function ReviewPaperPage() {
                 </div>
             )}
 
+            {/* Success Celebration after submit */}
+            {showSuccess && review.status === 'COMPLETED' && (
+                <SuccessCelebration
+                    title="Review Submitted!"
+                    message={`Your review for "${review.paper?.title}" has been submitted successfully.`}
+                    detail={`${answeredCount}/${questions.length} questions answered${review.totalScore != null ? ` • Score: ${review.totalScore}` : ''}`}
+                    ctaLabel="Back to Reviewer Console"
+                    ctaUrl={`/conference/${conferenceId}/reviewer`}
+                    autoRedirectUrl={`/conference/${conferenceId}/reviewer`}
+                    autoRedirectDelay={10}
+                />
+            )}
+
             {/* Read-only notice */}
-            {isReadOnly && (
+            {isReadOnly && !showSuccess && (
                 <div className={`p-4 rounded-lg border flex flex-col items-center text-center text-sm ${
                     review.status === 'COMPLETED'
                         ? 'bg-emerald-50 border-emerald-200 text-emerald-700'

@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Loader2, ArrowLeft, FileText, CheckCircle, XCircle, Clock, Search, BarChart3 } from 'lucide-react'
 import PaperDecisionDetail from '@/components/chair/paper-decision-detail'
 import { paperStatusClass, getPaperStatus } from '@/lib/constants/status'
+import { getCurrentUserId } from '@/lib/auth'
 
 export default function ChairDecisionsPage() {
     const params = useParams()
@@ -30,13 +31,7 @@ export default function ChairDecisionsPage() {
     const [userId, setUserId] = useState<number | null>(null)
 
     useEffect(() => {
-        try {
-            const token = localStorage.getItem('accessToken')
-            if (token) {
-                const payload = JSON.parse(atob(token.split('.')[1]))
-                setUserId(payload.userId || payload.id)
-            }
-        } catch { /* ignore */ }
+        setUserId(getCurrentUserId())
     }, [])
 
     const fetchData = async () => {
