@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, MessageSquare, Send, Reply, Trash2, ChevronDown, ChevronRight, User2, AlertCircle } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { V } from '@/lib/validation'
 
 interface PaperDiscussionProps {

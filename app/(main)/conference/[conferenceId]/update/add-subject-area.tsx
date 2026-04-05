@@ -128,6 +128,7 @@ export function AddSubjectArea({ initialSubjectAreas, onSubmit }: AddSubjectArea
                                             size="sm"
                                             onClick={() => removeSubjectArea(sa.id)}
                                             className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                                            aria-label="Remove subject area"
                                         >
                                             <Trash2 className="size-4" />
                                         </Button>

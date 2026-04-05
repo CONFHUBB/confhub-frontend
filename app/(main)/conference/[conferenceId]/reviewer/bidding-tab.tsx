@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Loader2, Search, Zap, ThumbsUp, Minus, ThumbsDown, ChevronDown, ChevronUp, AlertTriangle, Target, Tag, Pencil, XCircle, Lock, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { FilterPanel } from '@/components/ui/filter-panel'
 import { EmptyState } from '@/components/ui/empty-state'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 const BID_OPTIONS: { value: BidValue; label: string; shortLabel: string; color: string; activeColor: string; icon: React.ReactNode }[] = [
     { value: 'EAGER', label: 'Eager to review', shortLabel: 'Eager', color: 'border-gray-200 text-gray-500 hover:border-emerald-300 hover:text-emerald-600', activeColor: 'bg-emerald-100 border-emerald-400 text-emerald-700 ring-1 ring-emerald-300', icon: <Zap className="h-3.5 w-3.5" /> },

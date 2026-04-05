@@ -80,14 +80,27 @@ export const deleteAuthorFromPaper = async (paperAuthorId: number): Promise<void
     await http.delete(`/paper-author/${paperAuthorId}`)
 }
 
-export const uploadPaperFile = async (conferenceId: number, paperId: number, file: File): Promise<any> => {
+export const uploadPaperFile = async (
+    conferenceId: number,
+    paperId: number,
+    file: File,
+    onUploadProgress?: (percent: number) => void
+): Promise<any> => {
     const formData = new FormData()
     formData.append('file', file)
     const response = await http.post(`/paper-file/upload`, formData, {
         params: { conferenceId, paperId },
         headers: {
             'Content-Type': 'multipart/form-data'
-        }
+        },
+        onUploadProgress: onUploadProgress
+            ? (progressEvent) => {
+                const percent = progressEvent.total
+                    ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+                    : 0
+                onUploadProgress(percent)
+            }
+            : undefined,
     })
     return response.data
 }

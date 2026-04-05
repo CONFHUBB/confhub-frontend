@@ -37,17 +37,7 @@ import type { MetaReviewResponse, Decision } from "@/types/meta-review"
 import type { PaperConflictResponse } from "@/types/conflict"
 import { UnifiedDataTable, type DataTableColumn } from "@/components/ui/unified-data-table"
 import { PlagiarismBadge } from "@/components/plagiarism-badge"
-
-const STATUS_CONFIG: Record<string, { label: string, color: string }> = {
-    DRAFT: { label: "Draft", color: "bg-slate-100 text-slate-700" },
-    SUBMITTED: { label: "Submitted", color: "bg-blue-100 text-blue-700 font-medium" },
-    UNDER_REVIEW: { label: "Under Review", color: "bg-purple-100 text-purple-700 font-medium" },
-    AWAITING_DECISION: { label: "Awaiting Decision", color: "bg-amber-100 text-amber-700 font-medium" },
-    ACCEPTED: { label: "Accepted", color: "bg-green-100 text-green-700 font-bold" },
-    REJECTED: { label: "Rejected", color: "bg-red-100 text-red-700 font-bold" },
-    WITHDRAWN: { label: "Withdrawn", color: "bg-gray-100 text-gray-500 line-through" },
-    CAMERA_READY_SUBMITTED: { label: "Camera Ready", color: "bg-emerald-100 text-emerald-800 font-bold" },
-}
+import { getPaperStatus, paperStatusClass, PAPER_STATUS } from '@/lib/constants/status'
 
 export interface EnrichedPaper extends PaperResponse {
     conflictCount: number
@@ -231,7 +221,7 @@ export function PaperManagement({ conferenceId, trackIds }: PaperManagementProps
         try {
             const promises = Array.from(selectedIds).map(id => updatePaperStatus(id, newStatus))
             await Promise.all(promises)
-            toast.success(`Successfully updated ${selectedIds.size} papers to ${STATUS_CONFIG[newStatus]?.label || newStatus}`)
+            toast.success(`Successfully updated ${selectedIds.size} papers to ${getPaperStatus(newStatus).label}`)
             setSelectedIds(new Set())
             fetchAllData()
         } catch (error) {
@@ -427,8 +417,8 @@ export function PaperManagement({ conferenceId, trackIds }: PaperManagementProps
             header: <span className="cursor-pointer group flex items-center justify-center gap-1 w-full" onClick={() => handleSort("status")}>Status <SortIcon columnKey="status" /></span>,
             cell: (paper) => (
                 <div className="flex justify-center w-full">
-                    <Badge className={`text-[10px] whitespace-nowrap shadow-none ${STATUS_CONFIG[paper.status]?.color || ""}`}>
-                        {STATUS_CONFIG[paper.status]?.label || paper.status}
+                    <Badge className={`text-[10px] whitespace-nowrap shadow-none ${paperStatusClass(paper.status)}`}>
+                        {getPaperStatus(paper.status).label}
                     </Badge>
                 </div>
             )
@@ -487,7 +477,7 @@ export function PaperManagement({ conferenceId, trackIds }: PaperManagementProps
                                 onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(0); }}
                             >
                                 <option value="all">All Statuses</option>
-                                {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                                {Object.entries(PAPER_STATUS).map(([key, config]) => (
                                     <option key={key} value={key}>{config.label}</option>
                                 ))}
                             </select>

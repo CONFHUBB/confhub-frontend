@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Calendar, MapPin, Loader2, CheckCircle, Search, ChevronLeft, ChevronRight, Filter } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
-import toast from 'react-hot-toast'
+import { CardGridSkeleton, PageHeaderSkeleton } from '@/components/shared/skeletons'
+import { toast } from 'sonner'
 import { filterConferences, type FilterValues } from './conference-filter-bar'
 
 // Inner component that uses useSearchParams (must be inside Suspense)
@@ -120,8 +121,9 @@ function ConferencesPageInner() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 max-w-[1600px]">
+                <PageHeaderSkeleton />
+                <CardGridSkeleton count={8} />
             </div>
         )
     }

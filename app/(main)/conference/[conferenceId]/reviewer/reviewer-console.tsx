@@ -23,7 +23,7 @@ import {
     Building2, Mail, Globe, GraduationCap, Phone,
     ChevronUp, XCircle, ArrowRight, MessageSquare
 } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { SubjectAreasTab } from './subject-areas-tab'
 import { BiddingTab } from './bidding-tab'
 import { ReviewsTab } from './reviews-tab'
@@ -31,6 +31,10 @@ import { DiscussionTab } from './discussion-tab'
 import { FieldError } from '@/components/ui/field'
 import { V } from '@/lib/validation'
 import { useTrackSettings } from '@/hooks/useTrackSettings'
+import { reviewStatusClass } from '@/lib/constants/status'
+import { getCurrentUserId } from '@/lib/auth'
+import { Breadcrumb } from '@/components/shared/breadcrumb'
+import { DeadlineBanner } from '@/components/shared/deadline-banner'
 
 // ──────────────────────────── Types ────────────────────────────
 type ReviewerTab =
@@ -84,12 +88,7 @@ const TAB_GROUPS: StepGroup[] = [
     }
 ]
 
-const STATUS_COLORS: Record<string, string> = {
-    ASSIGNED: 'bg-indigo-100 text-indigo-800',
-    IN_PROGRESS: 'bg-amber-100 text-amber-800',
-    COMPLETED: 'bg-green-100 text-green-800',
-    DECLINED: 'bg-red-100 text-red-800',
-}
+
 
 const BID_ICONS: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
     EAGER: { icon: <Zap className="h-4 w-4" />, color: 'text-emerald-600', label: 'Eager' },
@@ -127,13 +126,7 @@ export default function ReviewerConsole() {
 
     // Get userId from JWT
     useEffect(() => {
-        try {
-            const token = localStorage.getItem('accessToken')
-            if (token) {
-                const payload = JSON.parse(atob(token.split('.')[1]))
-                setReviewerId(payload.userId || payload.id)
-            }
-        } catch { /* ignore */ }
+        setReviewerId(getCurrentUserId())
     }, [])
 
     // Fetch all data
@@ -304,12 +297,26 @@ export default function ReviewerConsole() {
     return (
         <div className="min-h-screen bg-transparent flex flex-col overflow-hidden">
             <div className="flex-1 w-full max-w-[1700px] mx-auto flex flex-col p-4 md:p-8 overflow-hidden">
+                {/* Breadcrumb Navigation */}
+                <Breadcrumb items={[
+                    { label: 'Conferences', href: '/conference' },
+                    { label: conference?.acronym || 'Conference', href: `/conference/${conferenceId}` },
+                    { label: 'Reviewer Console' },
+                ]} />
+
+                {/* Deadline Banner — shows most relevant deadline */}
+                {(() => {
+                    const reviewDeadline = activities.find(a => a.activityType === 'REVIEW_SUBMISSION')
+                    const biddingDeadline = activities.find(a => a.activityType === 'REVIEWER_BIDDING')
+                    const relevantActivity = reviewDeadline?.isEnabled ? reviewDeadline : biddingDeadline?.isEnabled ? biddingDeadline : null
+                    const deadlineLabel = relevantActivity?.activityType === 'REVIEW_SUBMISSION' ? 'Review Submission' : 'Reviewer Bidding'
+                    return relevantActivity ? (
+                        <DeadlineBanner deadline={relevantActivity.deadline} label={deadlineLabel} className="mb-4" />
+                    ) : null
+                })()}
+
                 {/* Header Area — Vibrant hero banner */}
                 <div className="mb-6 shrink-0">
-                    <Button variant="ghost" className="mb-3 -ml-2 gap-2" onClick={() => router.push('/conference/reviewer-console')}>
-                        <ArrowLeft className="h-4 w-4" />
-                        Back to My Reviews
-                    </Button>
                     <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-700 p-6 md:px-8 md:py-7 shadow-lg">
                         {/* Decorative circles */}
                         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
@@ -791,7 +798,7 @@ function DashboardTab({
                                     <div className="min-w-0 flex-1 mr-3">
                                         <p className="text-sm font-medium truncate">{r.paper?.title || `Paper #${r.paper?.id}`}</p>
                                     </div>
-                                    <Badge className={STATUS_COLORS[r.status] || 'bg-gray-100 text-gray-800'}>
+                                    <Badge className={reviewStatusClass(r.status)}>
                                         {r.status}
                                     </Badge>
                                 </div>

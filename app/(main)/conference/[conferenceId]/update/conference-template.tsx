@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/field"
 import { V, validate as validateField } from "@/lib/validation"
 import { ArrowLeft, Copy, FileText, Info, Mail, Plus, Trash2, Type } from "lucide-react"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { Textarea } from "@/components/ui/textarea"
 
 interface ConferenceTemplateProps {
@@ -189,6 +189,7 @@ export function ConferenceTemplate({ initialTemplates, onSubmit }: ConferenceTem
                                                 removeTemplate(template.id)
                                             }
                                             className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                                            aria-label="Remove template"
                                         >
                                             <Trash2 className="size-4" />
                                         </Button>

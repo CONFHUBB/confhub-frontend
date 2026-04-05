@@ -22,27 +22,17 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import Link from 'next/link'
+import { getPaperStatus, PAPER_STATUS } from '@/lib/constants/status'
 
-// ── Status Configuration ──
-const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-    DRAFT: { label: 'Draft', color: 'bg-amber-100 text-amber-700 hover:bg-amber-100', icon: <Edit className="w-3 h-3" /> },
-    SUBMITTED: { label: 'Submitted', color: 'bg-blue-100 text-blue-700 hover:bg-blue-100', icon: <Send className="w-3 h-3" /> },
-    UNDER_REVIEW: { label: 'Under Review', color: 'bg-purple-100 text-purple-700 hover:bg-purple-100', icon: <Search className="w-3 h-3" /> },
-    ACCEPTED: { label: 'Accepted', color: 'bg-green-100 text-green-700 hover:bg-green-100', icon: <CheckCircle2 className="w-3 h-3" /> },
-    REJECTED: { label: 'Rejected', color: 'bg-red-100 text-red-700 hover:bg-red-100', icon: <XCircle className="w-3 h-3" /> },
-    WITHDRAWN: { label: 'Withdrawn', color: 'bg-gray-100 text-gray-700 hover:bg-gray-100', icon: <Ban className="w-3 h-3" /> },
-    CAMERA_READY: { label: 'Camera Ready', color: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100', icon: <Camera className="w-3 h-3" /> },
-    PUBLISHED: { label: 'Published', color: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-100', icon: <Globe className="w-3 h-3" /> }
-}
 
-const ALL_STATUSES = Object.keys(STATUS_CONFIG) as PaperStatus[]
+const ALL_STATUSES = Object.keys(PAPER_STATUS) as PaperStatus[]
 const ACTION_STATUSES: PaperStatus[] = ['DRAFT']
 
 function StatusBadge({ status }: { status: PaperStatus }) {
-    const config = STATUS_CONFIG[status] || { label: status, color: 'text-gray-600', icon: null }
+    const config = getPaperStatus(status)
     return (
-        <Badge variant="outline" className={`text-[10px] font-semibold border-transparent uppercase ${config.color.includes('text') ? config.color.replace(/bg-.*?\s/, '') : 'text-gray-700'}`}>
-            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${config.color.split(' ')[0]}`} />
+        <Badge variant="outline" className={`text-[10px] font-semibold border-transparent uppercase ${config.text}`}>
+            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${config.dot}`} />
             {config.label}
         </Badge>
     )
@@ -250,7 +240,7 @@ export default function UserSubmissionsPage() {
                     <SelectContent>
                         <SelectItem value="ALL">All Statuses</SelectItem>
                         {ALL_STATUSES.map(s => (
-                            <SelectItem key={s} value={s}>{STATUS_CONFIG[s].label}</SelectItem>
+                            <SelectItem key={s} value={s}>{getPaperStatus(s).label}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>

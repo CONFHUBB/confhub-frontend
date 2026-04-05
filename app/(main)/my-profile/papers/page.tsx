@@ -10,18 +10,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ChevronDown, ChevronUp, FileText, Search, ExternalLink, ArrowRight } from "lucide-react"
-import { toast } from "react-hot-toast"
+import { toast } from 'sonner'
+import { getPaperStatus } from '@/lib/constants/status'
+import { getCurrentUserEmail } from '@/lib/auth'
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; dotColor: string }> = {
-    'DRAFT': { label: 'Draft', color: 'bg-gray-100 text-gray-700 border-gray-200', dotColor: 'bg-gray-500' },
-    'SUBMITTED': { label: 'Submitted', color: 'bg-blue-100 text-blue-700 border-blue-200', dotColor: 'bg-blue-500' },
-    'UNDER_REVIEW': { label: 'Under Review', color: 'bg-amber-100 text-amber-700 border-amber-200', dotColor: 'bg-amber-500' },
-    'ACCEPTED': { label: 'Accepted', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', dotColor: 'bg-emerald-500' },
-    'REJECTED': { label: 'Rejected', color: 'bg-red-100 text-red-700 border-red-200', dotColor: 'bg-red-500' },
-    'WITHDRAWN': { label: 'Withdrawn', color: 'bg-rose-100 text-rose-700 border-rose-200', dotColor: 'bg-rose-500' },
-    'CAMERA_READY': { label: 'Camera Ready', color: 'bg-indigo-100 text-indigo-700 border-indigo-200', dotColor: 'bg-indigo-500' },
-    'PUBLISHED': { label: 'Published', color: 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200', dotColor: 'bg-fuchsia-500' },
-}
+
 
 export default function MyAllPapersPage() {
     const router = useRouter()
@@ -37,10 +30,8 @@ export default function MyAllPapersPage() {
 
     const fetchData = async () => {
         try {
-            const token = localStorage.getItem("accessToken")
-            if (!token) return router.push("/auth/login")
-            const payload = JSON.parse(atob(token.split(".")[1]))
-            const email = payload.sub
+            const email = getCurrentUserEmail()
+            if (!email) return router.push("/auth/login")
             
             const user = await getUserByEmail(email)
             if (!user || !user.id) return
@@ -134,7 +125,7 @@ export default function MyAllPapersPage() {
                         </TableHeader>
                         <TableBody>
                             {filtered.map(paper => {
-                                const sc = STATUS_CONFIG[paper.status] || { label: paper.status, color: 'bg-gray-100', dotColor: 'bg-gray-500' }
+                                const sc = getPaperStatus(paper.status)
                                 return (
                                     <TableRow key={paper.id} className="hover:bg-muted/30 group">
                                         <TableCell className="text-center font-mono text-xs text-muted-foreground">
@@ -156,8 +147,8 @@ export default function MyAllPapersPage() {
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-center">
-                                            <Badge className={`text-[10px] px-2 py-0.5 border ${sc.color} shadow-sm justify-center`}>
-                                                <span className={`w-1.5 h-1.5 rounded-full ${sc.dotColor} mr-1.5`} />
+                                            <Badge className={`text-[10px] px-2 py-0.5 border ${sc.bg} ${sc.text} ${sc.border} shadow-sm justify-center`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${sc.dot} mr-1.5`} />
                                                 {sc.label}
                                             </Badge>
                                         </TableCell>

@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Loader2, MessageSquare, Send, Trash2, Reply, ChevronDown, ChevronRight } from "lucide-react"
+import { UserLink } from '@/components/shared/user-link'
 import { Select } from "antd"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { V } from "@/lib/validation"
 
 interface DiscussionPanelProps {
@@ -289,7 +290,7 @@ export function DiscussionPanel({ conferenceId }: DiscussionPanelProps) {
                                                 <p className="font-semibold text-base">{post.title}</p>
                                             )}
                                             <p className="text-xs text-muted-foreground">
-                                                {post.userFirstName} {post.userLastName}
+                                                <UserLink userId={post.userId} name={`${post.userFirstName || ''} ${post.userLastName || ''}`.trim() || 'Unknown'} className="text-xs font-medium" />
                                                 {post.userEmail && <span className="ml-1">({post.userEmail})</span>}
                                                 {" · "}
                                                 {formatDate(post.createdAt)}
@@ -358,7 +359,7 @@ export function DiscussionPanel({ conferenceId }: DiscussionPanelProps) {
                                                 repliesMap[post.id].map((reply) => (
                                                     <div key={reply.id} className="rounded border p-3 bg-muted/10">
                                                         <p className="text-xs text-muted-foreground mb-1">
-                                                            {reply.userFirstName} {reply.userLastName}
+                                                            <UserLink userId={reply.userId} name={`${reply.userFirstName || ''} ${reply.userLastName || ''}`.trim() || 'Unknown'} className="text-xs font-medium" />
                                                             {" · "}
                                                             {formatDate(reply.createdAt)}
                                                         </p>

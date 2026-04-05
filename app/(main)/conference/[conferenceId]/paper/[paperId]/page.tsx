@@ -152,7 +152,7 @@ export default function PaperDetailPage() {
             case 'assignments':
                 return <AssignmentsTab paperId={paperId} conferenceId={conferenceId} />
             case 'conflicts':
-                return <ConflictsTab paperId={paperId} conferenceId={conferenceId} isChair={isChair} />
+                return <ConflictsTab paperId={paperId} conferenceId={conferenceId} isChair={isChair} isAuthor={isAuthor} />
             case 'discussion':
                 return <DiscussionTab paperId={paperId} userId={userId} isChair={isChair} isReviewer={isReviewer} isAuthor={isAuthor} conferenceId={conferenceId} />
             case 'decision':
@@ -179,6 +179,7 @@ export default function PaperDetailPage() {
                 isChair={isChair}
                 isReviewer={isReviewer}
                 isAuthor={isAuthor}
+                isDoubleBlind={isDoubleBlind}
                 permissions={permissions}
                 conferenceId={conferenceId}
                 conferenceName={conference?.name}

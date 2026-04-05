@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button"
 import { ChevronDown, ChevronUp, Download, Loader2, Ticket } from "lucide-react"
 import QRCode from "qrcode"
 import { downloadAcceptanceLetter, downloadCertificate, downloadInvoice } from "@/app/api/document.api"
-import { toast } from "react-hot-toast"
+import { toast } from 'sonner'
+import { getCurrentUserEmail } from '@/lib/auth'
 
 export default function MyGlobalTicketsPage() {
     const router = useRouter()
@@ -29,10 +30,8 @@ export default function MyGlobalTicketsPage() {
 
     const fetchData = async () => {
         try {
-            const token = localStorage.getItem("accessToken")
-            if (!token) return router.push("/auth/login")
-            const payload = JSON.parse(atob(token.split(".")[1]))
-            const email = payload.sub
+            const email = getCurrentUserEmail()
+            if (!email) return router.push("/auth/login")
             const user = await getUserByEmail(email)
             if (!user || !user.id) return
             

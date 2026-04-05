@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { HelpTooltip } from "@/components/help-tooltip"
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 
 interface ActivityTimelineProps {
     conferenceId: number

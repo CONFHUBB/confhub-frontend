@@ -9,7 +9,7 @@ import { getReviewsByPaper, getReviewVersions } from '@/app/api/review.api'
 import type { ReviewResponse } from '@/types/review'
 import type { PaperResponse } from '@/types/paper'
 import Link from 'next/link'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 interface ReviewsTabProps {
     paperId: number

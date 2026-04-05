@@ -23,7 +23,7 @@ import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem,
     DropdownMenuSeparator, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import QRCode from 'qrcode'
 import {
     Loader2, ArrowLeft, FileText, Ticket, User, ChevronDown, ChevronRight,
@@ -33,9 +33,13 @@ import {
 import Link from 'next/link'
 import { AuthorPhaseTracker } from './author-phase-tracker'
 import dynamic from 'next/dynamic'
+import { getPaperStatus, PAPER_STATUS } from '@/lib/constants/status'
+import { getCurrentUserEmail } from '@/lib/auth'
+import { Breadcrumb } from '@/components/shared/breadcrumb'
+import { WorkspaceSkeleton } from '@/components/shared/skeletons'
 
 const CameraReadyPage = dynamic(() => import('./camera-ready/page'), {
-    loading: () => <div className="flex items-center justify-center py-20"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>
+    loading: () => <WorkspaceSkeleton />
 })
 
 // ── Types ──
@@ -71,16 +75,7 @@ const TAB_GROUPS = [
     },
 ]
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; dotColor: string }> = {
-    DRAFT:        { label: 'Draft',        color: 'bg-gray-100 text-gray-700 border-gray-200',     dotColor: 'bg-gray-400' },
-    SUBMITTED:    { label: 'Submitted',    color: 'bg-indigo-100 text-indigo-700 border-indigo-200', dotColor: 'bg-indigo-500' },
-    UNDER_REVIEW: { label: 'Under Review', color: 'bg-amber-100 text-amber-700 border-amber-200',   dotColor: 'bg-amber-500' },
-    ACCEPTED:     { label: 'Accepted',     color: 'bg-emerald-100 text-emerald-700 border-emerald-200', dotColor: 'bg-emerald-500' },
-    REJECTED:     { label: 'Rejected',     color: 'bg-red-100 text-red-700 border-red-200',         dotColor: 'bg-red-500' },
-    WITHDRAWN:    { label: 'Withdrawn',    color: 'bg-gray-100 text-gray-500 border-gray-200',      dotColor: 'bg-gray-400' },
-    CAMERA_READY: { label: 'Camera-Ready', color: 'bg-cyan-100 text-cyan-700 border-cyan-200',      dotColor: 'bg-cyan-500' },
-    PUBLISHED:    { label: 'Published',    color: 'bg-teal-100 text-teal-700 border-teal-200',      dotColor: 'bg-teal-500' },
-}
+
 
 const PAGE_SIZE = 20
 
@@ -120,10 +115,9 @@ export default function AuthorDashboardPage() {
     const fetchData = useCallback(async () => {
         try {
             setLoading(true)
-            const token = localStorage.getItem('accessToken')
-            if (!token) { router.push('/auth/login'); return }
-            const payload = JSON.parse(atob(token.split('.')[1]))
-            const user = await getUserByEmail(payload.sub)
+            const email = getCurrentUserEmail()
+            if (!email) { router.push('/auth/login'); return }
+            const user = await getUserByEmail(email)
             if (!user?.id) { router.push('/auth/login'); return }
             setUserInfo({ id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email })
 
@@ -155,7 +149,7 @@ export default function AuthorDashboardPage() {
 
     useEffect(() => { fetchData() }, [fetchData])
 
-    if (loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+    if (loading) return <WorkspaceSkeleton />
     if (!conference) return (
         <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
             <p className="text-muted-foreground text-lg">Conference not found</p>
@@ -177,12 +171,15 @@ export default function AuthorDashboardPage() {
     return (
         <div className="min-h-screen bg-transparent flex flex-col overflow-hidden">
             <div className="flex-1 w-full max-w-[1700px] mx-auto flex flex-col p-4 md:p-8 overflow-hidden">
+                {/* Breadcrumb Navigation */}
+                <Breadcrumb items={[
+                    { label: 'Conferences', href: '/conference' },
+                    { label: conference?.acronym || 'Conference', href: `/conference/${conferenceId}` },
+                    { label: 'Author Workspace' },
+                ]} />
+
                 {/* Header Area — Vibrant hero banner */}
                 <div className="mb-6 shrink-0">
-                    <Button variant="ghost" className="mb-3 -ml-2 gap-2" onClick={() => router.back()}>
-                        <ArrowLeft className="h-4 w-4" />
-                        Back
-                    </Button>
                     <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-700 p-6 md:px-8 md:py-7 shadow-lg">
                         {/* Decorative circles */}
                         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
@@ -472,7 +469,7 @@ function MyPapersTab({ papers, reviewData, metaReviews, conferenceId }: {
                     <span className="font-bold">{papers.length}</span>
                     <span className="text-muted-foreground text-xs">All</span>
                 </button>
-                {Object.entries(STATUS_CONFIG).map(([status, cfg]) => {
+                {Object.entries(PAPER_STATUS).map(([status, cfg]) => {
                     const count = statusCounts[status] || 0
                     if (count === 0) return null
                     const isActive = filterStatus === status
@@ -480,7 +477,7 @@ function MyPapersTab({ papers, reviewData, metaReviews, conferenceId }: {
                         <button key={status} onClick={() => setFilterStatus(isActive ? 'all' : status)}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-all hover:shadow-sm ${isActive ? 'ring-2 ring-primary bg-primary/5 border-primary/30' : 'hover:bg-muted/50'}`}
                         >
-                            <span className={`w-2 h-2 rounded-full ${cfg.dotColor}`} />
+                            <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
                             <span className="font-bold">{count}</span>
                             <span className="text-muted-foreground text-xs">{cfg.label}</span>
                         </button>
@@ -556,7 +553,7 @@ function MyPapersTab({ papers, reviewData, metaReviews, conferenceId }: {
                             {paginated.map(paper => {
                                 const agg = reviewData[paper.id]
                                 const mr = metaReviews[paper.id]
-                                const sc = STATUS_CONFIG[paper.status]
+                                const sc = getPaperStatus(paper.status)
                                 const isExpanded = expandedId === paper.id
 
                                 return (
@@ -571,8 +568,8 @@ function MyPapersTab({ papers, reviewData, metaReviews, conferenceId }: {
                                             </TableCell>
                                             <TableCell className="text-xs text-muted-foreground">{paper.track?.name || '—'}</TableCell>
                                             <TableCell className="text-center">
-                                                <Badge className={`text-[10px] border ${sc?.color || ''}`}>
-                                                    {sc?.label || paper.status}
+                                                <Badge className={`text-[10px] border ${sc.bg} ${sc.text} ${sc.border}`}>
+                                                    {sc.label}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-center">

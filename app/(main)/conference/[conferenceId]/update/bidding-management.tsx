@@ -21,7 +21,7 @@ import {
 } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { FilterPanel } from "@/components/ui/filter-panel"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import * as XLSX from "xlsx"
 
 interface BiddingManagementProps {

@@ -23,7 +23,7 @@ import {
     BookOpen,
 } from "lucide-react"
 import type { UserProfileRequest, UserProfile } from "@/types/user"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { FieldError } from "@/components/ui/field"
 import { V } from "@/lib/validation"
 

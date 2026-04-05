@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Select } from "antd"
 import { X, Plus, Trash2, Loader2, GripVertical } from "lucide-react"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { V } from "@/lib/validation"
 
 interface ReviewQuestionDialogProps {

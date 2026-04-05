@@ -16,7 +16,7 @@ import {
 import { CountrySelect } from "@/components/ui/country-select"
 import { Select } from "antd"
 import { AREA_OPTIONS, SOCIETY_SPONSOR_OPTIONS } from "@/lib/constants/conference-options"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { Upload, Loader2, X, ImageIcon } from "lucide-react"
 import { V } from "@/lib/validation"
 

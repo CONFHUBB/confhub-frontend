@@ -13,14 +13,8 @@ import { TableSkeleton } from '@/components/ui/table-skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { PlagiarismBadge } from '@/components/plagiarism-badge'
-import toast from 'react-hot-toast'
-
-const STATUS_COLORS: Record<string, string> = {
-    ASSIGNED: 'bg-amber-100 text-amber-800 border-amber-200',
-    COMPLETED: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    DECLINED: 'bg-red-100 text-red-800 border-red-200',
-    SUBMITTED: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-}
+import { toast } from 'sonner'
+import { reviewStatusClass } from '@/lib/constants/status'
 
 interface ReviewsTabProps {
     reviews: ReviewResponse[]
@@ -155,7 +149,7 @@ export function ReviewsTab({ reviews, conferenceId, loading = false }: ReviewsTa
                                             <span className="truncate block">{review.paper?.title || `Paper #${review.paper?.id}`}</span>
                                         </TableCell>
                                         <TableCell>
-                                            <Badge className={`border ${STATUS_COLORS[review.status] || 'bg-gray-100 text-gray-800'}`}>
+                                            <Badge className={`border ${reviewStatusClass(review.status)}`}>
                                                 {review.status}
                                             </Badge>
                                         </TableCell>

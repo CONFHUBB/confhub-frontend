@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { SubmissionFormManager } from '../submission-form/submission-form-manager'
 import { getTracksByConference, getSubjectAreasByTrack, getTrackReviewSettings } from '@/app/api/track.api'
 import { getConferenceMembers, getUserByEmail } from '@/app/api/user.api'
@@ -53,6 +53,10 @@ import { createTemplate } from '@/app/api/template.api'
 import { updateConference } from '@/app/api/conference.api'
 import { ConferenceForm } from '../../create/conference-form'
 import type { ConferenceData } from '@/types/conference-form'
+import { getCurrentUserId, getCurrentUserEmail } from '@/lib/auth'
+import { WorkspaceSkeleton } from '@/components/shared/skeletons'
+import { useKeyboardShortcuts, ShortcutHelpOverlay } from '@/hooks/useKeyboardShortcuts'
+import { OnboardingTooltips } from '@/components/shared/onboarding-tooltips'
 
 import type { DynamicField, FormDefinition } from '@/types/submission-form'
 import type {
@@ -206,8 +210,31 @@ export default function ConferenceUpdatePage() {
         const newUrl = `/conference/${conferenceId}/update?tab=${tab}`
         window.history.replaceState(null, '', newUrl)
     }, [conferenceId])
-    const [expandedGroups, setExpandedGroups] = useState<string[]>(['Overview', 'General Settings', 'User Management', 'Forms & Templates', 'Activity Timeline', 'Paper & Review', 'Registration', 'Event'])
+    // Progressive Disclosure: Only expand Overview + group containing active tab by default
+    const getInitialExpandedGroups = useCallback(() => {
+        const groups = ['Overview']
+        // Always expand the group that contains the active tab
+        for (const group of TAB_GROUPS) {
+            if (group.items.some(i => i.key === initialTab)) {
+                if (!groups.includes(group.title)) groups.push(group.title)
+                break
+            }
+        }
+        return groups
+    }, [initialTab])
+    const [expandedGroups, setExpandedGroups] = useState<string[]>(getInitialExpandedGroups)
     const [isUpdatingGeneral, setIsUpdatingGeneral] = useState(false)
+
+    // ── Keyboard Shortcuts ──
+    const SHORTCUT_DEFS = useMemo(() => [
+        { key: 'd', label: 'Dashboard', description: 'Go to Dashboard', action: () => setActiveTab('dashboard') },
+        { key: 'p', label: 'Papers', description: 'Go to Paper Management', action: () => setActiveTab('features-paper-management') },
+        { key: 'r', label: 'Reviews', description: 'Go to Review Management', action: () => setActiveTab('features-review-management') },
+        { key: 'm', label: 'Members', description: 'Go to Members & Roles', action: () => setActiveTab('features-members') },
+        { key: 't', label: 'Timeline', description: 'Go to Activity Timeline', action: () => setActiveTab('features-activity-timeline') },
+        { key: 'a', label: 'Analytics', description: 'Go to Analytics', action: () => setActiveTab('analytics') },
+    ], [setActiveTab])
+    const { showHelp, setShowHelp } = useKeyboardShortcuts(SHORTCUT_DEFS)
 
     // ── Role detection state ──────────────────────────────
     const [userRole, setUserRole] = useState<ChairRole | 'BOTH' | null>(null)
@@ -225,11 +252,10 @@ export default function ConferenceUpdatePage() {
     useEffect(() => {
         const detectRole = async () => {
             try {
-                const token = localStorage.getItem('accessToken')
-                if (!token) return
-                const payload = JSON.parse(atob(token.split('.')[1]))
-                const userId: number = Number(payload.userId || payload.id)
-                const myId = Number(payload.sub ? (await getUserByEmail(payload.sub))?.id : payload.userId || payload.id)
+                const userId = getCurrentUserId()
+                if (!userId) return
+                const email = getCurrentUserEmail()
+                const myId = email ? Number((await getUserByEmail(email))?.id) : userId
                 let me = null;
                 let page = 0;
                 let hasMore = true;
@@ -288,6 +314,28 @@ export default function ConferenceUpdatePage() {
 
     // Workflow completion status
     const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus>({})
+
+    // Auto-expand groups that need attention when workflow status loads
+    useEffect(() => {
+        if (Object.keys(workflowStatus).length === 0) return
+        setExpandedGroups(prev => {
+            const next = new Set(prev)
+            next.add('Overview')
+            for (const group of TAB_GROUPS) {
+                const hasIncomplete = group.items.some(item =>
+                    item.completionKey && !workflowStatus[item.completionKey]
+                )
+                if (hasIncomplete) next.add(group.title)
+            }
+            for (const group of TAB_GROUPS) {
+                if (group.items.some(i => i.key === activeTab)) {
+                    next.add(group.title)
+                    break
+                }
+            }
+            return Array.from(next)
+        })
+    }, [workflowStatus, activeTab])
 
     // ── Role-based tab filtering ─────────────────────────────────────
     const getTabPermission = useCallback((item: TabItemDef): TabPermission => {
@@ -548,11 +596,7 @@ export default function ConferenceUpdatePage() {
     }
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        )
+        return <WorkspaceSkeleton />
     }
 
     if (error) {
@@ -921,6 +965,32 @@ export default function ConferenceUpdatePage() {
                     </div>
                 </Card>
             </div>
+
+            {/* Keyboard Shortcuts Overlay */}
+            <ShortcutHelpOverlay
+                shortcuts={SHORTCUT_DEFS}
+                open={showHelp}
+                onClose={() => setShowHelp(false)}
+            />
+
+            {/* Onboarding Tooltips — shown once for first-time chairs */}
+            <OnboardingTooltips
+                storageKey={`chair-workspace-${conferenceId}`}
+                steps={[
+                    {
+                        title: 'Welcome to Chair Workspace!',
+                        content: 'This is your command center for managing the conference. Use the sidebar to navigate between sections.',
+                    },
+                    {
+                        title: 'Keyboard Shortcuts',
+                        content: 'Press "?" at any time to see keyboard shortcuts. Use D for Dashboard, P for Papers, R for Reviews, and more.',
+                    },
+                    {
+                        title: 'Progressive Sidebar',
+                        content: 'Click section headers to expand/collapse them. Only the sections you need will be visible.',
+                    },
+                ]}
+            />
         </div>
     )
 }

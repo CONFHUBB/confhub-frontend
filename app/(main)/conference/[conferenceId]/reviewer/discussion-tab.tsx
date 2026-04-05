@@ -13,6 +13,7 @@ import { getPapersByConference } from '@/app/api/paper.api'
 import type { PaperResponse } from '@/types/paper'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { reviewStatusClass } from '@/lib/constants/status'
 
 interface DiscussionTabProps {
     reviews: ReviewResponse[]
@@ -22,11 +23,7 @@ interface DiscussionTabProps {
     settings?: TrackReviewSetting
 }
 
-const STATUS_COLORS: Record<string, string> = {
-    ASSIGNED: 'bg-indigo-100 text-indigo-800',
-    IN_PROGRESS: 'bg-amber-100 text-amber-800',
-    COMPLETED: 'bg-green-100 text-green-800',
-}
+
 
 export function DiscussionTab({ reviews, conferenceId, currentUserId, activities = [], settings }: DiscussionTabProps) {
     const isDiscussionEnabled = activities.some(a => a.activityType === 'REVIEW_DISCUSSION' && a.isEnabled)
@@ -177,7 +174,7 @@ export function DiscussionTab({ reviews, conferenceId, currentUserId, activities
                                         {myReview ? (
                                             <>
                                                 <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> My Score: {myReview.totalScore != null ? myReview.totalScore : '—'}</span>
-                                                <Badge className={`font-normal text-[10px] border ${STATUS_COLORS[myReview.status] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+                                                <Badge className={`font-normal text-[10px] border ${reviewStatusClass(myReview.status)}`}>
                                                     {myReview.status}
                                                 </Badge>
                                             </>

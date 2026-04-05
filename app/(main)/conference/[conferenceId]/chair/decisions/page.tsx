@@ -13,15 +13,8 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Loader2, ArrowLeft, FileText, CheckCircle, XCircle, Clock, Search, BarChart3 } from 'lucide-react'
 import PaperDecisionDetail from '@/components/chair/paper-decision-detail'
-
-const STATUS_COLORS: Record<string, string> = {
-    SUBMITTED: 'bg-gray-100 text-gray-700',
-    UNDER_REVIEW: 'bg-indigo-100 text-indigo-800',
-    ACCEPTED: 'bg-green-100 text-green-800',
-    REJECTED: 'bg-red-100 text-red-800',
-    PUBLISHED: 'bg-emerald-100 text-emerald-800',
-    WITHDRAWN: 'bg-gray-200 text-gray-500',
-}
+import { paperStatusClass, getPaperStatus } from '@/lib/constants/status'
+import { getCurrentUserId } from '@/lib/auth'
 
 export default function ChairDecisionsPage() {
     const params = useParams()
@@ -38,13 +31,7 @@ export default function ChairDecisionsPage() {
     const [userId, setUserId] = useState<number | null>(null)
 
     useEffect(() => {
-        try {
-            const token = localStorage.getItem('accessToken')
-            if (token) {
-                const payload = JSON.parse(atob(token.split('.')[1]))
-                setUserId(payload.userId || payload.id)
-            }
-        } catch { /* ignore */ }
+        setUserId(getCurrentUserId())
     }, [])
 
     const fetchData = async () => {
@@ -264,8 +251,8 @@ export default function ChairDecisionsPage() {
                                                     </span>
                                                 </td>
                                                 <td className="px-5 py-4 text-center">
-                                                    <Badge className={STATUS_COLORS[agg.paperStatus] || 'bg-gray-100 text-gray-800'}>
-                                                        {agg.paperStatus.replace('_', ' ')}
+                                                    <Badge className={paperStatusClass(agg.paperStatus)}>
+                                                        {getPaperStatus(agg.paperStatus).label}
                                                     </Badge>
                                                 </td>
                                                 <td className="px-5 py-4 text-center">

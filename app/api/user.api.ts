@@ -48,3 +48,8 @@ export const createOrUpdateUserProfile = async (userId: number, data: UserProfil
     const response = await http.post<UserProfile>(`/users/${userId}/profile`, data)
     return response.data
 }
+
+export const getUserById = async (userId: number): Promise<User> => {
+    const response = await http.get<any>(`/users/${userId}`)
+    return mapUserResponse(response.data)
+}

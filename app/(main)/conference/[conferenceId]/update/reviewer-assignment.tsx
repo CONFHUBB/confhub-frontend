@@ -42,8 +42,13 @@ import {
     ChevronDown, ChevronLeft, ChevronRight, Building2, Phone, GraduationCap
 } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { ReviewDetailDialog } from "./review-detail-dialog"
+import { AutoAssignPanel } from "./_components/auto-assign-panel"
+import { AssignmentPreviewPanel } from "./_components/assignment-preview-panel"
+import { ReviewerInfoSheet } from "./_components/reviewer-info-sheet"
+import { AssignReviewersDialog } from "./_components/assign-reviewers-dialog"
+import { UserLink } from '@/components/shared/user-link'
 
 interface ReviewerAssignmentProps {
     conferenceId: number
@@ -1047,7 +1052,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                                                         <div className="w-6 h-6 rounded-full bg-emerald-100 border border-emerald-300 flex items-center justify-center text-[10px] font-bold text-emerald-700 shrink-0">
                                                                                                             {rev?.name?.charAt(0)?.toUpperCase() || '?'}
                                                                                                         </div>
-                                                                                                        <span className="font-medium truncate">{rev?.name || `Reviewer #${a.reviewerId}`}</span>
+                                                                                                        <span className="font-medium truncate"><UserLink userId={a.reviewerId} name={rev?.name || `Reviewer #${a.reviewerId}`} className="font-medium text-sm" /></span>
                                                                                                         <span className={`text-xs ${statusColors[st]}`}>• {statusLabels[st] || st}</span>
                                                                                                         <span className="text-xs text-muted-foreground">Relevance: {(a.relevanceScore * 100).toFixed(0)}%</span>
                                                                                                     </div>
@@ -1110,7 +1115,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                                                         <div className="w-6 h-6 rounded-full bg-gray-100 border flex items-center justify-center text-[10px] font-bold text-gray-600 shrink-0">
                                                                                                             {r.name?.charAt(0)?.toUpperCase() || '?'}
                                                                                                         </div>
-                                                                                                        <span className="font-medium truncate">{r.name}</span>
+                                                                                                        <span className="font-medium truncate"><UserLink userId={r.id} name={r.name} className="font-medium text-sm" /></span>
                                                                                                         {bidInfo && (
                                                                                                             <span className={`text-xs font-medium ${bidInfo.color}`}>• {bidInfo.label}</span>
                                                                                                         )}
@@ -1277,7 +1282,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                     >
                                                         <td className="px-4 py-3">
                                                             <div className="flex items-center gap-2">
-                                                                <span className="font-medium">{reviewer.name}</span>
+                                                                <span className="font-medium"><UserLink userId={reviewer.id} name={reviewer.name} className="font-medium text-sm" /></span>
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
@@ -1387,6 +1392,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                             className="h-8 w-8 p-0 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50"
                                                                             onClick={() => setViewingReviewId(reviewStatusMap[reviewer.id].reviewId)}
                                                                             title="View review details"
+                                                                            aria-label="View review details"
                                                                         >
                                                                             <Eye className="h-4 w-4" />
                                                                         </Button>
@@ -1397,6 +1403,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                         className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
                                                                         onClick={() => handleRemoveAssignment(assignmentForPaper?.reviewId)}
                                                                         title="Remove assignment"
+                                                                        aria-label="Remove assignment"
                                                                     >
                                                                         <Trash2 className="h-4 w-4" />
                                                                     </Button>
@@ -1408,6 +1415,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                     className="h-8 w-8 p-0"
                                                                     disabled
                                                                     title="Cannot assign — conflict exists"
+                                                                    aria-label="Cannot assign due to conflict"
                                                                 >
                                                                     <X className="h-4 w-4 text-gray-300" />
                                                                 </Button>
@@ -1419,6 +1427,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                     onClick={() => handleManualAssignForPaper(reviewer.id)}
                                                                     disabled={assigning}
                                                                     title="Assign reviewer"
+                                                                    aria-label="Assign reviewer"
                                                                 >
                                                                     {assigning ? (
                                                                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -1443,176 +1452,29 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
 
             {/* ═══════════ AUTO-ASSIGN CONFIG ═══════════ */}
             {viewMode === "auto-assign" && (
-                <Card className="border-indigo-200 bg-indigo-50/30">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <Wand2 className="h-5 w-5 text-indigo-600" />
-                            Auto-Assign Configuration
-                        </CardTitle>
-                        <CardDescription>
-                            Adjust parameters for the algorithm to find optimal assignments
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-5">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-sm font-medium text-gray-700 block mb-1">
-                                    Min reviewers per paper
-                                </label>
-                                <Input
-                                    type="number"
-                                    min={1}
-                                    max={10}
-                                    value={minReviewers}
-                                    onChange={e => setMinReviewers(Number(e.target.value))}
-                                    className="bg-white"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-gray-700 block mb-1">
-                                    Max papers per reviewer
-                                </label>
-                                <Input
-                                    type="number"
-                                    min={1}
-                                    max={50}
-                                    value={maxPapers}
-                                    onChange={e => setMaxPapers(Number(e.target.value))}
-                                    className="bg-white"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="text-sm font-medium text-gray-700 block mb-2">
-                                Weight: Bid ({(bidWeight * 100).toFixed(0)}%) vs Relevance ({(relevanceWeight * 100).toFixed(0)}%)
-                            </label>
-                            <input
-                                type="range"
-                                min={0}
-                                max={100}
-                                value={bidWeight * 100}
-                                onChange={e => handleBidWeightChange(Number(e.target.value) / 100)}
-                                className="w-full accent-blue-600"
-                            />
-                            <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                                <span>← Prioritize Bid</span>
-                                <span>Prioritize Relevance →</span>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <input
-                                type="checkbox"
-                                id="load-balancing"
-                                checked={loadBalancing}
-                                onChange={e => setLoadBalancing(e.target.checked)}
-                                className="rounded border-gray-300"
-                            />
-                            <label htmlFor="load-balancing" className="text-sm">
-                                <span className="font-medium">Load Balancing</span>
-                                <span className="text-muted-foreground ml-1">— distribute papers evenly among reviewers</span>
-                            </label>
-                        </div>
-
-                        <Button
-                            onClick={handleRunAutoAssign}
-                            disabled={running}
-                            className="w-full gap-2"
-                        >
-                            {running ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                                <Wand2 className="h-4 w-4" />
-                            )}
-                            {running ? "Running..." : "Run Auto-Assign"}
-                        </Button>
-                    </CardContent>
-                </Card>
+                <AutoAssignPanel
+                    minReviewers={minReviewers}
+                    maxPapers={maxPapers}
+                    bidWeight={bidWeight}
+                    relevanceWeight={relevanceWeight}
+                    loadBalancing={loadBalancing}
+                    running={running}
+                    onMinReviewersChange={setMinReviewers}
+                    onMaxPapersChange={setMaxPapers}
+                    onBidWeightChange={handleBidWeightChange}
+                    onLoadBalancingChange={setLoadBalancing}
+                    onRunAutoAssign={handleRunAutoAssign}
+                />
             )}
 
             {/* ═══════════ PREVIEW PANEL ═══════════ */}
             {viewMode === "preview" && previewData && (
-                <Card className="border-emerald-200 bg-emerald-50/30">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <Check className="h-5 w-5 text-emerald-600" />
-                            Auto-Assign Results Preview
-                        </CardTitle>
-                        <CardDescription>
-                            Review and confirm before saving to the system
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-3 gap-3 mb-4">
-                            <div className="rounded-lg border p-3 text-center bg-white">
-                                <p className="text-2xl font-bold text-emerald-600">{previewData.totalAssignments}</p>
-                                <p className="text-xs text-muted-foreground">New Assignments</p>
-                            </div>
-                            <div className="rounded-lg border p-3 text-center bg-white">
-                                <p className="text-2xl font-bold">{previewData.totalPapers}</p>
-                                <p className="text-xs text-muted-foreground">Papers</p>
-                            </div>
-                            <div className="rounded-lg border p-3 text-center bg-white">
-                                <p className="text-2xl font-bold text-amber-600">{previewData.unassignedPapers}</p>
-                                <p className="text-xs text-muted-foreground">Insufficient Reviewers</p>
-                            </div>
-                        </div>
-
-                        {previewData.assignments.length > 0 ? (
-                            <div className="max-h-80 overflow-y-auto rounded-lg border bg-white divide-y">
-                                {previewData.assignments.map((a, i) => (
-                                    <div key={i} className="flex items-center justify-between px-4 py-2.5 text-sm hover:bg-gray-50">
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-medium truncate">{a.paperTitle}</p>
-                                            <p className="text-xs text-muted-foreground">
-                                                → {a.reviewerName} ({a.reviewerEmail})
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center gap-3 text-xs shrink-0 ml-4">
-                                            <span title="Combined Score" className="font-mono font-semibold">
-                                                {(a.score * 100).toFixed(0)}%
-                                            </span>
-                                            <Badge variant="outline" className="text-xs">
-                                                Bid: {(a.bidScore * 100).toFixed(0)}%
-                                            </Badge>
-                                            <Badge variant="outline" className="text-xs">
-                                                SA: {(a.relevanceScore * 100).toFixed(0)}%
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-center py-4 text-muted-foreground">
-                                No suitable assignments found. Try adjusting the parameters.
-                            </p>
-                        )}
-
-                        <div className="flex gap-3 mt-4">
-                            <Button
-                                variant="outline"
-                                className="flex-1"
-                                onClick={() => { setViewMode("auto-assign"); setPreviewData(null) }}
-                            >
-                                <X className="h-4 w-4 mr-1" />
-                                Cancel & Reconfigure
-                            </Button>
-                            <Button
-                                className="flex-1 gap-2"
-                                disabled={confirming || previewData.assignments.length === 0}
-                                onClick={handleConfirm}
-                            >
-                                {confirming ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Check className="h-4 w-4" />
-                                )}
-                                {confirming ? "Saving..." : `Confirm ${previewData.assignments.length} Assignments`}
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
+                <AssignmentPreviewPanel
+                    previewData={previewData}
+                    confirming={confirming}
+                    onConfirm={handleConfirm}
+                    onCancel={() => { setViewMode("auto-assign"); setPreviewData(null) }}
+                />
             )}
             {/* ── Paper Detail Sheet ── */}
             <Sheet open={detailPaperId !== null} onOpenChange={v => !v && setDetailPaperId(null)}>
@@ -1692,7 +1554,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                             {r.reviewerName?.charAt(0)?.toUpperCase() || "?"}
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-medium">{r.reviewerName}</p>
+                                                            <p className="text-sm font-medium"><UserLink userId={r.reviewerId} name={r.reviewerName || `Reviewer #${r.reviewerId}`} className="text-sm font-medium" /></p>
                                                             <div className="flex items-center gap-2 mt-0.5">
                                                                 <Badge className={`text-[10px] ${statusColors[status]}`}>
                                                                     {statusLabels[status] || status}
@@ -1805,7 +1667,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                             <div className="space-y-1">
                                                 {bidsOfType.map(b => (
                                                     <div key={b.id} className="flex items-center justify-between px-3 py-2 rounded-lg border bg-white text-sm">
-                                                        <span className="font-medium">{b.reviewerName || `Reviewer #${b.reviewerId}`}</span>
+                                                        <span className="font-medium"><UserLink userId={b.reviewerId} name={b.reviewerName || `Reviewer #${b.reviewerId}`} className="font-medium text-sm" /></span>
                                                         <span className="text-xs text-muted-foreground">ID: {b.reviewerId}</span>
                                                     </div>
                                                 ))}
@@ -1820,427 +1682,41 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
             </Sheet>
 
             {/* ── Reviewer Info Sheet ── */}
-            <Sheet open={reviewerInfoId !== null} onOpenChange={v => { if (!v) { setReviewerInfoId(null); setReviewerProfile(null) } }}>
-                <SheetContent className="w-full sm:max-w-xl overflow-y-auto p-0">
-                    {(() => {
-                        const rev = reviewers.find(r => r.id === reviewerInfoId)
-                        if (!rev) return (
-                            <div className="p-6 text-center text-muted-foreground">
-                                <User2 className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                                <p>Reviewer not found.</p>
-                            </div>
-                        )
-                        const totalAssign = assignmentCountPerReviewer[rev.id] || 0
-                        const revAssignments = (currentData?.assignments || []).filter(a => a.reviewerId === rev.id)
-                        const bidForCurrentPaper = editingPaperId ? bidMapForPaper[rev.id] : null
-                        const bidLabels: Record<string, { label: string; color: string }> = {
-                            EAGER: { label: 'Eager', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
-                            WILLING: { label: 'Willing', color: 'bg-indigo-100 text-indigo-700 border-indigo-300' },
-                            IN_A_PINCH: { label: 'In a pinch', color: 'bg-amber-100 text-amber-700 border-amber-300' },
-                            NOT_WILLING: { label: 'Not willing', color: 'bg-red-100 text-red-700 border-red-300' },
-                        }
-                        const p = reviewerProfile
-                        return (
-                            <>
-                                {/* Header */}
-                                <SheetHeader className="px-6 pt-6 pb-4 border-b sticky top-0 bg-white z-10">
-                                    <div className="flex items-center gap-3">
-                                        {p?.avatarUrl ? (
-                                            <img src={p.avatarUrl} alt={rev.name} className="w-12 h-12 rounded-full object-cover ring-2 ring-primary/20" />
-                                        ) : (
-                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg">
-                                                {rev.name?.charAt(0)?.toUpperCase() || '?'}
-                                            </div>
-                                        )}
-                                        <div className="min-w-0">
-                                            <SheetTitle className="text-lg truncate">{rev.name}</SheetTitle>
-                                            <p className="text-sm text-muted-foreground">{rev.email}</p>
-                                            {p?.jobTitle && <p className="text-xs text-muted-foreground">{p.jobTitle}{p.institution ? ` at ${p.institution}` : ''}</p>}
-                                        </div>
-                                    </div>
-                                </SheetHeader>
-
-                                <div className="p-6 space-y-5">
-                                    {/* Stats */}
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <div className="rounded-lg border p-3 text-center">
-                                            <p className="text-lg font-bold">{totalAssign}</p>
-                                            <p className="text-[10px] text-muted-foreground">Assignments</p>
-                                        </div>
-                                        <div className="rounded-lg border p-3 text-center">
-                                            <p className="text-lg font-bold">{rev.quota !== null ? rev.quota : '∞'}</p>
-                                            <p className="text-[10px] text-muted-foreground">Quota</p>
-                                        </div>
-                                        <div className="rounded-lg border p-3 text-center">
-                                            <p className="text-lg font-bold">{rev.trackIds.length}</p>
-                                            <p className="text-[10px] text-muted-foreground">Tracks</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Bid for current paper */}
-                                    {editingPaperId && (
-                                        <div className="rounded-lg border p-3">
-                                            <p className="text-xs font-semibold text-muted-foreground mb-2">Bid for current paper (#{editingPaperId})</p>
-                                            {bidForCurrentPaper ? (
-                                                <Badge className={`text-xs ${bidLabels[bidForCurrentPaper]?.color || ''}`}>
-                                                    {bidLabels[bidForCurrentPaper]?.label || bidForCurrentPaper}
-                                                </Badge>
-                                            ) : (
-                                                <span className="text-sm text-muted-foreground">No bid submitted</span>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* ── Full Profile ── */}
-                                    <div className="rounded-lg border bg-gray-50/50 p-4 space-y-4">
-                                        <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1 uppercase tracking-wide">
-                                            <User2 className="h-3.5 w-3.5" /> Reviewer Profile
-                                        </p>
-
-                                        {reviewerProfileLoading ? (
-                                            <div className="flex items-center justify-center py-6">
-                                                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                                                <span className="ml-2 text-sm text-muted-foreground">Loading profile…</span>
-                                            </div>
-                                        ) : p ? (
-                                            <div className="space-y-3">
-                                                {/* Personal */}
-                                                <div className="rounded-lg border bg-white p-3 space-y-2">
-                                                    <p className="text-xs font-semibold text-muted-foreground">Personal Information</p>
-                                                    {p.userType && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-muted-foreground w-20">Type:</span>
-                                                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">{p.userType}</span>
-                                                        </div>
-                                                    )}
-                                                    {p.jobTitle && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-muted-foreground w-20">Job Title:</span>
-                                                            <span className="text-sm">{p.jobTitle}</span>
-                                                        </div>
-                                                    )}
-                                                    {p.biography && (
-                                                        <div>
-                                                            <span className="text-xs text-muted-foreground">Biography:</span>
-                                                            <p className="text-sm mt-1 text-foreground leading-relaxed whitespace-pre-wrap">{p.biography}</p>
-                                                        </div>
-                                                    )}
-                                                    {!p.userType && !p.jobTitle && !p.biography && (
-                                                        <p className="text-xs text-muted-foreground italic">No personal info provided.</p>
-                                                    )}
-                                                </div>
-
-                                                {/* Affiliation */}
-                                                <div className="rounded-lg border bg-white p-3 space-y-2">
-                                                    <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-                                                        <Building2 className="h-3 w-3" /> Affiliation
-                                                    </p>
-                                                    {p.institution && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-muted-foreground w-24 shrink-0">Institution:</span>
-                                                            <span className="text-sm font-medium">{p.institution}</span>
-                                                        </div>
-                                                    )}
-                                                    {p.department && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-muted-foreground w-24 shrink-0">Department:</span>
-                                                            <span className="text-sm">{p.department}</span>
-                                                        </div>
-                                                    )}
-                                                    {p.institutionCountry && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-muted-foreground w-24 shrink-0">Country:</span>
-                                                            <span className="text-sm">{p.institutionCountry}</span>
-                                                        </div>
-                                                    )}
-                                                    {p.institutionUrl && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-muted-foreground w-24 shrink-0">Website:</span>
-                                                            <a href={p.institutionUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline truncate">{p.institutionUrl}</a>
-                                                        </div>
-                                                    )}
-                                                    {p.secondaryInstitution && (
-                                                        <>
-                                                            <div className="border-t pt-2 mt-2" />
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-xs text-muted-foreground w-24 shrink-0">Secondary:</span>
-                                                                <span className="text-sm">{p.secondaryInstitution}{p.secondaryCountry ? ` (${p.secondaryCountry})` : ''}</span>
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                    {!p.institution && !p.department && !p.secondaryInstitution && (
-                                                        <p className="text-xs text-muted-foreground italic">No affiliation provided.</p>
-                                                    )}
-                                                </div>
-
-                                                {/* Contact */}
-                                                <div className="rounded-lg border bg-white p-3 space-y-2">
-                                                    <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-                                                        <Phone className="h-3 w-3" /> Contact
-                                                    </p>
-                                                    {p.phoneOffice && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-muted-foreground w-24 shrink-0">Office:</span>
-                                                            <span className="text-sm">{p.phoneOffice}</span>
-                                                        </div>
-                                                    )}
-                                                    {p.phoneMobile && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-muted-foreground w-24 shrink-0">Mobile:</span>
-                                                            <span className="text-sm">{p.phoneMobile}</span>
-                                                        </div>
-                                                    )}
-                                                    {p.websiteUrl && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-muted-foreground w-24 shrink-0">Website:</span>
-                                                            <a href={p.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline truncate">{p.websiteUrl}</a>
-                                                        </div>
-                                                    )}
-                                                    {!p.phoneOffice && !p.phoneMobile && !p.websiteUrl && (
-                                                        <p className="text-xs text-muted-foreground italic">No contact info provided.</p>
-                                                    )}
-                                                </div>
-
-                                                {/* Academic Profiles */}
-                                                <div className="rounded-lg border bg-white p-3 space-y-2">
-                                                    <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-                                                        <GraduationCap className="h-3 w-3" /> Academic Profiles
-                                                    </p>
-                                                    {p.orcid && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-muted-foreground w-32 shrink-0">ORCID:</span>
-                                                            <a href={`https://orcid.org/${p.orcid}`} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline">{p.orcid}</a>
-                                                        </div>
-                                                    )}
-                                                    {p.googleScholarLink && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-muted-foreground w-32 shrink-0">Google Scholar:</span>
-                                                            <a href={p.googleScholarLink} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline truncate">View Profile</a>
-                                                        </div>
-                                                    )}
-                                                    {p.dblpId && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-muted-foreground w-32 shrink-0">DBLP:</span>
-                                                            <span className="text-sm">{p.dblpId}</span>
-                                                        </div>
-                                                    )}
-                                                    {p.semanticScholarId && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-muted-foreground w-32 shrink-0">Semantic Scholar:</span>
-                                                            <span className="text-sm">{p.semanticScholarId}</span>
-                                                        </div>
-                                                    )}
-                                                    {!p.orcid && !p.googleScholarLink && !p.dblpId && !p.semanticScholarId && (
-                                                        <p className="text-xs text-muted-foreground italic">No academic profiles linked.</p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="rounded-lg border bg-white p-4 space-y-3">
-                                                <div className="flex items-center gap-2 text-amber-600">
-                                                    <AlertTriangle className="h-4 w-4" />
-                                                    <span className="text-sm font-medium">Profile not set up</span>
-                                                </div>
-                                                <p className="text-xs text-muted-foreground">This reviewer has not created their profile yet. Basic information is shown above.</p>
-                                                <div className="grid grid-cols-2 gap-2 text-sm">
-                                                    <div>
-                                                        <span className="text-xs text-muted-foreground">Name</span>
-                                                        <p className="font-medium">{rev.name}</p>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-xs text-muted-foreground">Email</span>
-                                                        <p className="font-medium truncate">{rev.email}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Assigned papers */}
-                                    <div>
-                                        <p className="text-sm font-semibold mb-2">Assigned Papers ({revAssignments.length})</p>
-                                        {revAssignments.length === 0 ? (
-                                            <p className="text-sm text-muted-foreground">No papers assigned yet.</p>
-                                        ) : (
-                                            <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                                                {revAssignments.map(a => {
-                                                    const paper = fullPapers.find(p => p.id === a.paperId)
-                                                    return (
-                                                        <div key={a.paperId} className="flex items-center justify-between px-3 py-2 rounded-lg border bg-white text-sm hover:bg-gray-50">
-                                                            <div className="min-w-0 flex-1">
-                                                                <p className="font-medium truncate">#{a.paperId} — {paper?.title || 'Unknown'}</p>
-                                                            </div>
-                                                            <Badge variant="outline" className="text-[10px] ml-2 shrink-0">
-                                                                {(a.relevanceScore * 100).toFixed(0)}%
-                                                            </Badge>
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </>
-                        )
-                    })()}
-                </SheetContent>
-            </Sheet>
+            <ReviewerInfoSheet
+                reviewerInfoId={reviewerInfoId}
+                reviewerProfile={reviewerProfile}
+                reviewerProfileLoading={reviewerProfileLoading}
+                reviewers={reviewers}
+                assignmentCountPerReviewer={assignmentCountPerReviewer}
+                currentAssignments={currentData?.assignments || []}
+                fullPapers={fullPapers}
+                editingPaperId={editingPaperId}
+                bidMapForPaper={bidMapForPaper}
+                onClose={() => { setReviewerInfoId(null); setReviewerProfile(null) }}
+            />
 
             {/* ═══════════ ASSIGN REVIEWERS DIALOG ═══════════ */}
-            <Dialog open={dialogPaperId !== null} onOpenChange={(open) => { if (!open) setDialogPaperId(null) }}>
-                <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0 gap-0">
-                    {/* Header */}
-                    <div className="px-6 pt-6 pb-4 border-b space-y-3 shrink-0">
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                                <UserPlus className="h-5 w-5 text-indigo-600" />
-                                Assign Reviewers
-                            </DialogTitle>
-                        </DialogHeader>
-                        {dialogPaper && (
-                            <div className="rounded-lg bg-indigo-50/60 border border-indigo-200 px-4 py-3">
-                                <p className="font-semibold text-sm line-clamp-2">#{dialogPaper.id}: {dialogPaper.title}</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Authors: {paperAuthors[dialogPaper.id] || '—'} · Subject: {subjectAreaMap[dialogPaper.primarySubjectAreaId] || '—'} · Assigned: <strong>{dialogPaperAssignments.length}</strong>/{minReviewers}
-                                </p>
-                            </div>
-                        )}
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                className="pl-9 h-9 text-sm"
-                                placeholder="Search reviewers by name or email..."
-                                value={dialogReviewerSearch}
-                                onChange={e => setDialogReviewerSearch(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Reviewer List */}
-                    <div className="flex-1 overflow-y-auto px-6 py-4">
-                        {dialogLoading ? (
-                            <div className="flex items-center justify-center py-12">
-                                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                            </div>
-                        ) : dialogSortedReviewers.length === 0 ? (
-                            <p className="text-sm text-muted-foreground text-center py-8">No reviewers found.</p>
-                        ) : (
-                            <div className="space-y-1.5">
-                                {dialogSortedReviewers.map(r => {
-                                    const isAssigned = dialogAssignedIds.has(r.id)
-                                    const isConflict = dialogConflictIds.has(r.id)
-                                    const bid = dialogBidMap[r.id]
-                                    const assignment = dialogPaperAssignments.find(a => a.reviewerId === r.id)
-                                    const revStatus = dialogReviewStatus[r.id]
-                                    const workload = assignmentCountPerReviewer[r.id] || 0
-
-                                    const bidLabels: Record<string, { label: string; color: string; bg: string }> = {
-                                        EAGER: { label: 'Eager', color: 'text-emerald-700', bg: 'bg-emerald-100' },
-                                        WILLING: { label: 'Willing', color: 'text-indigo-700', bg: 'bg-indigo-100' },
-                                        IN_A_PINCH: { label: 'In a pinch', color: 'text-amber-700', bg: 'bg-amber-100' },
-                                        NOT_WILLING: { label: 'Not willing', color: 'text-red-700', bg: 'bg-red-100' },
-                                    }
-                                    const bidInfo = bid ? bidLabels[bid] : null
-                                    const statusLabels: Record<string, string> = { ASSIGNED: 'Pending', IN_PROGRESS: 'In Progress', COMPLETED: 'Reviewed', DECLINED: 'Declined' }
-                                    const statusColors: Record<string, string> = { ASSIGNED: 'bg-gray-100 text-gray-600', IN_PROGRESS: 'bg-amber-100 text-amber-700', COMPLETED: 'bg-emerald-100 text-emerald-700', DECLINED: 'bg-red-100 text-red-700' }
-                                    const st = revStatus?.status || 'ASSIGNED'
-
-                                    return (
-                                        <div
-                                            key={r.id}
-                                            className={`flex items-center justify-between px-4 py-3 rounded-lg border text-sm transition-colors ${
-                                                isAssigned
-                                                    ? 'bg-emerald-50/50 border-emerald-200'
-                                                    : isConflict
-                                                        ? 'bg-red-50/30 border-red-200 opacity-60'
-                                                        : 'bg-white hover:bg-gray-50 border-gray-200'
-                                            }`}
-                                        >
-                                            {/* Left: Reviewer info */}
-                                            <div className="flex items-center gap-3 min-w-0 flex-1">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                                                    isAssigned ? 'bg-emerald-200 text-emerald-800 border border-emerald-300' : 'bg-gray-100 text-gray-600 border'
-                                                }`}>
-                                                    {r.name?.charAt(0)?.toUpperCase() || '?'}
-                                                </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="font-medium truncate">{r.name}</span>
-                                                        {isConflict && (
-                                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-semibold">CONFLICT</span>
-                                                        )}
-                                                        {isAssigned && (
-                                                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${statusColors[st]}`}>
-                                                                {statusLabels[st] || st}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
-                                                        <span className="truncate max-w-[180px]">{r.email}</span>
-                                                        <span className="shrink-0">Load: {workload}{r.quota !== null ? `/${r.quota}` : ''}</span>
-                                                        {isAssigned && assignment && (
-                                                            <span className="shrink-0">Relevance: <strong>{(assignment.relevanceScore * 100).toFixed(0)}%</strong></span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Right: Bid + Action */}
-                                            <div className="flex items-center gap-2 shrink-0 ml-3">
-                                                {bidInfo ? (
-                                                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${bidInfo.color} ${bidInfo.bg}`}>
-                                                        {bidInfo.label}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-[11px] px-2 py-0.5 rounded-full text-gray-400 bg-gray-50">No bid</span>
-                                                )}
-
-                                                {isConflict ? (
-                                                    <Button variant="ghost" size="sm" disabled className="h-7 text-xs opacity-40" title="Conflict">
-                                                        <AlertTriangle className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                ) : isAssigned ? (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="h-7 text-xs gap-1 text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200"
-                                                        onClick={() => handleDialogRemove(assignment?.reviewId)}
-                                                    >
-                                                        <Trash2 className="h-3 w-3" />
-                                                        Remove
-                                                    </Button>
-                                                ) : (
-                                                    <Button
-                                                        size="sm"
-                                                        className="h-7 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-                                                        onClick={() => handleDialogAssign(r.id)}
-                                                        disabled={dialogAssigning === r.id}
-                                                    >
-                                                        {dialogAssigning === r.id ? (
-                                                            <Loader2 className="h-3 w-3 animate-spin" />
-                                                        ) : (
-                                                            <Plus className="h-3 w-3" />
-                                                        )}
-                                                        Assign
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Footer */}
-                    <div className="px-6 py-3 border-t bg-muted/20 flex items-center justify-between shrink-0">
-                        <p className="text-xs text-muted-foreground">
-                            {dialogSortedReviewers.length} reviewer(s) · {dialogPaperAssignments.length} assigned · Sorted by bid → workload
-                        </p>
-                        <Button variant="outline" size="sm" onClick={() => setDialogPaperId(null)}>Close</Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            <AssignReviewersDialog
+                dialogPaperId={dialogPaperId}
+                dialogPaper={dialogPaper}
+                dialogSortedReviewers={dialogSortedReviewers}
+                dialogPaperAssignments={dialogPaperAssignments}
+                dialogAssignedIds={dialogAssignedIds}
+                dialogConflictIds={dialogConflictIds}
+                dialogBidMap={dialogBidMap}
+                dialogReviewStatus={dialogReviewStatus}
+                dialogLoading={dialogLoading}
+                dialogReviewerSearch={dialogReviewerSearch}
+                dialogAssigning={dialogAssigning}
+                assignmentCountPerReviewer={assignmentCountPerReviewer}
+                paperAuthors={paperAuthors}
+                subjectAreaMap={subjectAreaMap}
+                minReviewers={minReviewers}
+                onDialogReviewerSearchChange={setDialogReviewerSearch}
+                onDialogAssign={handleDialogAssign}
+                onDialogRemove={handleDialogRemove}
+                onClose={() => setDialogPaperId(null)}
+            />
         </div>
     )
 }

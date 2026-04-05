@@ -10,7 +10,7 @@ import {
     ChevronDown, ArrowRight, FileText, Bot, User as UserIcon, RotateCcw
 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import {
     sendChatMessage, analyzeManuscript, getChatHistory,
     type AIChatResponse, type ManuscriptAnalysisResponse,

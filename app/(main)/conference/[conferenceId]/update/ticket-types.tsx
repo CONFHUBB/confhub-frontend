@@ -314,10 +314,10 @@ export default function TicketTypesConfig({ conferenceId }: Props) {
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-primary" onClick={() => openEdit(tt)} title="Edit">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-primary" onClick={() => openEdit(tt)} title="Edit" aria-label="Edit ticket type">
                         <Pencil className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600" onClick={() => handleDelete(tt.id)} title="Delete">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600" onClick={() => handleDelete(tt.id)} title="Delete" aria-label="Delete ticket type">
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Loader2, Eye, Edit, Lock, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 
 import { FormBuilder } from "./form-builder"
 import { FormRenderer } from "./form-renderer"

@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Loader2, ArrowLeft, Search, Zap, ThumbsUp, Minus, ThumbsDown, ChevronDown, ChevronUp, AlertTriangle, Target, Tag, Pencil, XCircle } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
+import { getCurrentUserId } from '@/lib/auth'
 
 const BID_OPTIONS: { value: BidValue; label: string; shortLabel: string; color: string; activeColor: string; icon: React.ReactNode }[] = [
     { value: 'EAGER', label: 'Eager to review', shortLabel: 'Eager', color: 'border-gray-200 text-gray-500 hover:border-emerald-300 hover:text-emerald-600', activeColor: 'bg-emerald-100 border-emerald-400 text-emerald-700 ring-1 ring-emerald-300', icon: <Zap className="h-3.5 w-3.5" /> },
@@ -45,13 +46,7 @@ export default function BiddingPage() {
     const [activityClosed, setActivityClosed] = useState<string | null>(null) // null = open, string = reason
 
     useEffect(() => {
-        try {
-            const token = localStorage.getItem('accessToken')
-            if (token) {
-                const payload = JSON.parse(atob(token.split('.')[1]))
-                setReviewerId(payload.userId || payload.id)
-            }
-        } catch { /* ignore */ }
+        setReviewerId(getCurrentUserId())
     }, [])
 
     const fetchData = useCallback(async () => {
