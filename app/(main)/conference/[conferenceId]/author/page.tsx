@@ -604,7 +604,7 @@ function MyPapersTab({ papers, reviewData, metaReviews, conferenceId }: {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => router.push(`/conference/${conferenceId}/paper/${paper.id}`)}>
+                                                        <DropdownMenuItem onClick={() => router.push(`/paper/${paper.id}`)}>
                                                             <ExternalLink className="h-3.5 w-3.5 mr-2" /> View Details
                                                         </DropdownMenuItem>
                                                         {(paper.status === 'ACCEPTED' || paper.status === 'CAMERA_READY') && (
