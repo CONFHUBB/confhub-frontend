@@ -19,7 +19,7 @@ jobs:
       - name: Copy env file
         run: |
           # Copy the .env.local before docker build so Next.js embeds the env variables
-          cp /state/partition1/devops/secrets/.env.local .env.local
+          cp /state/partition1/devops/CONFMSA-GSP26SE76/secrets/.env.local .env.local
 
       - name: Build and Deploy via Docker Compose
         run: |
