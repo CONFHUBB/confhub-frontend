@@ -615,7 +615,7 @@ export default function ConferenceUpdatePage() {
 
         // View-only banner for tabs where user can see but not edit
         const ViewOnlyBanner = viewOnly ? (
-            <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 mb-6">
+            <div className="relative z-20 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 mb-6">
                 <Eye className="h-4 w-4 text-amber-600 shrink-0" />
                 <p className="text-sm text-amber-800">
                     <span className="font-medium">View Only</span> — You are viewing this section as {userRole === 'CONFERENCE_CHAIR' ? 'Conference Chair' : 'Program Chair'}. Only {userRole === 'CONFERENCE_CHAIR' ? 'Program Chairs' : 'Conference Chairs'} can make changes here.
