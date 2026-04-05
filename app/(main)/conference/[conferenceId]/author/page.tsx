@@ -36,9 +36,10 @@ import dynamic from 'next/dynamic'
 import { getPaperStatus, PAPER_STATUS } from '@/lib/constants/status'
 import { getCurrentUserEmail } from '@/lib/auth'
 import { Breadcrumb } from '@/components/shared/breadcrumb'
+import { WorkspaceSkeleton } from '@/components/shared/skeletons'
 
 const CameraReadyPage = dynamic(() => import('./camera-ready/page'), {
-    loading: () => <div className="flex items-center justify-center py-20"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>
+    loading: () => <WorkspaceSkeleton />
 })
 
 // ── Types ──
@@ -148,7 +149,7 @@ export default function AuthorDashboardPage() {
 
     useEffect(() => { fetchData() }, [fetchData])
 
-    if (loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+    if (loading) return <WorkspaceSkeleton />
     if (!conference) return (
         <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
             <p className="text-muted-foreground text-lg">Conference not found</p>

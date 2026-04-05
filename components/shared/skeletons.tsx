@@ -117,3 +117,145 @@ export function SidebarSkeleton({ items = 6 }: { items?: number }) {
         </div>
     )
 }
+
+// ── Workspace Skeleton ──────────────────────────────────────────────────────
+// Full page skeleton for workspace pages (sidebar + content area)
+
+export function WorkspaceSkeleton() {
+    return (
+        <div className="flex items-center justify-center min-h-[400px]">
+            <div className="w-full max-w-4xl space-y-6 px-4">
+                {/* Header */}
+                <div className="flex items-center gap-3">
+                    <Skeleton className="h-5 w-5 rounded" />
+                    <Skeleton className="h-7 w-56" />
+                </div>
+                <Skeleton className="h-4 w-80" />
+
+                {/* Stats cards row */}
+                <div className="grid grid-cols-3 gap-4">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="rounded-xl border p-4 space-y-2">
+                            <Skeleton className="h-3 w-16" />
+                            <Skeleton className="h-8 w-12" />
+                        </div>
+                    ))}
+                </div>
+
+                {/* Content block */}
+                <div className="rounded-xl border p-6 space-y-4">
+                    <Skeleton className="h-5 w-40" />
+                    <div className="space-y-3">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="flex items-center gap-3">
+                                <Skeleton className="h-4 w-4 rounded" />
+                                <Skeleton className="h-4 flex-1" />
+                                <Skeleton className="h-6 w-20 rounded-full" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// ── Profile Skeleton ────────────────────────────────────────────────────────
+// Used in: user/[userId]/page.tsx, my-profile/page.tsx
+
+export function ProfileSkeleton() {
+    return (
+        <div className="flex items-center justify-center min-h-[400px]">
+            <div className="w-full max-w-3xl space-y-6 px-4">
+                {/* Avatar + name */}
+                <div className="flex items-center gap-4">
+                    <Skeleton className="h-16 w-16 rounded-full" />
+                    <div className="space-y-2">
+                        <Skeleton className="h-6 w-48" />
+                        <Skeleton className="h-4 w-64" />
+                    </div>
+                </div>
+
+                {/* Info cards */}
+                <div className="grid grid-cols-2 gap-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="rounded-xl border p-4 space-y-2">
+                            <Skeleton className="h-3 w-20" />
+                            <Skeleton className="h-5 w-32" />
+                        </div>
+                    ))}
+                </div>
+
+                {/* Bio section */}
+                <div className="rounded-xl border p-6 space-y-3">
+                    <Skeleton className="h-5 w-24" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// ── Form Skeleton ───────────────────────────────────────────────────────────
+// Used for submit/edit forms loading state
+
+export function FormSkeleton({ fields = 4 }: { fields?: number }) {
+    return (
+        <div className="flex items-center justify-center min-h-[400px]">
+            <div className="w-full max-w-2xl space-y-6 px-4">
+                <PageHeaderSkeleton />
+                <div className="rounded-xl border p-6 space-y-5">
+                    {Array.from({ length: fields }).map((_, i) => (
+                        <div key={i} className="space-y-2">
+                            <Skeleton className="h-4 w-24" />
+                            <Skeleton className="h-10 w-full rounded-lg" />
+                        </div>
+                    ))}
+                    <Skeleton className="h-10 w-32 rounded-lg mt-4" />
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// ── Detail Page Skeleton ────────────────────────────────────────────────────
+// Used for conference detail, paper detail pages
+
+export function DetailPageSkeleton() {
+    return (
+        <div className="flex items-center justify-center min-h-[400px]">
+            <div className="w-full max-w-5xl space-y-6 px-4">
+                {/* Breadcrumb */}
+                <div className="flex items-center gap-2">
+                    <Skeleton className="h-3 w-12" />
+                    <Skeleton className="h-3 w-3" />
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-3 w-3" />
+                    <Skeleton className="h-3 w-32" />
+                </div>
+
+                {/* Banner */}
+                <Skeleton className="w-full h-48 rounded-xl" />
+
+                {/* Two-column layout */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-2 space-y-4">
+                        <Skeleton className="h-8 w-3/4" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-5/6" />
+                        <Skeleton className="h-4 w-2/3" />
+                    </div>
+                    <div className="space-y-3">
+                        <div className="rounded-xl border p-4 space-y-3">
+                            <Skeleton className="h-5 w-24" />
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-3/4" />
+                            <Skeleton className="h-10 w-full rounded-lg mt-2" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}

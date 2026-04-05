@@ -1392,6 +1392,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                             className="h-8 w-8 p-0 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50"
                                                                             onClick={() => setViewingReviewId(reviewStatusMap[reviewer.id].reviewId)}
                                                                             title="View review details"
+                                                                            aria-label="View review details"
                                                                         >
                                                                             <Eye className="h-4 w-4" />
                                                                         </Button>
@@ -1402,6 +1403,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                         className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
                                                                         onClick={() => handleRemoveAssignment(assignmentForPaper?.reviewId)}
                                                                         title="Remove assignment"
+                                                                        aria-label="Remove assignment"
                                                                     >
                                                                         <Trash2 className="h-4 w-4" />
                                                                     </Button>
@@ -1413,6 +1415,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                     className="h-8 w-8 p-0"
                                                                     disabled
                                                                     title="Cannot assign — conflict exists"
+                                                                    aria-label="Cannot assign due to conflict"
                                                                 >
                                                                     <X className="h-4 w-4 text-gray-300" />
                                                                 </Button>
@@ -1424,6 +1427,7 @@ export function ReviewerAssignment({ conferenceId }: ReviewerAssignmentProps) {
                                                                     onClick={() => handleManualAssignForPaper(reviewer.id)}
                                                                     disabled={assigning}
                                                                     title="Assign reviewer"
+                                                                    aria-label="Assign reviewer"
                                                                 >
                                                                     {assigning ? (
                                                                         <Loader2 className="h-4 w-4 animate-spin" />

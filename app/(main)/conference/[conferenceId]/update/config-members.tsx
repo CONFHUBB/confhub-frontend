@@ -1167,6 +1167,7 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                                             size="sm"
                                                             className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
                                                             title="View Details"
+                                                            aria-label="View member details"
                                                             onClick={() => {
                                                                 setDetailMember(member)
                                                                 setDetailOpen(true)
@@ -1179,6 +1180,7 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                                             size="sm"
                                                             className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
                                                             title="Manage Roles"
+                                                            aria-label="Manage member roles"
                                                             onClick={() => openManageRoles(member.user, member.roles)}
                                                         >
                                                             <Settings2 className="h-4 w-4" />
@@ -1188,6 +1190,7 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                                             size="sm"
                                                             className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600"
                                                             title="Remove Member"
+                                                            aria-label="Remove member"
                                                             onClick={() => {
                                                                 setMemberToRemove(member)
                                                                 setRemoveConfirmOpen(true)

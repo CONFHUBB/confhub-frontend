@@ -21,6 +21,8 @@ import { useTrackSettings } from '@/hooks/useTrackSettings'
 import { reviewStatusClass } from '@/lib/constants/status'
 import { summarizePaper, analyzeStrengthsWeaknesses, type PaperSummaryResponse, type StrengthWeaknessResponse } from '@/app/api/ai-assistant.api'
 import { getCurrentUserId } from '@/lib/auth'
+import { Breadcrumb } from '@/components/shared/breadcrumb'
+import { FormSkeleton } from '@/components/shared/skeletons'
 
 interface ReviewQuestion {
     id: number
@@ -314,11 +316,7 @@ export default function ReviewPaperPage() {
     }).length
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        )
+        return <FormSkeleton fields={6} />
     }
 
     if (!review) {
@@ -335,7 +333,13 @@ export default function ReviewPaperPage() {
         <div className="max-w-7xl 2xl:max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
             {/* Header */}
             <div className="space-y-4">
-                <Button variant="ghost" className="gap-2 -ml-2" onClick={() => router.push(`/conference/${conferenceId}/reviewer`)}>
+            {/* Breadcrumb */}
+            <Breadcrumb items={[
+                { label: 'Reviewer Console', href: `/conference/${conferenceId}/reviewer` },
+                { label: `Review #${reviewId}` },
+            ]} />
+
+                <Button variant="ghost" className="gap-2 -ml-2" onClick={() => router.push(`/conference/${conferenceId}/reviewer`)} aria-label="Back to Reviewer Console">
                     <ArrowLeft className="h-4 w-4" />
                     Back to Reviewer Console
                 </Button>

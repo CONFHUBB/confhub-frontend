@@ -46,6 +46,7 @@ import {
 import { Select as AntdSelect } from 'antd'
 import { BackButton } from '@/components/shared/back-button'
 import { UserLink } from '@/components/shared/user-link'
+import { WorkspaceSkeleton } from '@/components/shared/skeletons'
 import { toast } from 'sonner'
 import { getPaperStatus, DECISION_CONFIG } from '@/lib/constants/status'
 
@@ -289,11 +290,7 @@ export default function PaperWorkspacePage() {
     }
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        )
+        return <WorkspaceSkeleton />
     }
 
     if (!paper) {

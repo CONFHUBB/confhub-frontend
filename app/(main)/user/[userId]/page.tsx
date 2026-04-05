@@ -7,6 +7,7 @@ import { getUserById, getUserProfile } from '@/app/api/user.api'
 import type { User, UserProfile } from '@/types/user'
 import { getCurrentUserId } from '@/lib/auth'
 import { Breadcrumb } from '@/components/shared/breadcrumb'
+import { ProfileSkeleton } from '@/components/shared/skeletons'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -94,14 +95,7 @@ export default function PublicProfilePage() {
     }, [userId])
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="text-sm text-muted-foreground">Loading profile...</p>
-                </div>
-            </div>
-        )
+        return <ProfileSkeleton />
     }
 
     if (error || !user) {

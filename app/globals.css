@@ -192,3 +192,25 @@
 @keyframes drawCheck {
   to { stroke-dashoffset: 0; }
 }
+
+/* ── Dark Mode: Polish hardcoded colors ─────────────────────────────────
+   Ensures elements using hardcoded Tailwind colors (bg-gray-50, text-gray-900
+   etc.) adapt properly when .dark class is active. */
+.dark .bg-gray-50 { background-color: oklch(0.205 0 0) !important; }
+.dark .bg-gray-100 { background-color: oklch(0.225 0 0) !important; }
+.dark .bg-gray-200 { background-color: oklch(0.269 0 0) !important; }
+.dark .text-gray-900 { color: oklch(0.985 0 0) !important; }
+.dark .text-gray-800 { color: oklch(0.95 0 0) !important; }
+.dark .text-gray-700 { color: oklch(0.9 0 0) !important; }
+.dark .text-gray-600 { color: oklch(0.8 0 0) !important; }
+.dark .text-gray-500 { color: oklch(0.708 0 0) !important; }
+.dark .text-gray-400 { color: oklch(0.556 0 0) !important; }
+.dark .text-slate-900 { color: oklch(0.985 0 0) !important; }
+.dark .text-slate-500 { color: oklch(0.708 0 0) !important; }
+.dark .border-gray-200 { border-color: oklch(1 0 0 / 10%) !important; }
+.dark .border-gray-300 { border-color: oklch(1 0 0 / 15%) !important; }
+.dark .hover\:bg-gray-100:hover { background-color: oklch(0.269 0 0) !important; }
+.dark .bg-indigo-50 { background-color: oklch(0.25 0.05 270) !important; }
+.dark .text-indigo-700 { color: oklch(0.7 0.15 270) !important; }
+.dark .text-indigo-800 { color: oklch(0.75 0.12 270) !important; }
+.dark .border-indigo-200 { border-color: oklch(0.4 0.1 270) !important; }

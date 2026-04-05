@@ -54,6 +54,9 @@ import { updateConference } from '@/app/api/conference.api'
 import { ConferenceForm } from '../../create/conference-form'
 import type { ConferenceData } from '@/types/conference-form'
 import { getCurrentUserId, getCurrentUserEmail } from '@/lib/auth'
+import { WorkspaceSkeleton } from '@/components/shared/skeletons'
+import { useKeyboardShortcuts, ShortcutHelpOverlay } from '@/hooks/useKeyboardShortcuts'
+import { OnboardingTooltips } from '@/components/shared/onboarding-tooltips'
 
 import type { DynamicField, FormDefinition } from '@/types/submission-form'
 import type {
@@ -221,6 +224,17 @@ export default function ConferenceUpdatePage() {
     }, [initialTab])
     const [expandedGroups, setExpandedGroups] = useState<string[]>(getInitialExpandedGroups)
     const [isUpdatingGeneral, setIsUpdatingGeneral] = useState(false)
+
+    // ── Keyboard Shortcuts ──
+    const SHORTCUT_DEFS = useMemo(() => [
+        { key: 'd', label: 'Dashboard', description: 'Go to Dashboard', action: () => setActiveTab('dashboard') },
+        { key: 'p', label: 'Papers', description: 'Go to Paper Management', action: () => setActiveTab('features-paper-management') },
+        { key: 'r', label: 'Reviews', description: 'Go to Review Management', action: () => setActiveTab('features-review-management') },
+        { key: 'm', label: 'Members', description: 'Go to Members & Roles', action: () => setActiveTab('features-members') },
+        { key: 't', label: 'Timeline', description: 'Go to Activity Timeline', action: () => setActiveTab('features-activity-timeline') },
+        { key: 'a', label: 'Analytics', description: 'Go to Analytics', action: () => setActiveTab('analytics') },
+    ], [setActiveTab])
+    const { showHelp, setShowHelp } = useKeyboardShortcuts(SHORTCUT_DEFS)
 
     // ── Role detection state ──────────────────────────────
     const [userRole, setUserRole] = useState<ChairRole | 'BOTH' | null>(null)
@@ -582,11 +596,7 @@ export default function ConferenceUpdatePage() {
     }
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        )
+        return <WorkspaceSkeleton />
     }
 
     if (error) {
@@ -955,6 +965,32 @@ export default function ConferenceUpdatePage() {
                     </div>
                 </Card>
             </div>
+
+            {/* Keyboard Shortcuts Overlay */}
+            <ShortcutHelpOverlay
+                shortcuts={SHORTCUT_DEFS}
+                open={showHelp}
+                onClose={() => setShowHelp(false)}
+            />
+
+            {/* Onboarding Tooltips — shown once for first-time chairs */}
+            <OnboardingTooltips
+                storageKey={`chair-workspace-${conferenceId}`}
+                steps={[
+                    {
+                        title: 'Welcome to Chair Workspace!',
+                        content: 'This is your command center for managing the conference. Use the sidebar to navigate between sections.',
+                    },
+                    {
+                        title: 'Keyboard Shortcuts',
+                        content: 'Press "?" at any time to see keyboard shortcuts. Use D for Dashboard, P for Papers, R for Reviews, and more.',
+                    },
+                    {
+                        title: 'Progressive Sidebar',
+                        content: 'Click section headers to expand/collapse them. Only the sections you need will be visible.',
+                    },
+                ]}
+            />
         </div>
     )
 }

@@ -189,6 +189,7 @@ export function ConferenceTemplate({ initialTemplates, onSubmit }: ConferenceTem
                                                 removeTemplate(template.id)
                                             }
                                             className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                                            aria-label="Remove template"
                                         >
                                             <Trash2 className="size-4" />
                                         </Button>

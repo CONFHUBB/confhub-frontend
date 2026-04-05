@@ -6,6 +6,7 @@ import { getUserByEmail, getUserProfile, createOrUpdateUserProfile } from "@/app
 import type { UserProfile, UserProfileRequest } from "@/types/user"
 import { ProfileForm } from "./profile-form"
 import { Loader2 } from "lucide-react"
+import { ProfileSkeleton } from '@/components/shared/skeletons'
 import { Button } from "@/components/ui/button"
 import { getCurrentUserEmail } from '@/lib/auth'
 
@@ -68,14 +69,7 @@ export default function MyProfilePage() {
     }
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="text-sm text-muted-foreground">Loading your profile...</p>
-                </div>
-            </div>
-        )
+        return <ProfileSkeleton />
     }
 
     if (error) {

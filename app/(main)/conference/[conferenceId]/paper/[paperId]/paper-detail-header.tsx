@@ -3,7 +3,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-    ArrowLeft, Edit, UserPlus, Gavel, Shield, Upload, FileEdit, Lock
+    ArrowLeft, Upload, Lock
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import type { PaperResponse } from '@/types/paper'
@@ -168,29 +168,14 @@ export function PaperDetailHeader({
                     </div>
                 )}
 
-                {/* Row 6: Action Buttons (role-filtered) */}
-                <div className="flex gap-2 flex-wrap pt-1">
-                    {permissions.canViewAssignments && (
-                        <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => onTabChange('assignments')}>
-                            <UserPlus className="h-3.5 w-3.5" /> Assignments
-                        </Button>
-                    )}
-                    {permissions.canMakeDecision && (
-                        <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => onTabChange('decision')}>
-                            <Gavel className="h-3.5 w-3.5" /> Make Decision
-                        </Button>
-                    )}
-                    {permissions.canViewConflicts && (
-                        <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => onTabChange('conflicts')}>
-                            <Shield className="h-3.5 w-3.5" /> Conflicts
-                        </Button>
-                    )}
+                {/* Row 6: Quick Actions — only unique actions not in tab bar */}
+                <div className="flex gap-3 flex-wrap pt-1">
                     {permissions.canSubmitCameraReady && (
                         <Button 
-                            variant="outline" size="sm" className="gap-1.5 text-xs"
+                            variant="default" size="default" className="gap-2"
                             onClick={() => router.push(`/conference/${conferenceId}/paper/${paper.id}/camera-ready`)}
                         >
-                            <Upload className="h-3.5 w-3.5" /> Submit Camera-Ready
+                            <Upload className="h-4 w-4" /> Submit Camera-Ready
                         </Button>
                     )}
                 </div>
@@ -198,3 +183,4 @@ export function PaperDetailHeader({
         </div>
     )
 }
+

@@ -165,6 +165,7 @@ export function AssignRole({ initialAssignments, onSubmit }: AssignRoleProps) {
                                             removeAssignment(assignment.id)
                                         }
                                         className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                                        aria-label="Remove assignment"
                                     >
                                         <Trash2 className="size-4" />
                                     </Button>

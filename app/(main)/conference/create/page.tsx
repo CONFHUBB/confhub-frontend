@@ -4,10 +4,12 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ConferenceForm } from "./conference-form"
 import { ConferenceImport } from "./conference-import"
+import { SetupWizard } from "./setup-wizard"
 import { createConference } from "@/app/api/conference.api"
 import { toast } from 'sonner'
 import type { ConferenceData } from "@/types/conference-form"
 import { getToken } from '@/lib/auth'
+import { Sparkles, FileText, Upload } from 'lucide-react'
 
 const FRIENDLY_FIELD_LABEL: Record<string, string> = {
     startDate: "Start date",
@@ -79,12 +81,18 @@ const parseConferenceCreateError = (error: any): { message: string; fieldErrors:
     return { message: "Failed to create conference. Please review your input and try again.", fieldErrors }
 }
 
-type TabMode = "form" | "import"
+type TabMode = "wizard" | "form" | "import"
+
+const TABS = [
+    { id: 'wizard' as const, label: 'Setup Wizard', icon: Sparkles, description: 'Guided step-by-step' },
+    { id: 'form' as const, label: 'Manual Input', icon: FileText, description: 'All fields at once' },
+    { id: 'import' as const, label: 'Import Excel', icon: Upload, description: 'Bulk import' },
+]
 
 export default function CreateConferencePage() {
     const router = useRouter()
     const [isSubmitting, setIsSubmitting] = useState(false)
-    const [activeTab, setActiveTab] = useState<TabMode>("form")
+    const [activeTab, setActiveTab] = useState<TabMode>("wizard")
     const [backendFieldErrors, setBackendFieldErrors] = useState<Record<string, string>>({})
 
     useEffect(() => {
@@ -93,13 +101,11 @@ export default function CreateConferencePage() {
         }
     }, [router])
 
-
     const handleConferenceSubmit = async (data: ConferenceData, pendingBannerFile?: File) => {
         setIsSubmitting(true)
         setBackendFieldErrors({})
 
         try {
-            // Create conference first (without banner if file is pending)
             const conferenceResult = await createConference({
                 ...data,
                 bannerImageUrl: pendingBannerFile ? '' : data.bannerImageUrl,
@@ -109,7 +115,6 @@ export default function CreateConferencePage() {
             })
             const conferenceId = conferenceResult.id
 
-            // Upload banner after conference is created (now we have an ID)
             if (pendingBannerFile && conferenceId) {
                 try {
                     const { uploadBannerImage, updateConference } = await import('@/app/api/conference.api')
@@ -123,7 +128,6 @@ export default function CreateConferencePage() {
                         societySponsor: data.societySponsor.join(", "),
                     })
                 } catch {
-                    // Non-critical: conference created, banner upload failed
                     toast.error("Conference created but banner upload failed. You can re-upload later.")
                 }
             }
@@ -150,57 +154,57 @@ export default function CreateConferencePage() {
                             Create <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">Conference</span>
                         </h2>
                         <p className="mt-2 text-base text-slate-500 dark:text-slate-400 font-medium">
-                            Fill in the details manually or import from an Excel file to set up quickly.
+                            Use the step-by-step wizard for a guided experience, or switch to manual mode.
                         </p>
                     </div>
                 </div>
 
-                {/* Tab Switcher */}
+                {/* Tab Switcher — 3 modes */}
                 <div className="flex gap-1 rounded-lg bg-gray-200 p-1">
-                    <button
-                        type="button"
-                        className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-                            activeTab === "form"
-                                ? "bg-white text-gray-900 shadow-sm"
-                                : "text-gray-600 hover:text-gray-900"
-                        }`}
-                        onClick={() => setActiveTab("form")}
-                    >
-                        <span className="flex items-center justify-center gap-2">
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            Manual Input
-                        </span>
-                    </button>
-                    <button
-                        type="button"
-                        className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-                            activeTab === "import"
-                                ? "bg-white text-gray-900 shadow-sm"
-                                : "text-gray-600 hover:text-gray-900"
-                        }`}
-                        onClick={() => setActiveTab("import")}
-                    >
-                        <span className="flex items-center justify-center gap-2">
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                            </svg>
-                            Import from Excel
-                        </span>
-                    </button>
+                    {TABS.map(tab => {
+                        const Icon = tab.icon
+                        return (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                className={`flex-1 rounded-md px-4 py-2.5 text-sm font-medium transition-all ${
+                                    activeTab === tab.id
+                                        ? "bg-white text-gray-900 shadow-sm"
+                                        : "text-gray-600 hover:text-gray-900"
+                                }`}
+                                onClick={() => setActiveTab(tab.id)}
+                                aria-label={tab.label}
+                            >
+                                <span className="flex items-center justify-center gap-2">
+                                    <Icon className="h-4 w-4" />
+                                    <span className="hidden sm:inline">{tab.label}</span>
+                                </span>
+                                {activeTab === tab.id && (
+                                    <p className="text-[10px] text-muted-foreground mt-0.5 hidden sm:block">{tab.description}</p>
+                                )}
+                            </button>
+                        )
+                    })}
                 </div>
 
                 {/* Tab Content */}
                 <div className="pt-2">
-                    {activeTab === "form" ? (
+                    {activeTab === "wizard" && (
+                        <SetupWizard
+                            onSubmit={handleConferenceSubmit}
+                            isSubmitting={isSubmitting}
+                            backendErrors={backendFieldErrors}
+                        />
+                    )}
+                    {activeTab === "form" && (
                         <ConferenceForm
                             initialData={null}
                             onSubmit={handleConferenceSubmit}
                             isSubmitting={isSubmitting}
                             backendErrors={backendFieldErrors}
                         />
-                    ) : (
+                    )}
+                    {activeTab === "import" && (
                         <ConferenceImport />
                     )}
                 </div>

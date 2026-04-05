@@ -16,6 +16,7 @@ import { SuccessCelebration } from '@/components/shared/success-celebration'
 import { UploadProgress } from '@/components/shared/upload-progress'
 import { UserLink } from '@/components/shared/user-link'
 import { BackButton } from '@/components/shared/back-button'
+import { FormSkeleton } from '@/components/shared/skeletons'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { createPaper, assignAuthorToPaper, getAuthorsByPaper, uploadPaperFile, deletePaperFile, getPaperFilesByPaperId } from '@/app/api/paper.api'
@@ -736,11 +737,7 @@ export default function SubmitPaperPage() {
     }
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        )
+        return <FormSkeleton fields={5} />
     }
 
     if (error) {
