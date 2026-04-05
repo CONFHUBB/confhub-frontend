@@ -12,12 +12,17 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { FieldError } from '@/components/ui/field'
-import { Loader2, ArrowLeft, FileText, Check, X, AlertTriangle, Save, Eye, ExternalLink, FileDown, MessageSquare, Lock, Sparkles, ThumbsUp, ThumbsDown, BookOpen } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { Loader2, ArrowLeft, FileText, Check, X, AlertTriangle, Save, Eye, ExternalLink, FileDown, MessageSquare, Lock, Sparkles, ThumbsUp, ThumbsDown, BookOpen, ChevronDown, ChevronUp } from 'lucide-react'
+import { toast } from 'sonner'
+import { SuccessCelebration } from '@/components/shared/success-celebration'
 import { PaperDiscussion } from '@/components/paper-discussion'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useTrackSettings } from '@/hooks/useTrackSettings'
+import { reviewStatusClass } from '@/lib/constants/status'
 import { summarizePaper, analyzeStrengthsWeaknesses, type PaperSummaryResponse, type StrengthWeaknessResponse } from '@/app/api/ai-assistant.api'
+import { getCurrentUserId } from '@/lib/auth'
+import { Breadcrumb } from '@/components/shared/breadcrumb'
+import { FormSkeleton } from '@/components/shared/skeletons'
 
 interface ReviewQuestion {
     id: number
@@ -31,12 +36,7 @@ interface ReviewQuestion {
     choices?: { id: number; text: string; value: number; orderIndex: number }[]
 }
 
-const STATUS_COLORS: Record<string, string> = {
-    ASSIGNED: 'bg-indigo-100 text-indigo-800',
-    IN_PROGRESS: 'bg-amber-100 text-amber-800',
-    COMPLETED: 'bg-green-100 text-green-800',
-    DECLINED: 'bg-red-100 text-red-800',
-}
+
 
 export default function ReviewPaperPage() {
     const params = useParams()
@@ -58,6 +58,7 @@ export default function ReviewPaperPage() {
     const [showDiscussion, setShowDiscussion] = useState(false)
     const [discussionEnabled, setDiscussionEnabled] = useState(false)
     const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+    const [showSuccess, setShowSuccess] = useState(false)
 
     // #5: Other reviews state
     const [otherReviews, setOtherReviews] = useState<any[]>([])
@@ -76,16 +77,11 @@ export default function ReviewPaperPage() {
     const [loadingSW, setLoadingSW] = useState(false)
     const [showSummary, setShowSummary] = useState(false)
     const [showSW, setShowSW] = useState(false)
+    const [showInstructions, setShowInstructions] = useState(true)
 
     // Get userId from JWT
     useEffect(() => {
-        try {
-            const token = localStorage.getItem('accessToken')
-            if (token) {
-                const payload = JSON.parse(atob(token.split('.')[1]))
-                setCurrentUserId(payload.userId || payload.id)
-            }
-        } catch { /* ignore */ }
+        setCurrentUserId(getCurrentUserId())
     }, [])
 
     const fetchData = useCallback(async () => {
@@ -264,6 +260,7 @@ export default function ReviewPaperPage() {
                 status: 'COMPLETED',
             })
             setReview(updated)
+            setShowSuccess(true)
             toast.success('✅ Review submitted successfully!')
         } catch (err: any) {
             toast.error(err?.response?.data?.message || 'Failed to submit review')
@@ -319,11 +316,7 @@ export default function ReviewPaperPage() {
     }).length
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        )
+        return <FormSkeleton fields={6} />
     }
 
     if (!review) {
@@ -340,14 +333,20 @@ export default function ReviewPaperPage() {
         <div className="max-w-7xl 2xl:max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
             {/* Header */}
             <div className="space-y-4">
-                <Button variant="ghost" className="gap-2 -ml-2" onClick={() => router.push(`/conference/${conferenceId}/reviewer`)}>
+            {/* Breadcrumb */}
+            <Breadcrumb items={[
+                { label: 'Reviewer Console', href: `/conference/${conferenceId}/reviewer` },
+                { label: `Review #${reviewId}` },
+            ]} />
+
+                <Button variant="ghost" className="gap-2 -ml-2" onClick={() => router.push(`/conference/${conferenceId}/reviewer`)} aria-label="Back to Reviewer Console">
                     <ArrowLeft className="h-4 w-4" />
                     Back to Reviewer Console
                 </Button>
                 <div className="flex-1">
                     <div className="flex items-center gap-3">
                         <h1 className="text-2xl font-bold text-gray-900">Review Paper</h1>
-                        <Badge className={STATUS_COLORS[review.status]}>
+                        <Badge className={reviewStatusClass(review.status)}>
                             {review.status === 'ASSIGNED' ? 'Assigned' :
                              review.status === 'IN_PROGRESS' ? 'In Progress' :
                              review.status === 'COMPLETED' ? 'Completed' : 'Declined'}
@@ -616,6 +615,33 @@ export default function ReviewPaperPage() {
                         </TabsList>
 
                         <TabsContent value="review" className="space-y-6">
+                            {/* #2: Reviewer Instructions Banner */}
+                            {settings.reviewerInstructions && settings.reviewerInstructions.trim() !== '' && (
+                                <Card className="border-blue-200 bg-blue-50/50">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowInstructions(!showInstructions)}
+                                        className="w-full p-4 flex items-center justify-between text-left hover:bg-blue-50 transition-colors rounded-t-lg"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <BookOpen className="h-4 w-4 text-blue-600" />
+                                            <span className="text-sm font-semibold text-blue-800">Reviewer Instructions</span>
+                                        </div>
+                                        {showInstructions ? (
+                                            <ChevronUp className="h-4 w-4 text-blue-500" />
+                                        ) : (
+                                            <ChevronDown className="h-4 w-4 text-blue-500" />
+                                        )}
+                                    </button>
+                                    {showInstructions && (
+                                        <CardContent className="pt-0 pb-4 px-4">
+                                            <p className="text-sm text-blue-900 leading-relaxed whitespace-pre-wrap">
+                                                {settings.reviewerInstructions}
+                                            </p>
+                                        </CardContent>
+                                    )}
+                                </Card>
+                            )}
                             {/* Review Questions */}
                     {questions.length === 0 ? (
                 <Card>
@@ -775,8 +801,21 @@ export default function ReviewPaperPage() {
                 </div>
             )}
 
+            {/* Success Celebration after submit */}
+            {showSuccess && review.status === 'COMPLETED' && (
+                <SuccessCelebration
+                    title="Review Submitted!"
+                    message={`Your review for "${review.paper?.title}" has been submitted successfully.`}
+                    detail={`${answeredCount}/${questions.length} questions answered${review.totalScore != null ? ` • Score: ${review.totalScore}` : ''}`}
+                    ctaLabel="Back to Reviewer Console"
+                    ctaUrl={`/conference/${conferenceId}/reviewer`}
+                    autoRedirectUrl={`/conference/${conferenceId}/reviewer`}
+                    autoRedirectDelay={10}
+                />
+            )}
+
             {/* Read-only notice */}
-            {isReadOnly && (
+            {isReadOnly && !showSuccess && (
                 <div className={`p-4 rounded-lg border flex flex-col items-center text-center text-sm ${
                     review.status === 'COMPLETED'
                         ? 'bg-emerald-50 border-emerald-200 text-emerald-700'

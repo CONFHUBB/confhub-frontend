@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getToken, clearToken, isTokenExpired } from '@/lib/auth'
 
 const http = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -17,11 +18,9 @@ export const authHttp = axios.create({
 
 http.interceptors.request.use(
     (config) => {
-        if (typeof window !== 'undefined') {
-            const token = localStorage.getItem('accessToken')
-            if (token) {
-                config.headers.Authorization = `Bearer ${token}`
-            }
+        const token = getToken()
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`
         }
         return config
     },
@@ -41,10 +40,10 @@ http.interceptors.response.use(
             typeof window !== 'undefined' &&
             !isRedirecting
         ) {
-            const token = localStorage.getItem('accessToken')
+            const token = getToken()
             if (token) {
                 isRedirecting = true
-                localStorage.removeItem('accessToken')
+                clearToken()
                 const event = new CustomEvent('auth:expired')
                 window.dispatchEvent(event)
                 setTimeout(() => {
@@ -66,24 +65,24 @@ export function startTokenExpiryMonitor() {
     const WARN_BEFORE_MS = 5 * 60_000 // warn 5 minutes before expiry
 
     const checkExpiry = () => {
-        const token = localStorage.getItem('accessToken')
+        const token = getToken()
         if (!token) return
 
+        if (isTokenExpired()) {
+            // Token already expired
+            clearToken()
+            if (!isRedirecting) {
+                isRedirecting = true
+                window.location.replace('/auth/login?expired=1')
+            }
+            return
+        }
+
+        // Check remaining time for early warning
         try {
             const payload = JSON.parse(atob(token.split('.')[1]))
-            const exp = payload.exp * 1000 // convert to ms
-            const now = Date.now()
-            const remaining = exp - now
-
-            if (remaining <= 0) {
-                // Token already expired
-                localStorage.removeItem('accessToken')
-                if (!isRedirecting) {
-                    isRedirecting = true
-                    window.location.replace('/auth/login?expired=1')
-                }
-            } else if (remaining <= WARN_BEFORE_MS) {
-                // Warn user
+            const remaining = payload.exp * 1000 - Date.now()
+            if (remaining <= WARN_BEFORE_MS) {
                 const event = new CustomEvent('auth:expiring-soon', {
                     detail: { remainingMs: remaining }
                 })

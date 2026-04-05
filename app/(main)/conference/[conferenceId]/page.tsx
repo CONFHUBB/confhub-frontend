@@ -6,7 +6,7 @@ import { getConference, getConferenceActivities } from '@/app/api/conference.api
 import { getTracksByConference } from '@/app/api/track.api'
 import { getPapersByConference } from '@/app/api/paper.api'
 import { getUserRoleAssignments, acceptInvitation, declineInvitation } from '@/app/api/conference-user-track.api'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import type { ConferenceActivityDTO, ConferenceResponse, TrackResponse } from '@/types/conference'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -26,6 +26,8 @@ import { isActivityOpen } from '@/lib/activity'
 import { useUserRoles } from '@/hooks/useUserConferenceRoles'
 import { ConferenceFeedback } from '@/components/conference-feedback'
 import http from '@/lib/http'
+import { Breadcrumb } from '@/components/shared/breadcrumb'
+import { DetailPageSkeleton } from '@/components/shared/skeletons'
 import {
     Tooltip,
     TooltipContent,
@@ -225,11 +227,7 @@ export default function ConferenceDetailsPage() {
     const currentActivity = sortedOpenActivities[0] || null
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        )
+        return <DetailPageSkeleton />
     }
 
     if (error) {
@@ -262,13 +260,11 @@ export default function ConferenceDetailsPage() {
 
     return (
         <div className="container mx-auto py-8 px-4 max-w-7xl">
-            {/* Back button */}
-            <Link href="/conference">
-                <Button variant="ghost" className="mb-6 gap-2">
-                    <ArrowLeft className="h-4 w-4" />
-                    Back to Conferences
-                </Button>
-            </Link>
+            {/* Breadcrumb */}
+            <Breadcrumb items={[
+                { label: 'Conferences', href: '/conference' },
+                { label: conference.acronym || conference.name },
+            ]} className="mb-2" />
 
             {pendingInvitations.length > 0 && (
                 <div className="bg-amber-50 border-[2px] border-amber-300 rounded-xl p-5 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
@@ -595,6 +591,7 @@ export default function ConferenceDetailsPage() {
                                                     <Button
                                                         className="w-full gap-2"
                                                         variant="default"
+                                                        size="lg"
                                                     >
                                                         <Send className="h-4 w-4" />
                                                         Submit Paper
@@ -604,6 +601,7 @@ export default function ConferenceDetailsPage() {
                                                 <Button
                                                     className="w-full gap-2"
                                                     variant="outline"
+                                                    size="lg"
                                                     disabled
                                                 >
                                                     <Send className="h-4 w-4" />

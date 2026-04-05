@@ -12,7 +12,7 @@ import { Loader2, UserPlus, Shield, CheckCircle2 } from "lucide-react"
 import { activateAccount } from "@/app/api/account.api"
 import { createOrUpdateUserProfile } from "@/app/api/user.api"
 import type { UserProfileRequest } from "@/types/user"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { V, validate } from "@/lib/validation"
 
 const USER_TYPES = [

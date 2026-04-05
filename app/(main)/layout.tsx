@@ -8,7 +8,7 @@ import { AppNavbar } from "@/components/app-navbar"
 import { useUserRole } from "@/hooks/useUserRole"
 import { UserRolesProvider } from "@/hooks/useUserConferenceRoles"
 import { startTokenExpiryMonitor } from "@/lib/http"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import {
     SidebarInset,
     SidebarProvider,
@@ -17,6 +17,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { HeroSection } from "@/components/hero-section"
 import { AIChatWidget } from "@/components/ai-chat-widget"
+import { AppErrorBoundary } from "@/components/shared/app-error-boundary"
 import { Loader2 } from "lucide-react"
 
 export default function MainLayout({
@@ -81,7 +82,9 @@ export default function MainLayout({
                         </div>
                     </header>
                     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-                        {children}
+                        <AppErrorBoundary>
+                            {children}
+                        </AppErrorBoundary>
                     </div>
                 </SidebarInset>
                 <AIChatWidget />
@@ -96,7 +99,9 @@ export default function MainLayout({
                 <AppNavbar />
                 {isHomePage && <HeroSection />}
                 <main>
-                    {children}
+                    <AppErrorBoundary>
+                        {children}
+                    </AppErrorBoundary>
                 </main>
                 <AIChatWidget />
             </div>

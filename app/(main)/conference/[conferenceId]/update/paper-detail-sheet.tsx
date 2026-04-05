@@ -10,7 +10,7 @@ import {
     Loader2, FileText, Users, Gavel, Shield, MessageSquare, Eye,
     Check, X, ChevronDown, ChevronRight, Plus, Trash2, Send, Reply, UserPlus, ExternalLink, Sparkles
 } from "lucide-react"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 
 // APIs
 import { getAuthorsByPaper, type PaperAuthorItem } from "@/app/api/paper.api"
@@ -25,6 +25,8 @@ import { getConferenceUsersWithRoles } from "@/app/api/conference-user-track.api
 import { getReviewById, getAnswersByReview, getReviewQuestionsByTrack, getReviewsByPaper, getReviewVersions } from "@/app/api/review.api"
 import { analyzeReviewConsensus, type ConsensusResponse } from "@/app/api/ai-assistant.api"
 import Link from "next/link"
+import { paperStatusClass, getPaperStatus } from '@/lib/constants/status'
+import { UserLink } from '@/components/shared/user-link'
 
 // Types
 import type { BiddingResponse } from "@/types/bidding"
@@ -57,15 +59,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
     { key: "discussion", label: "Discussion", icon: <MessageSquare className="h-3.5 w-3.5" /> },
 ]
 
-const STATUS_COLORS: Record<string, string> = {
-    DRAFT: "bg-gray-100 text-gray-700",
-    SUBMITTED: "bg-indigo-100 text-indigo-700",
-    UNDER_REVIEW: "bg-amber-100 text-amber-700",
-    ACCEPTED: "bg-emerald-100 text-emerald-700",
-    REJECTED: "bg-red-100 text-red-700",
-    WITHDRAWN: "bg-gray-100 text-gray-500",
-    PUBLISHED: "bg-teal-100 text-teal-700",
-}
+
 
 export function PaperDetailSheet({
     paperId, conferenceId, userId, defaultTab,
@@ -88,8 +82,8 @@ export function PaperDetailSheet({
                             #{enrichedPaper?.id} — {enrichedPaper?.title || "Paper Detail"}
                         </SheetTitle>
                         {enrichedPaper && (
-                            <Badge className={`shrink-0 text-[10px] ${STATUS_COLORS[enrichedPaper.status] || ""}`}>
-                                {enrichedPaper.status.replace("_", " ")}
+                            <Badge className={`shrink-0 text-[10px] ${paperStatusClass(enrichedPaper.status)}`}>
+                                {getPaperStatus(enrichedPaper.status).label}
                             </Badge>
                         )}
                     </div>
@@ -257,7 +251,7 @@ function InfoTab({ paper, paperId }: { paper: EnrichedPaper; paperId: number }) 
                                 <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
                                     {(a.user.firstName?.[0] || "").toUpperCase()}
                                 </div>
-                                <span className="font-medium">{a.user.fullName || `${a.user.firstName} ${a.user.lastName}`}</span>
+                                <UserLink userId={a.user.id} name={a.user.fullName || `${a.user.firstName} ${a.user.lastName}`} className="font-medium" />
                                 <span className="text-xs text-muted-foreground">{a.user.email}</span>
                             </div>
                         ))}
@@ -274,7 +268,7 @@ function InfoTab({ paper, paperId }: { paper: EnrichedPaper; paperId: number }) 
                     <div className="space-y-1.5">
                         {bids.map(b => (
                             <div key={b.id} className="flex items-center justify-between text-sm">
-                                <span>{b.reviewerName}</span>
+                                <span><UserLink userId={b.reviewerId} name={b.reviewerName || `Reviewer #${b.reviewerId}`} className="text-sm font-medium" /></span>
                                 <Badge className={`text-[10px] ${BID_COLORS[b.bidValue] || ""}`}>
                                     {BID_LABELS[b.bidValue] || b.bidValue}
                                 </Badge>
@@ -413,7 +407,7 @@ function ReviewsTab({ paperId, paper, conferenceId }: { paperId: number; paper: 
                                 className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
                             >
                                 <div className="text-left">
-                                    <p className="text-sm font-semibold">{rev.reviewer.firstName} {rev.reviewer.lastName}</p>
+                                    <UserLink userId={rev.reviewer.id} name={`${rev.reviewer.firstName} ${rev.reviewer.lastName}`} className="text-sm font-semibold" />
                                     <p className="text-xs text-muted-foreground">{rev.status}</p>
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -579,7 +573,7 @@ function AssignmentsTab({ paperId, conferenceId, onChanged }: { paperId: number;
                         {assignments.map(a => (
                             <div key={a.reviewerId} className="flex items-center justify-between rounded-lg border px-3 py-2 bg-emerald-50/50">
                                 <div>
-                                    <p className="text-sm font-medium">{a.reviewerName}</p>
+                                    <p className="text-sm font-medium"><UserLink userId={a.reviewerId} name={a.reviewerName || `Reviewer #${a.reviewerId}`} className="text-sm font-medium" /></p>
                                     <p className="text-xs text-muted-foreground">{a.reviewerEmail}</p>
                                 </div>
                                 <Button
@@ -813,7 +807,7 @@ function DecisionTab({
             {/* Existing decision info */}
             {metaReview && (
                 <div className="border-t pt-4 text-xs text-muted-foreground">
-                    Last updated by: {metaReview.user.firstName} {metaReview.user.lastName} ({metaReview.user.email})
+                    Last updated by: <UserLink userId={metaReview.user.id} name={`${metaReview.user.firstName} ${metaReview.user.lastName}`} className="text-xs font-medium" /> ({metaReview.user.email})
                 </div>
             )}
         </div>
@@ -863,7 +857,7 @@ function ConflictsTab({ paperId, conferenceId }: { paperId: number; conferenceId
                     {conflicts.map(c => (
                         <div key={c.id} className="flex items-center justify-between rounded-lg border px-3 py-2">
                             <div>
-                                <p className="text-sm font-medium">{c.user?.firstName} {c.user?.lastName}</p>
+                                <p className="text-sm font-medium"><UserLink userId={c.user?.id} name={`${c.user?.firstName || ''} ${c.user?.lastName || ''}`.trim() || 'Unknown'} className="text-sm font-medium" /></p>
                                 <p className="text-xs text-muted-foreground">{c.user?.email}</p>
                             </div>
                             <div className="flex items-center gap-2">

@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { getPlagiarismResult, recheckPlagiarism, type PlagiarismDetails } from "@/app/api/plagiarism.api"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 
 interface PlagiarismBadgeProps {
     paperId: number

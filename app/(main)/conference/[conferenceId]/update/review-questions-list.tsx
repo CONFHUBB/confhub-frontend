@@ -13,7 +13,7 @@ import {
 import type { TrackResponse, ReviewQuestionDTO } from "@/types/track"
 import { Button } from "@/components/ui/button"
 import { Loader2, Plus, Copy, Eye, Pencil, Trash2, ArrowUp, ArrowDown, Send, BellRing } from "lucide-react"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { Select } from "antd"
 
 import { getConference } from "@/app/api/conference.api"

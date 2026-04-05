@@ -16,7 +16,7 @@ import {
     Loader2, ArrowLeft, Mail, Users, History, Send, RefreshCw,
     Clock, CheckCircle2, XCircle, AlertCircle
 } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 interface UserWithRoles {
     user: { id: number; firstName: string; lastName: string; email: string }

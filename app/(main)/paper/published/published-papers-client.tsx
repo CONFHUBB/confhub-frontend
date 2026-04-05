@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dialog'
 import { getPublishedPapers, getPaperFilesByPaperId, type PublishedPaperDTO } from '@/app/api/paper.api'
 import type { PaperFileResponse } from '@/types/paper'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import Link from 'next/link'
 
 // ─── Paper Card ───────────────────────────────────────────────────────

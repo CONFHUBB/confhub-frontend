@@ -15,12 +15,13 @@ import type { PaperResponse } from '@/types/paper'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { BackButton } from '@/components/shared/back-button'
 import {
     Loader2, ArrowLeft, Upload, FileCheck, ExternalLink, Ticket, CreditCard,
     CheckCircle2, AlertTriangle, ShieldCheck, RefreshCw, Layers, Eye, Trash2, FileText, Check, Scale
 } from 'lucide-react'
+import { getCurrentUserEmail } from '@/lib/auth'
 
 // ── Types ──
 type Step = 'loading' | 'register' | 'pending-payment' | 'upload'
@@ -103,11 +104,10 @@ export default function DedicatedCameraReadyPage() {
     const fetchData = async () => {
         try {
             setLoading(true)
-            const token = localStorage.getItem('accessToken')
-            if (!token) { router.push('/auth/login'); return }
+            const email = getCurrentUserEmail()
+            if (!email) { router.push('/auth/login'); return }
 
-            const payload = JSON.parse(atob(token.split('.')[1]))
-            const user = await getUserByEmail(payload.sub)
+            const user = await getUserByEmail(email)
             if (!user?.id) { router.push('/auth/login'); return }
             setUserId(user.id)
 

@@ -16,19 +16,20 @@ import {
 import { CountrySelect } from "@/components/ui/country-select"
 import { Select } from "antd"
 import { AREA_OPTIONS, SOCIETY_SPONSOR_OPTIONS } from "@/lib/constants/conference-options"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { Upload, Loader2, X, ImageIcon } from "lucide-react"
 import { V } from "@/lib/validation"
 
 interface ConferenceFormProps {
     initialData: ConferenceData | null
-    onSubmit: (data: ConferenceData, pendingBannerFile?: File) => void
+    onSubmit: (data: ConferenceData, pendingBannerFile?: File) => void | Promise<void>
     isSubmitting?: boolean
     submitLabel?: string
     conferenceId?: number
+    backendErrors?: Record<string, string>
 }
 
-export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabel, conferenceId }: ConferenceFormProps) {
+export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabel, conferenceId, backendErrors }: ConferenceFormProps) {
     const isEditMode = !!initialData
     const [errors, setErrors] = useState<Record<string, string>>({})
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -43,6 +44,11 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
             }
         }
     }, [bannerPreviewUrl])
+
+    useEffect(() => {
+        if (!backendErrors || Object.keys(backendErrors).length === 0) return
+        setErrors((prev) => ({ ...prev, ...backendErrors }))
+    }, [backendErrors])
 
     const [formData, setFormData] = useState<ConferenceData>(
         initialData ?? {
@@ -99,8 +105,15 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
         if (formData.name.length > SHORT_MAX) newErrors.name = `Name must be ${SHORT_MAX} characters or less.`
         if (!formData.acronym.trim()) newErrors.acronym = "Short name is required."
         if (formData.acronym.length > 20) newErrors.acronym = "Short name must be 20 characters or less."
+        if (!formData.location.trim()) newErrors.location = "Location is required."
         if (!formData.startDate) newErrors.startDate = "Start date is required."
         if (!formData.endDate) newErrors.endDate = "End date is required."
+        if (formData.startDate && !newErrors.startDate) {
+            const startTs = new Date(formData.startDate).getTime()
+            if (!Number.isNaN(startTs) && startTs <= Date.now()) {
+                newErrors.startDate = "Start date must be in the future."
+            }
+        }
         if (
             formData.startDate &&
             formData.endDate &&
@@ -314,7 +327,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
                                 {/* Location */}
                                 <Field data-invalid={!!errors.location || undefined}>
                                     <FieldLabel htmlFor="location" className="text-base font-semibold">
-                                        Location of conference
+                                        Location of conference <span className="text-red-500">*</span>
                                     </FieldLabel>
                                     <Input
                                         id="location"

@@ -30,7 +30,7 @@ import {
     FolderOpen,
 } from "lucide-react"
 import Link from "next/link"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 
 // ── Status helpers ──────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {

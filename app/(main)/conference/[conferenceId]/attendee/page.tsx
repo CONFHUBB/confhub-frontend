@@ -17,6 +17,7 @@ import {
     User, Loader2, QrCode, CreditCard, Clock, ExternalLink
 } from 'lucide-react'
 import Link from 'next/link'
+import { getCurrentUserId } from '@/lib/auth'
 
 function formatTime12(t: string): string {
     const [h, m] = t.split(':').map(Number)
@@ -43,14 +44,7 @@ export default function AttendeeWorkspacePage() {
                 setConference(confData)
 
                 // Get user ID from JWT
-                const token = localStorage.getItem('accessToken')
-                let userId: number | null = null
-                if (token) {
-                    try {
-                        const payload = JSON.parse(atob(token.split('.')[1]))
-                        userId = payload.id
-                    } catch {}
-                }
+                const userId = getCurrentUserId()
 
                 // Load ticket
                 if (userId) {

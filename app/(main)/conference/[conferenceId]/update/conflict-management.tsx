@@ -17,7 +17,8 @@ import { Select as ShadSelect, SelectContent, SelectItem, SelectTrigger, SelectV
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { FilterPanel } from "@/components/ui/filter-panel"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
+import { UserLink } from '@/components/shared/user-link'
 
 interface ConflictManagementProps {
     conferenceId: number
@@ -488,7 +489,7 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                                         <p className="font-medium text-xs truncate" title={`#${conflict.paper?.id} ${conflict.paper?.title}`}>#{conflict.paper?.id} {conflict.paper?.title}</p>
                                     </TableCell>
                                     <TableCell className="max-w-[160px]">
-                                        <p className="font-medium text-sm truncate" title={`${conflict.user?.firstName} ${conflict.user?.lastName}`}>{conflict.user?.firstName} {conflict.user?.lastName}</p>
+                                        <p className="font-medium text-sm truncate" title={`${conflict.user?.firstName} ${conflict.user?.lastName}`}><UserLink userId={conflict.user?.id} name={`${conflict.user?.firstName || ''} ${conflict.user?.lastName || ''}`.trim() || 'Unknown'} className="font-medium text-sm" /></p>
                                         <p className="text-muted-foreground text-xs truncate" title={conflict.user?.email}>{conflict.user?.email}</p>
                                     </TableCell>
                                     <TableCell>

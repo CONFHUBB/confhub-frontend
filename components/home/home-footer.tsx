@@ -57,15 +57,16 @@ export function HomeFooter() {
                             <p className="text-sm font-semibold text-white mb-3">Subscribe to our newsletter</p>
                             <form className="flex gap-2">
                                 <div className="flex items-center flex-1 bg-gray-800 rounded-lg overflow-hidden border border-gray-700 focus-within:border-indigo-500 transition-colors">
-                                    <Mail className="ml-3 h-4 w-4 text-gray-500 shrink-0" />
+                                    <Mail className="ml-3 h-4 w-4 text-gray-500 shrink-0" aria-hidden="true" />
                                     <input
                                         type="email"
                                         placeholder="Enter your email"
+                                        autoComplete="email"
                                         className="flex-1 px-3 py-2.5 bg-transparent text-sm text-white placeholder:text-gray-500 outline-none"
                                     />
                                 </div>
                                 <button
-                                    type="button"
+                                    type="submit"
                                     className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors shrink-0"
                                 >
                                     Subscribe
@@ -99,7 +100,7 @@ export function HomeFooter() {
                 {/* Bottom Bar */}
                 <div className="border-t border-gray-800 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <p className="text-xs text-gray-500">
-                        © {new Date().getFullYear()} ConfHub. All rights reserved.
+                        &copy; {new Date().getFullYear()} ConfHub. All rights reserved.
                     </p>
                     <div className="flex items-center gap-6">
                         <Link href="/conference" className="text-xs text-gray-500 hover:text-gray-300 transition-colors">Privacy Policy</Link>

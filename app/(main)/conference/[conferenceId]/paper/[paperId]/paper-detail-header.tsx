@@ -3,31 +3,14 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-    ArrowLeft, Edit, UserPlus, Gavel, Shield, Upload, FileEdit
+    ArrowLeft, Upload, Lock
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import type { PaperResponse } from '@/types/paper'
 import type { PaperAuthorItem } from '@/app/api/paper.api'
 import type { PaperPermissions } from '@/hooks/usePaperRole'
 import type { MetaReviewResponse } from '@/types/meta-review'
-
-// ── Status Color Map ──
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    DRAFT: { label: 'Draft', color: 'bg-slate-100 text-slate-700' },
-    SUBMITTED: { label: 'Submitted', color: 'bg-blue-100 text-blue-700' },
-    UNDER_REVIEW: { label: 'Under Review', color: 'bg-purple-100 text-purple-700' },
-    AWAITING_DECISION: { label: 'Awaiting Decision', color: 'bg-amber-100 text-amber-700' },
-    ACCEPTED: { label: 'Accepted', color: 'bg-emerald-100 text-emerald-700' },
-    REJECTED: { label: 'Rejected', color: 'bg-red-100 text-red-700' },
-    WITHDRAWN: { label: 'Withdrawn', color: 'bg-gray-100 text-gray-500' },
-    CAMERA_READY: { label: 'Camera Ready', color: 'bg-teal-100 text-teal-700' },
-    PUBLISHED: { label: 'Published', color: 'bg-cyan-100 text-cyan-700' },
-}
-
-const DECISION_CONFIG: Record<string, { label: string; color: string }> = {
-    APPROVE: { label: 'Accepted', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
-    REJECT: { label: 'Rejected', color: 'bg-red-100 text-red-700 border-red-300' },
-}
+import { getPaperStatus, paperStatusClass, DECISION_CONFIG } from '@/lib/constants/status'
 
 const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
     chair: { label: 'Chair', cls: 'bg-indigo-100 text-indigo-700 border-indigo-300' },
@@ -45,6 +28,7 @@ interface PaperDetailHeaderProps {
     isChair: boolean
     isReviewer: boolean
     isAuthor: boolean
+    isDoubleBlind: boolean
     permissions: PaperPermissions
     conferenceId: number
     conferenceName?: string
@@ -54,7 +38,7 @@ interface PaperDetailHeaderProps {
 export function PaperDetailHeader({
     paper, authors, metaReview,
     reviewCount, completedReviewCount, averageTotalScore,
-    isChair, isReviewer, isAuthor, permissions,
+    isChair, isReviewer, isAuthor, isDoubleBlind, permissions,
     conferenceId, conferenceName,
     onTabChange,
 }: PaperDetailHeaderProps) {
@@ -66,9 +50,14 @@ export function PaperDetailHeader({
     // Determine primary role badge
     const roleBadge = isChair ? ROLE_BADGE.chair : isReviewer ? ROLE_BADGE.reviewer : isAuthor ? ROLE_BADGE.author : null
 
-    const authorNames = authors.map(a =>
-        a.user?.fullName || `${a.user?.firstName || ''} ${a.user?.lastName || ''}`.trim()
-    ).filter(Boolean).join(', ')
+    // Double-blind: hide author names for reviewers (chairs always see)
+    const shouldMaskAuthors = isDoubleBlind && isReviewer && !isChair
+
+    const authorNames = shouldMaskAuthors
+        ? ''
+        : authors.map(a =>
+            a.user?.fullName || `${a.user?.firstName || ''} ${a.user?.lastName || ''}`.trim()
+        ).filter(Boolean).join(', ')
 
     return (
         <div className="space-y-4">
@@ -105,14 +94,14 @@ export function PaperDetailHeader({
                 {/* Row 3: Badges */}
                 <div className="flex items-center gap-2 flex-wrap">
                     {/* Status */}
-                    <Badge className={`text-xs shadow-none ${STATUS_CONFIG[paper.status]?.color || 'bg-gray-100 text-gray-700'}`}>
-                        {STATUS_CONFIG[paper.status]?.label || paper.status?.replace(/_/g, ' ')}
+                    <Badge className={`text-xs shadow-none ${paperStatusClass(paper.status)}`}>
+                        {getPaperStatus(paper.status).label}
                     </Badge>
 
                     {/* Decision */}
                     {metaReview?.finalDecision && (
-                        <Badge variant="outline" className={`text-xs ${DECISION_CONFIG[metaReview.finalDecision]?.color || ''}`}>
-                            Decision: {DECISION_CONFIG[metaReview.finalDecision]?.label || metaReview.finalDecision}
+                        <Badge variant="outline" className={`text-xs ${DECISION_CONFIG[metaReview.finalDecision as keyof typeof DECISION_CONFIG]?.bg || ''} ${DECISION_CONFIG[metaReview.finalDecision as keyof typeof DECISION_CONFIG]?.text || ''} ${DECISION_CONFIG[metaReview.finalDecision as keyof typeof DECISION_CONFIG]?.border || ''}`}>
+                            Decision: {DECISION_CONFIG[metaReview.finalDecision as keyof typeof DECISION_CONFIG]?.label || metaReview.finalDecision}
                         </Badge>
                     )}
 
@@ -126,11 +115,18 @@ export function PaperDetailHeader({
 
                 {/* Row 4: Authors + Submitted + Keywords */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
-                    {authorNames && (
+                    {shouldMaskAuthors ? (
+                        <span className="flex items-center gap-1.5">
+                            <Badge variant="outline" className="text-xs bg-slate-100 text-slate-600 border-slate-200">
+                                <Lock className="h-3 w-3 mr-1" />
+                                Double-Blind Active — Author identities are hidden
+                            </Badge>
+                        </span>
+                    ) : authorNames ? (
                         <span className="flex items-center gap-1.5">
                             <span className="font-medium text-foreground">Authors:</span> {authorNames}
                         </span>
-                    )}
+                    ) : null}
                     {paper.submissionTime && (
                         <span className="flex items-center gap-1.5">
                             <span className="font-medium text-foreground">Submitted:</span>
@@ -172,29 +168,14 @@ export function PaperDetailHeader({
                     </div>
                 )}
 
-                {/* Row 6: Action Buttons (role-filtered) */}
-                <div className="flex gap-2 flex-wrap pt-1">
-                    {permissions.canViewAssignments && (
-                        <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => onTabChange('assignments')}>
-                            <UserPlus className="h-3.5 w-3.5" /> Assignments
-                        </Button>
-                    )}
-                    {permissions.canMakeDecision && (
-                        <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => onTabChange('decision')}>
-                            <Gavel className="h-3.5 w-3.5" /> Make Decision
-                        </Button>
-                    )}
-                    {permissions.canViewConflicts && (
-                        <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => onTabChange('conflicts')}>
-                            <Shield className="h-3.5 w-3.5" /> Conflicts
-                        </Button>
-                    )}
+                {/* Row 6: Quick Actions — only unique actions not in tab bar */}
+                <div className="flex gap-3 flex-wrap pt-1">
                     {permissions.canSubmitCameraReady && (
                         <Button 
-                            variant="outline" size="sm" className="gap-1.5 text-xs"
+                            variant="default" size="default" className="gap-2"
                             onClick={() => router.push(`/conference/${conferenceId}/paper/${paper.id}/camera-ready`)}
                         >
-                            <Upload className="h-3.5 w-3.5" /> Submit Camera-Ready
+                            <Upload className="h-4 w-4" /> Submit Camera-Ready
                         </Button>
                     )}
                 </div>
@@ -202,3 +183,4 @@ export function PaperDetailHeader({
         </div>
     )
 }
+

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Loader2, BarChart3, Bell, Send, ChevronDown, ChevronRight } from "lucide-react"
 import { Select } from "antd"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { V } from "@/lib/validation"
 
 interface AuthorNotificationWizardProps {

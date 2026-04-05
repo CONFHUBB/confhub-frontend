@@ -8,7 +8,7 @@ import { sendInvitationEmail } from "@/app/api/email.api"
 import type { User, ConferenceUserTrack, MemberWithRoles } from "@/types/user"
 import type { TrackResponse } from "@/types/track"
 import type { ConferenceResponse } from "@/types/conference"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -73,6 +73,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { FilterPanel } from "@/components/ui/filter-panel"
 import { V } from "@/lib/validation"
+import { MemberDetailDialog } from "./_components/member-detail-dialog"
+import { UserLink } from '@/components/shared/user-link'
 
 // ── Role constants ──────────────────────────────────────
 const ROLE_OPTIONS = [
@@ -1112,7 +1114,7 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                                             {(member.user.fullName ?? "?")[0]?.toUpperCase()}
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <p className="font-medium text-sm truncate" title={member.user.fullName ?? ""}>{member.user.fullName}</p>
+                                                            <UserLink userId={member.user.id} name={member.user.fullName ?? ''} className="font-medium text-sm truncate" />
                                                             <p className="text-xs text-muted-foreground truncate" title={member.user.email}>{member.user.email}</p>
                                                         </div>
                                                     </div>
@@ -1165,6 +1167,7 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                                             size="sm"
                                                             className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
                                                             title="View Details"
+                                                            aria-label="View member details"
                                                             onClick={() => {
                                                                 setDetailMember(member)
                                                                 setDetailOpen(true)
@@ -1177,6 +1180,7 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                                             size="sm"
                                                             className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
                                                             title="Manage Roles"
+                                                            aria-label="Manage member roles"
                                                             onClick={() => openManageRoles(member.user, member.roles)}
                                                         >
                                                             <Settings2 className="h-4 w-4" />
@@ -1186,6 +1190,7 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                                             size="sm"
                                                             className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600"
                                                             title="Remove Member"
+                                                            aria-label="Remove member"
                                                             onClick={() => {
                                                                 setMemberToRemove(member)
                                                                 setRemoveConfirmOpen(true)
@@ -1233,145 +1238,18 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
             </div>
 
             {/* ── Member Detail Dialog ─────────────────── */}
-            <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-                <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <UserIcon className="h-5 w-5 text-primary" />
-                            Member Details
-                        </DialogTitle>
-                        <DialogDescription>
-                            Detailed information about this conference member.
-                        </DialogDescription>
-                    </DialogHeader>
-                    {detailMember && (
-                        <div className="space-y-5 py-2">
-                            {/* User Info */}
-                            <div className="flex items-center gap-4">
-                                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-lg font-bold text-primary">
-                                    {(detailMember.user.fullName ?? "?")[0]?.toUpperCase()}
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-base">{detailMember.user.fullName}</p>
-                                    <p className="text-sm text-muted-foreground">{detailMember.user.email}</p>
-                                </div>
-                            </div>
-
-                            {/* Detail Info */}
-                            <div className="rounded-lg border bg-muted/20 divide-y">
-                                {detailMember.user.country && (
-                                    <div className="flex items-center gap-3 px-4 py-2.5">
-                                        <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
-                                        <div>
-                                            <p className="text-xs text-muted-foreground">Country</p>
-                                            <p className="text-sm font-medium">{detailMember.user.country}</p>
-                                        </div>
-                                    </div>
-                                )}
-                                <div className="flex items-center gap-3 px-4 py-2.5">
-                                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                                    <div>
-                                        <p className="text-xs text-muted-foreground">Joined Conference</p>
-                                        <p className="text-sm font-medium">
-                                            {detailMember.roles[0]?.createdAt
-                                                ? new Date(detailMember.roles[0].createdAt).toLocaleDateString('en-US', {
-                                                    year: 'numeric', month: 'long', day: 'numeric'
-                                                })
-                                                : 'N/A'
-                                            }
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3 px-4 py-2.5">
-                                    <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-                                    <div>
-                                        <p className="text-xs text-muted-foreground">Invitation Status</p>
-                                        <p className="text-sm font-medium">
-                                            {(() => {
-                                                const s = getAcceptanceStatus(detailMember.roles)
-                                                if (s === 'accepted') return '✅ Accepted'
-                                                if (s === 'declined') return '❌ Declined'
-                                                return '⏳ Pending'
-                                            })()}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Roles Breakdown */}
-                            <div>
-                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Assigned Roles</h4>
-                                <div className="space-y-2">
-                                    {[...formatRoles(detailMember.roles).entries()].map(([role, trackNames]) => (
-                                        <div key={role} className="rounded-lg border p-3">
-                                            <Badge
-                                                variant="outline"
-                                                className={`text-xs font-semibold ${ROLE_COLORS[role] ?? ""}`}
-                                            >
-                                                {ROLE_DISPLAY[role] ?? role}
-                                            </Badge>
-                                            {trackNames.length > 0 && (
-                                                <div className="flex flex-wrap gap-1.5 mt-2">
-                                                    {trackNames.map((tn) => (
-                                                        <span key={tn} className="text-xs bg-muted px-2 py-0.5 rounded-md">
-                                                            {tn}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Activity History */}
-                            <div>
-                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Activity History</h4>
-                                <div className="rounded-lg border bg-muted/10 divide-y">
-                                    {detailMember.roles
-                                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                                        .map((role) => (
-                                            <div key={role.id} className="px-4 py-2.5 flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${role.isAccepted === true ? 'bg-green-500'
-                                                            : role.isAccepted === false ? 'bg-red-500'
-                                                                : 'bg-amber-500'
-                                                        }`} />
-                                                    <span className="text-sm font-medium">
-                                                        {ROLE_DISPLAY[role.assignedRole] ?? role.assignedRole}
-                                                    </span>
-                                                    {role.conferenceTrackId && (
-                                                        <span className="text-xs text-muted-foreground">
-                                                            — {tracks.find(t => t.id === role.conferenceTrackId)?.name ?? `Track #${role.conferenceTrackId}`}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <span className="text-[11px] text-muted-foreground">
-                                                    {new Date(role.createdAt).toLocaleDateString('en-US', {
-                                                        month: 'short', day: 'numeric', year: 'numeric'
-                                                    })}
-                                                </span>
-                                            </div>
-                                        ))
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setDetailOpen(false)}>Close</Button>
-                        {detailMember && (
-                            <Button onClick={() => {
-                                setDetailOpen(false)
-                                openManageRoles(detailMember.user, detailMember.roles)
-                            }}>
-                                <Settings2 className="h-4 w-4 mr-1.5" />
-                                Manage Roles
-                            </Button>
-                        )}
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <MemberDetailDialog
+                open={detailOpen}
+                onOpenChange={setDetailOpen}
+                member={detailMember}
+                tracks={tracks}
+                formatRoles={formatRoles}
+                getAcceptanceStatus={getAcceptanceStatus}
+                onManageRoles={() => {
+                    setDetailOpen(false)
+                    if (detailMember) openManageRoles(detailMember.user, detailMember.roles)
+                }}
+            />
 
             {/* ── Manage Roles Dialog ─────────────────── */}
             {dialogUser && (

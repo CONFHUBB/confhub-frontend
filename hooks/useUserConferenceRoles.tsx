@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 import { getUserRoleAssignments } from "@/app/api/conference-user-track.api"
 import type { ConferenceUserTrackResponse, ConferenceTrackRole } from "@/types/notification"
+import { getCurrentUserId } from "@/lib/auth"
 
 interface UserRolesContextValue {
     /** All role assignments across all conferences */
@@ -25,16 +26,6 @@ interface UserRolesContextValue {
 
 const UserRolesContext = createContext<UserRolesContextValue | undefined>(undefined)
 
-function getUserIdFromToken(): number | null {
-    try {
-        const token = localStorage.getItem('accessToken')
-        if (!token) return null
-        const payload = JSON.parse(atob(token.split('.')[1]))
-        return payload.userId || payload.id || null
-    } catch {
-        return null
-    }
-}
 
 export function UserRolesProvider({ children }: { children: ReactNode }) {
     const [roles, setRoles] = useState<ConferenceUserTrackResponse[]>([])
@@ -42,7 +33,7 @@ export function UserRolesProvider({ children }: { children: ReactNode }) {
     const [userId, setUserId] = useState<number | null>(null)
 
     const fetchRoles = useCallback(async () => {
-        const uid = getUserIdFromToken()
+        const uid = getCurrentUserId()
         setUserId(uid)
         if (!uid) {
             setRoles([])
