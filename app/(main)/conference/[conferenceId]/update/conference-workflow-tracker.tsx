@@ -96,7 +96,7 @@ export function ConferenceWorkflowTracker({
             const hasSubmissionForm = !!(formConfig && formConfig.definitionJson)
 
             // Check members (more than just the chair)
-            const hasMembers = (membersData as any).totalElements > 1
+            const hasMembers = (membersData as { totalElements: number }).totalElements > 1
 
             // Check reviewer assignments
             const papersWithReviewers = papers.filter((p: any) => {

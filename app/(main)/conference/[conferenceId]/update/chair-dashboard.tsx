@@ -665,7 +665,7 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                 hasSubjectAreas = Array.isArray(areas) && areas.length > 0
                 
                 if (reviewSettings) {
-                    const s = reviewSettings as any
+                    const s = reviewSettings as Record<string, any>
                     hasReviewSettings = !!(
                         s.isDoubleBlind ||
                         s.allowReviewerQuota ||
@@ -701,9 +701,9 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
             }
 
             // Paper helpers
-            const aggregateMap = new Map(aggregatesData.map((a: any) => [a.paperId, a]))
-            const merged: PaperSummary[] = papersData.map((p: any) => {
-                const agg = aggregateMap.get(p.id) as any
+            const aggregateMap = new Map(aggregatesData.map((a: Record<string, any>) => [a.paperId, a]))
+            const merged: PaperSummary[] = papersData.map((p: Record<string, any>) => {
+                const agg = aggregateMap.get(p.id) as Record<string, any> | undefined
                 return {
                     id: p.id,
                     title: p.title,
@@ -745,7 +745,7 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
             setPhaseData({
                 hasTracks: tracksData.length > 0,
                 hasSubjectAreas,
-                hasMembers: (membersData as any).totalElements > 1,
+                hasMembers: (membersData as { totalElements: number }).totalElements > 1,
                 hasTickets: Array.isArray(ticketTypes) && ticketTypes.length > 0,
                 hasSubmissionForm,
                 hasReviewSettings,
