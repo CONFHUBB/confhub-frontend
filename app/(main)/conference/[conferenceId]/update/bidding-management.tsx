@@ -15,14 +15,16 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
-    Loader2, Search, Download, Eye, Users, ChevronLeft, ChevronRight, 
+    Loader2, Search, Download, Eye, Users, 
     Zap, ThumbsUp, Minus, ThumbsDown, FileSpreadsheet, Filter,
     Building2, Mail, Globe, GraduationCap, Phone, User2
 } from "lucide-react"
+import { StandardPagination } from "@/components/ui/standard-pagination"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { FilterPanel } from "@/components/ui/filter-panel"
 import { toast } from 'sonner'
 import * as XLSX from "xlsx"
+import { fmtDate } from '@/lib/utils'
 
 interface BiddingManagementProps {
     conferenceId: number
@@ -427,22 +429,13 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                         </div>
                     </div>
 
-                    {/* Pagination */}
-                    {totalPages > 1 && (
-                        <div className="flex items-center justify-between px-5 py-3 border-t">
-                            <p className="text-xs text-muted-foreground">
-                                Page {currentPage + 1} of {totalPages} · {filteredRows.length} reviewers
-                            </p>
-                            <div className="flex items-center gap-1">
-                                <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </div>
-                    )}
+                    <StandardPagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalElements={filteredRows.length}
+                        entityName="reviewers"
+                        onPageChange={setCurrentPage}
+                    />
 
 
             {/* Detail Sheet */}
@@ -659,7 +652,7 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                                                     <div className="flex-1 min-w-0 mr-3">
                                                         <p className="text-sm font-medium line-clamp-1" title={bid.paperTitle}>{bid.paperTitle}</p>
                                                         <p className="text-[10px] text-muted-foreground">
-                                                            Paper #{bid.paperId} · {new Date(bid.updatedAt || bid.createdAt).toLocaleDateString("vi-VN")}
+                                                            Paper #{bid.paperId} · {fmtDate(bid.updatedAt || bid.createdAt)}
                                                         </p>
                                                     </div>
                                                     {bidInfo && (

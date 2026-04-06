@@ -23,6 +23,8 @@ interface ChatMsg {
     intent?: string
     actions?: ActionSuggestion[]
     analysis?: ManuscriptAnalysisResponse
+    isFailed?: boolean
+    originalInput?: string
 }
 
 function generateSessionId(): string {
@@ -38,7 +40,14 @@ export function AIChatWidget() {
     const [messages, setMessages] = useState<ChatMsg[]>([])
     const [input, setInput] = useState("")
     const [loading, setLoading] = useState(false)
-    const [sessionId, setSessionId] = useState(() => generateSessionId())
+    const [sessionId, setSessionId] = useState(() => {
+        if (typeof window === 'undefined') return generateSessionId()
+        const existing = sessionStorage.getItem('confhub-ai-session')
+        if (existing) return existing
+        const newId = generateSessionId()
+        sessionStorage.setItem('confhub-ai-session', newId)
+        return newId
+    })
     const [historyLoaded, setHistoryLoaded] = useState(false)
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -73,6 +82,20 @@ export function AIChatWidget() {
                     content: h.content,
                     intent: h.intent,
                 })))
+                // Fetch fresh suggestions by sending a silent context refresh
+                try {
+                    const refreshResponse = await sendChatMessage({
+                        message: "Give me quick suggestions based on our conversation so far. Keep it very brief, 1-2 sentences.",
+                        conferenceId,
+                        sessionId,
+                    })
+                    setMessages(prev => [...prev, {
+                        role: "model",
+                        content: refreshResponse.reply,
+                        intent: refreshResponse.intent,
+                        actions: refreshResponse.suggestedActions,
+                    }])
+                } catch { /* ignore refresh failure */ }
             }
         } catch { /* no history */ }
         setHistoryLoaded(true)
@@ -99,11 +122,19 @@ export function AIChatWidget() {
                 actions: response.suggestedActions,
             }])
         } catch (err: any) {
-            const errMsg = err?.response?.data?.message || err?.response?.data?.detail || "Failed to get AI response"
+            const status = err?.response?.status
+            let errMsg: string
+            if (status === 429) {
+                errMsg = "Too many messages. Please wait a moment and try again."
+            } else {
+                errMsg = err?.response?.data?.message || err?.response?.data?.detail || "Failed to get AI response"
+            }
             toast.error(errMsg)
             setMessages(prev => [...prev, {
                 role: "model",
                 content: "⚠️ " + errMsg,
+                isFailed: true,
+                originalInput: msg,
             }])
         } finally {
             setLoading(false)
@@ -151,9 +182,40 @@ export function AIChatWidget() {
     }
 
     const handleNewSession = () => {
-        setSessionId(generateSessionId())
+        const newId = generateSessionId()
+        sessionStorage.setItem('confhub-ai-session', newId)
+        setSessionId(newId)
         setMessages([])
         setHistoryLoaded(false)
+    }
+
+    const handleRetry = (failedMsg: ChatMsg) => {
+        if (!failedMsg.originalInput || loading) return
+        // Remove the failed bot message
+        setMessages(prev => prev.filter(m => m !== failedMsg))
+        // Re-send the original message directly
+        const msg = failedMsg.originalInput
+        setMessages(prev => [...prev, { role: "user", content: msg }])
+        setLoading(true)
+        sendChatMessage({ message: msg, conferenceId, sessionId })
+            .then(response => {
+                setMessages(prev => [...prev, {
+                    role: "model",
+                    content: response.reply,
+                    intent: response.intent,
+                    actions: response.suggestedActions,
+                }])
+            })
+            .catch((err: any) => {
+                const errMsg = err?.response?.status === 429
+                    ? "Too many messages. Please wait a moment."
+                    : err?.response?.data?.message || "Failed to get AI response"
+                setMessages(prev => [...prev, {
+                    role: "model", content: "⚠️ " + errMsg,
+                    isFailed: true, originalInput: msg,
+                }])
+            })
+            .finally(() => setLoading(false))
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -285,20 +347,90 @@ export function AIChatWidget() {
                                     )}
                                 </div>
 
-                                {/* Suggested actions */}
-                                {msg.actions && msg.actions.length > 0 && (
-                                    <div className="flex flex-wrap gap-1.5 mt-2 ml-9">
-                                        {msg.actions.map((action, j) => (
-                                            <button
-                                                key={j}
-                                                onClick={() => handleActionClick(action)}
-                                                className="text-[11px] px-3 py-1.5 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
-                                            >
-                                                {action.label}
-                                            </button>
-                                        ))}
-                                    </div>
+                                {/* Retry button for failed messages */}
+                                {msg.isFailed && msg.originalInput && (
+                                    <button
+                                        onClick={() => handleRetry(msg)}
+                                        className="flex items-center gap-1 ml-9 mt-1 text-xs text-red-500 hover:text-red-700 transition-colors"
+                                    >
+                                        <RotateCcw className="h-3 w-3" /> Retry
+                                    </button>
                                 )}
+
+                                {/* Suggested actions — grouped by conference */}
+                                {msg.actions && msg.actions.length > 0 && (() => {
+                                    // Group actions by conference name (extract from label pattern "Action: ConferenceName")
+                                    const grouped = new Map<string, ActionSuggestion[]>()
+                                    const ungrouped: ActionSuggestion[] = []
+                                    
+                                    msg.actions.forEach(action => {
+                                        // Try to extract conference name from label like "📄 Nộp bài: ICML2026" or "🔍 Xem: GSRE2026"
+                                        const match = action.label.match(/:\s*(.+)$/)
+                                        if (match) {
+                                            const confName = match[1].trim()
+                                            if (!grouped.has(confName)) grouped.set(confName, [])
+                                            grouped.get(confName)!.push(action)
+                                        } else {
+                                            ungrouped.push(action)
+                                        }
+                                    })
+
+                                    // If no grouping possible (no colon pattern), fall back to simple pills
+                                    if (grouped.size === 0) {
+                                        return (
+                                            <div className="flex flex-wrap gap-1.5 mt-2 ml-9">
+                                                {msg.actions.map((action, j) => (
+                                                    <button
+                                                        key={j}
+                                                        onClick={() => handleActionClick(action)}
+                                                        className="text-[11px] px-3 py-1.5 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                                                    >
+                                                        {action.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )
+                                    }
+
+                                    return (
+                                        <div className="mt-2 ml-9 space-y-2">
+                                            {Array.from(grouped.entries()).map(([confName, actions]) => (
+                                                <div key={confName} className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm hover:border-indigo-200 transition-colors">
+                                                    <p className="text-xs font-semibold text-gray-800 mb-2">{confName}</p>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {actions.map((action, j) => {
+                                                            // Extract just the action part (before the colon)
+                                                            const actionLabel = action.label.replace(/:\s*.+$/, '').trim()
+                                                            return (
+                                                                <button
+                                                                    key={j}
+                                                                    onClick={() => handleActionClick(action)}
+                                                                    className="text-[11px] px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-colors font-medium"
+                                                                >
+                                                                    {actionLabel}
+                                                                </button>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {/* Ungrouped actions (no conference name) */}
+                                            {ungrouped.length > 0 && (
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {ungrouped.map((action, j) => (
+                                                        <button
+                                                            key={j}
+                                                            onClick={() => handleActionClick(action)}
+                                                            className="text-[11px] px-3 py-1.5 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                                                        >
+                                                            {action.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })()}
 
                                 {/* Conference recommendations */}
                                 {msg.analysis && msg.analysis.recommendations.length > 0 && (

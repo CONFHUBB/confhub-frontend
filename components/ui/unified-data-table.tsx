@@ -122,7 +122,7 @@ export function UnifiedDataTable<T>({
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-muted/50 hover:bg-muted/50">
+                            <TableRow className="bg-muted/30 hover:bg-muted/30">
                                 {columns.map((col, idx) => (
                                     <TableHead key={idx} className={`whitespace-nowrap ${col.className || ""}`}>
                                         {col.header}

@@ -158,6 +158,43 @@
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: var(--muted-foreground);
   }
+
+  /* ── Page Container Utilities ────────────────────────────────────────────
+     Three standardized container widths for consistent page layouts.
+     wide  = 1280px (7xl): lists, grids, dashboards
+     base  = 1152px (6xl): detail pages, read views
+     narrow = 896px (4xl): forms, profile, settings */
+  .page-wide {
+    max-width: 90rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 2rem 1rem;
+  }
+  .page-base {
+    max-width: 72rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 2rem 1rem;
+  }
+  .page-narrow {
+    max-width: 56rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 2rem 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .page-wide, .page-base, .page-narrow {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .page-wide, .page-base, .page-narrow {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
 }
 
 /* ── Accessibility: Reduced Motion ──────────────────────────────────────────

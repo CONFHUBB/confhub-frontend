@@ -57,6 +57,7 @@ import { getCurrentUserId, getCurrentUserEmail } from '@/lib/auth'
 import { WorkspaceSkeleton } from '@/components/shared/skeletons'
 import { useKeyboardShortcuts, ShortcutHelpOverlay } from '@/hooks/useKeyboardShortcuts'
 import { OnboardingTooltips } from '@/components/shared/onboarding-tooltips'
+import { fmtDate } from '@/lib/utils'
 
 import type { DynamicField, FormDefinition } from '@/types/submission-form'
 import type {
@@ -857,7 +858,7 @@ export default function ConferenceUpdatePage() {
                                 <p className="text-white/60 text-sm mt-1.5 flex items-center gap-2 flex-wrap">
                                     <Calendar className="h-3.5 w-3.5 shrink-0" />
                                     {conference.startDate && conference.endDate
-                                        ? `${new Date(conference.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(conference.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                                        ? `${fmtDate(conference.startDate)} – ${fmtDate(conference.endDate)}`
                                         : 'Dates TBD'
                                     }
                                     {conference.location && (

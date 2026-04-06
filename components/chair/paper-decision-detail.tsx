@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, ChevronDown, ChevronUp, MessageSquare, User } from 'lucide-react'
 import { V } from '@/lib/validation'
+import { fmtDate } from '@/lib/utils'
 
 interface Props {
     paperId: number
@@ -245,7 +246,7 @@ export default function PaperDecisionDetail({ paperId, conferenceId, userId, exi
                                             <div className="flex items-center gap-2 mb-1">
                                                 <span className="font-medium">{d.userFirstName} {d.userLastName}</span>
                                                 <span className="text-xs text-muted-foreground">
-                                                    {new Date(d.createdAt).toLocaleDateString()}
+                                                    {fmtDate(d.createdAt)}
                                                 </span>
                                             </div>
                                             {d.title && <p className="font-semibold text-gray-800">{d.title}</p>}

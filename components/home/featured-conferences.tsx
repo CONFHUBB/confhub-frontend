@@ -7,6 +7,7 @@ import { getConferences } from "@/app/api/conference.api"
 import type { ConferenceListResponse } from "@/types/conference"
 import { Calendar, MapPin, ArrowRight, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { fmtDate } from "@/lib/utils"
 
 export function FeaturedConferences() {
     const [conferences, setConferences] = useState<ConferenceListResponse[]>([])
@@ -145,11 +146,7 @@ export function FeaturedConferences() {
                                         <div className="mt-4 flex items-center gap-4 text-xs text-gray-400">
                                             <span className="flex items-center gap-1">
                                                 <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
-                                                {new Date(conf.startDate).toLocaleDateString("en-US", {
-                                                    month: "short",
-                                                    day: "numeric",
-                                                    year: "numeric",
-                                                })}
+                                                {fmtDate(conf.startDate)}
                                             </span>
                                             <span className="flex items-center gap-1">
                                                 <MapPin className="h-3.5 w-3.5" aria-hidden="true" />

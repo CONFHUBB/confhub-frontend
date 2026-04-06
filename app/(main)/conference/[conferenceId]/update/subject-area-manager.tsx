@@ -13,9 +13,8 @@ import {
     FileSpreadsheet,
     BookOpen,
     UserPlus,
-    ChevronLeft,
-    ChevronRight,
 } from "lucide-react"
+import { StandardPagination } from "@/components/ui/standard-pagination"
 import { toast } from 'sonner'
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -344,7 +343,7 @@ export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-muted/30">
-                                        <TableHead className="w-16 text-center">#</TableHead>
+                                        <TableHead className="w-12 text-center">#</TableHead>
                                         <TableHead>Name</TableHead>
                                         <TableHead>Description</TableHead>
                                         <TableHead className="w-24 text-center">Type</TableHead>
@@ -388,31 +387,13 @@ export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
                     )}
 
                     {/* Pagination */}
-                    {totalPages > 1 && (
-                        <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
-                            <div className="text-sm text-muted-foreground">
-                                Page {currentPage + 1} of {totalPages} · {totalElements} subject areas
-                            </div>
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={currentPage === 0}
-                                    onClick={() => setCurrentPage(p => p - 1)}
-                                >
-                                    <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={currentPage >= totalPages - 1}
-                                    onClick={() => setCurrentPage(p => p + 1)}
-                                >
-                                    Next <ChevronRight className="h-4 w-4 ml-1" />
-                                </Button>
-                            </div>
-                        </div>
-                    )}
+                    <StandardPagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalElements={totalElements}
+                        entityName="subject areas"
+                        onPageChange={setCurrentPage}
+                    />
                 </div>
             )}
         </div>

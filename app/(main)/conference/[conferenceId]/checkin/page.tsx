@@ -40,7 +40,7 @@ export default function CheckInPage() {
   }, [code])
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-10">
+    <div className="page-narrow">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <ScanLine className="w-6 h-6 text-primary" />

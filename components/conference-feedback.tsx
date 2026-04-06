@@ -15,10 +15,12 @@ import {
     type ConferenceFeedbackResponse,
     type ConferenceFeedbackSummary,
 } from '@/app/api/feedback.api'
+import { fmtDate } from '@/lib/utils'
 
 interface ConferenceFeedbackProps {
     conferenceId: number
-    isCheckedIn?: boolean // if true, show the submit form
+    isCheckedIn?: boolean
+    compact?: boolean  // for side-panel layout
 }
 
 function StarRating({ rating, onRate, size = 'md', interactive = false }: {
@@ -56,27 +58,22 @@ function RatingBar({ label, count, total }: { label: string, count: number, tota
     const pct = total > 0 ? (count / total) * 100 : 0
     return (
         <div className="flex items-center gap-2 text-sm">
-            <span className="w-6 text-right text-muted-foreground font-medium">{label}</span>
-            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400 shrink-0" />
-            <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                <div
-                    className="h-full rounded-full bg-amber-400 transition-all duration-500"
-                    style={{ width: `${pct}%` }}
-                />
+            <span className="w-4 text-right text-muted-foreground font-medium text-xs">{label}</span>
+            <Star className="h-3 w-3 fill-amber-400 text-amber-400 shrink-0" />
+            <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                <div className="h-full rounded-full bg-amber-400 transition-all duration-500" style={{ width: `${pct}%` }} />
             </div>
-            <span className="w-8 text-right text-muted-foreground text-xs">{count}</span>
+            <span className="w-6 text-right text-muted-foreground text-xs">{count}</span>
         </div>
     )
 }
 
-export function ConferenceFeedback({ conferenceId, isCheckedIn = false }: ConferenceFeedbackProps) {
+export function ConferenceFeedback({ conferenceId, isCheckedIn = false, compact = false }: ConferenceFeedbackProps) {
     const [feedbacks, setFeedbacks] = useState<ConferenceFeedbackResponse[]>([])
     const [summary, setSummary] = useState<ConferenceFeedbackSummary | null>(null)
     const [myFeedback, setMyFeedback] = useState<ConferenceFeedbackResponse | null>(null)
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
-
-    // Form state
     const [newRating, setNewRating] = useState(0)
     const [newComment, setNewComment] = useState('')
 
@@ -91,40 +88,24 @@ export function ConferenceFeedback({ conferenceId, isCheckedIn = false }: Confer
             setFeedbacks(fb)
             setSummary(sm)
             setMyFeedback(my)
-            if (my) {
-                setNewRating(my.rating)
-                setNewComment(my.comment || '')
-            }
+            if (my) { setNewRating(my.rating); setNewComment(my.comment || '') }
         } catch (err) {
             console.error('Failed to load feedback:', err)
-        } finally {
-            setLoading(false)
-        }
+        } finally { setLoading(false) }
     }, [conferenceId])
 
-    useEffect(() => {
-        fetchData()
-    }, [fetchData])
+    useEffect(() => { fetchData() }, [fetchData])
 
     const handleSubmit = async () => {
-        if (newRating === 0) {
-            toast.error('Please select a rating')
-            return
-        }
+        if (newRating === 0) { toast.error('Please select a rating'); return }
         setSubmitting(true)
         try {
-            await submitFeedback(conferenceId, {
-                rating: newRating,
-                comment: newComment.trim() || undefined,
-            })
+            await submitFeedback(conferenceId, { rating: newRating, comment: newComment.trim() || undefined })
             toast.success(myFeedback ? 'Feedback updated!' : 'Thank you for your feedback!')
             await fetchData()
         } catch (err: any) {
-            const msg = err?.response?.data?.detail || err?.response?.data?.message || 'Failed to submit feedback'
-            toast.error(msg)
-        } finally {
-            setSubmitting(false)
-        }
+            toast.error(err?.response?.data?.detail || err?.response?.data?.message || 'Failed to submit feedback')
+        } finally { setSubmitting(false) }
     }
 
     const handleDelete = async () => {
@@ -132,85 +113,60 @@ export function ConferenceFeedback({ conferenceId, isCheckedIn = false }: Confer
         try {
             await deleteMyFeedback(conferenceId)
             toast.success('Feedback deleted')
-            setNewRating(0)
-            setNewComment('')
-            setMyFeedback(null)
+            setNewRating(0); setNewComment(''); setMyFeedback(null)
             await fetchData()
-        } catch {
-            toast.error('Failed to delete feedback')
-        }
+        } catch { toast.error('Failed to delete feedback') }
     }
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-        )
+        return <div className="flex items-center justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
     }
 
     return (
-        <div className="space-y-6">
-            {/* ── Summary Card ── */}
-            <div className="grid gap-6 md:grid-cols-[280px_1fr]">
-                <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200/50">
-                    <CardContent className="p-6 flex flex-col items-center text-center">
-                        <p className="text-5xl font-bold text-amber-600">
-                            {summary?.averageRating?.toFixed(1) || '—'}
-                        </p>
-                        <StarRating rating={Math.round(summary?.averageRating || 0)} size="md" />
-                        <p className="text-sm text-muted-foreground mt-2">
-                            {summary?.totalCount || 0} {(summary?.totalCount || 0) === 1 ? 'review' : 'reviews'}
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="p-6 space-y-2">
-                        <p className="text-sm font-semibold text-muted-foreground mb-3">Rating Distribution</p>
+        <div className="space-y-4">
+            {/* Compact Summary */}
+            <div className="rounded-xl border bg-gradient-to-br from-amber-50/50 to-orange-50/30 dark:from-amber-950/10 dark:to-orange-950/10 p-4">
+                <div className="flex items-center gap-4">
+                    <div className="text-center">
+                        <p className="text-3xl font-bold text-amber-600">{summary?.averageRating?.toFixed(1) || '\u2014'}</p>
+                        <StarRating rating={Math.round(summary?.averageRating || 0)} size="sm" />
+                        <p className="text-xs text-muted-foreground mt-1">{summary?.totalCount || 0} review{(summary?.totalCount || 0) !== 1 ? 's' : ''}</p>
+                    </div>
+                    <div className="flex-1 space-y-1">
                         <RatingBar label="5" count={summary?.rating5 || 0} total={summary?.totalCount || 0} />
                         <RatingBar label="4" count={summary?.rating4 || 0} total={summary?.totalCount || 0} />
                         <RatingBar label="3" count={summary?.rating3 || 0} total={summary?.totalCount || 0} />
                         <RatingBar label="2" count={summary?.rating2 || 0} total={summary?.totalCount || 0} />
                         <RatingBar label="1" count={summary?.rating1 || 0} total={summary?.totalCount || 0} />
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
             </div>
 
-            {/* ── Submit Form (only for checked-in attendees) ── */}
+            {/* Submit Form */}
             {isCheckedIn && (
-                <Card className="border-primary/20 shadow-sm">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-base flex items-center gap-2">
+                <Card className="border-primary/20">
+                    <CardHeader className="pb-2 pt-4 px-4">
+                        <CardTitle className="text-sm flex items-center gap-2">
                             <MessageSquare className="h-4 w-4 text-primary" />
                             {myFeedback ? 'Update Your Review' : 'Write a Review'}
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-3 px-4 pb-4">
                         <div>
-                            <p className="text-sm text-muted-foreground mb-2">Your rating</p>
-                            <StarRating rating={newRating} onRate={setNewRating} size="lg" interactive />
+                            <p className="text-xs text-muted-foreground mb-1">Your rating</p>
+                            <StarRating rating={newRating} onRate={setNewRating} size="md" interactive />
                         </div>
-                        <div>
-                            <Textarea
-                                value={newComment}
-                                onChange={e => setNewComment(e.target.value)}
-                                placeholder="Share your experience at this conference... (optional)"
-                                className="min-h-[100px] resize-none"
-                                maxLength={2000}
-                            />
-                            <p className="text-xs text-muted-foreground mt-1 text-right">{newComment.length}/2000</p>
-                        </div>
+                        <Textarea value={newComment} onChange={e => setNewComment(e.target.value)}
+                            placeholder="Share your experience... (optional)" className="min-h-[70px] resize-none text-sm" maxLength={2000} />
                         <div className="flex items-center gap-2">
-                            <Button onClick={handleSubmit} disabled={submitting || newRating === 0}>
-                                {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                                <Send className="h-4 w-4 mr-2" />
-                                {myFeedback ? 'Update Review' : 'Submit Review'}
+                            <Button size="sm" onClick={handleSubmit} disabled={submitting || newRating === 0}>
+                                {submitting && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                                <Send className="h-3.5 w-3.5 mr-1.5" />
+                                {myFeedback ? 'Update' : 'Submit'}
                             </Button>
                             {myFeedback && (
                                 <Button variant="outline" size="sm" onClick={handleDelete} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                                    <Trash2 className="h-4 w-4 mr-1" />
-                                    Delete
+                                    <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
                                 </Button>
                             )}
                         </div>
@@ -218,53 +174,38 @@ export function ConferenceFeedback({ conferenceId, isCheckedIn = false }: Confer
                 </Card>
             )}
 
-            {/* ── Feedback List ── */}
+            {/* Reviews List */}
             <div>
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5" />
-                    Reviews ({feedbacks.length})
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 text-muted-foreground">
+                    <MessageSquare className="h-4 w-4" /> Reviews ({feedbacks.length})
                 </h3>
                 {feedbacks.length === 0 ? (
-                    <div className="text-center py-12 border rounded-xl bg-muted/5">
-                        <Star className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-                        <p className="text-muted-foreground">No reviews yet. Be the first to share your experience!</p>
+                    <div className="text-center py-8 border rounded-xl bg-muted/5">
+                        <Star className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">No reviews yet</p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         {feedbacks.map(fb => (
-                            <Card key={fb.id} className="hover:shadow-sm transition-shadow">
-                                <CardContent className="p-4 flex gap-4">
-                                    <div className="shrink-0">
-                                        {fb.userAvatarUrl ? (
-                                            <img
-                                                src={fb.userAvatarUrl}
-                                                alt={`${fb.userFirstName} ${fb.userLastName}`}
-                                                className="h-10 w-10 rounded-full object-cover border"
-                                            />
-                                        ) : (
-                                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                                <UserCircle className="h-6 w-6 text-primary/60" />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="font-medium text-sm">
-                                                {fb.userFirstName} {fb.userLastName}
-                                            </span>
-                                            <StarRating rating={fb.rating} size="sm" />
-                                            <span className="text-xs text-muted-foreground">
-                                                {new Date(fb.createdAt).toLocaleDateString('vi-VN')}
-                                            </span>
+                            <div key={fb.id} className="flex gap-3 p-3 rounded-lg border hover:bg-muted/20 transition-colors">
+                                <div className="shrink-0">
+                                    {fb.userAvatarUrl ? (
+                                        <img src={fb.userAvatarUrl} alt={`${fb.userFirstName} ${fb.userLastName}`} className="h-8 w-8 rounded-full object-cover border" />
+                                    ) : (
+                                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                            <UserCircle className="h-5 w-5 text-primary/60" />
                                         </div>
-                                        {fb.comment && (
-                                            <p className="text-sm text-muted-foreground mt-1.5 whitespace-pre-wrap">
-                                                {fb.comment}
-                                            </p>
-                                        )}
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="font-medium text-xs">{fb.userFirstName} {fb.userLastName}</span>
+                                        <StarRating rating={fb.rating} size="sm" />
+                                        <span className="text-[10px] text-muted-foreground">{fmtDate(fb.createdAt)}</span>
                                     </div>
-                                </CardContent>
-                            </Card>
+                                    {fb.comment && <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap line-clamp-3">{fb.comment}</p>}
+                                </div>
+                            </div>
                         ))}
                     </div>
                 )}

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { getConferenceActivities } from '@/app/api/conference.api'
 import type { ConferenceActivityDTO } from '@/types/conference'
 import { CheckCircle2, Circle, ChevronDown, ChevronUp, Loader2, FileText, Search, Bell, Camera, Send, Users, MessageSquare, Ticket, CalendarDays } from 'lucide-react'
+import { fmtDate } from '@/lib/utils'
 
 interface PhaseStep {
     key: string
@@ -211,7 +212,7 @@ export function ConferencePhaseTracker({ conferenceId }: ConferencePhaseTrackerP
                                     {/* Deadline */}
                                     {step.deadline && (
                                         <p className={`text-[10px] mt-1 ${isPast ? 'text-emerald-600/60' : step.isActive ? 'text-indigo-600' : 'text-muted-foreground/40'}`}>
-                                            {new Date(step.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                            {fmtDate(step.deadline)}
                                         </p>
                                     )}
                                 </div>
@@ -244,7 +245,7 @@ export function ConferencePhaseTracker({ conferenceId }: ConferencePhaseTrackerP
                                             </p>
                                             {step.deadline && (
                                                 <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                                                    Deadline: {new Date(step.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    Deadline: {fmtDate(step.deadline)}
                                                 </p>
                                             )}
                                         </div>

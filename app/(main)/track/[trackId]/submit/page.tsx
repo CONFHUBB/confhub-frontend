@@ -585,7 +585,7 @@ function StepUploadManuscript({
                                     {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                                     {uploading ? 'Uploading...' : 'Upload PDF'}
                                 </Button>
-                                <Button variant="outline" onClick={() => router.push(`/track?conferenceId=${conferenceId}`)}>
+                                <Button variant="outline" onClick={() => router.push(`/conference/${conferenceId}`)}>
                                     Skip for now
                                 </Button>
                             </div>
@@ -754,9 +754,9 @@ export default function SubmitPaperPage() {
     }
 
     return (
-        <div className="container mx-auto py-8 px-4 max-w-4xl">
+        <div className="page-narrow">
             {/* Back button */}
-            <BackButton fallbackUrl={`/track?conferenceId=${conferenceId}`} className="mb-4" />
+            <BackButton fallbackUrl={`/conference/${conferenceId}`} className="mb-4" />
 
             {/* Page header */}
             <Card className="mb-6">

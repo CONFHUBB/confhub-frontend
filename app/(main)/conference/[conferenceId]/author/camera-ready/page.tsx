@@ -20,6 +20,7 @@ import {
 import { toast } from 'sonner'
 import { FileCheck, Camera, Calendar, Layers, ExternalLink, Activity, CheckCircle2, Search, Loader2, BookOpen, ChevronLeft, ChevronRight, Scale } from 'lucide-react'
 import { getCurrentUserEmail } from '@/lib/auth'
+import { fmtDate } from '@/lib/utils'
 
 export default function CameraReadyDashboardTab() {
     const params = useParams()
@@ -175,7 +176,7 @@ export default function CameraReadyDashboardTab() {
                                                         <p className="font-semibold text-sm line-clamp-2 leading-relaxed" title={p.title}>{p.title}</p>
                                                         <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
                                                             <span className="flex items-center gap-1.5"><Layers className="h-3.5 w-3.5" /> {p.track?.name || 'Main Track'}</span>
-                                                            <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> {new Date(p.submissionTime).toLocaleDateString()}</span>
+                                                            <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> {fmtDate(p.submissionTime)}</span>
                                                         </div>
                                                     </div>
                                                 </TableCell>

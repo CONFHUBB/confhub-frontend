@@ -14,8 +14,9 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
 import { forgotPassword, resetPassword } from "@/app/api/account.api"
-import { ArrowLeft, Mail, KeyRound, ShieldCheck } from "lucide-react"
+import { ArrowLeft, Mail, KeyRound, ShieldCheck, Loader2 } from "lucide-react"
 
 type Step = "email" | "reset"
 
@@ -103,7 +104,7 @@ export default function ForgotPasswordPage() {
                   </Field>
                   <Field>
                     <Button type="submit" disabled={isLoading} className="w-full">
-                      {isLoading ? "Sending..." : "Send Verification Code"}
+                      {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending...</> : "Send Verification Code"}
                     </Button>
                   </Field>
                   <FieldDescription className="text-center">
@@ -141,9 +142,8 @@ export default function ForgotPasswordPage() {
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="newPassword">New Password</FieldLabel>
-                    <Input
+                    <PasswordInput
                       id="newPassword"
-                      type="password"
                       value={newPassword}
                       onChange={(e) => { setNewPassword(e.target.value); setErrors(p => { const n = {...p}; delete n.newPassword; return n }) }}
                     />
@@ -152,9 +152,8 @@ export default function ForgotPasswordPage() {
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="confirmPassword">Confirm New Password</FieldLabel>
-                    <Input
+                    <PasswordInput
                       id="confirmPassword"
-                      type="password"
                       value={confirmPassword}
                       onChange={(e) => { setConfirmPassword(e.target.value); setErrors(p => { const n = {...p}; delete n.confirmPassword; return n }) }}
                     />
@@ -162,7 +161,7 @@ export default function ForgotPasswordPage() {
                   </Field>
                   <Field>
                     <Button type="submit" disabled={isLoading} className="w-full">
-                      {isLoading ? "Resetting..." : "Reset Password"}
+                      {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Resetting...</> : "Reset Password"}
                     </Button>
                   </Field>
                   <div className="flex items-center justify-between text-sm">

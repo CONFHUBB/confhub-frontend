@@ -78,7 +78,7 @@ export default function TracksPage() {
     }
 
     return (
-        <div className="container mx-auto py-8 px-4">
+        <div className="page-wide">
             <div className="mb-8">
                 <BackButton fallbackUrl={`/conference/${conferenceId}`} className="mb-4" />
                 <div>

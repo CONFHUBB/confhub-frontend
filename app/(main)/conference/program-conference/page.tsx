@@ -24,13 +24,13 @@ import {
     Eye,
     Building2,
     Filter,
-    ChevronLeft,
-    ChevronRight,
     ArrowRight,
     FolderOpen,
 } from "lucide-react"
+import { StandardPagination } from "@/components/ui/standard-pagination"
 import Link from "next/link"
 import { toast } from 'sonner'
+import { fmtDate } from '@/lib/utils'
 
 // ── Status helpers ──────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
@@ -140,13 +140,7 @@ export default function ProgramConferencesPage() {
         completed: conferences.filter(c => c.status?.toLowerCase() === 'completed').length,
     }), [conferences])
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-        })
-    }
+    const formatDate = (dateString: string) => fmtDate(dateString)
 
     // ── Loading / Error states ──────────────────────────
     if (loading) {
@@ -169,7 +163,7 @@ export default function ProgramConferencesPage() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div className="page-wide space-y-6">
             {/* ── Eye-catching Header ──────────────────────────────────── */}
             <div className="relative mb-4 p-8 sm:p-10 bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-sm border border-slate-200/80 dark:border-slate-800">
                 {/* Decorative background blobs */}
@@ -331,44 +325,13 @@ export default function ProgramConferencesPage() {
                 </div>
             )}
 
-            {/* ── Pagination ─────────────────────────────── */}
-            {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-2">
-                    <p className="text-xs text-muted-foreground">
-                        Page {currentPage + 1} of {totalPages} · {filteredConferences.length} conference{filteredConferences.length !== 1 ? 's' : ''}
-                    </p>
-                    <div className="flex gap-1">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={currentPage === 0}
-                            onClick={() => setCurrentPage(p => p - 1)}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        {/* Page numbers */}
-                        {Array.from({ length: totalPages }, (_, i) => (
-                            <Button
-                                key={i}
-                                variant={i === currentPage ? "default" : "outline"}
-                                size="sm"
-                                className={`w-8 h-8 p-0 text-xs ${i === currentPage ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
-                                onClick={() => setCurrentPage(i)}
-                            >
-                                {i + 1}
-                            </Button>
-                        ))}
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={currentPage >= totalPages - 1}
-                            onClick={() => setCurrentPage(p => p + 1)}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
-            )}
+            <StandardPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalElements={filteredConferences.length}
+                entityName="conferences"
+                onPageChange={setCurrentPage}
+            />
         </div>
     )
 }

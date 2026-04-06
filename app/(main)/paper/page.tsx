@@ -12,8 +12,9 @@ import { Input } from '@/components/ui/input'
 import {
     Loader2, Edit, FileText, Send, Search, CheckCircle2, XCircle, Ban,
     Camera, Globe, AlertTriangle, Calendar, Tag, Layers, BarChart3, Star, Upload,
-    Filter, X, Building2, ChevronLeft, ChevronRight, ArrowRight, FolderOpen
+    Filter, X, Building2, ArrowRight, FolderOpen
 } from 'lucide-react'
+import { StandardPagination } from '@/components/ui/standard-pagination'
 import {
     Select,
     SelectContent,
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/select"
 import Link from 'next/link'
 import { getPaperStatus, PAPER_STATUS } from '@/lib/constants/status'
+import { fmtDate } from '@/lib/utils'
 
 
 const ALL_STATUSES = Object.keys(PAPER_STATUS) as PaperStatus[]
@@ -51,7 +53,7 @@ export default function UserSubmissionsPage() {
     const [statusFilter, setStatusFilter] = useState<PaperStatus | 'ALL'>('ALL')
     const [conferenceFilter, setConferenceFilter] = useState<number | 'ALL'>('ALL')
     const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title'>('newest')
-    const [currentPage, setCurrentPage] = useState(1)
+    const [currentPage, setCurrentPage] = useState(0)
 
     useEffect(() => {
         const fetchPapers = async () => {
@@ -128,12 +130,12 @@ export default function UserSubmissionsPage() {
     // ── Pagination ──
     const totalPages = Math.ceil(filteredPapers.length / ITEMS_PER_PAGE)
     const paginatedPapers = useMemo(() => {
-        const start = (currentPage - 1) * ITEMS_PER_PAGE
+        const start = currentPage * ITEMS_PER_PAGE
         return filteredPapers.slice(start, start + ITEMS_PER_PAGE)
     }, [filteredPapers, currentPage])
 
     // Reset page when filters change
-    useEffect(() => { setCurrentPage(1) }, [searchQuery, statusFilter, conferenceFilter, sortBy])
+    useEffect(() => { setCurrentPage(0) }, [searchQuery, statusFilter, conferenceFilter, sortBy])
 
     // ── Compute stats ──
     const stats = {
@@ -178,7 +180,7 @@ export default function UserSubmissionsPage() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div className="page-wide space-y-6">
             {/* ── Eye-catching Header ──────────────────────────────────── */}
             <div className="relative mb-4 p-8 sm:p-10 bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-sm border border-slate-200/80 dark:border-slate-800">
                 {/* Decorative background blobs */}
@@ -301,7 +303,7 @@ export default function UserSubmissionsPage() {
                             </thead>
                             <tbody className="divide-y">
                                 {paginatedPapers.map((paper, idx) => {
-                                    const pageOffset = (currentPage - 1) * ITEMS_PER_PAGE
+                                    const pageOffset = currentPage * ITEMS_PER_PAGE
                                     return (
                                         <tr key={paper.id} className="transition-colors hover:bg-indigo-50/30">
                                             <td className="px-5 py-4 text-xs text-muted-foreground font-medium">
@@ -322,7 +324,7 @@ export default function UserSubmissionsPage() {
                                             <td className="px-5 py-4">
                                                 <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
                                                     <Calendar className="size-3.5 shrink-0" />
-                                                    {new Date(paper.submissionTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    {fmtDate(paper.submissionTime)}
                                                 </div>
                                             </td>
                                             <td className="px-5 py-4">
@@ -358,44 +360,13 @@ export default function UserSubmissionsPage() {
                 </div>
             )}
 
-            {/* ── Pagination ─────────────────────────────── */}
-            {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-2">
-                    <p className="text-xs text-muted-foreground">
-                        Page {currentPage} of {totalPages} · {filteredPapers.length} paper{filteredPapers.length !== 1 ? 's' : ''}
-                    </p>
-                    <div className="flex gap-1">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={currentPage === 1}
-                            onClick={() => setCurrentPage(p => p - 1)}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        {/* Page numbers */}
-                        {Array.from({ length: totalPages }, (_, i) => (
-                            <Button
-                                key={i}
-                                variant={i + 1 === currentPage ? "default" : "outline"}
-                                size="sm"
-                                className={`w-8 h-8 p-0 text-xs ${i + 1 === currentPage ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
-                                onClick={() => setCurrentPage(i + 1)}
-                            >
-                                {i + 1}
-                            </Button>
-                        ))}
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={currentPage >= totalPages}
-                            onClick={() => setCurrentPage(p => p + 1)}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
-            )}
+            <StandardPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalElements={filteredPapers.length}
+                entityName="papers"
+                onPageChange={setCurrentPage}
+            />
         </div>
     )
 }

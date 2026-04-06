@@ -15,6 +15,8 @@ import {
   FieldSeparator,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
+import { Loader2 } from "lucide-react"
 import { login, loginWithGoogle } from "@/app/api/account.api"
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google"
 
@@ -109,6 +111,7 @@ export function LoginForm({
                   placeholder="m@example.com"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setErrors(p => { const n = {...p}; delete n.email; return n }) }}
+                  onBlur={() => { const err = validate(email, V.required, V.email); setErrors(p => err ? {...p, email: err} : (() => { const n = {...p}; delete n.email; return n })()) }}
                 />
                 {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
               </Field>
@@ -122,17 +125,17 @@ export function LoginForm({
                     Forgot your password?
                   </a>
                 </div>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setErrors(p => { const n = {...p}; delete n.password; return n }) }}
+                  onBlur={() => { const err = validate(password, V.required, (v) => V.minLen(v, 6)); setErrors(p => err ? {...p, password: err} : (() => { const n = {...p}; delete n.password; return n })()) }}
                 />
                 {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
               </Field>
               <Field>
                 <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Logging in..." : "Login"}
+                  {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Logging in...</> : "Login"}
                 </Button>
               </Field>
               {GOOGLE_CLIENT_ID && (

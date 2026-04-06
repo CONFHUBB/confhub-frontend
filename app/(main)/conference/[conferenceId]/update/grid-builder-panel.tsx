@@ -855,7 +855,7 @@ export function GridBuilderPanel({ program, allPapers, onProgramChange }: GridBu
         <div className="space-y-4">
           {/* Add Day Row */}
           <div className="flex items-center gap-3 p-4 bg-white border rounded-2xl shadow-sm">
-            <Input type="date" value={dateInput} onChange={e => setDateInput(e.target.value)}
+            <Input type="date" max="9999-12-31" value={dateInput} onChange={e => setDateInput(e.target.value)}
               className="rounded-xl max-w-[220px]" />
             <Button onClick={addDay} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl">
               <Plus className="w-4 h-4 mr-1" /> Add Day

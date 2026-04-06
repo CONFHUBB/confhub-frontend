@@ -19,6 +19,8 @@ import { CountrySelect } from "@/components/ui/country-select"
 import { signup, loginWithGoogle } from "@/app/api/account.api"
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google"
 import { z } from "zod"
+import { PasswordInput } from "@/components/ui/password-input"
+import { Loader2 } from "lucide-react"
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""
 
@@ -165,6 +167,7 @@ export function SignupForm({
                     id="firstName"
                     type="text"
                     placeholder="John"
+                    autoFocus
                     value={firstName}
                     onChange={(e) => {
                       setFirstName(e.target.value)
@@ -221,6 +224,12 @@ export function SignupForm({
                       })
                     }
                   }}
+                  onBlur={() => {
+                    const result = signupSchema.shape.email.safeParse(email)
+                    if (!result.success) {
+                      setFieldErrors((prev) => ({ ...prev, email: result.error.issues[0].message }))
+                    }
+                  }}
                 />
                 {fieldErrors.email && (
                   <FieldError>{fieldErrors.email}</FieldError>
@@ -251,9 +260,8 @@ export function SignupForm({
                 <Field className="grid grid-cols-2 gap-4">
                   <Field>
                     <FieldLabel htmlFor="password">Password</FieldLabel>
-                    <Input
+                    <PasswordInput
                       id="password"
-                      type="password"
                       value={password}
                       onChange={(e) => {
                         setPassword(e.target.value)
@@ -265,6 +273,12 @@ export function SignupForm({
                           })
                         }
                       }}
+                      onBlur={() => {
+                        const result = signupSchema.shape.password.safeParse(password)
+                        if (!result.success) {
+                          setFieldErrors((prev) => ({ ...prev, password: result.error.issues[0].message }))
+                        }
+                      }}
                     />
                     {fieldErrors.password && (
                       <FieldError>{fieldErrors.password}</FieldError>
@@ -274,9 +288,8 @@ export function SignupForm({
                     <FieldLabel htmlFor="confirm-password">
                       Confirm Password
                     </FieldLabel>
-                    <Input
+                    <PasswordInput
                       id="confirm-password"
-                      type="password"
                       value={confirmPassword}
                       onChange={(e) => {
                         setConfirmPassword(e.target.value)
@@ -286,6 +299,11 @@ export function SignupForm({
                             delete next.confirmPassword
                             return next
                           })
+                        }
+                      }}
+                      onBlur={() => {
+                        if (confirmPassword && password !== confirmPassword) {
+                          setFieldErrors((prev) => ({ ...prev, confirmPassword: 'Passwords do not match' }))
                         }
                       }}
                     />
@@ -300,7 +318,7 @@ export function SignupForm({
               </Field>
               <Field>
                 <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Creating..." : "Create Account"}
+                  {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</> : "Create Account"}
                 </Button>
               </Field>
               {GOOGLE_CLIENT_ID && (

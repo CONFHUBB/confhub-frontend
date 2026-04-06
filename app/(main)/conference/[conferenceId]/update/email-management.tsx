@@ -24,6 +24,7 @@ import {
 } from "lucide-react"
 import { toast } from 'sonner'
 import { V } from "@/lib/validation"
+import { safeDate } from '@/lib/utils'
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
     pending: { label: "Pending", color: "bg-amber-100 text-amber-800", icon: <Clock className="h-3.5 w-3.5" /> },
@@ -149,7 +150,9 @@ export function EmailManagementInline({ conferenceId }: EmailManagementInlinePro
 
     const formatDate = (dateStr: string | null) => {
         if (!dateStr) return "—"
-        return new Date(dateStr).toLocaleDateString("en-US", {
+        const d = safeDate(dateStr)
+        if (!d || isNaN(d.getTime())) return "—"
+        return d.toLocaleDateString("en-US", {
             year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
         })
     }

@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { getConferencePaymentHistory, exportAllInvoices, PaymentHistoryResponse } from '@/app/api/registration.api'
-import { Loader2, CheckCircle2, XCircle, AlertCircle, ChevronDown, ChevronRight, Search, ChevronLeft, Download } from 'lucide-react'
+import { Loader2, ChevronDown, ChevronRight, ChevronUp, Search, Download, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
+import { StandardPagination } from '@/components/ui/standard-pagination'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -249,19 +250,13 @@ export function PaymentHistoryView({ conferenceId }: PaymentHistoryViewProps) {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
-          <div className="text-sm text-muted-foreground">
-            Page {currentPage + 1} of {totalPages} · {filtered.length} records
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
-              <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-            </Button>
-            <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
-              Next <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
-        </div>
+        <StandardPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalElements={filtered.length}
+          entityName="records"
+          onPageChange={setCurrentPage}
+        />
       )}
     </div>
   )

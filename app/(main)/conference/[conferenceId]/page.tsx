@@ -1,39 +1,29 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
+import { fmtDate } from '@/lib/utils'
 import { useParams, useRouter } from 'next/navigation'
-import { getConference, getConferenceActivities } from '@/app/api/conference.api'
+import { getConference, getConferenceActivities, getConferences } from '@/app/api/conference.api'
 import { getTracksByConference } from '@/app/api/track.api'
 import { getPapersByConference } from '@/app/api/paper.api'
 import { getUserRoleAssignments, acceptInvitation, declineInvitation } from '@/app/api/conference-user-track.api'
 import { toast } from 'sonner'
-import type { ConferenceActivityDTO, ConferenceResponse, TrackResponse } from '@/types/conference'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import type { ConferenceActivityDTO, ConferenceResponse, ConferenceListResponse, TrackResponse } from '@/types/conference'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Calendar, MapPin, ExternalLink, Loader2, ArrowLeft, Settings,
-    Globe, Phone, FileText, Clock, Send, Ticket, BookOpen
-} from 'lucide-react'
+import { Calendar, MapPin, ExternalLink, Loader2, Globe, Phone, FileText, Clock, Send, Ticket, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { ProgramViewer } from '@/components/program-viewer'
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { isActivityOpen } from '@/lib/activity'
 import { useUserRoles } from '@/hooks/useUserConferenceRoles'
 import { ConferenceFeedback } from '@/components/conference-feedback'
 import http from '@/lib/http'
 import { Breadcrumb } from '@/components/shared/breadcrumb'
 import { DetailPageSkeleton } from '@/components/shared/skeletons'
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from '@/components/ui/tooltip'
+import { ConferencePhaseTracker } from '@/components/conference-phase-tracker'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 export default function ConferenceDetailsPage() {
     const params = useParams()
@@ -46,16 +36,14 @@ export default function ConferenceDetailsPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const { hasRoleInConference, userId, refreshRoles } = useUserRoles()
-    const canManageConference = hasRoleInConference(conferenceId, 'CONFERENCE_CHAIR') || hasRoleInConference(conferenceId, 'PROGRAM_CHAIR')
     const [pendingInvitations, setPendingInvitations] = useState<any[]>([])
     const [actionLoading, setActionLoading] = useState(false)
     const [isCheckedIn, setIsCheckedIn] = useState(false)
     const [hasTicket, setHasTicket] = useState(false)
-
-    // For program popup
     const [showProgramPopup, setShowProgramPopup] = useState(false)
     const [programData, setProgramData] = useState<any>(null)
     const [allPapers, setAllPapers] = useState<any[]>([])
+    const [similarConferences, setSimilarConferences] = useState<ConferenceListResponse[]>([])
 
     useEffect(() => {
         const fetchData = async () => {
@@ -72,7 +60,6 @@ export default function ConferenceDetailsPage() {
                 setActivities(activitiesData)
                 setPendingInvitations(userRoles.filter((r: any) => r.conferenceId === conferenceId && r.isAccepted === null))
 
-                // Check if user is checked in (for feedback form)
                 if (userId) {
                     try {
                         const ticketRes = await http.get(`/registration/my-tickets`)
@@ -80,44 +67,48 @@ export default function ConferenceDetailsPage() {
                         const conferenceTicket = myTickets?.find((t: any) => t.conferenceId === conferenceId)
                         if (conferenceTicket) {
                             setHasTicket(true)
-                            if (conferenceTicket.isCheckedIn) {
-                                setIsCheckedIn(true)
-                            }
+                            if (conferenceTicket.isCheckedIn) setIsCheckedIn(true)
                         }
-                    } catch { /* not registered */ }
+                    } catch {}
                 }
 
-                // Load papers if program exists
                 if (conferenceData.programSchedule) {
                     try {
-                        const parsed = typeof conferenceData.programSchedule === 'string' 
+                        const parsed = typeof conferenceData.programSchedule === 'string'
                             ? JSON.parse(conferenceData.programSchedule) : conferenceData.programSchedule
                         if (parsed?.published) {
                             setProgramData(parsed.schedule ? parsed : null)
-                            // Fetch accepted papers for detail view with full DTOs
                             const papersData = await getPapersByConference(conferenceId)
                             setAllPapers(papersData.filter((p: any) => p.status === 'ACCEPTED'))
                         }
-                    } catch (e) {}
+                    } catch {}
                 }
+
+                // Similar / other conferences — same area first, then the rest
+                try {
+                    const allConfs = await getConferences()
+                    const currentArea = conferenceData.area?.toLowerCase() || ''
+                    const others = allConfs.filter(c => c.id !== conferenceId)
+                    // Sort: same area first
+                    others.sort((a, b) => {
+                        const aMatch = a.area?.toLowerCase() === currentArea && currentArea !== '' ? 0 : 1
+                        const bMatch = b.area?.toLowerCase() === currentArea && currentArea !== '' ? 0 : 1
+                        return aMatch - bMatch
+                    })
+                    setSimilarConferences(others.slice(0, 8))
+                } catch {}
             } catch (err: any) {
                 if (err.response?.status === 401 || err.response?.status === 403) {
                     setError('You must be logged in to view this conference.')
-                    setTimeout(() => {
-                        router.push('/auth/login')
-                    }, 2000)
+                    setTimeout(() => router.push('/auth/login'), 2000)
                 } else {
                     setError('Failed to load conference details. Please try again later.')
                 }
-                console.error('Error fetching conference:', err)
             } finally {
                 setLoading(false)
             }
         }
-
-        if (conferenceId) {
-            fetchData()
-        }
+        if (conferenceId) fetchData()
     }, [conferenceId, router, userId])
 
     const handleAcceptInvitation = async () => {
@@ -128,11 +119,8 @@ export default function ConferenceDetailsPage() {
             toast.success('Invitation accepted!')
             setPendingInvitations([])
             await refreshRoles()
-        } catch {
-            toast.error('Failed to accept invitation.')
-        } finally {
-            setActionLoading(false)
-        }
+        } catch { toast.error('Failed to accept invitation.') }
+        finally { setActionLoading(false) }
     }
 
     const handleDeclineInvitation = async () => {
@@ -143,501 +131,333 @@ export default function ConferenceDetailsPage() {
             toast.success('Invitation declined.')
             setPendingInvitations([])
             await refreshRoles()
-        } catch {
-            toast.error('Failed to decline invitation.')
-        } finally {
-            setActionLoading(false)
-        }
+        } catch { toast.error('Failed to decline invitation.') }
+        finally { setActionLoading(false) }
     }
 
-    const formatDate = (dateString: string) => {
-        if (!dateString) return '—'
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        })
-    }
-
-    const formatDateShort = (dateString: string) => {
-        if (!dateString) return '—'
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        })
-    }
-
-    const getStatusColor = (status: string) => {
-        switch (status?.toUpperCase()) {
-            case 'ACTIVE':
-            case 'APPROVED':
-                return 'bg-green-100 text-green-800 border-green-200'
-            case 'UPCOMING':
-                return 'bg-indigo-100 text-indigo-800 border-indigo-200'
-            case 'PENDING':
-                return 'bg-amber-100 text-amber-800 border-amber-200'
-            case 'REJECTED':
-                return 'bg-red-100 text-red-800 border-red-200'
-            case 'COMPLETED':
-                return 'bg-gray-100 text-gray-800 border-gray-200'
-            default:
-                return 'bg-gray-100 text-gray-800 border-gray-200'
-        }
-    }
-
-    const ACTIVITY_ORDER = [
-        'PAPER_SUBMISSION',
-        'REVIEWER_BIDDING',
-        'REVIEW_SUBMISSION',
-        'REVIEW_DISCUSSION',
-        'AUTHOR_NOTIFICATION',
-        'CAMERA_READY_SUBMISSION',
-        'REGISTRATION',
-        'EVENT_DAY',
-    ]
+    const fmt = (d: string) => fmtDate(d)
 
     const ACTIVITY_LABELS: Record<string, string> = {
-        PAPER_SUBMISSION: 'Paper Submission',
-        REVIEWER_BIDDING: 'Reviewer Bidding',
-        REVIEW_SUBMISSION: 'Review Submission',
-        REVIEW_DISCUSSION: 'Review Discussion',
-        AUTHOR_NOTIFICATION: 'Author Notification',
-        CAMERA_READY_SUBMISSION: 'Camera Ready',
-        REGISTRATION: 'Registration',
-        EVENT_DAY: 'Conference Event',
+        PAPER_SUBMISSION: 'Paper Submission', REVIEWER_BIDDING: 'Reviewer Bidding',
+        REVIEW_SUBMISSION: 'Review Submission', REVIEW_DISCUSSION: 'Review Discussion',
+        AUTHOR_NOTIFICATION: 'Author Notification', CAMERA_READY_SUBMISSION: 'Camera Ready',
+        REGISTRATION: 'Registration', EVENT_DAY: 'Conference Event',
     }
 
-    const paperSubmissionActivity = activities.find(a => a.activityType === 'PAPER_SUBMISSION')
-    const isPaperSubmissionOpen = isActivityOpen(paperSubmissionActivity)
+    const isPaperSubmissionOpen = isActivityOpen(activities.find(a => a.activityType === 'PAPER_SUBMISSION'))
+    const openActivities = activities.filter(a => isActivityOpen(a))
+    const currentActivity = [...openActivities].sort((a, b) => {
+        const order = Object.keys(ACTIVITY_LABELS)
+        return order.indexOf(a.activityType) - order.indexOf(b.activityType)
+    })[0] || null
 
-    const isSubmissionOpen = () => {
-        return isPaperSubmissionOpen
+    if (loading) return <DetailPageSkeleton />
+    if (error) return (
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+            <p className="text-destructive text-lg">{error}</p>
+            {error.includes('logged in') ? <Link href="/auth/login"><Button>Go to Login</Button></Link>
+                : <Button onClick={() => window.location.reload()}>Retry</Button>}
+        </div>
+    )
+    if (!conference) return (
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+            <p className="text-muted-foreground text-lg">Conference not found</p>
+            <Link href="/conference"><Button>Back to Conferences</Button></Link>
+        </div>
+    )
+
+    const registrationActivity = activities.find(a => a.activityType === 'REGISTRATION')
+    const eventDayActivity = activities.find(a => a.activityType === 'EVENT_DAY')
+    const canRegister = isActivityOpen(registrationActivity)
+    let isProgramPublished = false
+    if (conference.programSchedule) {
+        try {
+            const parsed = typeof conference.programSchedule === 'string'
+                ? JSON.parse(conference.programSchedule) : conference.programSchedule
+            isProgramPublished = !!parsed?.published
+        } catch {}
     }
-
-    const openActivities = activities.filter((a) => isActivityOpen(a))
-    const sortedOpenActivities = [...openActivities].sort((a, b) => {
-        const indexA = ACTIVITY_ORDER.indexOf(a.activityType)
-        const indexB = ACTIVITY_ORDER.indexOf(b.activityType)
-        if (indexA === -1 && indexB === -1) return 0
-        if (indexA === -1) return 1
-        if (indexB === -1) return -1
-        return indexA - indexB
-    })
-    const currentActivity = sortedOpenActivities[0] || null
-
-    if (loading) {
-        return <DetailPageSkeleton />
-    }
-
-    if (error) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-                <p className="text-destructive text-lg">{error}</p>
-                {error.includes('logged in') ? (
-                    <Link href="/auth/login">
-                        <Button>Go to Login</Button>
-                    </Link>
-                ) : (
-                    <Button onClick={() => window.location.reload()}>
-                        Retry
-                    </Button>
-                )}
-            </div>
-        )
-    }
-
-    if (!conference) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-                <p className="text-muted-foreground text-lg">Conference not found</p>
-                <Link href="/conference">
-                    <Button>Back to Conferences</Button>
-                </Link>
-            </div>
-        )
-    }
+    const hasProgramAvailable = isProgramPublished || isActivityOpen(eventDayActivity)
 
     return (
-        <div className="container mx-auto py-8 px-4 max-w-7xl">
-            {/* Breadcrumb */}
+        <div className="page-wide">
             <Breadcrumb items={[
                 { label: 'Conferences', href: '/conference' },
                 { label: conference.acronym || conference.name },
-            ]} className="mb-2" />
+            ]} className="mb-5" />
 
+            {/* Invitation banner */}
             {pendingInvitations.length > 0 && (
-                <div className="bg-amber-50 border-[2px] border-amber-300 rounded-xl p-5 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-5 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
                     <div>
-                        <h3 className="font-bold text-amber-900 text-lg flex items-center gap-2">
-                            👋 You have been invited
-                        </h3>
-                        <p className="text-amber-800 mt-1 font-medium">
-                            You have a pending invitation to join this conference as: {Array.from(new Set(pendingInvitations.map(p => p.assignedRole.replace('_', ' ')))).join(', ')}. 
-                        </p>
+                        <h3 className="font-bold text-amber-900 text-lg">{'\uD83D\uDC4B'} You have been invited</h3>
+                        <p className="text-amber-800 mt-1">Join as: {Array.from(new Set(pendingInvitations.map(p => p.assignedRole.replace('_', ' ')))).join(', ')}</p>
                     </div>
-                    <div className="flex gap-2 shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
-                        <Button variant="outline" onClick={handleDeclineInvitation} disabled={actionLoading} className="w-full sm:w-auto border-amber-300 text-amber-700 bg-white hover:bg-amber-100 font-bold">
-                            Decline
-                        </Button>
-                        <Button onClick={handleAcceptInvitation} disabled={actionLoading} className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white font-bold">
-                            {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            Accept Invitation
+                    <div className="flex gap-2 shrink-0">
+                        <Button variant="outline" onClick={handleDeclineInvitation} disabled={actionLoading} className="border-amber-300 text-amber-700 hover:bg-amber-100">Decline</Button>
+                        <Button onClick={handleAcceptInvitation} disabled={actionLoading} className="bg-amber-600 hover:bg-amber-700 text-white font-bold">
+                            {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Accept
                         </Button>
                     </div>
                 </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 mb-10">
-                <div className="lg:col-span-2 space-y-6">
-                    <div>
-                        <div className="flex items-center gap-3 mb-3">
-                            <span className="text-sm font-mono text-muted-foreground bg-muted px-2.5 py-1 rounded">
-                                {conference.acronym}
-                            </span>
-                            <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${getStatusColor(conference.status)}`}>
-                                {conference.status}
-                            </span>
-                        </div>
-                        <h1 className="text-3xl font-bold tracking-tight mb-4">
-                            {conference.name}
-                        </h1>
-                        <p className="text-muted-foreground text-base leading-relaxed">
+            {/* ═══════ HERO ═══════ */}
+            <div className="relative rounded-2xl overflow-hidden mb-8">
+                {conference.bannerImageUrl ? (
+                    <img src={conference.bannerImageUrl} alt={conference.name} fetchPriority="high" decoding="async"
+                        className="w-full h-[280px] lg:h-[340px] object-cover" />
+                ) : (
+                    <div className="w-full h-[280px] lg:h-[340px] bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700" />
+                )}
+
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
+
+                <div className="absolute inset-0 flex flex-col justify-end p-6 lg:p-8">
+                    <div className="flex items-center gap-2.5 mb-2 flex-wrap">
+                        <span className="text-sm font-mono text-white bg-white/20 backdrop-blur-sm px-2.5 py-0.5 rounded border border-white/25">
+                            {conference.acronym}
+                        </span>
+                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold backdrop-blur-sm border ${
+                            conference.status?.toUpperCase() === 'ACTIVE' || conference.status?.toUpperCase() === 'APPROVED'
+                                ? 'bg-emerald-500/25 text-emerald-100 border-emerald-400/40'
+                                : conference.status?.toUpperCase() === 'PENDING'
+                                    ? 'bg-amber-500/25 text-amber-100 border-amber-400/40'
+                                    : 'bg-white/15 text-white/80 border-white/25'
+                        }`}>
+                            {conference.status}
+                        </span>
+                    </div>
+
+                    <h1 className="text-3xl lg:text-4xl font-extrabold text-white tracking-tight max-w-3xl leading-tight" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
+                        {conference.name}
+                    </h1>
+                    {conference.description && (
+                        <p className="text-white/80 text-base mt-2 max-w-2xl line-clamp-2 leading-relaxed" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
                             {conference.description}
                         </p>
-                    </div>
+                    )}
 
-                    {/* Key details grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                            <MapPin className="h-5 w-5 text-indigo-500 mt-0.5 shrink-0" />
-                            <div>
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Location</p>
-                                <p className="text-sm font-medium">{conference.location}{conference.province ? `, ${conference.province}` : ''}{conference.country ? `, ${conference.country}` : ''}</p>
-                            </div>
-                        </div>
-                        <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                            <Calendar className="h-5 w-5 text-indigo-500 mt-0.5 shrink-0" />
-                            <div>
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Conference Dates</p>
-                                <p className="text-sm font-medium">{formatDateShort(conference.startDate)} – {formatDateShort(conference.endDate)}</p>
-                            </div>
-                        </div>
-                        {conference.paperDeadline && (
-                            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                                <Clock className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
-                                <div>
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Paper Deadline</p>
-                                    <p className="text-sm font-medium">{formatDate(conference.paperDeadline)}</p>
-                                </div>
-                            </div>
-                        )}
-                        {conference.cameraReadyDeadline && (
-                            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                                <FileText className="h-5 w-5 text-orange-500 mt-0.5 shrink-0" />
-                                <div>
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Camera-ready Deadline</p>
-                                    <p className="text-sm font-medium">{formatDate(conference.cameraReadyDeadline)}</p>
-                                </div>
-                            </div>
-                        )}
-                        {conference.contactInformation && (
-                            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                                <Phone className="h-5 w-5 text-green-500 mt-0.5 shrink-0" />
-                                <div>
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contact</p>
-                                    <p className="text-sm font-medium">{conference.contactInformation}</p>
-                                </div>
-                            </div>
-                        )}
-                        {conference.websiteUrl && (
-                            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                                <Globe className="h-5 w-5 text-indigo-500 mt-0.5 shrink-0" />
-                                <div>
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Website</p>
-                                    <a
-                                        href={conference.websiteUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-sm font-medium text-indigo-600 hover:underline flex items-center gap-1"
-                                    >
-                                        Visit site <ExternalLink className="h-3 w-3" />
-                                    </a>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-        
-                    {/* ── Call-to-Action Buttons ── */}
-                    {(() => {
-                        const registrationActivity = activities.find(a => a.activityType === 'REGISTRATION')
-                        const eventDayActivity = activities.find(a => a.activityType === 'EVENT_DAY')
-                        const canRegister = isActivityOpen(registrationActivity)
-
-                        let isProgramPublished = false
-                        if (conference.programSchedule) {
-                            try {
-                                const parsed = typeof conference.programSchedule === 'string' 
-                                    ? JSON.parse(conference.programSchedule) 
-                                    : conference.programSchedule
-                                isProgramPublished = !!parsed?.published
-                            } catch (e) {}
-                        }
-                        const hasProgramAvailable = isProgramPublished || isActivityOpen(eventDayActivity)
-
-                        return (
-                            <TooltipProvider delayDuration={200}>
-                                <div className="flex gap-3 pt-4 flex-wrap">
-                                    {/* Register to Attend or My Workspace */}
-                                    {hasTicket ? (
-                                        <Link href={`/conference/${conferenceId}/attendee`}>
-                                            <Button size="lg" className="gap-2 bg-emerald-600 hover:bg-emerald-700">
-                                                <Ticket className="h-5 w-5" />
-                                                My Workspace
+                    {/* CTA — solid colored buttons for visibility */}
+                    <TooltipProvider delayDuration={200}>
+                        <div className="flex gap-3 mt-4 flex-wrap">
+                            {hasTicket ? (
+                                <Link href={`/conference/${conferenceId}/attendee`}>
+                                    <Button size="lg" className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg font-bold">
+                                        <Ticket className="h-5 w-5" /> My Workspace
+                                    </Button>
+                                </Link>
+                            ) : (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <span className="inline-flex" tabIndex={0} style={{ pointerEvents: 'auto' }}>
+                                            <Button size="lg" className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg disabled:opacity-40 disabled:pointer-events-none font-bold"
+                                                disabled={!canRegister} onClick={() => canRegister && window.location.assign(`/conference/${conferenceId}/register`)}>
+                                                <Ticket className="h-5 w-5" /> Register to Attend
                                             </Button>
-                                        </Link>
-                                    ) : (
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <span className="inline-flex" tabIndex={0} style={{ pointerEvents: 'auto' }}>
-                                                    <Button
-                                                        size="lg"
-                                                        className="gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:pointer-events-none"
-                                                        disabled={!canRegister}
-                                                        onClick={() => canRegister && window.location.assign(`/conference/${conferenceId}/register`)}
-                                                    >
-                                                        <Ticket className="h-5 w-5" />
-                                                        Register to Attend
-                                                    </Button>
-                                                </span>
-                                            </TooltipTrigger>
-                                            {!canRegister && (
-                                                <TooltipContent side="bottom" className="max-w-xs">
-                                                    {registrationActivity?.deadline && new Date(registrationActivity.deadline).getTime() < Date.now()
-                                                        ? 'Registration is closed.'
-                                                        : 'Registration is not open yet. Please wait until the Registration phase.'}
-                                                </TooltipContent>
-                                            )}
-                                        </Tooltip>
+                                        </span>
+                                    </TooltipTrigger>
+                                    {!canRegister && (
+                                        <TooltipContent side="bottom" className="max-w-xs">
+                                            {registrationActivity?.deadline && new Date(registrationActivity.deadline).getTime() < Date.now()
+                                                ? 'Registration is closed.' : 'Registration is not open yet.'}
+                                        </TooltipContent>
                                     )}
-
-                                    {/* View Program */}
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <span className="inline-flex" tabIndex={0} style={{ pointerEvents: 'auto' }}>
-                                                <Button
-                                                    size="lg"
-                                                    variant="outline"
-                                                    className="gap-2 disabled:pointer-events-none"
-                                                    disabled={!hasProgramAvailable}
-                                                    onClick={() => {
-                                                        if (hasProgramAvailable) {
-                                                            setShowProgramPopup(true)
-                                                        }
-                                                    }}
-                                                >
-                                                    <Calendar className="h-5 w-5" />
-                                                    View Program
-                                                </Button>
-                                            </span>
-                                        </TooltipTrigger>
-                                        {!hasProgramAvailable && (
-                                            <TooltipContent side="bottom" className="max-w-xs">
-                                                Detailed program is not yet available
-                                            </TooltipContent>
-                                        )}
-                                    </Tooltip>
-                                </div>
-                            </TooltipProvider>
-                        )
-                    })()}
-
-
-                </div>
-
-                <div className="lg:col-span-3 pt-9">
-                    <div className="sticky rounded-xl overflow-hidden border shadow-sm">
-                        {conference.bannerImageUrl ? (
-                            <img
-                                src={conference.bannerImageUrl}
-                                alt={conference.name}
-                                fetchPriority="high"
-                                decoding="async"
-                                className="w-full object-cover"
-                            />
-                        ) : (
-                            <div className="w-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                                <span className="text-white/60 text-5xl font-bold tracking-wider">
-                                    {conference.acronym}
-                                </span>
-                            </div>
-                        )}
-                    </div>
+                                </Tooltip>
+                            )}
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span className="inline-flex" tabIndex={0} style={{ pointerEvents: 'auto' }}>
+                                        <Button size="lg"
+                                            className="gap-2 bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-600 disabled:opacity-30 disabled:pointer-events-none font-medium"
+                                            disabled={!hasProgramAvailable} onClick={() => hasProgramAvailable && setShowProgramPopup(true)}>
+                                            <Calendar className="h-5 w-5" /> View Program
+                                        </Button>
+                                    </span>
+                                </TooltipTrigger>
+                                {!hasProgramAvailable && (
+                                    <TooltipContent side="bottom" className="max-w-xs">Program not yet available</TooltipContent>
+                                )}
+                            </Tooltip>
+                        </div>
+                    </TooltipProvider>
                 </div>
             </div>
 
-            {/* Phase Indicator — always render so user sees full roadmap */}
-            <div className="mb-8 rounded-xl border bg-card p-4 sm:p-5">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
-                    Conference Progress
-                </h3>
-                <div className="w-full overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
-                    <div className="flex flex-row flex-nowrap items-center min-w-max">
-                        {ACTIVITY_ORDER.map((actType, idx) => {
-                            const activity = activities.find(a => a.activityType === actType)
-                            const isActive = activity?.isEnabled === true
-                            const isCompleted = !isActive && activities
-                                .filter(a => ACTIVITY_ORDER.indexOf(a.activityType) > ACTIVITY_ORDER.indexOf(actType))
-                                .some(a => a.isEnabled)
-                            const isPast = activity?.deadline ? new Date(activity.deadline).getTime() < Date.now() : false
-                            const done = isCompleted || (isPast && !isActive)
-
-                            return (
-                                <div key={actType} className="flex items-center shrink-0">
-                                    {/* Phase badge */}
-                                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap shrink-0
-                                        ${isActive
-                                            ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
-                                            : done
-                                                ? 'bg-emerald-50 text-emerald-700'
-                                                : 'bg-muted text-muted-foreground/40'
-                                        }`}
-                                    >
-                                        {done ? (
-                                            <svg className="h-3.5 w-3.5 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                            </svg>
-                                        ) : isActive ? (
-                                            <span className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />
-                                        ) : (
-                                            <span className="h-2 w-2 rounded-full bg-muted-foreground/30 shrink-0" />
-                                        )}
-                                        {ACTIVITY_LABELS[actType]}
-                                    </div>
-
-                                    {/* Connector line between nodes */}
-                                    {idx < ACTIVITY_ORDER.length - 1 && (
-                                        <div className={`min-w-[24px] w-6 h-[2px] mx-2 shrink-0 rounded-full ${
-                                            done ? 'bg-emerald-300' : 'bg-slate-200'
-                                        }`} />
-                                    )}
-                                </div>
-                            )
-                        })}
+            {/* ═══════ INFO CARDS ═══════ */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 -mt-12 relative z-10 mb-8 px-2 lg:px-4">
+                <div className="bg-white dark:bg-card rounded-xl border shadow-lg p-4 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="h-8 w-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0"><MapPin className="h-4 w-4 text-indigo-600 dark:text-indigo-400" /></div>
+                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Location</p>
                     </div>
+                    <p className="text-sm font-semibold truncate">{conference.location}{conference.province ? `, ${conference.province}` : ''}</p>
+                    {conference.country && <p className="text-xs text-muted-foreground">{conference.country}</p>}
                 </div>
-            </div>
-
-            <section>
-                <div className="flex items-center justify-between mb-6">
-                    <div>
-                        <h2 className="text-2xl font-bold tracking-tight">Conference Tracks</h2>
-                        <p className="text-muted-foreground mt-1">
-                            {tracks.length === 0
-                                ? 'No tracks available yet.'
-                                : `${tracks.length} track${tracks.length > 1 ? 's' : ''} available for submission`}
+                <div className="bg-white dark:bg-card rounded-xl border shadow-lg p-4 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="h-8 w-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center shrink-0"><Calendar className="h-4 w-4 text-violet-600 dark:text-violet-400" /></div>
+                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Event Dates</p>
+                    </div>
+                    <p className="text-sm font-semibold">{fmt(conference.startDate)}</p>
+                    <p className="text-xs text-muted-foreground">to {fmt(conference.endDate)}</p>
+                </div>
+                <div className="bg-white dark:bg-card rounded-xl border shadow-lg p-4 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0"><BookOpen className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /></div>
+                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Tracks</p>
+                    </div>
+                    <p className="text-2xl font-bold">{tracks.length}</p>
+                    <p className="text-xs text-muted-foreground">research track{tracks.length !== 1 ? 's' : ''}</p>
+                </div>
+                <div className="bg-white dark:bg-card rounded-xl border shadow-lg p-4 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="h-8 w-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0">
+                            {conference.paperDeadline ? <Clock className="h-4 w-4 text-orange-600" /> : conference.websiteUrl ? <Globe className="h-4 w-4 text-orange-600" /> : <Phone className="h-4 w-4 text-orange-600" />}
+                        </div>
+                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                            {conference.paperDeadline ? 'Deadline' : conference.websiteUrl ? 'Website' : 'Contact'}
                         </p>
                     </div>
+                    {conference.paperDeadline ? (
+                        <><p className="text-sm font-semibold">{fmt(conference.paperDeadline)}</p><p className="text-xs text-muted-foreground">submission closes</p></>
+                    ) : conference.websiteUrl ? (
+                        <a href={conference.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-indigo-600 hover:underline flex items-center gap-1">Visit site <ExternalLink className="h-3 w-3" /></a>
+                    ) : conference.contactInformation ? (
+                        <p className="text-sm font-semibold truncate">{conference.contactInformation}</p>
+                    ) : <p className="text-sm text-muted-foreground">{'\u2014'}</p>}
+                </div>
+            </div>
+
+            {/* Phase Indicator */}
+            <div className="mb-8">
+                <ConferencePhaseTracker conferenceId={conferenceId} />
+            </div>
+
+            {/* ═══════ TRACKS (left) & REVIEWS (right) — side by side ═══════ */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 mb-10">
+                {/* TRACKS — 3/5 width */}
+                <div className="lg:col-span-3">
+                    <h2 className="text-xl font-bold tracking-tight mb-4">Conference Tracks</h2>
+                    {tracks.length === 0 ? (
+                        <Card className="border-dashed">
+                            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                                <FileText className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                                <p className="text-muted-foreground text-lg font-medium">No tracks yet</p>
+                                <p className="text-sm text-muted-foreground mt-1">Tracks will appear once the organizer adds them.</p>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <div className="rounded-xl border overflow-hidden bg-white dark:bg-card">
+                            {/* Table header */}
+                            <div className="grid grid-cols-12 gap-3 px-4 py-2.5 bg-muted/50 border-b text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                                <div className="col-span-4">Track</div>
+                                <div className="col-span-4 hidden sm:block">Description</div>
+                                <div className="col-span-4 sm:col-span-2 text-center">Status</div>
+                                <div className="col-span-4 sm:col-span-2 text-right">Action</div>
+                            </div>
+                            {tracks.map((track, idx) => (
+                                <div key={track.id} className={`grid grid-cols-12 gap-3 px-4 py-3.5 items-center hover:bg-muted/30 transition-colors ${idx < tracks.length - 1 ? 'border-b border-dashed' : ''}`}>
+                                    <div className="col-span-4">
+                                        <p className="font-semibold text-sm">{track.name}</p>
+                                    </div>
+                                    <div className="col-span-4 hidden sm:block">
+                                        <p className="text-sm text-muted-foreground line-clamp-1">{track.description || '\u2014'}</p>
+                                    </div>
+                                    <div className="col-span-4 sm:col-span-2 text-center">
+                                        <Badge variant="outline" className={
+                                            isPaperSubmissionOpen
+                                                ? 'border-green-300 text-green-700 bg-green-50'
+                                                : currentActivity
+                                                    ? 'border-indigo-300 text-indigo-700 bg-indigo-50'
+                                                    : 'border-gray-300 text-gray-500 bg-gray-50'
+                                        }>
+                                            {isPaperSubmissionOpen ? 'Open' : currentActivity
+                                                ? (ACTIVITY_LABELS[currentActivity.activityType] || currentActivity.activityType) : 'Closed'}
+                                        </Badge>
+                                    </div>
+                                    <div className="col-span-4 sm:col-span-2 text-right">
+                                        {isPaperSubmissionOpen ? (
+                                            <Link href={`/track/${track.id}/submit?conferenceId=${conferenceId}`}>
+                                                <Button size="sm" className="gap-1.5 h-8"><Send className="h-3.5 w-3.5" /> Submit</Button>
+                                            </Link>
+                                        ) : (
+                                            <Button size="sm" variant="outline" disabled className="h-8 gap-1.5"><Send className="h-3.5 w-3.5" /> Closed</Button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
-                {tracks.length === 0 ? (
-                    <Card className="border-dashed">
-                        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                            <FileText className="h-12 w-12 text-muted-foreground/40 mb-4" />
-                            <p className="text-muted-foreground text-lg font-medium">No tracks yet</p>
-                            <p className="text-sm text-muted-foreground mt-1">Tracks will appear here once the organizer adds them.</p>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-                        {tracks.map((track) => {
-                            const submissionOpen = isSubmissionOpen()
-                            return (
-                                <Card key={track.id} className="hover:shadow-lg transition-shadow flex flex-col">
-                                    <CardHeader className="pb-3">
-                                        <div className="flex items-start justify-between gap-2">
-                                            <CardTitle className="text-lg leading-tight">
-                                                {track.name}
-                                            </CardTitle>
-                                            <div className="flex flex-col items-end gap-1">
-                                                <Badge
-                                                    variant="outline"
-                                                    className={
-                                                        !submissionOpen && currentActivity
-                                                            ? 'border-indigo-300 text-indigo-700 bg-indigo-50 shrink-0'
-                                                            : submissionOpen
-                                                                ? 'border-green-300 text-green-700 bg-green-50 shrink-0'
-                                                                : 'border-gray-300 text-gray-500 bg-gray-50 shrink-0'
-                                                    }
-                                                >
-                                                    {!submissionOpen && currentActivity
-                                                        ? (ACTIVITY_LABELS[currentActivity.activityType] || currentActivity.name || currentActivity.activityType)
-                                                        : (submissionOpen ? 'Open' : 'Closed')}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="flex flex-col flex-1">
-                                        {track.description && (
-                                            <p className="text-sm text-muted-foreground line-clamp-3">
-                                                {track.description}
-                                            </p>
-                                        )}
+                {/* REVIEWS — 2/5 width */}
+                <div className="lg:col-span-2">
+                    <h2 className="text-xl font-bold tracking-tight mb-4">Reviews & Feedback</h2>
+                    <ConferenceFeedback conferenceId={conferenceId} isCheckedIn={isCheckedIn} />
+                </div>
+            </div>
 
-                                        <div className="mt-auto pt-4">
-                                            {submissionOpen ? (
-                                                <Link href={`/track/${track.id}/submit?conferenceId=${conferenceId}`}>
-                                                    <Button
-                                                        className="w-full gap-2"
-                                                        variant="default"
-                                                        size="lg"
-                                                    >
-                                                        <Send className="h-4 w-4" />
-                                                        Submit Paper
-                                                    </Button>
-                                                </Link>
-                                            ) : (
-                                                <Button
-                                                    className="w-full gap-2"
-                                                    variant="outline"
-                                                    size="lg"
-                                                    disabled
-                                                >
-                                                    <Send className="h-4 w-4" />
-                                                    Submission Closed
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )
-                        })}
+            {/* ═══════ EXPLORE MORE — horizontal carousel ═══════ */}
+            {similarConferences.length > 0 && (
+                <section className="mb-10 pt-8 border-t">
+                    <div className="flex items-center justify-between mb-5">
+                        <div>
+                            <h2 className="text-xl font-bold tracking-tight mb-1">Explore More Conferences</h2>
+                            <p className="text-sm text-muted-foreground">
+                                Discover other conferences{conference.area ? <> — related to <span className="font-semibold text-foreground">{conference.area}</span> listed first</> : ' on ConfHub'}
+                            </p>
+                        </div>
+                        <div className="flex gap-2 shrink-0">
+                            <button onClick={() => { const el = document.getElementById('conf-carousel'); if (el) el.scrollBy({ left: -300, behavior: 'smooth' }) }}
+                                className="h-9 w-9 rounded-full border bg-white dark:bg-card shadow-sm flex items-center justify-center hover:bg-muted transition-colors">
+                                <ChevronLeft className="h-5 w-5" />
+                            </button>
+                            <button onClick={() => { const el = document.getElementById('conf-carousel'); if (el) el.scrollBy({ left: 300, behavior: 'smooth' }) }}
+                                className="h-9 w-9 rounded-full border bg-white dark:bg-card shadow-sm flex items-center justify-center hover:bg-muted transition-colors">
+                                <ChevronRight className="h-5 w-5" />
+                            </button>
+                        </div>
                     </div>
-                )}
-            </section>
+                    <div id="conf-carousel" className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                        {similarConferences.map(c => (
+                            <Link key={c.id} href={`/conference/${c.id}`} className="group snap-start shrink-0 w-[260px]">
+                                <div className="rounded-xl border bg-white dark:bg-card overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all duration-200 h-full flex flex-col">
+                                    {c.bannerImageUrl ? (
+                                        <img src={c.bannerImageUrl} alt={c.name} className="w-full h-28 object-cover" />
+                                    ) : (
+                                        <div className="w-full h-28 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                                            <span className="text-white/70 text-lg font-bold">{c.acronym}</span>
+                                        </div>
+                                    )}
+                                    <div className="p-3.5 flex flex-col flex-1">
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                            <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">{c.acronym}</span>
+                                            <Badge variant="outline" className="text-[10px] py-0">{c.status}</Badge>
+                                        </div>
+                                        <h3 className="text-sm font-bold line-clamp-2 group-hover:text-indigo-600 transition-colors flex-1">{c.name}</h3>
+                                        <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                                            <MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">{c.location}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                                            <Calendar className="h-3 w-3 shrink-0" /> {fmt(c.startDate)}
+                                        </div>
+                                    </div>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </section>
+            )}
 
-            {/* ── Conference Feedback / Reviews ── */}
-            <section className="mt-10">
-                <h2 className="text-2xl font-bold tracking-tight mb-6">Conference Reviews</h2>
-                <ConferenceFeedback conferenceId={conferenceId} isCheckedIn={isCheckedIn} />
-            </section>
-
-            {/* ── Program Dialog Popup ── */}
+            {/* Program Dialog */}
             <Dialog open={showProgramPopup} onOpenChange={setShowProgramPopup}>
                 <DialogContent className="!max-w-[95vw] sm:max-w-[95vw] !w-[95vw] max-h-[90vh] overflow-y-auto bg-[#f8fafc] sm:rounded-2xl border-none">
                     <DialogHeader className="mb-6 sticky top-0 z-50 bg-[#f8fafc] py-2">
-                        <DialogTitle className="text-2xl font-black text-slate-800">
-                            Conference Program
-                        </DialogTitle>
+                        <DialogTitle className="text-2xl font-black text-slate-800">Conference Program</DialogTitle>
                     </DialogHeader>
-                    {programData ? (
-                        <ProgramViewer program={programData} allPapers={allPapers} />
-                    ) : (
-                        <div className="py-12 text-center text-slate-500">
-                            The detailed program could not be loaded. Please try again later.
-                        </div>
-                    )}
+                    {programData ? <ProgramViewer program={programData} allPapers={allPapers} />
+                        : <div className="py-12 text-center text-slate-500">Program could not be loaded.</div>}
                 </DialogContent>
             </Dialog>
         </div>
