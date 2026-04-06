@@ -22,6 +22,7 @@ ENV NEXT_TELEMETRY_DISABLED 1
 # Provide dummy build-time environment variable if Next.js statically injects it into client
 ENV NEXT_PUBLIC_API_URL /api/v1
 ENV NEXT_PUBLIC_AUTH_API_URL /api/v1/
+ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID 1041085898173-t169evq3enbhn964k822n2mjs0drag4g.apps.googleusercontent.com
 
 RUN npm run build
 
