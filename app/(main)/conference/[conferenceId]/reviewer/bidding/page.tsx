@@ -209,7 +209,7 @@ export default function BiddingPage() {
     // Activity closed banner
     if (activityClosed) {
         return (
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+            <div className="page-narrow space-y-6">
                 <Button variant="ghost" className="gap-2 -ml-2" onClick={() => router.push(`/conference/${conferenceId}/reviewer`)}>
                     <ArrowLeft className="h-4 w-4" />
                     Back to Reviewer Console
@@ -233,7 +233,7 @@ export default function BiddingPage() {
     // Subject Area requirement banner
     if (needsSubjectAreas) {
         return (
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+            <div className="page-narrow space-y-6">
                 <Button variant="ghost" className="gap-2 -ml-2" onClick={() => router.push(`/conference/${conferenceId}/reviewer`)}>
                     <ArrowLeft className="h-4 w-4" />
                     Back to Reviewer Console
@@ -262,7 +262,7 @@ export default function BiddingPage() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div className="page-base space-y-6">
             {/* Header */}
             <div className="space-y-4">
                 <Button variant="ghost" className="gap-2 -ml-2" onClick={() => router.push(`/conference/${conferenceId}/reviewer`)}>

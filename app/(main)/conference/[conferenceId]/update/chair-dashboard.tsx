@@ -22,6 +22,7 @@ import { sendBulkEmail } from '@/app/api/email.api'
 import { createNotification } from '@/app/api/notification.api'
 import type { ConferenceActivityDTO } from '@/types/conference'
 import { toast } from 'sonner'
+import { safeDate } from '@/lib/utils'
 
 interface PaperSummary {
     id: number
@@ -977,7 +978,7 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                     <CardContent>
                         <div className="space-y-3">
                             {sortedActivities.map(a => {
-                                const deadline = a.deadline ? new Date(a.deadline) : null
+                                const deadline = a.deadline ? safeDate(a.deadline) : null
                                 const isPast = deadline ? deadline.getTime() < now.getTime() : false
                                 const diffDays = deadline ? Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null
                                 const isUrgent = diffDays !== null && diffDays <= 3 && !isPast

@@ -49,6 +49,7 @@ import { UserLink } from '@/components/shared/user-link'
 import { WorkspaceSkeleton } from '@/components/shared/skeletons'
 import { toast } from 'sonner'
 import { getPaperStatus, DECISION_CONFIG } from '@/lib/constants/status'
+import { fmtDate } from '@/lib/utils'
 
 
 
@@ -322,7 +323,7 @@ export default function PaperWorkspacePage() {
     const cameraReadyFiles = paperFiles.filter(pf => pf.isCameraReady)
 
     return (
-        <div className="container mx-auto py-8 px-4 max-w-6xl space-y-6">
+        <div className="page-base space-y-6">
             <BackButton fallbackUrl={`/conference/${paper.conferenceId || paper.track?.conference?.id}/update`} className="-ml-2" />
 
             {/* ── Workspace Header ── */}
@@ -400,7 +401,7 @@ export default function PaperWorkspacePage() {
 
                             <div>
                                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Submitted Date</h3>
-                                <p className="text-sm">{new Date(paper.submissionTime).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                                <p className="text-sm">{fmtDate(paper.submissionTime)}</p>
                             </div>
                         </div>
                     </div>

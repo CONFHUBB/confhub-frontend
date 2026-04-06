@@ -10,7 +10,8 @@ import { CONFLICT_TYPE_LABELS } from "@/types/conflict"
 import type { TrackResponse } from "@/types/track"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { Loader2, Plus, Trash2, AlertTriangle, Shield, Lock, Globe, UserX, Settings2, ChevronLeft, ChevronRight, Search, Filter, Download } from "lucide-react"
+import { Loader2, Plus, Trash2, AlertTriangle, Shield, Lock, Globe, UserX, Settings2, Search, Filter, Download } from "lucide-react"
+import { StandardPagination } from "@/components/ui/standard-pagination"
 import { Select } from "antd"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select as ShadSelect, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -474,7 +475,7 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-muted/30">
-                                <TableHead className="w-12">#</TableHead>
+                                <TableHead className="w-12 text-center">#</TableHead>
                                 <TableHead className="min-w-[180px] max-w-[260px]">Paper</TableHead>
                                 <TableHead className="min-w-[140px]">User</TableHead>
                                 <TableHead>Type</TableHead>
@@ -513,21 +514,13 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                     </Table>
                     </div>
                 </div>
-                {conflictsTotalPages > 1 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
-                        <div className="text-sm text-muted-foreground">
-                            Page {currentPage + 1} of {conflictsTotalPages} · {filteredConflicts.length} conflicts
-                        </div>
-                        <div className="flex gap-2">
-                            <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
-                                <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-                            </Button>
-                            <Button variant="outline" size="sm" disabled={currentPage >= conflictsTotalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
-                                Next <ChevronRight className="h-4 w-4 ml-1" />
-                            </Button>
-                        </div>
-                    </div>
-                )}
+                <StandardPagination
+                    currentPage={currentPage}
+                    totalPages={conflictsTotalPages}
+                    totalElements={filteredConflicts.length}
+                    entityName="conflicts"
+                    onPageChange={setCurrentPage}
+                />
                 </>
             )}
 

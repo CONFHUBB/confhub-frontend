@@ -13,6 +13,7 @@ import { ChevronDown, ChevronUp, FileText, Search, ExternalLink, ArrowRight } fr
 import { toast } from 'sonner'
 import { getPaperStatus } from '@/lib/constants/status'
 import { getCurrentUserEmail } from '@/lib/auth'
+import { fmtDate } from '@/lib/utils'
 
 
 
@@ -82,7 +83,7 @@ export default function MyAllPapersPage() {
     if (loading) return <div className="p-12 flex justify-center"><div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" /></div>
 
     return (
-        <div className="p-8 max-w-6xl mx-auto space-y-6">
+        <div className="page-base space-y-6">
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">My Papers</h1>
                 <p className="text-sm text-muted-foreground mt-1">All your manuscripts submitted across various conferences</p>
@@ -134,7 +135,7 @@ export default function MyAllPapersPage() {
                                         <TableCell>
                                             <p className="font-semibold text-sm line-clamp-1">{paper.title}</p>
                                             <p className="text-xs text-muted-foreground mt-1 flex gap-2">
-                                                <span>{new Date(paper.submissionTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                                <span>{fmtDate(paper.submissionTime)}</span>
                                                 {paper.track?.name && <span>• {paper.track.name}</span>}
                                             </p>
                                         </TableCell>

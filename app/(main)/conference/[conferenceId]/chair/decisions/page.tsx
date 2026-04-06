@@ -92,7 +92,7 @@ export default function ChairDecisionsPage() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div className="page-wide space-y-6">
             {/* Header */}
             <div className="space-y-3">
                 <Button variant="ghost" className="gap-2 -ml-2" onClick={() => router.push(`/conference/${conferenceId}/update`)}>

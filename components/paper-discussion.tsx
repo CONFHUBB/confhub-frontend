@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Loader2, MessageSquare, Send, Reply, Trash2, ChevronDown, ChevronRight, User2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { V } from '@/lib/validation'
+import { safeDate, fmtDate } from '@/lib/utils'
 
 interface PaperDiscussionProps {
     paperId: number
@@ -145,7 +146,8 @@ export function PaperDiscussion({ paperId, currentUserId, isChair = false, anony
     }
 
     const formatDate = (dateStr: string) => {
-        const d = new Date(dateStr)
+        const d = safeDate(dateStr)
+        if (!d || isNaN(d.getTime())) return fmtDate(dateStr)
         const now = new Date()
         const diffMs = now.getTime() - d.getTime()
         const diffMins = Math.floor(diffMs / 60000)
@@ -155,7 +157,7 @@ export function PaperDiscussion({ paperId, currentUserId, isChair = false, anony
         if (diffHours < 24) return `${diffHours}h ago`
         const diffDays = Math.floor(diffHours / 24)
         if (diffDays < 7) return `${diffDays}d ago`
-        return d.toLocaleDateString('en-US')
+        return fmtDate(dateStr)
     }
 
     if (loading) {

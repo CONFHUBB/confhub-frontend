@@ -171,10 +171,16 @@ export function SetupWizard({ onSubmit, isSubmitting, backendErrors }: SetupWiza
             if (!formData.startDate) newErrors.startDate = 'Start date is required.'
             if (!formData.endDate) newErrors.endDate = 'End date is required.'
             if (formData.startDate && !newErrors.startDate) {
+                const startYear = new Date(formData.startDate).getFullYear()
+                if (startYear > 9999) newErrors.startDate = 'Year must be 4 digits or less.'
                 const startTs = new Date(formData.startDate).getTime()
                 if (!Number.isNaN(startTs) && startTs <= Date.now()) {
                     newErrors.startDate = 'Start date must be in the future.'
                 }
+            }
+            if (formData.endDate && !newErrors.endDate) {
+                const endYear = new Date(formData.endDate).getFullYear()
+                if (endYear > 9999) newErrors.endDate = 'Year must be 4 digits or less.'
             }
             if (formData.startDate && formData.endDate && new Date(formData.endDate) < new Date(formData.startDate)) {
                 newErrors.endDate = 'End date must be after start date.'
@@ -468,6 +474,7 @@ export function SetupWizard({ onSubmit, isSubmitting, backendErrors }: SetupWiza
                                         <Input
                                             id="startDate"
                                             type="date"
+                                            max="9999-12-31"
                                             className="h-12 text-base"
                                             value={formData.startDate}
                                             onChange={handleChange}
@@ -483,6 +490,7 @@ export function SetupWizard({ onSubmit, isSubmitting, backendErrors }: SetupWiza
                                         <Input
                                             id="endDate"
                                             type="date"
+                                            max="9999-12-31"
                                             className="h-12 text-base"
                                             value={formData.endDate}
                                             onChange={handleChange}
@@ -652,9 +660,9 @@ export function SetupWizard({ onSubmit, isSubmitting, backendErrors }: SetupWiza
                                 <div>
                                     <p className="text-xs text-muted-foreground">Dates</p>
                                     <p className="font-medium">
-                                        {formData.startDate ? new Date(formData.startDate).toLocaleDateString() : '—'}
+                                        {formData.startDate ? new Date(formData.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
                                         {' → '}
-                                        {formData.endDate ? new Date(formData.endDate).toLocaleDateString() : '—'}
+                                        {formData.endDate ? new Date(formData.endDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
                                     </p>
                                 </div>
                                 {formData.area && (

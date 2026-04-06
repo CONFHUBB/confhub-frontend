@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { HelpTooltip } from "@/components/help-tooltip"
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast } from 'sonner'
+import { safeDate } from '@/lib/utils'
 
 interface ActivityTimelineProps {
     conferenceId: number
@@ -191,7 +192,8 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
 
     const formatAuditDate = (iso: string) => {
         try {
-            const d = new Date(iso)
+            const d = safeDate(iso)
+            if (!d || isNaN(d.getTime())) return iso
             return d.toLocaleDateString('vi-VN', {
                 day: '2-digit', month: '2-digit', year: 'numeric',
                 hour: '2-digit', minute: '2-digit',
@@ -204,7 +206,8 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
     const formatDeadlineValue = (val: string | null) => {
         if (!val || val === 'none') return '—'
         try {
-            const d = new Date(val)
+            const d = safeDate(val)
+            if (!d || isNaN(d.getTime())) return val
             return d.toLocaleDateString('vi-VN', {
                 day: '2-digit', month: '2-digit', year: 'numeric',
                 hour: '2-digit', minute: '2-digit',
@@ -432,6 +435,7 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
                                                 <div className="relative">
                                                     <Input 
                                                         type="datetime-local" 
+                                                        max="9999-12-31T23:59"
                                                         value={formattedDate}
                                                         onChange={(e) => handleDateChange(activity.id, e.target.value)}
                                                         className={`text-sm cursor-pointer w-full text-foreground/90 pl-8 ${

@@ -310,20 +310,71 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false, t
                 {/* Writing Suggestions Panel */}
                 {writingSuggestions.length > 0 && (
                     <div className="rounded-lg border border-violet-200 bg-violet-50/50 p-4 space-y-3">
-                        <div className="flex items-center gap-2 text-violet-700 font-medium text-sm">
-                            <PenLine className="h-4 w-4" />
-                            Writing Suggestions ({writingSuggestions.length})
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-violet-700 font-medium text-sm">
+                                <PenLine className="h-4 w-4" />
+                                Writing Suggestions ({writingSuggestions.length})
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-[11px] gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50 font-medium"
+                                onClick={() => {
+                                    let currentAbstract = form.getValues("abstractField") as string
+                                    let applied = 0
+                                    writingSuggestions.forEach(s => {
+                                        if (currentAbstract.includes(s.original)) {
+                                            currentAbstract = currentAbstract.replace(s.original, s.suggested)
+                                            applied++
+                                        }
+                                    })
+                                    if (applied > 0) {
+                                        form.setValue("abstractField", currentAbstract, { shouldDirty: true, shouldValidate: true })
+                                        setWritingSuggestions([])
+                                        setWritingAssessment("")
+                                        toast.success(`Applied ${applied} fix${applied > 1 ? 'es' : ''} to your abstract`)
+                                    } else {
+                                        toast.info("No matching text found. The fixes may have been applied already.")
+                                    }
+                                }}
+                            >
+                                <CheckCircle2 className="h-3 w-3" />
+                                Apply All Fixes
+                            </Button>
                         </div>
                         {writingSuggestions.map((s, i) => (
-                            <div key={i} className="p-3 bg-white rounded-lg border space-y-1.5 text-sm">
-                                <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className={`text-[10px] ${
-                                        s.type === 'SPELLING' ? 'text-orange-600 border-orange-200 bg-orange-50' :
-                                        s.type === 'GRAMMAR' ? 'text-red-600 border-red-200 bg-red-50' :
-                                        s.type === 'TONE' ? 'text-amber-600 border-amber-200 bg-amber-50' :
-                                        'text-blue-600 border-blue-200 bg-blue-50'
-                                    }`}>{s.type}</Badge>
-                                    <span className="text-xs text-gray-500">{s.reason}</span>
+                            <div key={i} className="p-3 bg-white rounded-lg border space-y-2 text-sm">
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className={`text-[10px] ${
+                                            s.type === 'SPELLING' ? 'text-orange-600 border-orange-200 bg-orange-50' :
+                                            s.type === 'GRAMMAR' ? 'text-red-600 border-red-200 bg-red-50' :
+                                            s.type === 'TONE' ? 'text-amber-600 border-amber-200 bg-amber-50' :
+                                            'text-blue-600 border-blue-200 bg-blue-50'
+                                        }`}>{s.type}</Badge>
+                                        <span className="text-xs text-gray-500">{s.reason}</span>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-6 text-[10px] gap-1 px-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50 shrink-0"
+                                        onClick={() => {
+                                            const currentAbstract = form.getValues("abstractField") as string
+                                            if (currentAbstract.includes(s.original)) {
+                                                form.setValue("abstractField", currentAbstract.replace(s.original, s.suggested), { shouldDirty: true, shouldValidate: true })
+                                                setWritingSuggestions(prev => prev.filter((_, idx) => idx !== i))
+                                                toast.success("Fix applied!")
+                                            } else {
+                                                toast.info("Text not found — it may have been changed already.")
+                                                setWritingSuggestions(prev => prev.filter((_, idx) => idx !== i))
+                                            }
+                                        }}
+                                    >
+                                        <CheckCircle2 className="h-3 w-3" />
+                                        Apply
+                                    </Button>
                                 </div>
                                 <div className="flex items-start gap-2">
                                     <span className="line-through text-red-500">{s.original}</span>

@@ -11,6 +11,7 @@ import type { PaperAuthorItem } from '@/app/api/paper.api'
 import type { PaperPermissions } from '@/hooks/usePaperRole'
 import type { MetaReviewResponse } from '@/types/meta-review'
 import { getPaperStatus, paperStatusClass, DECISION_CONFIG } from '@/lib/constants/status'
+import { fmtDate } from '@/lib/utils'
 
 const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
     chair: { label: 'Chair', cls: 'bg-indigo-100 text-indigo-700 border-indigo-300' },
@@ -130,7 +131,7 @@ export function PaperDetailHeader({
                     {paper.submissionTime && (
                         <span className="flex items-center gap-1.5">
                             <span className="font-medium text-foreground">Submitted:</span>
-                            {new Date(paper.submissionTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {fmtDate(paper.submissionTime)}
                         </span>
                     )}
                 </div>

@@ -5,7 +5,4 @@ services:
     container_name: confhub-frontend
     restart: unless-stopped
     network_mode: host
-    environment:
-      - BACKEND_URL=http://localhost:8080
-      - NEXT_PUBLIC_API_URL=/api/v1
-      - NEXT_PUBLIC_AUTH_API_URL=/api/v1/
+    env_file: .env.local

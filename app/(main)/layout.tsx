@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator"
 import { HeroSection } from "@/components/hero-section"
 import { AIChatWidget } from "@/components/ai-chat-widget"
 import { AppErrorBoundary } from "@/components/shared/app-error-boundary"
+import { AppFooter } from "@/components/app-footer"
 import { Loader2 } from "lucide-react"
 
 export default function MainLayout({
@@ -95,14 +96,15 @@ export default function MainLayout({
     // Other roles → navbar layout
     return (
         <UserRolesProvider>
-            <div className={`min-h-screen ${isHomePage ? 'bg-white' : 'bg-gray-50'}`}>
+            <div className={`flex flex-col min-h-screen ${isHomePage ? 'bg-white' : 'bg-gray-50'}`}>
                 <AppNavbar />
                 {isHomePage && <HeroSection />}
-                <main>
+                <main className="flex-1">
                     <AppErrorBoundary>
                         {children}
                     </AppErrorBoundary>
                 </main>
+                <AppFooter />
                 <AIChatWidget />
             </div>
         </UserRolesProvider>

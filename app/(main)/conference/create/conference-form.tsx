@@ -109,10 +109,16 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
         if (!formData.startDate) newErrors.startDate = "Start date is required."
         if (!formData.endDate) newErrors.endDate = "End date is required."
         if (formData.startDate && !newErrors.startDate) {
+            const startYear = new Date(formData.startDate).getFullYear()
+            if (startYear > 9999) newErrors.startDate = "Year must be 4 digits or less."
             const startTs = new Date(formData.startDate).getTime()
             if (!Number.isNaN(startTs) && startTs <= Date.now()) {
                 newErrors.startDate = "Start date must be in the future."
             }
+        }
+        if (formData.endDate && !newErrors.endDate) {
+            const endYear = new Date(formData.endDate).getFullYear()
+            if (endYear > 9999) newErrors.endDate = "Year must be 4 digits or less."
         }
         if (
             formData.startDate &&
@@ -510,6 +516,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
                                         <Input
                                             id="startDate"
                                             type="date"
+                                            max="9999-12-31"
                                             className="h-12 text-base"
                                             value={formData.startDate}
                                             onChange={handleChange}
@@ -526,6 +533,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
                                         <Input
                                             id="endDate"
                                             type="date"
+                                            max="9999-12-31"
                                             className="h-12 text-base"
                                             value={formData.endDate}
                                             onChange={handleChange}

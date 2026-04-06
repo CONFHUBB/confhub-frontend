@@ -37,6 +37,7 @@ import { getPaperStatus, PAPER_STATUS } from '@/lib/constants/status'
 import { getCurrentUserEmail } from '@/lib/auth'
 import { Breadcrumb } from '@/components/shared/breadcrumb'
 import { WorkspaceSkeleton } from '@/components/shared/skeletons'
+import { fmtDate } from '@/lib/utils'
 
 const CameraReadyPage = dynamic(() => import('./camera-ready/page'), {
     loading: () => <WorkspaceSkeleton />
@@ -442,7 +443,7 @@ function MyPapersTab({ papers, reviewData, metaReviews, conferenceId }: {
             `"${p.title.replace(/"/g, '""')}"`,
             `"${p.track?.name || ''}"`,
             p.status,
-            new Date(p.submissionTime).toLocaleDateString(),
+            fmtDate(p.submissionTime),
             reviewData[p.id]?.averageTotalScore?.toFixed(1) || 'N/A',
             metaReviews[p.id]?.finalDecision || 'N/A',
         ])
@@ -563,7 +564,7 @@ function MyPapersTab({ papers, reviewData, metaReviews, conferenceId }: {
                                             <TableCell>
                                                 <p className="font-medium line-clamp-1 text-sm">{paper.title}</p>
                                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                                    {new Date(paper.submissionTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    {fmtDate(paper.submissionTime)}
                                                 </p>
                                             </TableCell>
                                             <TableCell className="text-xs text-muted-foreground">{paper.track?.name || '—'}</TableCell>
@@ -604,7 +605,7 @@ function MyPapersTab({ papers, reviewData, metaReviews, conferenceId }: {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => router.push(`/conference/${conferenceId}/paper/${paper.id}`)}>
+                                                        <DropdownMenuItem onClick={() => router.push(`/paper/${paper.id}`)}>
                                                             <ExternalLink className="h-3.5 w-3.5 mr-2" /> View Details
                                                         </DropdownMenuItem>
                                                         {(paper.status === 'ACCEPTED' || paper.status === 'CAMERA_READY') && (

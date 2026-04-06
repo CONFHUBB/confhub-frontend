@@ -167,7 +167,7 @@ export default function PaperDetailPage() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-0">
+        <div className="page-base space-y-0">
             {/* ── 1. Paper Metadata Card ── */}
             <PaperDetailHeader
                 paper={paper}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { getPublishedPapers, type PublishedPaperDTO } from "@/app/api/paper.api"
 import { ArrowRight, BookOpen, Loader2 } from "lucide-react"
+import { fmtDate } from "@/lib/utils"
 
 export function LatestPapers() {
     const [papers, setPapers] = useState<PublishedPaperDTO[]>([])
@@ -133,11 +134,7 @@ export function LatestPapers() {
                                                 </span>
                                             )}
                                             <span className="ml-auto text-gray-400">
-                                                {new Date(paper.submissionTime).toLocaleDateString("en-US", {
-                                                    month: "short",
-                                                    day: "numeric",
-                                                    year: "numeric",
-                                                })}
+                                                {fmtDate(paper.submissionTime)}
                                             </span>
                                         </div>
                                     </div>

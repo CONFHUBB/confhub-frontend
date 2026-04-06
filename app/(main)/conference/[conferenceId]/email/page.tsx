@@ -17,6 +17,7 @@ import {
     Clock, CheckCircle2, XCircle, AlertCircle
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { safeDate } from '@/lib/utils'
 
 interface UserWithRoles {
     user: { id: number; firstName: string; lastName: string; email: string }
@@ -140,7 +141,9 @@ export default function EmailManagementPage() {
 
     const formatDate = (dateStr: string | null) => {
         if (!dateStr) return '—'
-        return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        const d = safeDate(dateStr)
+        if (!d || isNaN(d.getTime())) return '—'
+        return d!.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     }
 
     const isTokenExpired = (expiresAt: string | null) => {
@@ -171,7 +174,7 @@ export default function EmailManagementPage() {
     )
 
     return (
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div className="page-base space-y-6">
             {/* Header */}
             <div className="space-y-2">
                 <Button variant="ghost" className="gap-2 -ml-2" onClick={() => router.push(`/conference/${conferenceId}/update`)}>

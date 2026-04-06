@@ -6,11 +6,13 @@ import { getConferences, approveConference } from '@/app/api/conference.api'
 import { useUserRole } from '@/hooks/useUserRole'
 import type { ConferenceListResponse } from '@/types/conference'
 import { Button } from '@/components/ui/button'
-import { Calendar, MapPin, Loader2, CheckCircle, Search, ChevronLeft, ChevronRight, Filter } from 'lucide-react'
+import { Calendar, MapPin, Loader2, CheckCircle, Search, Filter } from 'lucide-react'
+import { StandardPagination } from '@/components/ui/standard-pagination'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import { CardGridSkeleton, PageHeaderSkeleton } from '@/components/shared/skeletons'
 import { toast } from 'sonner'
+import { fmtDate } from '@/lib/utils'
 import { filterConferences, type FilterValues } from './conference-filter-bar'
 
 // Inner component that uses useSearchParams (must be inside Suspense)
@@ -104,8 +106,7 @@ function ConferencesPageInner() {
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
     const paginatedList = filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
 
-    const formatDate = (dateString: string) =>
-        new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    const formatDate = (dateString: string) => fmtDate(dateString)
 
     const getStatusColor = (status: string) => {
         switch (status.toUpperCase()) {
@@ -121,7 +122,7 @@ function ConferencesPageInner() {
 
     if (loading) {
         return (
-            <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 max-w-[1600px]">
+            <div className="page-wide">
                 <PageHeaderSkeleton />
                 <CardGridSkeleton count={8} />
             </div>
@@ -146,7 +147,7 @@ function ConferencesPageInner() {
         : isStaff ? 'Manage and approve conferences' : 'Browse and discover conferences'
 
     return (
-        <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 max-w-[1600px]">
+        <div className="page-wide">
             {/* Eye-catching Page Header */}
             <div className="relative mb-8 p-8 sm:p-10 bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-sm border border-slate-200/80 dark:border-slate-800">
                 {/* Decorative background blobs */}
@@ -203,6 +204,7 @@ function ConferencesPageInner() {
                                         <label className="text-xs font-medium text-slate-500">Starts after</label>
                                         <Input 
                                             type="date" 
+                                            max="9999-12-31"
                                             className="h-10 text-sm bg-white dark:bg-slate-950 border-slate-200/60 shadow-sm rounded-xl focus-visible:ring-indigo-500"
                                             value={filters.filterStartDate || ''}
                                             onChange={(e) => setFilters({ ...filters, filterStartDate: e.target.value })}
@@ -212,6 +214,7 @@ function ConferencesPageInner() {
                                         <label className="text-xs font-medium text-slate-500">Starts before</label>
                                         <Input 
                                             type="date" 
+                                            max="9999-12-31"
                                             className="h-10 text-sm bg-white dark:bg-slate-950 border-slate-200/60 shadow-sm rounded-xl focus-visible:ring-indigo-500"
                                             value={filters.filterEndDate || ''}
                                             onChange={(e) => setFilters({ ...filters, filterEndDate: e.target.value })}
@@ -394,50 +397,13 @@ function ConferencesPageInner() {
                         ))}
                     </div>
 
-                    {/* Pagination */}
-                    <div className="flex flex-col sm:flex-row items-center justify-between mt-8 pt-6 border-t gap-4">
-                        <p className="text-sm text-muted-foreground font-medium">
-                            Showing <span className="text-foreground">{currentPage * PAGE_SIZE + 1}</span> to <span className="text-foreground">{Math.min((currentPage + 1) * PAGE_SIZE, filtered.length)}</span> of <span className="text-foreground">{filtered.length}</span> conferences
-                        </p>
-                        {totalPages > 1 && (
-                            <div className="flex items-center gap-1">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    disabled={currentPage === 0}
-                                    onClick={() => setCurrentPage(p => p - 1)}
-                                    title="Previous page"
-                                >
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                {Array.from({ length: totalPages }, (_, i) => (
-                                    <Button
-                                        key={i}
-                                        variant={currentPage === i ? 'default' : 'outline'}
-                                        size="sm"
-                                        className="h-8 w-8 p-0 text-xs"
-                                        onClick={() => setCurrentPage(i)}
-                                    >
-                                        {i + 1}
-                                    </Button>
-                                )).slice(
-                                    Math.max(0, currentPage - 2),
-                                    Math.min(totalPages, currentPage + 3)
-                                )}
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    disabled={currentPage >= totalPages - 1}
-                                    onClick={() => setCurrentPage(p => p + 1)}
-                                    title="Next page"
-                                >
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        )}
-                    </div>
+                    <StandardPagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalElements={filtered.length}
+                        entityName="conferences"
+                        onPageChange={setCurrentPage}
+                    />
                 </>
             )}
             </main>

@@ -118,7 +118,7 @@ export default function PublicProfilePage() {
     const hasBio = profile?.biography
 
     return (
-        <div className="container mx-auto py-6 px-4 max-w-4xl">
+        <div className="page-narrow">
             <Breadcrumb items={[
                 { label: 'Home', href: '/' },
                 { label: user.fullName || 'User Profile' },

@@ -19,6 +19,7 @@ import {
 import type { MemberWithRoles, ConferenceUserTrack } from "@/types/user"
 import type { TrackResponse } from "@/types/track"
 import { UserLink } from '@/components/shared/user-link'
+import { fmtDate } from '@/lib/utils'
 
 const ROLE_DISPLAY: Record<string, string> = {
     CONFERENCE_CHAIR: "Conference Chair",
@@ -97,9 +98,7 @@ export function MemberDetailDialog({
                                     <p className="text-xs text-muted-foreground">Joined Conference</p>
                                     <p className="text-sm font-medium">
                                         {member.roles[0]?.createdAt
-                                            ? new Date(member.roles[0].createdAt).toLocaleDateString('en-US', {
-                                                year: 'numeric', month: 'long', day: 'numeric'
-                                            })
+                                            ? fmtDate(member.roles[0].createdAt)
                                             : 'N/A'
                                         }
                                     </p>
@@ -170,9 +169,7 @@ export function MemberDetailDialog({
                                                 )}
                                             </div>
                                             <span className="text-[11px] text-muted-foreground">
-                                                {new Date(role.createdAt).toLocaleDateString('en-US', {
-                                                    month: 'short', day: 'numeric', year: 'numeric'
-                                                })}
+                                                {fmtDate(role.createdAt)}
                                             </span>
                                         </div>
                                     ))

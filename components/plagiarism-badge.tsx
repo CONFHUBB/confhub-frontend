@@ -76,19 +76,38 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
     const handleRecheck = async () => {
         setRechecking(true)
         try {
-            const res = await recheckPlagiarism(paperId)
-            const parsed = parseDetails(res.details)
-            setDetails(parsed)
-            if (res.score != null) setLocalScore(res.score)
-            if (res.status) setLocalStatus(res.status)
+            // Trigger async recheck — returns immediately with CHECKING status
+            await recheckPlagiarism(paperId)
+            setLocalStatus("CHECKING")
 
-            const s = res.score ?? 0
-            const label = s <= 20 ? '✅ Low' : s <= 40 ? '⚠️ Moderate' : '🚨 High'
-            toast.success(
-                `Plagiarism Check Complete!\n${label} Similarity: ${s.toFixed(1)}%` +
-                (parsed ? `\nInternal: ${(parsed.internalScore ?? 0).toFixed(1)}% | Web: ${(parsed.webSearchScore ?? 0).toFixed(1)}% | AI: ${(parsed.externalScore ?? 0).toFixed(1)}%` : ''),
-                { duration: 6000 }
-            )
+            // Poll for completion every 3 seconds, max 60 seconds
+            const maxPolls = 20
+            for (let i = 0; i < maxPolls; i++) {
+                await new Promise(r => setTimeout(r, 3000))
+                const res = await getPlagiarismResult(paperId)
+                if (res.status !== "CHECKING") {
+                    const parsed = parseDetails(res.details)
+                    setDetails(parsed)
+                    if (res.score != null) setLocalScore(res.score)
+                    if (res.status) setLocalStatus(res.status)
+
+                    if (res.status === "COMPLETED") {
+                        const s = res.score ?? 0
+                        const label = s <= 20 ? '✅ Low' : s <= 40 ? '⚠️ Moderate' : '🚨 High'
+                        toast.success(
+                            `Plagiarism Check Complete!\n${label} Similarity: ${s.toFixed(1)}%` +
+                            (parsed ? `\nInternal: ${(parsed.internalScore ?? 0).toFixed(1)}% | Web: ${(parsed.webSearchScore ?? 0).toFixed(1)}%` : ''),
+                            { duration: 6000 }
+                        )
+                    } else {
+                        toast.error("Plagiarism check failed. Please try again.")
+                    }
+                    setRechecking(false)
+                    return
+                }
+            }
+            // Timed out waiting
+            toast.info("Plagiarism check is still running. Results will appear shortly.", { duration: 5000 })
         } catch {
             toast.error("Re-check failed. Please try again.")
         } finally {
@@ -258,7 +277,7 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
                             ) : (
                                 <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50/50 dark:bg-green-950/20 rounded-lg px-3 py-2.5 border border-green-100 dark:border-green-900">
                                     <CheckCircle2 className="h-4 w-4 shrink-0" />
-                                    No similar content found on the web.
+                                    {(details as any).webSearchSummary || "No similar content found on the web."}
                                 </div>
                             )}
                         </div>

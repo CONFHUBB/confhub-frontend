@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react"
 import { getTracksByConference } from "@/app/api/track.api"
 import type { TrackResponse } from "@/types/track"
-import { Loader2, Layers, ChevronLeft, ChevronRight } from "lucide-react"
+import { Loader2, Layers } from "lucide-react"
+import { StandardPagination } from "@/components/ui/standard-pagination"
 import { Button } from "@/components/ui/button"
 import {
     Table,
@@ -106,32 +107,13 @@ export function TrackList({ conferenceId, refreshKey }: TrackListProps) {
                 </div>
             )}
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-                <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
-                    <div className="text-sm text-muted-foreground">
-                        Page {currentPage + 1} of {totalPages} · {totalElements} tracks
-                    </div>
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={currentPage === 0}
-                            onClick={() => setCurrentPage(p => p - 1)}
-                        >
-                            <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={currentPage >= totalPages - 1}
-                            onClick={() => setCurrentPage(p => p + 1)}
-                        >
-                            Next <ChevronRight className="h-4 w-4 ml-1" />
-                        </Button>
-                    </div>
-                </div>
-            )}
+            <StandardPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalElements={totalElements}
+                entityName="tracks"
+                onPageChange={setCurrentPage}
+            />
         </div>
     )
 }

@@ -9,7 +9,7 @@ import { createConference } from "@/app/api/conference.api"
 import { toast } from 'sonner'
 import type { ConferenceData } from "@/types/conference-form"
 import { getToken } from '@/lib/auth'
-import { Sparkles, FileText, Upload } from 'lucide-react'
+import { Sparkles, Upload } from 'lucide-react'
 
 const FRIENDLY_FIELD_LABEL: Record<string, string> = {
     startDate: "Start date",
@@ -81,12 +81,11 @@ const parseConferenceCreateError = (error: any): { message: string; fieldErrors:
     return { message: "Failed to create conference. Please review your input and try again.", fieldErrors }
 }
 
-type TabMode = "wizard" | "form" | "import"
+type TabMode = "wizard" | "import"
 
 const TABS = [
-    { id: 'wizard' as const, label: 'Setup Wizard', icon: Sparkles, description: 'Guided step-by-step' },
-    { id: 'form' as const, label: 'Manual Input', icon: FileText, description: 'All fields at once' },
-    { id: 'import' as const, label: 'Import Excel', icon: Upload, description: 'Bulk import' },
+    { id: 'wizard' as const, label: 'Quick Setup', icon: Sparkles, description: 'Guided step-by-step' },
+    { id: 'import' as const, label: 'Import Excel', icon: Upload, description: 'Bulk import from spreadsheet' },
 ]
 
 export default function CreateConferencePage() {
@@ -145,7 +144,7 @@ export default function CreateConferencePage() {
     }
 
     return (
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+        <div className="page-wide">
             <div className="flex w-full flex-col gap-8 rounded-xl border bg-card p-6 shadow-sm bg-gray-50">
                 <div className="relative mb-2">
                     <div className="absolute -left-4 -top-4 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
@@ -154,7 +153,7 @@ export default function CreateConferencePage() {
                             Create <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">Conference</span>
                         </h2>
                         <p className="mt-2 text-base text-slate-500 dark:text-slate-400 font-medium">
-                            Use the step-by-step wizard for a guided experience, or switch to manual mode.
+                            Follow the guided setup to create your conference in minutes.
                         </p>
                     </div>
                 </div>
@@ -196,14 +195,7 @@ export default function CreateConferencePage() {
                             backendErrors={backendFieldErrors}
                         />
                     )}
-                    {activeTab === "form" && (
-                        <ConferenceForm
-                            initialData={null}
-                            onSubmit={handleConferenceSubmit}
-                            isSubmitting={isSubmitting}
-                            backendErrors={backendFieldErrors}
-                        />
-                    )}
+
                     {activeTab === "import" && (
                         <ConferenceImport />
                     )}

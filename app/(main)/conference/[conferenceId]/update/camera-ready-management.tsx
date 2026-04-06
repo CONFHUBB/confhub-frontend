@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
-    Loader2, Search, FileText, Eye, CheckCircle, ExternalLink, FileCheck, Upload, ChevronLeft, ChevronRight, Download
+    Loader2, Search, FileText, Eye, CheckCircle, ExternalLink, FileCheck, Upload, Download
 } from "lucide-react"
+import { StandardPagination } from "@/components/ui/standard-pagination"
 import { FilterPanel } from "@/components/ui/filter-panel"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { toast } from 'sonner'
@@ -259,7 +260,7 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-muted/30">
-                                <TableHead className="w-12">#</TableHead>
+                                <TableHead className="w-12 text-center">#</TableHead>
                                 <TableHead className="w-14">ID</TableHead>
                                 <TableHead className="min-w-[200px] max-w-[300px]">Title</TableHead>
                                 <TableHead className="w-28">Track</TableHead>
@@ -333,21 +334,13 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
                     </Table>
                     </div>
                 </div>
-                {totalPages > 1 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
-                        <div className="text-sm text-muted-foreground">
-                            Page {currentPage + 1} of {totalPages} · {filtered.length} papers
-                        </div>
-                        <div className="flex gap-2">
-                            <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
-                                <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-                            </Button>
-                            <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
-                                Next <ChevronRight className="h-4 w-4 ml-1" />
-                            </Button>
-                        </div>
-                    </div>
-                )}
+                <StandardPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalElements={filtered.length}
+                    entityName="papers"
+                    onPageChange={setCurrentPage}
+                />
                 </>
             )}
 

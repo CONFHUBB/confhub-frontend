@@ -95,7 +95,7 @@ export default function ProgramPage({ params }: { params: { conferenceId: string
 
   if (!program || !program.published) {
     return (
-      <div className="container mx-auto py-12 px-4 max-w-4xl text-center">
+      <div className="page-narrow text-center">
         <h1 className="text-3xl font-bold mb-4 text-gray-800">Conference Program</h1>
         <div className="p-8 bg-indigo-50 border-[3px] border-dashed border-indigo-200 rounded-2xl">
           <Calendar className="w-16 h-16 mx-auto mb-4 text-indigo-300" />
@@ -111,7 +111,7 @@ export default function ProgramPage({ params }: { params: { conferenceId: string
   const days = schedule.days || []
 
   return (
-    <div className="container mx-auto py-10 px-4 max-w-7xl">
+    <div className="page-wide">
       {/* Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 border-b pb-6 border-gray-200 gap-4">
         <div>

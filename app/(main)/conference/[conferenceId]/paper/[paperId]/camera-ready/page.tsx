@@ -293,7 +293,7 @@ export default function DedicatedCameraReadyPage() {
     }
 
     return (
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div className="page-base space-y-6">
             {/* ── Header ── */}
             <div className="space-y-3">
                 <Button variant="ghost" className="gap-2 -ml-2 text-indigo-700 hover:text-indigo-900" onClick={() => router.back()}>
