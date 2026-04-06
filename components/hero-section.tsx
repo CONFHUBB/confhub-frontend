@@ -1,16 +1,10 @@
 "use client"
 
 import Link from "next/link"
-import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Search, ArrowRight, Sparkles } from "lucide-react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-
-const Grainient = dynamic(
-  () => import("@/components/ui/Grainient/Grainient"),
-  { ssr: false }
-)
 
 export function HeroSection() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -27,33 +21,9 @@ export function HeroSection() {
 
   return (
     <section className="relative flex min-h-[560px] items-center justify-center overflow-hidden">
-      {/* Grainient Background */}
-      <div className="absolute inset-0">
-        <Grainient
-          color1="#4f46e5"
-          color2="#7c3aed"
-          color3="#6366f1"
-          timeSpeed={0.8}
-          colorBalance={0}
-          warpStrength={1.2}
-          warpFrequency={4}
-          warpSpeed={1.5}
-          warpAmplitude={60}
-          blendAngle={0}
-          blendSoftness={0.05}
-          rotationAmount={400}
-          noiseScale={2}
-          grainAmount={0.08}
-          grainScale={2}
-          grainAnimated={false}
-          contrast={1.4}
-          gamma={1}
-          saturation={1.1}
-          centerX={0}
-          centerY={0}
-          zoom={0.85}
-        />
-      </div>
+      {/* Animated Gradient Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-700 animate-gradient-shift" />
+      <div className="absolute inset-0 opacity-30 bg-[radial-gradient(ellipse_at_20%_50%,rgba(120,119,198,0.5),transparent_60%),radial-gradient(ellipse_at_80%_20%,rgba(99,102,241,0.4),transparent_50%),radial-gradient(ellipse_at_40%_80%,rgba(139,92,246,0.3),transparent_50%)]" />
 
       {/* Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/30" />
