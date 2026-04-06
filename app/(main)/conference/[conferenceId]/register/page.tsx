@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { getTicketTypes, registerForConference, TicketTypeResponse } from '@/app/api/registration.api'
+import { getTicketTypes, getTicketTypesForUser, registerForConference, TicketTypeResponse } from '@/app/api/registration.api'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -41,11 +41,31 @@ function RegisterContent() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    getTicketTypes(conferenceId, true)
-      .then(setTicketTypes)
-      .catch(() => setError('Failed to load ticket types.'))
-      .finally(() => setLoading(false))
-  }, [conferenceId])
+    const loadTickets = async () => {
+      try {
+        // Try role-based filtering first (shows only eligible ticket types)
+        if (userId) {
+          const filtered = await getTicketTypesForUser(conferenceId, userId)
+          setTicketTypes(filtered)
+        } else {
+          // Fallback: show all active tickets if no userId
+          const all = await getTicketTypes(conferenceId, true)
+          setTicketTypes(all)
+        }
+      } catch {
+        // Fallback: show all active tickets if filtered endpoint fails
+        try {
+          const all = await getTicketTypes(conferenceId, true)
+          setTicketTypes(all)
+        } catch {
+          setError('Failed to load ticket types.')
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadTickets()
+  }, [conferenceId, userId])
 
   const handleRegister = async () => {
     if (!selected || !userId) return
@@ -124,8 +144,18 @@ function RegisterContent() {
                 `}
               >
                 {tt.category === 'AUTHOR' && !isDisabled && (
-                  <span className="absolute -top-3 left-4 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full">
-                    Recommended for Authors
+                  <span className="absolute -top-3 left-4 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                    ✦ Your Author Ticket
+                  </span>
+                )}
+                {tt.category === 'STAFF' && !isDisabled && (
+                  <span className="absolute -top-3 left-4 bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                    ✦ Staff Exclusive
+                  </span>
+                )}
+                {tt.category === 'STUDENT' && !isDisabled && (
+                  <span className="absolute -top-3 left-4 bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                    Student Discount
                   </span>
                 )}
                 {isSelected && (
