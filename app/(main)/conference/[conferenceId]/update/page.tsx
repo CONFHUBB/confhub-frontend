@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, Suspense } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { getConference, getConferenceActivities } from '@/app/api/conference.api'
 import type { ConferenceResponse, ConferenceActivityDTO } from '@/types/conference'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -14,7 +15,6 @@ import {
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { SubmissionFormManager } from '../submission-form/submission-form-manager'
 import { getTracksByConference, getSubjectAreasByTrack, getTrackReviewSettings } from '@/app/api/track.api'
 import { getConferenceMembers, getUserByEmail } from '@/app/api/user.api'
 import { getConferenceUsersWithRoles } from "@/app/api/conference-user-track.api"
@@ -22,28 +22,32 @@ import { getPapersByConference } from '@/app/api/paper.api'
 import { saveConferenceSubmissionForm, getConferenceSubmissionForm } from '@/app/api/submission-form.api'
 import { getReviewQuestionsByTrack } from '@/app/api/review.api'
 
+// ── Eagerly imported (used in initial render / always needed) ──
+import { ConferenceForm } from '../../create/conference-form'
 import { AddTrack } from './add-track'
-import { SubjectAreaManager } from './subject-area-manager'
-import { AssignRole } from './assign-role'
-import { ConferenceTemplate } from './conference-template'
-import { ReviewSettings } from './review-settings'
-import { ConfigMembers } from './config-members'
 import { TrackList } from './track-list'
-import { ReviewQuestionsList } from './review-questions-list'
-import { ActivityTimeline } from './activity-timeline'
-import { EmailManagementInline } from './email-management'
-import { PaperManagement } from './paper-management'
-import { ReviewManagement } from './review-management'
-import { ReviewSettings as ReviewSettingsComponent } from './review-settings'
-import { ConflictManagement } from './conflict-management'
-import { CameraReadyManagement } from './camera-ready-management'
-import { ChairDashboard } from './chair-dashboard'
-import TicketTypesConfig from './ticket-types'
-import AttendeesManagement from './attendees-management'
-import ProgramBuilder from './program-builder'
-import { CheckInInline } from './checkin-inline'
-import { PaymentHistoryView } from './payment-history-view'
-import { AnalyticsDashboard } from './analytics-dashboard'
+
+// ── Lazy-loaded tab components (only loaded when tab is active) ──
+const TabLoader = () => <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+
+const ChairDashboard = dynamic(() => import('./chair-dashboard').then(m => ({ default: m.ChairDashboard })), { loading: TabLoader })
+const AnalyticsDashboard = dynamic(() => import('./analytics-dashboard').then(m => ({ default: m.AnalyticsDashboard })), { loading: TabLoader })
+const SubjectAreaManager = dynamic(() => import('./subject-area-manager').then(m => ({ default: m.SubjectAreaManager })), { loading: TabLoader })
+const ConfigMembers = dynamic(() => import('./config-members').then(m => ({ default: m.ConfigMembers })), { loading: TabLoader })
+const PaperManagement = dynamic(() => import('./paper-management').then(m => ({ default: m.PaperManagement })), { loading: TabLoader })
+const ReviewSettingsComponent = dynamic(() => import('./review-settings').then(m => ({ default: m.ReviewSettings })), { loading: TabLoader })
+const ConflictManagement = dynamic(() => import('./conflict-management').then(m => ({ default: m.ConflictManagement })), { loading: TabLoader })
+const ReviewManagement = dynamic(() => import('./review-management').then(m => ({ default: m.ReviewManagement })), { loading: TabLoader })
+const CameraReadyManagement = dynamic(() => import('./camera-ready-management').then(m => ({ default: m.CameraReadyManagement })), { loading: TabLoader })
+const ReviewQuestionsList = dynamic(() => import('./review-questions-list').then(m => ({ default: m.ReviewQuestionsList })), { loading: TabLoader })
+const ActivityTimeline = dynamic(() => import('./activity-timeline').then(m => ({ default: m.ActivityTimeline })), { loading: TabLoader })
+const EmailManagementInline = dynamic(() => import('./email-management').then(m => ({ default: m.EmailManagementInline })), { loading: TabLoader })
+const SubmissionFormManager = dynamic(() => import('../submission-form/submission-form-manager').then(m => ({ default: m.SubmissionFormManager })), { loading: TabLoader })
+const TicketTypesConfig = dynamic(() => import('./ticket-types'), { loading: TabLoader })
+const AttendeesManagement = dynamic(() => import('./attendees-management'), { loading: TabLoader })
+const ProgramBuilder = dynamic(() => import('./program-builder'), { loading: TabLoader })
+const CheckInInline = dynamic(() => import('./checkin-inline').then(m => ({ default: m.CheckInInline })), { loading: TabLoader })
+const PaymentHistoryView = dynamic(() => import('./payment-history-view').then(m => ({ default: m.PaymentHistoryView })), { loading: TabLoader })
 
 import { AuthorNotificationWizard } from './author-notification-wizard'
 
@@ -51,7 +55,6 @@ import { createTrack } from '@/app/api/conference.api'
 import { assignRole } from '@/app/api/user.api'
 import { createTemplate } from '@/app/api/template.api'
 import { updateConference } from '@/app/api/conference.api'
-import { ConferenceForm } from '../../create/conference-form'
 import type { ConferenceData } from '@/types/conference-form'
 import { getCurrentUserId, getCurrentUserEmail } from '@/lib/auth'
 import { WorkspaceSkeleton } from '@/components/shared/skeletons'
