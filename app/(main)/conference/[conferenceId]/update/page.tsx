@@ -43,11 +43,11 @@ const ReviewQuestionsList = dynamic(() => import('./review-questions-list').then
 const ActivityTimeline = dynamic(() => import('./activity-timeline').then(m => ({ default: m.ActivityTimeline })), { loading: TabLoader })
 const EmailManagementInline = dynamic(() => import('./email-management').then(m => ({ default: m.EmailManagementInline })), { loading: TabLoader })
 const SubmissionFormManager = dynamic(() => import('../submission-form/submission-form-manager').then(m => ({ default: m.SubmissionFormManager })), { loading: TabLoader })
-const TicketTypesConfig = dynamic(() => import('./ticket-types'), { loading: TabLoader })
-const AttendeesManagement = dynamic(() => import('./attendees-management'), { loading: TabLoader })
+const TicketTypesConfig = dynamic(() => import('./registration/ticket-types'), { loading: TabLoader })
+const AttendeesManagement = dynamic(() => import('./registration/attendees-management'), { loading: TabLoader })
 const ProgramBuilder = dynamic(() => import('./program-builder'), { loading: TabLoader })
-const CheckInInline = dynamic(() => import('./checkin-inline').then(m => ({ default: m.CheckInInline })), { loading: TabLoader })
-const PaymentHistoryView = dynamic(() => import('./payment-history-view').then(m => ({ default: m.PaymentHistoryView })), { loading: TabLoader })
+const CheckInInline = dynamic(() => import('./registration/checkin-inline').then(m => ({ default: m.CheckInInline })), { loading: TabLoader })
+const PaymentHistoryView = dynamic(() => import('./registration/payment-history-view').then(m => ({ default: m.PaymentHistoryView })), { loading: TabLoader })
 
 import { AuthorNotificationWizard } from './author-notification-wizard'
 
