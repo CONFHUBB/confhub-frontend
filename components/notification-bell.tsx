@@ -43,7 +43,7 @@ export function NotificationBell() {
 
     useEffect(() => {
         fetchUnreadCount()
-        const interval = setInterval(fetchUnreadCount, 10000)
+        const interval = setInterval(fetchUnreadCount, 30000)
         const handleFocus = () => fetchUnreadCount()
         window.addEventListener('focus', handleFocus)
         return () => {
@@ -141,8 +141,7 @@ export function NotificationBell() {
                         <div className="flex items-center gap-2">
                             <button
                                     onClick={handleMarkAllRead}
-                                    style={{ color: '#4338ca', backgroundColor: '#e0e7ff' }}
-                                    className="text-xs hover:!bg-indigo-200 px-2.5 py-1 rounded-full font-medium flex items-center gap-1 cursor-pointer transition-colors border border-indigo-200"
+                                    className="text-xs text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-2.5 py-1 rounded-full font-medium flex items-center gap-1 cursor-pointer transition-colors border border-indigo-200"
                                 >
                                     <CheckCheck className="h-3 w-3" /> Mark all read
                                 </button>

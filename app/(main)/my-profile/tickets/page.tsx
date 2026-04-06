@@ -73,7 +73,7 @@ export default function MyGlobalTicketsPage() {
     if (loading) return <div className="p-12 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
 
     return (
-        <div className="p-8 max-w-6xl mx-auto space-y-6">
+        <div className="page-base space-y-6">
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">My Tickets</h1>
                 <p className="text-sm text-muted-foreground mt-1">Your event registrations across all conferences</p>

@@ -106,7 +106,7 @@ function MyTicketContent() {
   const statusCfg = STATUS_CONFIG[ticket.paymentStatus] ?? STATUS_CONFIG.PENDING
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-10">
+    <div className="page-narrow">
       {/* Success banner */}
       {statusParam === 'success' && (
         <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">

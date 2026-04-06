@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { getCurrentUserId } from '@/lib/auth'
+import { fmtDate } from '@/lib/utils'
 
 function formatTime12(t: string): string {
     const [h, m] = t.split(':').map(Number)
@@ -95,7 +96,7 @@ export default function AttendeeWorkspacePage() {
     }
 
     return (
-        <div className="container mx-auto py-8 px-4 max-w-5xl">
+        <div className="page-base">
             {/* Header */}
             <div className="mb-8">
                 <Link href={`/conference/${conferenceId}`} className="text-sm text-muted-foreground hover:text-primary mb-2 inline-flex items-center gap-1">
@@ -181,7 +182,7 @@ export default function AttendeeWorkspacePage() {
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                                                         <span className="text-xs text-gray-500 font-medium">
-                                                            {session._date && new Date(session._date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                                            {session._date && fmtDate(session._date)}
                                                             {' · '}
                                                             {formatTime12(session.startTime)} – {formatTime12(session.endTime)}
                                                         </span>
@@ -257,7 +258,7 @@ export default function AttendeeWorkspacePage() {
                                             <div className="flex justify-between">
                                                 <span className="text-sm text-gray-500">Registered</span>
                                                 <span className="text-sm text-gray-600">
-                                                    {new Date(ticket.createdAt).toLocaleDateString()}
+                                                    {fmtDate(ticket.createdAt)}
                                                 </span>
                                             </div>
                                         </div>

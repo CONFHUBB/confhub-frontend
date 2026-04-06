@@ -21,14 +21,13 @@ import { getPublishedPapers, getPaperFilesByPaperId, type PublishedPaperDTO } fr
 import type { PaperFileResponse } from '@/types/paper'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import { fmtDate } from '@/lib/utils'
 
 // ─── Paper Card ───────────────────────────────────────────────────────
 function PaperCard({ paper, onReadPaper }: { paper: PublishedPaperDTO; onReadPaper: () => void }) {
     const formatDate = (iso?: string) => {
         if (!iso) return '—'
-        try {
-            return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-        } catch { return '—' }
+        return fmtDate(iso)
     }
 
     const authorDisplay = paper.authorNames && paper.authorNames.length > 0
@@ -139,9 +138,7 @@ function PaperDetailDialog({
 
     const formatDate = (iso?: string) => {
         if (!iso) return '—'
-        try {
-            return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-        } catch { return '—' }
+        return fmtDate(iso)
     }
 
     return (
@@ -377,9 +374,9 @@ export default function PublishedPapersClient() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div>
             {/* ── Hero / Search Header ── */}
-            <div className="pt-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+            <div className="page-wide pb-0">
                 <div className="relative mb-2 p-10 sm:p-14 bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-sm border border-slate-200/80 dark:border-slate-800 text-center">
                     {/* Decorative background blobs */}
                     <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-gradient-to-br from-indigo-500/15 to-purple-500/15 dark:from-indigo-500/20 dark:to-purple-500/10 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/4 pointer-events-none"></div>
@@ -425,7 +422,7 @@ export default function PublishedPapersClient() {
             </div>
 
             {/* ── Paper Grid ── */}
-            <div className="max-w-7xl mx-auto px-4 py-10">
+            <div className="page-wide pt-0">
                 {isLoading ? (
                     <div className="grid gap-5 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
                         {Array.from({ length: PAGE_SIZE }).map((_, i) => <PaperCardSkeleton key={i} />)}

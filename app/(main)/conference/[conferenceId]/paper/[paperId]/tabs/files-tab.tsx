@@ -9,6 +9,7 @@ import { getPaperFilesByPaperId, uploadPaperFile } from '@/app/api/paper.api'
 import { toast } from 'sonner'
 import { getFilesByPaper, type CameraReadyFile } from '@/app/api/camera-ready.api'
 import type { PaperFileResponse } from '@/types/paper'
+import { fmtDate } from '@/lib/utils'
 
 interface FilesTabProps {
     paperId: number
@@ -148,7 +149,7 @@ export function FilesTab({ paperId, conferenceId, isAuthor = false }: FilesTabPr
                                             )}
                                             {file.uploadedAt && (
                                                 <span className="text-[10px] text-muted-foreground">
-                                                    {new Date(file.uploadedAt).toLocaleDateString('en-US')}
+                                                    {fmtDate(file.uploadedAt)}
                                                 </span>
                                             )}
                                         </div>

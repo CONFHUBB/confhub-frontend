@@ -321,7 +321,7 @@ export default function ReviewPaperPage() {
 
     if (!review) {
         return (
-            <div className="max-w-4xl mx-auto px-4 py-8 text-center">
+            <div className="page-narrow text-center">
                 <p className="text-muted-foreground">Review not found.</p>
             </div>
         )
@@ -330,7 +330,7 @@ export default function ReviewPaperPage() {
     const isReadOnly = review.status === 'COMPLETED' || review.status === 'DECLINED' || !!activityClosed
 
     return (
-        <div className="max-w-7xl 2xl:max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div className="page-wide space-y-6">
             {/* Header */}
             <div className="space-y-4">
             {/* Breadcrumb */}

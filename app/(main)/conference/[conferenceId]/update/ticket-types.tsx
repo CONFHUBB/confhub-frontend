@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
-import { Loader2, Plus, Pencil, Trash2, Ticket, Download, ToggleRight, ToggleLeft, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Loader2, Plus, Pencil, Trash2, Ticket, Download, ToggleRight, ToggleLeft, Search, Filter } from 'lucide-react'
+import { StandardPagination } from '@/components/ui/standard-pagination'
 import { FilterPanel } from '@/components/ui/filter-panel'
 import { formatDate } from '@/lib/utils'
 
@@ -331,21 +332,13 @@ export default function TicketTypesConfig({ conferenceId }: Props) {
       )}
 
       {/* Pagination */}
-      {!loading && totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20 mt-4 rounded-b-lg">
-          <div className="text-sm text-muted-foreground">
-            Page {currentPage + 1} of {totalPages} · {filtered.length} types
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
-              <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-            </Button>
-            <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
-              Next <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
-        </div>
-      )}
+        <StandardPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalElements={filtered.length}
+          entityName="types"
+          onPageChange={setCurrentPage}
+        />
 
       {/* Edit/Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -400,7 +393,7 @@ export default function TicketTypesConfig({ conferenceId }: Props) {
               </div>
               <div>
                 <Label>Deadline</Label>
-                <Input type="datetime-local" value={form.deadline ? form.deadline.slice(0, 16) : ''} onChange={e => setForm(f => ({ ...f, deadline: e.target.value || null }))} />
+                <Input type="datetime-local" max="9999-12-31T23:59" value={form.deadline ? form.deadline.slice(0, 16) : ''} onChange={e => setForm(f => ({ ...f, deadline: e.target.value || null }))} />
               </div>
             </div>
             <div className="flex items-center gap-2">

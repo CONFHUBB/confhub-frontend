@@ -6,7 +6,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Search, ClipboardList, Download, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, ClipboardList, Download } from 'lucide-react'
+import { StandardPagination } from '@/components/ui/standard-pagination'
 import type { ReviewResponse } from '@/types/review'
 import { FilterPanel } from '@/components/ui/filter-panel'
 import { TableSkeleton } from '@/components/ui/table-skeleton'
@@ -132,7 +133,7 @@ export function ReviewsTab({ reviews, conferenceId, loading = false }: ReviewsTa
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-muted/30">
-                                <TableHead className="w-16 text-center">#</TableHead>
+                                <TableHead className="w-12 text-center">#</TableHead>
                                 <TableHead>Paper Title</TableHead>
                                 <TableHead className="w-32">Status</TableHead>
                                 <TableHead className="w-24 text-center">Score</TableHead>
@@ -186,22 +187,13 @@ export function ReviewsTab({ reviews, conferenceId, loading = false }: ReviewsTa
                 </div>
             )}
 
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-                <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20 mt-4 rounded-b-lg border">
-                    <div className="text-sm text-muted-foreground">
-                        Page {currentPage + 1} of {totalPages} · {filteredReviews.length} reviews total
-                    </div>
-                    <div className="flex gap-2">
-                        <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage((p) => p - 1)}>
-                            <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-                        </Button>
-                        <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage((p) => p + 1)}>
-                            Next <ChevronRight className="h-4 w-4 ml-1" />
-                        </Button>
-                    </div>
-                </div>
-            )}
+            <StandardPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalElements={filteredReviews.length}
+                entityName="reviews"
+                onPageChange={setCurrentPage}
+            />
         </div>
     )
 }
