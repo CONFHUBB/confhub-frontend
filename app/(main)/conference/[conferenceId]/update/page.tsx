@@ -263,11 +263,11 @@ export default function ConferenceUpdatePage() {
 
                 while (!me && hasMore) {
                     const data = await getConferenceUsersWithRoles(conferenceId, page, 100)
-                    const members: any[] = (data as any)?.content || data || []
+                    const members: any[] = (data as { content?: any[] })?.content || (data as any[]) || []
                     
                     me = members.find((m: any) => Number(m.user?.id || m.userId || m.id) === myId)
                     
-                    const totalPages = (data as any)?.totalPages || 1
+                    const totalPages = (data as { totalPages?: number })?.totalPages || 1
                     page++;
                     if (page >= totalPages) hasMore = false;
                 }
@@ -418,7 +418,7 @@ export default function ConferenceUpdatePage() {
                 hasReviewQuestions = Array.isArray(questions) && questions.length > 0
                 hasSubjectAreas = Array.isArray(areas) && areas.length > 0
                 if (reviewSettings) {
-                    const s = reviewSettings as any
+                    const s = reviewSettings as Record<string, any>
                     // Review settings: consider configured if user changed any review-related value from default
                     hasReviewSettings = !!(
                         s.isDoubleBlind ||
@@ -450,7 +450,7 @@ export default function ConferenceUpdatePage() {
 
             const hasSubmissionForm = !!formConfig;
 
-            const hasMembers = (membersData as any).totalElements > 1
+            const hasMembers = (membersData as { totalElements: number }).totalElements > 1
             const hasReviewerAssignments = papers.some((p: any) =>
                 ['UNDER_REVIEW', 'ACCEPTED', 'REJECTED', 'PUBLISHED'].includes(p.status)
             )
@@ -644,16 +644,16 @@ export default function ConferenceUpdatePage() {
                     startDate: conference.startDate ? conference.startDate.split("T")[0] : "",
                     endDate: conference.endDate ? conference.endDate.split("T")[0] : "",
                     websiteUrl: conference.websiteUrl || "",
-                    area: (conference as any).area || "",
-                    societySponsor: (conference as any).societySponsor
-                        ? (conference as any).societySponsor.split(",").map((s: string) => s.trim())
+                    area: conference.area || "",
+                    societySponsor: conference.societySponsor
+                        ? conference.societySponsor.split(",").map((s: string) => s.trim())
                         : [],
 
-                    country: (conference as any).country || "",
-                    province: (conference as any).province || "",
-                    bannerImageUrl: (conference as any).bannerImageUrl || "",
-                    contactInformation: (conference as any).contactInformation || "",
-                    chairEmails: (conference as any).chairEmails || "",
+                    country: conference.country || "",
+                    province: conference.province || "",
+                    bannerImageUrl: conference.bannerImageUrl || "",
+                    contactInformation: conference.contactInformation || "",
+                    chairEmails: conference.chairEmails || "",
                 }
                 return (
                     <div>
@@ -669,7 +669,7 @@ export default function ConferenceUpdatePage() {
                 )
 
             case 'dashboard':
-                return <ChairDashboard conferenceId={conferenceId} onNavigate={(tab) => setActiveTab(tab as any)} role={userRole === 'BOTH' ? undefined : userRole ?? undefined} />
+                return <ChairDashboard conferenceId={conferenceId} onNavigate={(tab) => setActiveTab(tab as SettingsTab)} role={userRole === 'BOTH' ? undefined : userRole ?? undefined} />
 
             case 'analytics':
                 return <AnalyticsDashboard conferenceId={conferenceId} />
@@ -761,7 +761,7 @@ export default function ConferenceUpdatePage() {
                 )
 
             case 'features-activity-timeline':
-                return <>{ViewOnlyBanner}<ActivityTimeline conferenceId={conferenceId} onNavigate={(tab) => setActiveTab(tab as any)} /></>
+                return <>{ViewOnlyBanner}<ActivityTimeline conferenceId={conferenceId} onNavigate={(tab) => setActiveTab(tab as SettingsTab)} /></>
 
             case 'reg-ticket-types':
                 return <>{ViewOnlyBanner}<TicketTypesConfig conferenceId={conferenceId} /></>
