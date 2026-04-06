@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, Suspense } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { getConference, getConferenceActivities } from '@/app/api/conference.api'
 import type { ConferenceResponse, ConferenceActivityDTO } from '@/types/conference'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -14,7 +15,6 @@ import {
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { SubmissionFormManager } from '../submission-form/submission-form-manager'
 import { getTracksByConference, getSubjectAreasByTrack, getTrackReviewSettings } from '@/app/api/track.api'
 import { getConferenceMembers, getUserByEmail } from '@/app/api/user.api'
 import { getConferenceUsersWithRoles } from "@/app/api/conference-user-track.api"
@@ -22,28 +22,32 @@ import { getPapersByConference } from '@/app/api/paper.api'
 import { saveConferenceSubmissionForm, getConferenceSubmissionForm } from '@/app/api/submission-form.api'
 import { getReviewQuestionsByTrack } from '@/app/api/review.api'
 
+// ── Eagerly imported (used in initial render / always needed) ──
+import { ConferenceForm } from '../../create/conference-form'
 import { AddTrack } from './add-track'
-import { SubjectAreaManager } from './subject-area-manager'
-import { AssignRole } from './assign-role'
-import { ConferenceTemplate } from './conference-template'
-import { ReviewSettings } from './review-settings'
-import { ConfigMembers } from './config-members'
 import { TrackList } from './track-list'
-import { ReviewQuestionsList } from './review-questions-list'
-import { ActivityTimeline } from './activity-timeline'
-import { EmailManagementInline } from './email-management'
-import { PaperManagement } from './paper-management'
-import { ReviewManagement } from './review-management'
-import { ReviewSettings as ReviewSettingsComponent } from './review-settings'
-import { ConflictManagement } from './conflict-management'
-import { CameraReadyManagement } from './camera-ready-management'
-import { ChairDashboard } from './chair-dashboard'
-import TicketTypesConfig from './ticket-types'
-import AttendeesManagement from './attendees-management'
-import ProgramBuilder from './program-builder'
-import { CheckInInline } from './checkin-inline'
-import { PaymentHistoryView } from './payment-history-view'
-import { AnalyticsDashboard } from './analytics-dashboard'
+
+// ── Lazy-loaded tab components (only loaded when tab is active) ──
+const TabLoader = () => <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+
+const ChairDashboard = dynamic(() => import('./chair-dashboard').then(m => ({ default: m.ChairDashboard })), { loading: TabLoader })
+const AnalyticsDashboard = dynamic(() => import('./analytics-dashboard').then(m => ({ default: m.AnalyticsDashboard })), { loading: TabLoader })
+const SubjectAreaManager = dynamic(() => import('./subject-area-manager').then(m => ({ default: m.SubjectAreaManager })), { loading: TabLoader })
+const ConfigMembers = dynamic(() => import('./config-members').then(m => ({ default: m.ConfigMembers })), { loading: TabLoader })
+const PaperManagement = dynamic(() => import('./paper-management').then(m => ({ default: m.PaperManagement })), { loading: TabLoader })
+const ReviewSettingsComponent = dynamic(() => import('./review-settings').then(m => ({ default: m.ReviewSettings })), { loading: TabLoader })
+const ConflictManagement = dynamic(() => import('./conflict-management').then(m => ({ default: m.ConflictManagement })), { loading: TabLoader })
+const ReviewManagement = dynamic(() => import('./review-management').then(m => ({ default: m.ReviewManagement })), { loading: TabLoader })
+const CameraReadyManagement = dynamic(() => import('./camera-ready-management').then(m => ({ default: m.CameraReadyManagement })), { loading: TabLoader })
+const ReviewQuestionsList = dynamic(() => import('./review-questions-list').then(m => ({ default: m.ReviewQuestionsList })), { loading: TabLoader })
+const ActivityTimeline = dynamic(() => import('./activity-timeline').then(m => ({ default: m.ActivityTimeline })), { loading: TabLoader })
+const EmailManagementInline = dynamic(() => import('./email-management').then(m => ({ default: m.EmailManagementInline })), { loading: TabLoader })
+const SubmissionFormManager = dynamic(() => import('../submission-form/submission-form-manager').then(m => ({ default: m.SubmissionFormManager })), { loading: TabLoader })
+const TicketTypesConfig = dynamic(() => import('./registration/ticket-types'), { loading: TabLoader })
+const AttendeesManagement = dynamic(() => import('./registration/attendees-management'), { loading: TabLoader })
+const ProgramBuilder = dynamic(() => import('./program-builder'), { loading: TabLoader })
+const CheckInInline = dynamic(() => import('./registration/checkin-inline').then(m => ({ default: m.CheckInInline })), { loading: TabLoader })
+const PaymentHistoryView = dynamic(() => import('./registration/payment-history-view').then(m => ({ default: m.PaymentHistoryView })), { loading: TabLoader })
 
 import { AuthorNotificationWizard } from './author-notification-wizard'
 
@@ -51,7 +55,6 @@ import { createTrack } from '@/app/api/conference.api'
 import { assignRole } from '@/app/api/user.api'
 import { createTemplate } from '@/app/api/template.api'
 import { updateConference } from '@/app/api/conference.api'
-import { ConferenceForm } from '../../create/conference-form'
 import type { ConferenceData } from '@/types/conference-form'
 import { getCurrentUserId, getCurrentUserEmail } from '@/lib/auth'
 import { WorkspaceSkeleton } from '@/components/shared/skeletons'
@@ -263,11 +266,11 @@ export default function ConferenceUpdatePage() {
 
                 while (!me && hasMore) {
                     const data = await getConferenceUsersWithRoles(conferenceId, page, 100)
-                    const members: any[] = (data as any)?.content || data || []
+                    const members: any[] = (data as { content?: any[] })?.content || (data as any[]) || []
                     
                     me = members.find((m: any) => Number(m.user?.id || m.userId || m.id) === myId)
                     
-                    const totalPages = (data as any)?.totalPages || 1
+                    const totalPages = (data as { totalPages?: number })?.totalPages || 1
                     page++;
                     if (page >= totalPages) hasMore = false;
                 }
@@ -418,7 +421,7 @@ export default function ConferenceUpdatePage() {
                 hasReviewQuestions = Array.isArray(questions) && questions.length > 0
                 hasSubjectAreas = Array.isArray(areas) && areas.length > 0
                 if (reviewSettings) {
-                    const s = reviewSettings as any
+                    const s = reviewSettings as Record<string, any>
                     // Review settings: consider configured if user changed any review-related value from default
                     hasReviewSettings = !!(
                         s.isDoubleBlind ||
@@ -450,7 +453,7 @@ export default function ConferenceUpdatePage() {
 
             const hasSubmissionForm = !!formConfig;
 
-            const hasMembers = (membersData as any).totalElements > 1
+            const hasMembers = (membersData as { totalElements: number }).totalElements > 1
             const hasReviewerAssignments = papers.some((p: any) =>
                 ['UNDER_REVIEW', 'ACCEPTED', 'REJECTED', 'PUBLISHED'].includes(p.status)
             )
@@ -644,16 +647,16 @@ export default function ConferenceUpdatePage() {
                     startDate: conference.startDate ? conference.startDate.split("T")[0] : "",
                     endDate: conference.endDate ? conference.endDate.split("T")[0] : "",
                     websiteUrl: conference.websiteUrl || "",
-                    area: (conference as any).area || "",
-                    societySponsor: (conference as any).societySponsor
-                        ? (conference as any).societySponsor.split(",").map((s: string) => s.trim())
+                    area: conference.area || "",
+                    societySponsor: conference.societySponsor
+                        ? conference.societySponsor.split(",").map((s: string) => s.trim())
                         : [],
 
-                    country: (conference as any).country || "",
-                    province: (conference as any).province || "",
-                    bannerImageUrl: (conference as any).bannerImageUrl || "",
-                    contactInformation: (conference as any).contactInformation || "",
-                    chairEmails: (conference as any).chairEmails || "",
+                    country: conference.country || "",
+                    province: conference.province || "",
+                    bannerImageUrl: conference.bannerImageUrl || "",
+                    contactInformation: conference.contactInformation || "",
+                    chairEmails: conference.chairEmails || "",
                 }
                 return (
                     <div>
@@ -669,7 +672,7 @@ export default function ConferenceUpdatePage() {
                 )
 
             case 'dashboard':
-                return <ChairDashboard conferenceId={conferenceId} onNavigate={(tab) => setActiveTab(tab as any)} role={userRole === 'BOTH' ? undefined : userRole ?? undefined} />
+                return <ChairDashboard conferenceId={conferenceId} onNavigate={(tab) => setActiveTab(tab as SettingsTab)} role={userRole === 'BOTH' ? undefined : userRole ?? undefined} />
 
             case 'analytics':
                 return <AnalyticsDashboard conferenceId={conferenceId} />
@@ -761,7 +764,7 @@ export default function ConferenceUpdatePage() {
                 )
 
             case 'features-activity-timeline':
-                return <>{ViewOnlyBanner}<ActivityTimeline conferenceId={conferenceId} onNavigate={(tab) => setActiveTab(tab as any)} /></>
+                return <>{ViewOnlyBanner}<ActivityTimeline conferenceId={conferenceId} onNavigate={(tab) => setActiveTab(tab as SettingsTab)} /></>
 
             case 'reg-ticket-types':
                 return <>{ViewOnlyBanner}<TicketTypesConfig conferenceId={conferenceId} /></>

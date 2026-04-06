@@ -84,6 +84,11 @@ export const getTicketTypes = async (conferenceId: number, activeOnly = true): P
   return res.data
 }
 
+export const getTicketTypesForUser = async (conferenceId: number, userId: number): Promise<TicketTypeResponse[]> => {
+  const res = await http.get<TicketTypeResponse[]>(`/conferences/${conferenceId}/ticket-types/for-user?userId=${userId}`)
+  return res.data
+}
+
 export const createTicketType = async (conferenceId: number, body: TicketTypeRequest): Promise<TicketTypeResponse> => {
   const res = await http.post<TicketTypeResponse>(`/conferences/${conferenceId}/ticket-types`, body)
   return res.data
