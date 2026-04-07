@@ -8,6 +8,11 @@ import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field'
 import { CountrySelect } from '@/components/ui/country-select'
 import { Select } from 'antd'
+import Box from '@mui/material/Box'
+import MUIStepper from '@mui/material/Stepper'
+import Step from '@mui/material/Step'
+import StepLabel from '@mui/material/StepLabel'
+import StepButton from '@mui/material/StepButton'
 import { AREA_OPTIONS, SOCIETY_SPONSOR_OPTIONS } from '@/lib/constants/conference-options'
 import { toast } from 'sonner'
 import {
@@ -62,6 +67,26 @@ interface SetupWizardProps {
 
 const SHORT_MAX = 255
 const LONG_MAX = 1000
+
+function CustomStepIcon(props: any) {
+    const { active, completed, icon } = props;
+    const stepDef = STEPS[Number(icon) - 1];
+    const IconComponent = stepDef ? stepDef.icon : Check;
+
+    return (
+        <div
+            className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
+                active
+                    ? 'border-indigo-500 bg-indigo-500 text-white shadow-lg shadow-indigo-200 scale-110'
+                    : completed
+                        ? 'border-indigo-500 bg-indigo-500 text-white'
+                        : 'border-gray-300 bg-white text-gray-400'
+            }`}
+        >
+            {completed ? <Check className="h-5 w-5" /> : <IconComponent className="h-5 w-5" />}
+        </div>
+    );
+}
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -259,70 +284,37 @@ export function SetupWizard({ onSubmit, isSubmitting, backendErrors }: SetupWiza
     return (
         <div className="space-y-8">
             {/* ── Progress Stepper ── */}
-            <div className="relative">
-                {/* Progress bar background */}
-                <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 rounded-full" />
-                <div
-                    className="absolute top-5 left-0 h-0.5 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${((currentStep) / (STEPS.length - 1)) * 100}%` }}
-                />
-
-                <div className="relative flex justify-between">
+            <Box sx={{ width: '100%' }}>
+                <MUIStepper activeStep={currentStep} alternativeLabel nonLinear>
                     {STEPS.map((step, idx) => {
-                        const StepIcon = step.icon
-                        const isActive = idx === currentStep
-                        const isCompleted = idx < currentStep
                         const isClickable = visited.has(idx) || idx <= currentStep
 
                         return (
-                            <button
-                                key={step.id}
-                                type="button"
-                                onClick={() => isClickable && goToStep(idx)}
-                                disabled={!isClickable}
-                                className={cn(
-                                    'flex flex-col items-center gap-2 group transition-all duration-300',
-                                    isClickable ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
-                                )}
-                                aria-label={`Step ${idx + 1}: ${step.title}`}
-                                aria-current={isActive ? 'step' : undefined}
-                            >
-                                {/* Step circle */}
-                                <div className={cn(
-                                    'relative flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300',
-                                    isActive
-                                        ? 'border-indigo-500 bg-indigo-500 text-white shadow-lg shadow-indigo-200 scale-110'
-                                        : isCompleted
-                                            ? 'border-indigo-500 bg-indigo-500 text-white'
-                                            : 'border-gray-300 bg-white text-gray-400'
-                                )}>
-                                    {isCompleted ? (
-                                        <Check className="h-5 w-5" />
-                                    ) : (
-                                        <StepIcon className="h-5 w-5" />
-                                    )}
-                                    {isActive && (
-                                        <div className="absolute inset-0 rounded-full animate-ping bg-indigo-400/30" />
-                                    )}
-                                </div>
-
-                                {/* Step label */}
-                                <div className="text-center">
-                                    <p className={cn(
-                                        'text-xs font-semibold transition-colors',
-                                        isActive ? 'text-indigo-600' : isCompleted ? 'text-indigo-500' : 'text-gray-400'
-                                    )}>
-                                        {step.title}
-                                    </p>
-                                    <p className="text-[10px] text-muted-foreground mt-0.5 hidden sm:block">
-                                        {step.description}
-                                    </p>
-                                </div>
-                            </button>
+                            <Step key={step.id} completed={idx < currentStep}>
+                                <StepButton
+                                    color="inherit"
+                                    onClick={() => isClickable && goToStep(idx)}
+                                    disabled={!isClickable}
+                                >
+                                    <StepLabel StepIconComponent={CustomStepIcon}>
+                                        <div className="text-center">
+                                            <p className={cn(
+                                                'text-xs font-semibold transition-colors',
+                                                idx === currentStep ? 'text-indigo-600' : idx < currentStep ? 'text-indigo-500' : 'text-gray-400'
+                                            )}>
+                                                {step.title}
+                                            </p>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5 hidden sm:block">
+                                                {step.description}
+                                            </p>
+                                        </div>
+                                    </StepLabel>
+                                </StepButton>
+                            </Step>
                         )
                     })}
-                </div>
-            </div>
+                </MUIStepper>
+            </Box>
 
             {/* ── Step Hint ── */}
             <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-100 rounded-lg px-4 py-3">
@@ -704,7 +696,7 @@ export function SetupWizard({ onSubmit, isSubmitting, backendErrors }: SetupWiza
                         type="button"
                         onClick={handleSubmit}
                         disabled={isSubmitting}
-                        className="gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg"
+                        className="gap-2 bg-primary hover:bg-primary/90 text-white shadow-lg"
                         size="lg"
                     >
                         {isSubmitting ? 'Creating...' : 'Create Conference'}

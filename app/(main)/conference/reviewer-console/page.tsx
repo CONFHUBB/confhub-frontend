@@ -141,8 +141,8 @@ export default function ReviewerConsolePage() {
             {/* ── Eye-catching Header ──────────────────────────────────── */}
             <div className="relative mb-4 p-8 sm:p-10 bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-sm border border-slate-200/80 dark:border-slate-800">
                 {/* Decorative background blobs */}
-                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-br from-amber-500/10 to-orange-500/10 dark:from-amber-500/20 dark:to-orange-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
-                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-gradient-to-tr from-yellow-500/10 to-amber-500/10 dark:from-yellow-500/20 dark:to-amber-500/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3 pointer-events-none"></div>
+                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-primary/10 dark:bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-secondary/10 dark:bg-secondary/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3 pointer-events-none"></div>
 
                 <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
@@ -151,7 +151,7 @@ export default function ReviewerConsolePage() {
                                 <ClipboardList className="h-8 w-8 text-amber-600 dark:text-amber-400" />
                             </div>
                             <div>
-                                My <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-orange-600 dark:from-amber-400 dark:to-orange-400">Reviews</span>
+                                My <span className="text-primary">Reviews</span>
                             </div>
                         </h1>
                         <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300 font-medium">

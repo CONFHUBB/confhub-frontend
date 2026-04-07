@@ -194,7 +194,7 @@ export default function UserSubmissionsPage() {
                                 <FileText className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
                             </div>
                             <div>
-                                My <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">Papers</span>
+                                My <span className="text-primary">Papers</span>
                             </div>
                         </h1>
                         <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300 font-medium">

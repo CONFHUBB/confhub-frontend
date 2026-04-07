@@ -118,7 +118,7 @@ function MyTicketContent() {
       {/* Ticket Card */}
       <div className="bg-white rounded-2xl shadow-md border overflow-hidden">
         {/* Top stripe */}
-        <div className="h-3 bg-gradient-to-r from-primary to-primary/60" />
+        <div className="h-3 bg-primary" />
 
         <div className="p-6">
           <div className="flex items-start justify-between mb-4">

@@ -181,7 +181,7 @@ export default function AuthorDashboardPage() {
 
                 {/* Header Area — Vibrant hero banner */}
                 <div className="mb-6 shrink-0">
-                    <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-700 p-6 md:px-8 md:py-7 shadow-lg">
+                    <div className="relative rounded-2xl overflow-hidden bg-primary p-6 md:px-8 md:py-7 shadow-lg">
                         {/* Decorative circles */}
                         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
                         <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/5 blur-xl" />
@@ -742,7 +742,7 @@ function MyTicketTab({ tickets, papers, conferenceId }: { tickets: TicketRespons
             <div className="flex flex-col xl:flex-row gap-6">
                 {/* Ticket Fields Table */}
                 <div className="flex-1 rounded-lg border overflow-hidden bg-background max-w-xl shadow-sm">
-                    <div className={`h-1.5 ${isPaid ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-amber-400 to-amber-300'}`} />
+                    <div className={`h-1.5 ${isPaid ? 'bg-emerald-500' : 'bg-amber-400'}`} />
                     <Table>
                         <TableBody>
                             {ticketFields.map(f => (
@@ -838,7 +838,7 @@ function ProfileTab({ userInfo }: { userInfo: { id: number; firstName: string; l
             </div>
 
             <div className="bg-white dark:bg-gray-900 rounded-2xl border overflow-hidden">
-                <div className="h-20 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+                <div className="h-20 bg-primary" />
                 <div className="px-6 pb-6 -mt-8">
                     <div className="w-16 h-16 rounded-full bg-white dark:bg-gray-800 border-4 border-white dark:border-gray-800 shadow-lg flex items-center justify-center mb-3">
                         <span className="text-xl font-bold text-indigo-600">

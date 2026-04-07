@@ -11,6 +11,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select as AntdSelect } from 'antd'
+import Box from '@mui/material/Box'
+import MUIStepper from '@mui/material/Stepper'
+import Step from '@mui/material/Step'
+import StepLabel from '@mui/material/StepLabel'
 import { Loader2, ArrowLeft, Check, FileText, Users, Upload, Search, Trash2, Send, FileUp, Eye } from 'lucide-react'
 import { SuccessCelebration } from '@/components/shared/success-celebration'
 import { UploadProgress } from '@/components/shared/upload-progress'
@@ -31,51 +35,47 @@ import { getPlagiarismResult, resetPlagiarism, type PlagiarismResult } from '@/a
 import { PlagiarismBadge } from '@/components/plagiarism-badge'
 import { getCurrentUserEmail } from '@/lib/auth'
 
+function CustomStepIcon(props: any) {
+    const { active, completed, icon } = props;
+
+    const icons: { [index: string]: React.ReactElement } = {
+        1: <FileText className="w-5 h-5" />,
+        2: <Users className="w-5 h-5" />,
+        3: <Upload className="w-5 h-5" />,
+    };
+
+    return (
+        <div
+            className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
+                completed
+                    ? 'bg-primary border-primary text-primary-foreground'
+                    : active
+                    ? 'bg-primary/10 border-primary text-primary'
+                    : 'bg-muted border-muted-foreground/30 text-muted-foreground'
+            }`}
+        >
+            {completed ? <Check className="w-5 h-5" /> : icons[String(icon)]}
+        </div>
+    );
+}
+
 function Stepper({ currentStep }: { currentStep: number }) {
     const steps = [
-        { label: 'Register Paper', icon: FileText },
-        { label: 'Add Authors', icon: Users },
-        { label: 'Upload Manuscript', icon: Upload },
+        'Register Paper',
+        'Add Authors',
+        'Upload Manuscript',
     ]
 
     return (
-        <div className="flex items-center justify-between mb-8">
-            {steps.map((step, index) => {
-                const stepNumber = index + 1
-                const isActive = stepNumber === currentStep
-                const isCompleted = stepNumber < currentStep
-                const Icon = step.icon
-
-                return (
-                    <div key={step.label} className="flex items-center flex-1 last:flex-initial">
-                        <div className="flex flex-col items-center gap-2">
-                            <div
-                                className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300
-                                    ${isCompleted
-                                        ? 'bg-primary border-primary text-primary-foreground'
-                                        : isActive
-                                            ? 'bg-primary/10 border-primary text-primary'
-                                            : 'bg-muted border-muted-foreground/30 text-muted-foreground'
-                                    }`}
-                            >
-                                {isCompleted ? (
-                                    <Check className="h-5 w-5" />
-                                ) : (
-                                    <Icon className="h-5 w-5" />
-                                )}
-                            </div>
-                            <span className={`text-xs font-medium whitespace-nowrap ${isActive ? 'text-primary' : isCompleted ? 'text-primary' : 'text-muted-foreground'}`}>
-                                {step.label}
-                            </span>
-                        </div>
-
-                        {index < steps.length - 1 && (
-                            <div className={`flex-1 h-0.5 mx-3 mt-[-1.5rem] transition-colors duration-300 ${isCompleted ? 'bg-primary' : 'bg-muted-foreground/20'}`} />
-                        )}
-                    </div>
-                )
-            })}
-        </div>
+        <Box sx={{ width: '100%', mb: 4 }}>
+            <MUIStepper activeStep={currentStep - 1} alternativeLabel>
+                {steps.map((label) => (
+                    <Step key={label}>
+                        <StepLabel StepIconComponent={CustomStepIcon}>{label}</StepLabel>
+                    </Step>
+                ))}
+            </MUIStepper>
+        </Box>
     )
 }
 

@@ -828,7 +828,7 @@ export default function ConferenceUpdatePage() {
                             {backLabel}
                         </Button>
                     </Link>
-                    <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-700 p-6 md:px-8 md:py-7 shadow-lg">
+                    <div className="relative rounded-2xl overflow-hidden bg-primary p-6 md:px-8 md:py-7 shadow-lg">
                         {/* Decorative circles */}
                         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
                         <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/5 blur-xl" />

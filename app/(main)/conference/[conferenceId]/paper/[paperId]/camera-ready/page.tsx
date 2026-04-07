@@ -309,7 +309,7 @@ export default function DedicatedCameraReadyPage() {
             </div>
 
             {/* Target Paper Banner */}
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl p-5 shadow-sm">
+            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-5 shadow-sm">
                 <h3 className="text-xs font-bold uppercase text-emerald-600 mb-1 tracking-wider">Target Paper</h3>
                 <p className="text-lg font-semibold text-emerald-950 line-clamp-2">{paper.title}</p>
                 <p className="text-sm text-emerald-700 mt-1 flex items-center gap-1.5"><Layers className="w-4 h-4"/> Track: {paper.track?.name}</p>
@@ -448,7 +448,7 @@ export default function DedicatedCameraReadyPage() {
                         {/* ── Camera-Ready Card ── */}
                         <div className="space-y-4">
                             <Card className="border-emerald-200 overflow-hidden shadow-sm">
-                                <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-5 py-3 flex items-center gap-2 text-white">
+                                <div className="bg-emerald-600 px-5 py-3 flex items-center gap-2 text-white">
                                     <Upload className="h-4 w-4" />
                                     <h3 className="font-semibold text-sm">Camera-Ready Manuscript</h3>
                                 </div>
@@ -515,7 +515,7 @@ export default function DedicatedCameraReadyPage() {
                         {/* ── Copyright Submission Card ── */}
                         <div className="space-y-4">
                             <Card className="border-indigo-200 overflow-hidden shadow-sm">
-                                <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-5 py-3 flex items-center gap-2 text-white">
+                                <div className="bg-primary px-5 py-3 flex items-center gap-2 text-white">
                                     <Scale className="h-4 w-4" />
                                     <h3 className="font-semibold text-sm">Copyright Submission</h3>
                                 </div>

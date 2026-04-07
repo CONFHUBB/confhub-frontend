@@ -4,6 +4,10 @@ import { useEffect, useState, useCallback } from 'react'
 import { getConferenceActivities } from '@/app/api/conference.api'
 import type { ConferenceActivityDTO } from '@/types/conference'
 import { CheckCircle2, Circle, ChevronDown, ChevronUp, Loader2, FileText, Search, Bell, Camera, Send, Users, MessageSquare, Ticket, CalendarDays } from 'lucide-react'
+import Box from '@mui/material/Box'
+import MUIStepper from '@mui/material/Stepper'
+import Step from '@mui/material/Step'
+import StepLabel from '@mui/material/StepLabel'
 import { fmtDate } from '@/lib/utils'
 
 interface PhaseStep {
@@ -17,6 +21,42 @@ interface PhaseStep {
 
 interface ConferencePhaseTrackerProps {
     conferenceId: number
+}
+
+const ICONS_MAP: Record<string, React.ReactElement> = {
+    'submission': <Send className="h-4 w-4" />,
+    'bidding': <Users className="h-4 w-4" />,
+    'review': <Search className="h-4 w-4" />,
+    'discussion': <MessageSquare className="h-4 w-4" />,
+    'notification': <Bell className="h-4 w-4" />,
+    'camera-ready': <Camera className="h-4 w-4" />,
+    'registration': <Ticket className="h-4 w-4" />,
+    'event': <CalendarDays className="h-4 w-4" />,
+}
+
+function CustomPhaseIcon(props: any) {
+    const { active, completed, className, icon } = props;
+    // icon is passed as string from steps mapping
+    const iconObj = ICONS_MAP[String(icon)];
+
+    return (
+        <div className={`
+            flex items-center justify-center h-10 w-10 rounded-full border-2 transition-all duration-300
+            ${completed
+                ? 'bg-emerald-500 border-emerald-500 text-white'
+                : active
+                    ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-200'
+                    : 'bg-white border-muted-foreground/25 text-muted-foreground/40'
+            } ${className || ''}
+        `}>
+            {completed
+                ? <CheckCircle2 className="h-5 w-5" />
+                : active
+                    ? <div className="relative">{iconObj}<span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-white animate-pulse" /></div>
+                    : <Circle className="h-5 w-5" />
+            }
+        </div>
+    );
 }
 
 export function ConferencePhaseTracker({ conferenceId }: ConferencePhaseTrackerProps) {
@@ -80,16 +120,7 @@ export function ConferencePhaseTracker({ conferenceId }: ConferencePhaseTrackerP
     let currentIdx = steps.findIndex(s => s.isActive)
     if (currentIdx === -1) currentIdx = steps.findIndex(s => !s.done)
 
-    const ICONS = [
-        <Send key="sub" className="h-4 w-4" />,
-        <Users key="bid" className="h-4 w-4" />,
-        <Search key="rev" className="h-4 w-4" />,
-        <MessageSquare key="dis" className="h-4 w-4" />,
-        <Bell key="not" className="h-4 w-4" />,
-        <Camera key="cam" className="h-4 w-4" />,
-        <Ticket key="reg" className="h-4 w-4" />,
-        <CalendarDays key="evt" className="h-4 w-4" />,
-    ]
+    // ICONS_MAP used above.
 
     if (loading) {
         return (
@@ -155,70 +186,48 @@ export function ConferencePhaseTracker({ conferenceId }: ConferencePhaseTrackerP
             {!collapsed && (
                 <div className="border-t px-4 pb-5 pt-4">
                     {/* Horizontal stepper for larger screens */}
-                    <div className="hidden sm:flex items-start justify-between relative">
-                        {/* Connecting line */}
-                        <div className="absolute top-5 left-[40px] right-[40px] h-0.5 bg-border" />
-                        <div
-                            className="absolute top-5 left-[40px] h-0.5 bg-indigo-500 transition-all duration-700"
-                            style={{
-                                width: currentIdx >= 0
-                                    ? `${(Math.min(currentIdx + (steps[currentIdx]?.isActive ? 0.5 : 0), totalSteps - 1) / (totalSteps - 1)) * (100 - (80 / (typeof window !== 'undefined' ? window.innerWidth : 800) * 100))}%`
-                                    : '0%'
-                            }}
-                        />
+                    <Box sx={{ width: '100%', display: { xs: 'none', sm: 'block' }, pt: 2, pb: 2 }}>
+                        <MUIStepper activeStep={currentIdx} alternativeLabel>
+                            {steps.map((step, idx) => {
+                                const isPast = step.done
+                                const isActive = step.isActive
 
-                        {steps.map((step, idx) => {
-                            const isCurrent = idx === currentIdx
-                            const isPast = step.done
-                            const isFuture = !step.done && !step.isActive
+                                return (
+                                    <Step key={step.key} completed={isPast}>
+                                        <StepLabel 
+                                            StepIconComponent={CustomPhaseIcon}
+                                            StepIconProps={{ icon: step.key } as any}
+                                        >
+                                            <div className="flex flex-col items-center">
+                                                <p className={`text-xs font-semibold leading-tight ${isPast ? 'text-emerald-700' : isActive ? 'text-indigo-700' : 'text-muted-foreground/50'}`}>
+                                                    {step.label}
+                                                </p>
+                                                
+                                                {/* Status badge */}
+                                                {isActive && (
+                                                    <span className="mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 animate-pulse">
+                                                        In Progress
+                                                    </span>
+                                                )}
+                                                {isPast && (
+                                                    <span className="mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                                                        Completed
+                                                    </span>
+                                                )}
 
-                            return (
-                                <div key={step.key} className="flex flex-col items-center text-center relative z-10" style={{ width: `${100 / totalSteps}%` }}>
-                                    {/* Step circle */}
-                                    <div className={`
-                                        flex items-center justify-center h-10 w-10 rounded-full border-2 transition-all duration-300
-                                        ${isPast
-                                            ? 'bg-emerald-500 border-emerald-500 text-white'
-                                            : step.isActive
-                                                ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-200'
-                                                : 'bg-white border-muted-foreground/25 text-muted-foreground/40'
-                                        }
-                                    `}>
-                                        {isPast
-                                            ? <CheckCircle2 className="h-5 w-5" />
-                                            : step.isActive
-                                                ? <div className="relative">{ICONS[idx]}<span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-white animate-pulse" /></div>
-                                                : <Circle className="h-5 w-5" />
-                                        }
-                                    </div>
-
-                                    {/* Label */}
-                                    <p className={`text-xs font-semibold mt-2 leading-tight ${isPast ? 'text-emerald-700' : step.isActive ? 'text-indigo-700' : 'text-muted-foreground/50'}`}>
-                                        {step.label}
-                                    </p>
-
-                                    {/* Status badge */}
-                                    {step.isActive && (
-                                        <span className="mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 animate-pulse">
-                                            In Progress
-                                        </span>
-                                    )}
-                                    {isPast && (
-                                        <span className="mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                                            Completed
-                                        </span>
-                                    )}
-
-                                    {/* Deadline */}
-                                    {step.deadline && (
-                                        <p className={`text-[10px] mt-1 ${isPast ? 'text-emerald-600/60' : step.isActive ? 'text-indigo-600' : 'text-muted-foreground/40'}`}>
-                                            {fmtDate(step.deadline)}
-                                        </p>
-                                    )}
-                                </div>
-                            )
-                        })}
-                    </div>
+                                                {/* Deadline */}
+                                                {step.deadline && (
+                                                    <p className={`text-[10px] mt-1 ${isPast ? 'text-emerald-600/60' : isActive ? 'text-indigo-600' : 'text-muted-foreground/40'}`}>
+                                                        {fmtDate(step.deadline)}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </StepLabel>
+                                    </Step>
+                                )
+                            })}
+                        </MUIStepper>
+                    </Box>
 
                     {/* Vertical layout for mobile */}
                     <div className="sm:hidden space-y-1">

@@ -150,7 +150,7 @@ export default function CreateConferencePage() {
                     <div className="absolute -left-4 -top-4 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
                     <div className="relative z-10">
                         <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                            Create <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">Conference</span>
+                            Create <span className="text-primary">Conference</span>
                         </h2>
                         <p className="mt-2 text-base text-slate-500 dark:text-slate-400 font-medium">
                             Follow the guided setup to create your conference in minutes.
