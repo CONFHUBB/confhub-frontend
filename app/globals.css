@@ -8,6 +8,9 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* ── Landing page font mappings (Geist only, no new fonts) ── */
+  --font-heading: var(--font-geist-sans);
+  --font-body: var(--font-geist-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -44,6 +47,17 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+  /* ── Landing page extended color tokens ── */
+  --color-primary-light: var(--primary-light);
+  --color-primary-dark: var(--primary-dark);
+  --color-secondary-dark: var(--secondary-dark);
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-light: var(--tertiary-light);
+  --color-neutral: var(--neutral);
+  --color-neutral-dark: var(--neutral-dark);
+  --color-text-dark: var(--text-dark);
+  --color-text-medium: var(--text-medium);
+  --color-text-light: var(--text-light);
 }
 
 :root {
@@ -79,6 +93,17 @@
   --sidebar-accent-foreground: #1E293B;
   --sidebar-border: #8EACBB;
   --sidebar-ring: #4A6FA5;
+  /* ── Landing page extended tokens ── */
+  --primary-light: #6B8FC5;
+  --primary-dark: #3A5A8A;
+  --secondary-dark: #4A6470;
+  --tertiary: #8EACBB;
+  --tertiary-light: #B5CAD4;
+  --neutral: #F4F7F9;
+  --neutral-dark: #E8EDF2;
+  --text-dark: #1A2B3C;
+  --text-medium: #4A5568;
+  --text-light: #718096;
 }
 
 .dark {
@@ -135,6 +160,21 @@
     scrollbar-color: var(--border) transparent;
   }
 
+  @keyframes dropdown-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .custom-dropdown-anim {
+    animation: dropdown-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
   }
@@ -187,6 +227,70 @@
       padding-left: 2rem;
       padding-right: 2rem;
     }
+  }
+}
+
+/* ── Landing Page: Keyframe Animations ──────────────────────────────────── */
+@keyframes scroll-left {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+/* ── Landing Page: Utility Classes ──────────────────────────────────────── */
+@layer utilities {
+  /* Logo carousel */
+  .logo-scroll {
+    animation: scroll-left 30s linear infinite;
+  }
+  .logo-scroll:hover {
+    animation-play-state: paused;
+  }
+
+  /* Hero mockup float */
+  .float-anim {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  /* Scroll-triggered fade-in */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Stagger delays for children */
+  .stagger-children .fade-in:nth-child(1) { transition-delay: 0ms; }
+  .stagger-children .fade-in:nth-child(2) { transition-delay: 120ms; }
+  .stagger-children .fade-in:nth-child(3) { transition-delay: 240ms; }
+
+  /* Card hover lift */
+  .card-lift {
+    transition:
+      transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .card-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -12px rgba(74, 111, 165, 0.15);
+  }
+
+  /* Button press micro-interaction */
+  .btn-press {
+    transition: all 0.2s ease;
+  }
+  .btn-press:active {
+    transform: scale(0.97);
   }
 }
 

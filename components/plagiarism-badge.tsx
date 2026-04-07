@@ -215,7 +215,7 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
                         {/* ═══ Internal Matches ═══ */}
                         <div>
                             <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                                <FileText className="h-4 w-4 text-indigo-500" />
+                                <FileText className="h-4 w-4 text-primary" />
                                 Internal Database Check
                             </h4>
                             {details.internalMatches && details.internalMatches.length > 0 ? (

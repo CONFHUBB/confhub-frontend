@@ -22,8 +22,8 @@ export function StatCard({
     change,
     changePositive,
     icon: Icon,
-    iconBg = "bg-violet-50",
-    iconColor = "text-violet-600",
+    iconBg = "bg-primary/10",
+    iconColor = "text-primary",
     isLoading = false,
     suffix,
 }: StatCardProps) {

@@ -163,7 +163,7 @@ function ConferencesPageInner() {
                             <>All <span className="text-primary">Conferences</span></>
                         )}
                     </h1>
-                    
+
                     <div className="flex items-center flex-wrap gap-4 mt-2">
                         <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 font-medium">
                             {pageSubtitle}
@@ -203,8 +203,8 @@ function ConferencesPageInner() {
                                 <div className="space-y-3">
                                     <div className="flex flex-col gap-1.5">
                                         <label className="text-xs font-medium text-slate-500">Starts after</label>
-                                        <Input 
-                                            type="date" 
+                                        <Input
+                                            type="date"
                                             max="9999-12-31"
                                             className="h-10 text-sm bg-white dark:bg-slate-950 border-slate-200/60 shadow-sm rounded-xl focus-visible:ring-indigo-500"
                                             value={filters.filterStartDate || ''}
@@ -213,8 +213,8 @@ function ConferencesPageInner() {
                                     </div>
                                     <div className="flex flex-col gap-1.5">
                                         <label className="text-xs font-medium text-slate-500">Starts before</label>
-                                        <Input 
-                                            type="date" 
+                                        <Input
+                                            type="date"
                                             max="9999-12-31"
                                             className="h-10 text-sm bg-white dark:bg-slate-950 border-slate-200/60 shadow-sm rounded-xl focus-visible:ring-indigo-500"
                                             value={filters.filterEndDate || ''}
@@ -269,7 +269,7 @@ function ConferencesPageInner() {
                                     {(['all', 'ONGOING', 'SCHEDULED', 'PENDING', 'BIDDING', 'COMPLETED', 'CANCELLED'] as const).map(s => {
                                         const label = s === 'all' ? 'All statuses'
                                             : s === 'ONGOING' ? 'Open for Submissions'
-                                            : s.charAt(0) + s.slice(1).toLowerCase()
+                                                : s.charAt(0) + s.slice(1).toLowerCase()
                                         return (
                                             <button
                                                 key={s}
@@ -282,7 +282,7 @@ function ConferencesPageInner() {
                                     })}
                                 </div>
                             </div>
-                            
+
                             {isStaff && (
                                 <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
                                     <div className="inline-flex items-center gap-1.5 text-xs py-1 px-2.5 border border-indigo-200 text-indigo-700 bg-indigo-50 rounded-full font-medium mt-2">
@@ -297,117 +297,117 @@ function ConferencesPageInner() {
                 {/* Main Content */}
                 <main className="flex-1 min-w-0">
 
-            {filtered.length === 0 ? (
-                <div className="text-center py-12">
-                    <p className="text-muted-foreground text-lg">
-                        {conferences.length === 0 ? 'No conferences found' : 'No conferences match your filters'}
-                    </p>
-                    {conferences.length === 0 ? (
-                        <Link href="/conference/create">
-                            <Button className="mt-4">Create Your First Conference</Button>
-                        </Link>
+                    {filtered.length === 0 ? (
+                        <div className="text-center py-12">
+                            <p className="text-muted-foreground text-lg">
+                                {conferences.length === 0 ? 'No conferences found' : 'No conferences match your filters'}
+                            </p>
+                            {conferences.length === 0 ? (
+                                <Link href="/conference/create">
+                                    <Button className="mt-4">Create Your First Conference</Button>
+                                </Link>
+                            ) : (
+                                <Button variant="outline" className="mt-4" onClick={() => {
+                                    setFilters({ filterStartDate: '', filterEndDate: '', location: 'all', area: 'all', status: 'all' })
+                                    setSearchQuery('')
+                                }}>
+                                    Clear all filters
+                                </Button>
+                            )}
+                        </div>
                     ) : (
-                        <Button variant="outline" className="mt-4" onClick={() => {
-                            setFilters({ filterStartDate: '', filterEndDate: '', location: 'all', area: 'all', status: 'all' })
-                            setSearchQuery('')
-                        }}>
-                            Clear all filters
-                        </Button>
-                    )}
-                </div>
-            ) : (
-                <>
-                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {paginatedList.map((conference) => (
-                            <Link
-                                key={conference.id}
-                                href={`/conference/${conference.id}`}
-                                className="group block h-full"
-                            >
-                                <div className="h-full flex flex-col rounded-xl overflow-hidden border bg-card shadow-sm hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1">
-                                    {/* Banner Image */}
-                                    <div className="relative w-full aspect-[16/9] bg-primary overflow-hidden shrink-0">
-                                        {conference.bannerImageUrl ? (
-                                            <Image
-                                                src={conference.bannerImageUrl}
-                                                alt={conference.name}
-                                                fill
-                                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
-                                                className="object-cover group-hover:scale-105 transition-transform duration-500"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center">
-                                                <span className="text-white/60 text-4xl font-bold tracking-wider">
-                                                    {conference.acronym}
-                                                </span>
-                                            </div>
-                                        )}
-                                        <div className="absolute top-3 left-3">
-                                            <span className={`text-xs px-2.5 py-1 rounded-full font-semibold backdrop-blur-sm ${getStatusColor(conference.status)}`}>
-                                                {conference.status}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Card Body */}
-                                    <div className="p-4 flex flex-col flex-grow">
-                                        <div>
-                                            <h3 className="font-bold text-base leading-snug line-clamp-2 min-h-[2.75rem] group-hover:text-indigo-600 transition-colors">
-                                                {conference.name}
-                                            </h3>
-                                            <p className="text-xs text-muted-foreground font-mono mt-1.5 truncate">
-                                                {conference.acronym}
-                                            </p>
-                                        </div>
-
-                                        <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem] mt-3">
-                                            {conference.description}
-                                        </p>
-
-                                        <div className="mt-auto space-y-2 pt-5">
-                                            <div className="flex items-center gap-2.5 text-[0.7rem] font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 px-2 py-1.5 rounded-md border border-slate-100 dark:border-slate-800">
-                                                <div className="p-1 rounded-md bg-blue-100 dark:bg-blue-900/50 shrink-0">
-                                                    <Calendar className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                                                </div>
-                                                <span className="truncate whitespace-nowrap">{formatDate(conference.startDate)} – {formatDate(conference.endDate)}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2.5 text-xs font-medium text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 px-2 py-1.5 rounded-md border border-slate-100 dark:border-slate-800">
-                                                <div className="p-1 rounded-md bg-teal-100 dark:bg-teal-900/50 shrink-0">
-                                                    <MapPin className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
-                                                </div>
-                                                <span className="truncate">{conference.location}</span>
-                                            </div>
-                                        </div>
-
-                                        {isStaff && conference.status.toUpperCase() === 'PENDING' && (
-                                            <Button
-                                                className="w-full mt-4 gap-2 bg-green-600 hover:bg-green-700 text-white text-sm h-9 shrink-0"
-                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleApprove(conference.id) }}
-                                                disabled={approvingId === conference.id}
-                                            >
-                                                {approvingId === conference.id ? (
-                                                    <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Approving...</>
+                        <>
+                            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-8">
+                                {paginatedList.map((conference) => (
+                                    <Link
+                                        key={conference.id}
+                                        href={`/conference/${conference.id}`}
+                                        className="group block h-full"
+                                    >
+                                        <div className="h-full flex flex-col rounded-xl overflow-hidden border bg-card shadow-sm hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1">
+                                            {/* Banner Image */}
+                                            <div className="relative w-full aspect-[16/9] bg-primary overflow-hidden shrink-0">
+                                                {conference.bannerImageUrl ? (
+                                                    <Image
+                                                        src={conference.bannerImageUrl}
+                                                        alt={conference.name}
+                                                        fill
+                                                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                                                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                                    />
                                                 ) : (
-                                                    <><CheckCircle className="h-3.5 w-3.5" /> Approve</>
+                                                    <div className="w-full h-full flex items-center justify-center">
+                                                        <span className="text-white/60 text-4xl font-bold tracking-wider">
+                                                            {conference.acronym}
+                                                        </span>
+                                                    </div>
                                                 )}
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-                            </Link>
-                        ))}
-                    </div>
+                                                <div className="absolute top-3 left-3">
+                                                    <span className={`text-xs px-2.5 py-1 rounded-full font-semibold backdrop-blur-sm ${getStatusColor(conference.status)}`}>
+                                                        {conference.status}
+                                                    </span>
+                                                </div>
+                                            </div>
 
-                    <StandardPagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        totalElements={filtered.length}
-                        entityName="conferences"
-                        onPageChange={setCurrentPage}
-                    />
-                </>
-            )}
-            </main>
+                                            {/* Card Body */}
+                                            <div className="p-4 flex flex-col flex-grow">
+                                                <div>
+                                                    <h3 className="font-bold text-base leading-snug line-clamp-2 min-h-[2.75rem] group-hover:text-indigo-600 transition-colors">
+                                                        {conference.name}
+                                                    </h3>
+                                                    <p className="text-xs text-muted-foreground font-mono mt-1.5 truncate">
+                                                        {conference.acronym}
+                                                    </p>
+                                                </div>
+
+                                                <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem] mt-3">
+                                                    {conference.description}
+                                                </p>
+
+                                                <div className="mt-auto space-y-2 pt-5">
+                                                    <div className="flex items-center gap-2.5 text-[0.7rem] font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 px-2 py-1.5 rounded-md border border-slate-100 dark:border-slate-800">
+                                                        <div className="p-1 rounded-md bg-blue-100 dark:bg-blue-900/50 shrink-0">
+                                                            <Calendar className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                                                        </div>
+                                                        <span className="truncate whitespace-nowrap">{formatDate(conference.startDate)} – {formatDate(conference.endDate)}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2.5 text-xs font-medium text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 px-2 py-1.5 rounded-md border border-slate-100 dark:border-slate-800">
+                                                        <div className="p-1 rounded-md bg-teal-100 dark:bg-teal-900/50 shrink-0">
+                                                            <MapPin className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
+                                                        </div>
+                                                        <span className="truncate">{conference.location}</span>
+                                                    </div>
+                                                </div>
+
+                                                {isStaff && conference.status.toUpperCase() === 'PENDING' && (
+                                                    <Button
+                                                        className="w-full mt-4 gap-2 bg-green-600 hover:bg-green-700 text-white text-sm h-9 shrink-0"
+                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleApprove(conference.id) }}
+                                                        disabled={approvingId === conference.id}
+                                                    >
+                                                        {approvingId === conference.id ? (
+                                                            <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Approving...</>
+                                                        ) : (
+                                                            <><CheckCircle className="h-3.5 w-3.5" /> Approve</>
+                                                        )}
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+
+                            <StandardPagination
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                totalElements={filtered.length}
+                                entityName="conferences"
+                                onPageChange={setCurrentPage}
+                            />
+                        </>
+                    )}
+                </main>
             </div>
         </div>
     )

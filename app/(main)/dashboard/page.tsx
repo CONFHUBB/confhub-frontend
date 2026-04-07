@@ -67,7 +67,7 @@ const STATUS_COLOR: Record<string, string> = {
     PENDING:    "bg-amber-100 text-amber-700 border-amber-200",
     COMPLETED:  "bg-blue-100 text-blue-700 border-blue-200",
     CANCELLED:  "bg-rose-100 text-rose-700 border-rose-200",
-    IN_REVIEW:  "bg-violet-100 text-violet-700 border-violet-200",
+    IN_REVIEW:  "bg-primary/10 text-primary border-primary/20",
 }
 
 interface SystemStats {
@@ -225,8 +225,8 @@ export default function DashboardPage() {
                     change={`${stats?.activeConferences ?? 0} ${msg.active}, ${stats?.pendingConferences ?? 0} ${msg.pending}`}
                     changePositive
                     icon={FolderOpen}
-                    iconBg="bg-violet-50"
-                    iconColor="text-violet-600"
+                    iconBg="bg-primary/10"
+                    iconColor="text-primary"
                     isLoading={isLoading}
                 />
                 <StatCard
@@ -292,7 +292,7 @@ export default function DashboardPage() {
                 <Card className="lg:col-span-4 border-0 shadow-sm">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-base font-semibold flex items-center gap-2">
-                            <BarChart3 className="h-4 w-4 text-violet-600" aria-hidden="true" />
+                            <BarChart3 className="h-4 w-4 text-primary" aria-hidden="true" />
                             {msg.papersPerConference}
                         </CardTitle>
                         <CardDescription>{msg.papersPerConferenceDesc}</CardDescription>
@@ -392,12 +392,12 @@ export default function DashboardPage() {
                     <CardHeader className="pb-2 flex flex-row items-center justify-between">
                         <div>
                             <CardTitle className="text-base font-semibold flex items-center gap-2">
-                                <FolderOpen className="h-4 w-4 text-violet-600" aria-hidden="true" />
+                                <FolderOpen className="h-4 w-4 text-primary" aria-hidden="true" />
                                 {msg.recentConferences}
                             </CardTitle>
                             <CardDescription>{msg.recentConferencesDesc}</CardDescription>
                         </div>
-                        <Link href="/dashboard/conferences" className="text-xs text-violet-600 hover:underline font-medium">
+                        <Link href="/dashboard/conferences" className="text-xs text-primary hover:underline font-medium">
                             {msg.viewAll}
                         </Link>
                     </CardHeader>
@@ -422,7 +422,7 @@ export default function DashboardPage() {
                                     : stats?.recentConferences.map(c => (
                                         <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                                             <td className="py-2.5 px-6">
-                                                <Link href={`/conference/${c.id}`} className="font-medium hover:text-violet-600 transition-colors line-clamp-1">
+                                                <Link href={`/conference/${c.id}`} className="font-medium hover:text-primary transition-colors line-clamp-1">
                                                     {c.acronym || c.name}
                                                 </Link>
                                             </td>
@@ -452,7 +452,7 @@ export default function DashboardPage() {
                             </CardTitle>
                             <CardDescription>{msg.recentPaymentsDesc}</CardDescription>
                         </div>
-                        <Link href="/dashboard/finance" className="text-xs text-violet-600 hover:underline font-medium">
+                        <Link href="/dashboard/finance" className="text-xs text-primary hover:underline font-medium">
                             {msg.viewAll}
                         </Link>
                     </CardHeader>

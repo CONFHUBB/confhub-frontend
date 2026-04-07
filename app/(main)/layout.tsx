@@ -15,10 +15,9 @@ import {
     SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
-import { HeroSection } from "@/components/hero-section"
 import { AIChatWidget } from "@/components/ai-chat-widget"
 import { AppErrorBoundary } from "@/components/shared/app-error-boundary"
-import { AppFooter } from "@/components/app-footer"
+import { HomeFooter } from "@/components/home/home-footer"
 import { Loader2 } from "lucide-react"
 
 export default function MainLayout({
@@ -98,13 +97,12 @@ export default function MainLayout({
         <UserRolesProvider>
             <div className={`flex flex-col min-h-screen ${isHomePage ? 'bg-white' : 'bg-gray-50'}`}>
                 <AppNavbar />
-                {isHomePage && <HeroSection />}
                 <main className="flex-1">
                     <AppErrorBoundary>
                         {children}
                     </AppErrorBoundary>
                 </main>
-                <AppFooter />
+                <HomeFooter />
                 <AIChatWidget />
             </div>
         </UserRolesProvider>

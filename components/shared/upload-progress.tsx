@@ -25,7 +25,7 @@ export function UploadProgress({ percent, fileName, fileSize, complete }: Upload
                     {fileName && <span className="font-medium text-foreground truncate max-w-[250px]">{fileName}</span>}
                     {fileSize && <span className="text-xs">({fileSize})</span>}
                 </div>
-                <span className={`text-xs font-semibold tabular-nums ${complete ? 'text-emerald-600' : 'text-indigo-600'}`}>
+                <span className={`text-xs font-semibold tabular-nums ${complete ? 'text-emerald-600' : 'text-primary'}`}>
                     {complete ? '✓ Complete' : `${clampedPercent}%`}
                 </span>
             </div>
@@ -36,7 +36,7 @@ export function UploadProgress({ percent, fileName, fileSize, complete }: Upload
                     className={`h-full rounded-full transition-all duration-300 ease-out ${
                         complete
                             ? 'bg-emerald-500'
-                            : 'bg-gradient-to-r from-indigo-500 to-indigo-400'
+                            : 'bg-gradient-to-r from-primary to-primary-light'
                     }`}
                     style={{ width: `${clampedPercent}%` }}
                 />

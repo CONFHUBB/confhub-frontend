@@ -112,7 +112,7 @@ export function ExcelImport({
 
                 <div
                     className={`flex-1 min-w-[200px] flex items-center gap-3 rounded-lg border-2 border-dashed px-4 py-3 cursor-pointer transition-colors ${
-                        isDragging ? "border-indigo-500 bg-indigo-50" :
+                        isDragging ? "border-primary bg-primary/5" :
                         file ? "border-green-400 bg-green-50" :
                         "border-gray-300 hover:border-gray-400"
                     }`}
@@ -131,7 +131,7 @@ export function ExcelImport({
                         </div>
                     ) : (
                         <span className="text-sm text-gray-500">
-                            <span className="font-medium text-indigo-600">Click to upload</span> or drag & drop (.xlsx)
+                            <span className="font-medium text-primary">Click to upload</span> or drag & drop (.xlsx)
                         </span>
                     )}
                     <input ref={fileInputRef} type="file" accept=".xlsx" className="hidden" onChange={(e: ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) validateAndSetFile(f) }} />
