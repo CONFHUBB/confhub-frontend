@@ -76,7 +76,7 @@ export function StandardPagination({
             variant={page === currentPage ? "default" : "outline"}
             size="sm"
             className={`h-8 w-8 p-0 text-xs ${
-              page === currentPage ? "bg-indigo-600 hover:bg-indigo-700" : ""
+              page === currentPage ? "bg-primary hover:bg-primary-dark" : ""
             }`}
             onClick={() => onPageChange(page)}
           >

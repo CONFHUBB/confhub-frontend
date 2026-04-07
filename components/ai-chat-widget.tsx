@@ -233,7 +233,7 @@ export function AIChatWidget() {
                 className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 ${
                     isOpen
                         ? "bg-gray-700 hover:bg-gray-800 rotate-0"
-                        : "bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 hover:scale-110"
+                        : "bg-gradient-to-br from-primary to-secondary hover:from-primary-dark hover:to-secondary-dark hover:scale-110"
                 }`}
                 title={isOpen ? "Close Chat" : "ConfHub AI Assistant"}
             >
@@ -248,7 +248,7 @@ export function AIChatWidget() {
             {isOpen && (
                 <div className="fixed bottom-24 right-6 z-50 w-[640px] h-[720px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
                     {/* Header */}
-                    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-4 flex items-center justify-between shrink-0">
+                    <div className="bg-gradient-to-r from-primary to-secondary px-5 py-4 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
                                 <Bot className="h-5 w-5 text-white" />
@@ -279,8 +279,8 @@ export function AIChatWidget() {
                     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-gray-50/50">
                         {messages.length === 0 && (
                             <div className="flex flex-col items-center justify-center h-full text-center px-6">
-                                <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center mb-4">
-                                    <Sparkles className="h-7 w-7 text-indigo-600" />
+                                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                                    <Sparkles className="h-7 w-7 text-primary" />
                                 </div>
                                 <h4 className="font-semibold text-gray-800 mb-1">Hi! I'm ConfHub AI</h4>
                                 <p className="text-xs text-gray-500 mb-6">
@@ -310,7 +310,7 @@ export function AIChatWidget() {
                                                     setTimeout(() => handleSend(), 100)
                                                 }
                                             }}
-                                            className="w-full text-left px-4 py-2.5 rounded-xl border border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/50 text-sm text-gray-700 transition-colors"
+                                            className="w-full text-left px-4 py-2.5 rounded-xl border border-secondary/20 bg-white hover:border-primary/30 hover:bg-primary/5 text-sm text-text-medium transition-colors"
                                         >
                                             {q.label}
                                         </button>
@@ -323,14 +323,14 @@ export function AIChatWidget() {
                             <div key={i}>
                                 <div className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                                     {msg.role === "model" && (
-                                        <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 mt-0.5">
-                                            <Bot className="h-3.5 w-3.5 text-indigo-600" />
+                                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                                            <Bot className="h-3.5 w-3.5 text-primary" />
                                         </div>
                                     )}
                                     <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
                                         msg.role === "user"
-                                            ? "bg-indigo-600 text-white rounded-br-md"
-                                            : "bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm"
+                                            ? "bg-primary text-white rounded-br-md"
+                                            : "bg-white border border-secondary/20 text-text-dark rounded-bl-md shadow-sm"
                                     }`}>
                                         {msg.role === "model" ? (
                                             <div className="prose prose-sm prose-gray max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_p]:my-1.5 [&_ul]:my-1.5 [&_ol]:my-1.5 [&_li]:my-0.5 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_code]:text-xs [&_pre]:text-xs [&_pre]:bg-gray-50 [&_pre]:rounded-lg">
@@ -383,7 +383,7 @@ export function AIChatWidget() {
                                                     <button
                                                         key={j}
                                                         onClick={() => handleActionClick(action)}
-                                                        className="text-[11px] px-3 py-1.5 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                                                        className="text-[11px] px-3 py-1.5 rounded-full border border-primary/20 bg-primary/8 text-primary hover:bg-primary/15 transition-colors"
                                                     >
                                                         {action.label}
                                                     </button>
@@ -395,7 +395,7 @@ export function AIChatWidget() {
                                     return (
                                         <div className="mt-2 ml-9 space-y-2">
                                             {Array.from(grouped.entries()).map(([confName, actions]) => (
-                                                <div key={confName} className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm hover:border-indigo-200 transition-colors">
+                                                <div key={confName} className="bg-white rounded-xl border border-secondary/15 p-3 shadow-sm hover:border-primary/30 transition-colors">
                                                     <p className="text-xs font-semibold text-gray-800 mb-2">{confName}</p>
                                                     <div className="flex flex-wrap gap-1.5">
                                                         {actions.map((action, j) => {
@@ -405,7 +405,7 @@ export function AIChatWidget() {
                                                                 <button
                                                                     key={j}
                                                                     onClick={() => handleActionClick(action)}
-                                                                    className="text-[11px] px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-colors font-medium"
+                                                                    className="text-[11px] px-3 py-1.5 rounded-lg border border-primary/20 bg-primary/8 text-primary hover:bg-primary/15 hover:border-primary/30 transition-colors font-medium"
                                                                 >
                                                                     {actionLabel}
                                                                 </button>
@@ -421,7 +421,7 @@ export function AIChatWidget() {
                                                         <button
                                                             key={j}
                                                             onClick={() => handleActionClick(action)}
-                                                            className="text-[11px] px-3 py-1.5 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                                                            className="text-[11px] px-3 py-1.5 rounded-full border border-primary/20 bg-primary/8 text-primary hover:bg-primary/15 transition-colors"
                                                         >
                                                             {action.label}
                                                         </button>
@@ -469,7 +469,7 @@ export function AIChatWidget() {
                                                     </div>
                                                     <Button
                                                         size="sm"
-                                                        className="h-6 text-[10px] gap-0.5 bg-indigo-600 hover:bg-indigo-700"
+                                                        className="h-6 text-[10px] gap-0.5 bg-primary hover:bg-primary-dark"
                                                         onClick={() => router.push(`/conference/${rec.conferenceId}`)}
                                                     >
                                                         Submit <ArrowRight className="h-3 w-3" />
@@ -485,14 +485,14 @@ export function AIChatWidget() {
                         {/* Loading indicator */}
                         {loading && (
                             <div className="flex gap-2.5">
-                                <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-                                    <Bot className="h-3.5 w-3.5 text-indigo-600" />
+                                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                    <Bot className="h-3.5 w-3.5 text-primary" />
                                 </div>
                                 <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
                                     <div className="flex items-center gap-1.5">
-                                        <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                                        <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                                        <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                                        <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                                        <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                                        <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                                     </div>
                                 </div>
                             </div>
@@ -507,7 +507,7 @@ export function AIChatWidget() {
                         <button
                             onClick={() => fileInputRef.current?.click()}
                             disabled={loading}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-dashed border-indigo-300 bg-indigo-50/50 hover:bg-indigo-100/70 text-indigo-600 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <FileText className="h-3.5 w-3.5" />
                             Upload PDF Manuscript for AI Analysis
@@ -527,13 +527,13 @@ export function AIChatWidget() {
                                 onChange={e => setInput(e.target.value)}
                                 onKeyDown={handleKeyDown}
                                 placeholder="Ask ConfHub AI..."
-                                className="flex-1 h-9 text-sm border-gray-200 focus-visible:ring-indigo-500"
+                                className="flex-1 h-9 text-sm border-secondary/20 focus-visible:ring-primary/30"
                                 disabled={loading}
                             />
                             <button
                                 onClick={handleSend}
                                 disabled={!input.trim() || loading}
-                                className="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+                                className="p-2 rounded-lg bg-primary hover:bg-primary-dark text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
                             >
                                 <Send className="h-4 w-4" />
                             </button>

@@ -81,9 +81,9 @@ export function OnboardingTooltips({ storageKey, steps, forceShow }: OnboardingT
         setPosition({ top, left })
 
         // Add highlight pulse to target
-        targetEl.classList.add('ring-2', 'ring-indigo-400', 'ring-offset-2', 'rounded-lg')
+        targetEl.classList.add('ring-2', 'ring-primary/40', 'ring-offset-2', 'rounded-lg')
         return () => {
-            targetEl.classList.remove('ring-2', 'ring-indigo-400', 'ring-offset-2', 'rounded-lg')
+            targetEl.classList.remove('ring-2', 'ring-primary/40', 'ring-offset-2', 'rounded-lg')
         }
     }, [visible, currentStep, steps])
 
@@ -120,7 +120,7 @@ export function OnboardingTooltips({ storageKey, steps, forceShow }: OnboardingT
             {/* Tooltip card */}
             <div
                 className={cn(
-                    'z-50 w-80 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-indigo-100 dark:border-indigo-900 overflow-hidden animate-in fade-in zoom-in-95 duration-300',
+                    'z-50 w-80 bg-white rounded-xl shadow-2xl border border-secondary/20 overflow-hidden animate-in fade-in zoom-in-95 duration-300',
                     hasTarget ? 'absolute' : 'fixed bottom-24 right-6'
                 )}
                 style={hasTarget ? {
@@ -130,7 +130,7 @@ export function OnboardingTooltips({ storageKey, steps, forceShow }: OnboardingT
                 } : undefined}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-500 to-violet-500 text-white">
+                <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary to-secondary text-white">
                     <div className="flex items-center gap-2">
                         <Lightbulb className="h-4 w-4" />
                         <span className="text-sm font-semibold">{step.title}</span>

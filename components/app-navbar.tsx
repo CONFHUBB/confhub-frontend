@@ -25,7 +25,7 @@ const WORKSPACE_SECTIONS = [
         icon: <BookOpen className="h-3.5 w-3.5" />,
         color: 'text-blue-600',
         items: [
-            { name: 'My Papers',        path: '/paper',                       icon: <FileText className="h-4 w-4" /> },
+            { name: 'My Papers', path: '/paper', icon: <FileText className="h-4 w-4" /> },
         ],
     },
     {
@@ -33,7 +33,7 @@ const WORKSPACE_SECTIONS = [
         icon: <Star className="h-3.5 w-3.5" />,
         color: 'text-amber-600',
         items: [
-            { name: 'My Reviews',  path: '/conference/reviewer-console',  icon: <ClipboardList className="h-4 w-4" /> },
+            { name: 'My Reviews', path: '/conference/reviewer-console', icon: <ClipboardList className="h-4 w-4" /> },
         ],
     },
     {
@@ -41,7 +41,7 @@ const WORKSPACE_SECTIONS = [
         icon: <GraduationCap className="h-3.5 w-3.5" />,
         color: 'text-indigo-600',
         items: [
-            { name: 'Program Conferences',   path: '/conference/program-conference',    icon: <Building2 className="h-4 w-4" /> },
+            { name: 'Program Conferences', path: '/conference/program-conference', icon: <Building2 className="h-4 w-4" /> },
         ],
     },
     {
@@ -49,7 +49,7 @@ const WORKSPACE_SECTIONS = [
         icon: <GraduationCap className="h-3.5 w-3.5" />,
         color: 'text-emerald-600',
         items: [
-            { name: 'My Conferences',   path: '/conference/my-conference',    icon: <Building2 className="h-4 w-4" /> },
+            { name: 'My Conferences', path: '/conference/my-conference', icon: <Building2 className="h-4 w-4" /> },
         ],
     },
 ]
@@ -67,18 +67,18 @@ const WORKSPACE_PATHS: { path: string; exact: boolean }[] = [
 // Primary flat links (Home + All Conferences + Submit Paper + Create)
 // ─────────────────────────────────────────────────────────────────────────────
 const PRIMARY_NAV = [
-    { name: 'Home',               path: '/',                   exact: true,  chairOnly: false },
-    { name: 'All Conferences',   path: '/conference',         exact: true,  chairOnly: false },
-    { name: 'Submit Paper',      path: '/conference',         exact: false, chairOnly: false, query: '?status=ONGOING' },
-    { name: 'Published Papers',  path: '/paper/published',    exact: false, chairOnly: false },
-    { name: 'Create Conference', path: '/conference/create',  exact: false },
+    { name: 'Home', path: '/', exact: true, chairOnly: false },
+    { name: 'All Conferences', path: '/conference', exact: true, chairOnly: false },
+    { name: 'Submit Paper', path: '/conference', exact: false, chairOnly: false, query: '?status=ONGOING' },
+    { name: 'Published Papers', path: '/paper/published', exact: false, chairOnly: false },
+    { name: 'Create Conference', path: '/conference/create', exact: false },
 ]
 
-export function AppNavbar({ isLandingPage = false }: { isLandingPage?: boolean }) {
-    const pathname  = usePathname()
-    const router    = useRouter()
+export function AppNavbar() {
+    const pathname = usePathname()
+    const router = useRouter()
     const { hasAnyRole, getRolesInConference, userId } = useUserRoles()
-    
+
     // Allow checking auth state safely
     const [isMounted, setIsMounted] = React.useState(false)
     React.useEffect(() => { setIsMounted(true) }, [])
@@ -86,22 +86,21 @@ export function AppNavbar({ isLandingPage = false }: { isLandingPage?: boolean }
     // Glassmorphism scroll border for landing page
     const [hasScrolled, setHasScrolled] = React.useState(false)
     React.useEffect(() => {
-        if (!isLandingPage) return
         const onScroll = () => setHasScrolled(window.scrollY > 10)
         window.addEventListener('scroll', onScroll, { passive: true })
         return () => window.removeEventListener('scroll', onScroll)
-    }, [isLandingPage])
+    }, [])
 
-    const [isMenuOpen,      setIsMenuOpen]      = React.useState(false)
-    const [userMenuOpen,    setUserMenuOpen]    = React.useState(false)
-    const [workspaceOpen,   setWorkspaceOpen]   = React.useState(false)
-    const [userName,        setUserName]        = React.useState('')
-    const [avatarUrl,       setAvatarUrl]       = React.useState('')
+    const [isMenuOpen, setIsMenuOpen] = React.useState(false)
+    const [userMenuOpen, setUserMenuOpen] = React.useState(false)
+    const [workspaceOpen, setWorkspaceOpen] = React.useState(false)
+    const [userName, setUserName] = React.useState('')
+    const [avatarUrl, setAvatarUrl] = React.useState('')
     const [ctxConferenceName, setCtxConferenceName] = React.useState('')
-    const [ctxConferenceId,   setCtxConferenceId]   = React.useState<number | null>(null)
+    const [ctxConferenceId, setCtxConferenceId] = React.useState<number | null>(null)
 
-    const userMenuRef     = React.useRef<HTMLDivElement>(null)
-    const workspaceRef    = React.useRef<HTMLDivElement>(null)
+    const userMenuRef = React.useRef<HTMLDivElement>(null)
+    const workspaceRef = React.useRef<HTMLDivElement>(null)
 
     // Close dropdowns on outside click
     React.useEffect(() => {
@@ -191,46 +190,18 @@ export function AppNavbar({ isLandingPage = false }: { isLandingPage?: boolean }
                             : ''
 
     return (
-        <header className={`sticky top-0 left-0 w-full z-50 transition-all duration-300 ${
-            isLandingPage
-                ? `bg-white/80 backdrop-blur-xl ${hasScrolled ? 'border-b border-secondary/20 shadow-sm' : 'border-b border-transparent'}`
-                : ''
-        }`}>
+        <header className={`sticky top-0 left-0 w-full z-50 transition-all duration-300 bg-white/80 backdrop-blur-xl ${hasScrolled ? 'border-b border-secondary/20 shadow-sm' : 'border-b border-transparent'}`}>
             {/* Main navbar */}
-            <div className={isLandingPage
-                ? 'max-w-7xl mx-auto'
-                : 'bg-gradient-to-r from-[#1e1b4b] via-[#272463] to-[#312e81] shadow-lg'
-            }>
+            <div className="max-w-7xl mx-auto">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
 
                         {/* ── Logo ── */}
                         <Link href="/" className="shrink-0 flex items-center gap-2.5 group">
-                            {isLandingPage ? (
-                                <>
-                                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center group-hover:bg-primary-dark transition-colors">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>
-                                    </div>
-                                    <span className="font-heading font-bold text-xl text-text-dark">Conf<span className="text-primary">Hub</span></span>
-                                </>
-                            ) : (
-                                <>
-                                    <Image
-                                        src="/images/Favicon-White.png"
-                                        alt="Confhub"
-                                        width={36} height={36}
-                                        className="h-9 w-auto object-contain"
-                                        priority
-                                    />
-                                    <Image
-                                        src="/images/White.png"
-                                        alt="Confhub"
-                                        width={110} height={40}
-                                        className="h-7 w-auto object-contain hidden sm:block"
-                                        priority
-                                    />
-                                </>
-                            )}
+                            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center group-hover:bg-primary-dark transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" /><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" /><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" /></svg>
+                            </div>
+                            <span className="font-heading font-bold text-xl text-text-dark">Conf<span className="text-primary">Hub</span></span>
                         </Link>
 
                         {/* ── Center: Primary Nav + Workspace Dropdown (Desktop) ── */}
@@ -242,14 +213,10 @@ export function AppNavbar({ isLandingPage = false }: { isLandingPage?: boolean }
                                         key={href}
                                         href={href}
                                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                            isLandingPage
-                                                ? isPrimaryActive(link.path, link.exact, link.query)
-                                                    ? 'text-primary bg-primary/8'
-                                                    : 'text-text-medium hover:text-primary hover:bg-primary/5'
-                                                : isPrimaryActive(link.path, link.exact, link.query)
-                                                    ? 'text-white bg-white/20'
-                                                    : 'text-white/75 hover:text-white hover:bg-white/10'
-                                        }`}
+                                            isPrimaryActive(link.path, link.exact, link.query)
+                                                ? 'text-primary bg-primary/8'
+                                                : 'text-text-medium hover:text-primary hover:bg-primary/5'
+                                            }`}
                                     >
                                         {link.name}
                                     </Link>
@@ -257,19 +224,15 @@ export function AppNavbar({ isLandingPage = false }: { isLandingPage?: boolean }
                             })}
 
                             {/* ── My Workspace Dropdown ── */}
-                            {userId && (
+                            {isMounted && userId && (
                                 <div ref={workspaceRef} className="relative">
                                     <button
                                         onClick={() => setWorkspaceOpen(prev => !prev)}
                                         className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                            isLandingPage
-                                                ? isWorkspaceActive || workspaceOpen
-                                                    ? 'text-primary bg-primary/8'
-                                                    : 'text-text-medium hover:text-primary hover:bg-primary/5'
-                                                : isWorkspaceActive || workspaceOpen
-                                                    ? 'text-white bg-white/20'
-                                                    : 'text-white/75 hover:text-white hover:bg-white/10'
-                                        }`}
+                                            isWorkspaceActive || workspaceOpen
+                                                ? 'text-primary bg-primary/8'
+                                                : 'text-text-medium hover:text-primary hover:bg-primary/5'
+                                            }`}
                                     >
                                         <Globe className="h-4 w-4" />
                                         My Workspace
@@ -277,36 +240,35 @@ export function AppNavbar({ isLandingPage = false }: { isLandingPage?: boolean }
                                     </button>
 
                                     {workspaceOpen && (
-                                        <div className="absolute left-0 top-full mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="absolute left-0 top-full mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 custom-dropdown-anim">
                                             {WORKSPACE_SECTIONS.map((section) => (
-                                            <div key={section.label}>
-                                                {/* Section header */}
-                                                <div className={`flex items-center gap-2 px-4 py-2 ${section.color}`}>
-                                                    {section.icon}
-                                                    <span className="text-[11px] font-bold uppercase tracking-widest">{section.label}</span>
+                                                <div key={section.label}>
+                                                    {/* Section header */}
+                                                    <div className={`flex items-center gap-2 px-4 py-2 ${section.color}`}>
+                                                        {section.icon}
+                                                        <span className="text-[11px] font-bold uppercase tracking-widest">{section.label}</span>
+                                                    </div>
+                                                    {/* Section items */}
+                                                    {section.items.map((item) => (
+                                                        <Link
+                                                            key={item.path}
+                                                            href={item.path}
+                                                            onClick={() => setWorkspaceOpen(false)}
+                                                            className={`flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors ${pathname.startsWith(item.path)
+                                                                ? 'text-primary bg-primary/8'
+                                                                : 'text-text-medium hover:bg-neutral-dark hover:text-text-dark'
+                                                                }`}
+                                                        >
+                                                            <span className="text-gray-400">{item.icon}</span>
+                                                            {item.name}
+                                                        </Link>
+                                                    ))}
+                                                    {/* Divider between sections */}
+                                                    <div className="mx-3 my-1 border-t border-gray-100" />
                                                 </div>
-                                                {/* Section items */}
-                                                {section.items.map((item) => (
-                                                    <Link
-                                                        key={item.path}
-                                                        href={item.path}
-                                                        onClick={() => setWorkspaceOpen(false)}
-                                                        className={`flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors ${
-                                                            pathname.startsWith(item.path)
-                                                                ? 'text-indigo-700 bg-indigo-50'
-                                                                : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                                                        }`}
-                                                    >
-                                                        <span className="text-gray-400">{item.icon}</span>
-                                                        {item.name}
-                                                    </Link>
-                                                ))}
-                                                {/* Divider between sections */}
-                                                <div className="mx-3 my-1 border-t border-gray-100" />
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </nav>
@@ -316,101 +278,95 @@ export function AppNavbar({ isLandingPage = false }: { isLandingPage?: boolean }
                             {isMounted && userId ? (
                                 <>
                                     {/* Notification */}
-                            <div className="[&_button]:text-white/80 [&_button]:hover:text-white [&_button]:hover:bg-white/10">
-                                <NotificationBell />
-                            </div>
-
-                            {/* User Account Dropdown */}
-                            <div ref={userMenuRef} className="relative">
-                                <button
-                                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/10 transition-colors"
-                                >
-                                    {avatarUrl ? (
-                                        <img src={avatarUrl} alt={userName} className="h-8 w-8 rounded-full object-cover ring-2 ring-white/30" />
-                                    ) : (
-                                        <span className="flex items-center justify-center h-8 w-8 rounded-full bg-white/20 text-white text-xs font-bold ring-2 ring-white/30">
-                                            {initials}
-                                        </span>
-                                    )}
-                                    <span className="text-sm font-medium max-w-[100px] truncate hidden xl:block text-white/90">
-                                        {userName || 'Profile'}
-                                    </span>
-                                    <ChevronDown className={`h-3.5 w-3.5 text-white/60 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
-                                </button>
-
-                                {userMenuOpen && (
-                                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                                        <div className="px-4 py-2.5 border-b border-gray-100">
-                                            <p className="text-sm font-semibold text-gray-900 truncate">{userName || 'User'}</p>
-                                            <p className="text-xs text-gray-500 mt-0.5">Manage your account</p>
-                                        </div>
-
-                                        {/* ── Account ── */}
-                                        <div className="px-4 pt-2 pb-1">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Account</p>
-                                        </div>
-                                        <Link
-                                            href="/my-profile"
-                                            onClick={() => setUserMenuOpen(false)}
-                                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
-                                        >
-                                            <User className="h-4 w-4 text-gray-400" /> My Profile
-                                        </Link>
-
-                                        {/* ── Activity ── */}
-                                        <div className="border-t border-gray-100 mt-1" />
-                                        <div className="px-4 pt-2 pb-1">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Activity</p>
-                                        </div>
-                                        <Link
-                                            href="/my-profile/invitations"
-                                            onClick={() => setUserMenuOpen(false)}
-                                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
-                                        >
-                                            <Mail className="h-4 w-4 text-gray-400" /> My Invitations
-                                        </Link>
-                                        <Link
-                                            href="/my-profile/tickets"
-                                            onClick={() => setUserMenuOpen(false)}
-                                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
-                                        >
-                                            <Ticket className="h-4 w-4 text-gray-400" /> My Tickets
-                                        </Link>
-                                        <Link
-                                            href="/my-profile/payments"
-                                            onClick={() => setUserMenuOpen(false)}
-                                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
-                                        >
-                                            <CreditCard className="h-4 w-4 text-gray-400" /> Payment History
-                                        </Link>
-
-                                        <div className="border-t border-gray-100 mt-1 pt-1">
-                                            <button
-                                                onClick={() => { setUserMenuOpen(false); handleLogout() }}
-                                                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                                            >
-                                                <LogOut className="h-4 w-4" />
-                                                Log out
-                                            </button>
-                                        </div>
+                                    <div className="[&_button]:text-text-medium [&_button]:hover:text-text-dark [&_button]:hover:bg-neutral-dark">
+                                        <NotificationBell />
                                     </div>
-                                )}
-                            </div>
+
+                                    {/* User Account Dropdown */}
+                                    <div ref={userMenuRef} className="relative">
+                                        <button
+                                            onClick={() => setUserMenuOpen(!userMenuOpen)}
+                                            className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors hover:bg-neutral-dark"
+                                        >
+                                            {avatarUrl ? (
+                                                <img src={avatarUrl} alt={userName} className="h-8 w-8 rounded-full object-cover ring-2 ring-gray-200" />
+                                            ) : (
+                                                <span className="flex items-center justify-center h-8 w-8 rounded-full text-xs font-bold ring-2 bg-gray-100 text-text-dark ring-gray-200">
+                                                    {initials}
+                                                </span>
+                                            )}
+                                            <span className="text-sm font-medium max-w-[100px] truncate hidden xl:block text-text-dark">
+                                                {userName || 'Profile'}
+                                            </span>
+                                            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${userMenuOpen ? 'rotate-180' : ''} text-text-medium`} />
+                                        </button>
+
+                                        {userMenuOpen && (
+                                            <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 custom-dropdown-anim">
+                                                <div className="px-4 py-2.5 border-b border-gray-100">
+                                                    <p className="text-sm font-semibold text-gray-900 truncate">{userName || 'User'}</p>
+                                                    <p className="text-xs text-gray-500 mt-0.5">Manage your account</p>
+                                                </div>
+
+                                                {/* ── Account ── */}
+                                                <div className="px-4 pt-2 pb-1">
+                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Account</p>
+                                                </div>
+                                                <Link
+                                                    href="/my-profile"
+                                                    onClick={() => setUserMenuOpen(false)}
+                                                    className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-text-medium hover:bg-primary/5 hover:text-primary transition-colors"
+                                                >
+                                                    <User className="h-4 w-4 text-gray-400" /> My Profile
+                                                </Link>
+
+                                                {/* ── Activity ── */}
+                                                <div className="border-t border-gray-100 mt-1" />
+                                                <div className="px-4 pt-2 pb-1">
+                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Activity</p>
+                                                </div>
+                                                <Link
+                                                    href="/my-profile/invitations"
+                                                    onClick={() => setUserMenuOpen(false)}
+                                                    className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-text-medium hover:bg-primary/5 hover:text-primary transition-colors"
+                                                >
+                                                    <Mail className="h-4 w-4 text-gray-400" /> My Invitations
+                                                </Link>
+                                                <Link
+                                                    href="/my-profile/tickets"
+                                                    onClick={() => setUserMenuOpen(false)}
+                                                    className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-text-medium hover:bg-primary/5 hover:text-primary transition-colors"
+                                                >
+                                                    <Ticket className="h-4 w-4 text-gray-400" /> My Tickets
+                                                </Link>
+                                                <Link
+                                                    href="/my-profile/payments"
+                                                    onClick={() => setUserMenuOpen(false)}
+                                                    className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-text-medium hover:bg-primary/5 hover:text-primary transition-colors"
+                                                >
+                                                    <CreditCard className="h-4 w-4 text-gray-400" /> Payment History
+                                                </Link>
+
+                                                <div className="border-t border-gray-100 mt-1 pt-1">
+                                                    <button
+                                                        onClick={() => { setUserMenuOpen(false); handleLogout() }}
+                                                        className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                                    >
+                                                        <LogOut className="h-4 w-4" />
+                                                        Log out
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </>
                             ) : isMounted ? (
                                 <div className="flex items-center gap-3 ml-2">
-                                    <Link href="/auth/login" className={`text-sm font-medium transition-colors ${
-                                        isLandingPage ? 'text-text-medium hover:text-primary' : 'text-white/90 hover:text-white'
-                                    }`}>
+                                    <Link href="/auth/login" className="text-sm font-medium transition-colors text-text-medium hover:text-primary">
                                         Log in
                                     </Link>
-                                    <Link href="/auth/register" className={`text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors ${
-                                        isLandingPage
-                                            ? 'bg-primary text-white hover:bg-primary-dark shadow-sm'
-                                            : 'bg-white text-indigo-900 hover:bg-gray-100 px-4 py-2'
-                                    }`}>
-                                        {isLandingPage ? 'Create Conference' : 'Sign up'}
+                                    <Link href="/auth/register" className="text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors bg-primary text-white hover:bg-primary-dark shadow-sm">
+                                        Create Conference
                                     </Link>
                                 </div>
                             ) : null}
@@ -418,11 +374,7 @@ export function AppNavbar({ isLandingPage = false }: { isLandingPage?: boolean }
 
                         {/* ── Mobile: Hamburger ── */}
                         <button
-                            className={`lg:hidden p-2 rounded-lg transition-colors ${
-                                isLandingPage
-                                    ? 'text-text-dark hover:bg-neutral-dark'
-                                    : 'text-white hover:bg-white/10'
-                            }`}
+                            className="lg:hidden p-2 rounded-lg transition-colors text-text-dark hover:bg-neutral-dark"
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
                         >
                             {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -434,20 +386,17 @@ export function AppNavbar({ isLandingPage = false }: { isLandingPage?: boolean }
 
             {/* ── Mobile Menu ── */}
             {isMenuOpen && (
-                <div className={`lg:hidden border-t shadow-xl ${
-                    isLandingPage ? 'bg-white/95 backdrop-blur-xl border-neutral-dark' : 'bg-white'
-                }`}>
+                <div className="lg:hidden border-t shadow-xl bg-white/95 backdrop-blur-xl border-neutral-dark">
                     <div className="max-w-7xl mx-auto px-4 py-3 space-y-1">
                         {/* Primary links */}
                         {PRIMARY_NAV.map((link) => (
                             <Link
                                 key={link.path}
                                 href={link.path}
-                                className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                                    isPrimaryActive(link.path, link.exact)
-                                        ? 'text-primary bg-primary/8'
-                                        : 'text-text-medium hover:bg-neutral-dark hover:text-text-dark'
-                                }`}
+                                className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${isPrimaryActive(link.path, link.exact)
+                                    ? 'text-primary bg-primary/8'
+                                    : 'text-text-medium hover:bg-neutral-dark hover:text-text-dark'
+                                    }`}
                             >
                                 {link.name}
                             </Link>
@@ -456,29 +405,28 @@ export function AppNavbar({ isLandingPage = false }: { isLandingPage?: boolean }
                         {/* Workspace section */}
                         {isMounted && userId && (
                             <div className="mt-1 pt-1 border-t border-gray-100">
-                            <p className="px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-400">My Workspace</p>
-                            {WORKSPACE_SECTIONS.map((section) => (
-                                <div key={section.label}>
-                                    <p className={`flex items-center gap-1.5 px-4 py-1 text-[11px] font-semibold uppercase tracking-wider ${section.color}`}>
-                                        {section.icon} {section.label}
-                                    </p>
-                                    {section.items.map((item) => (
-                                        <Link
-                                            key={item.path}
-                                            href={item.path}
-                                            className={`flex items-center gap-3 pl-8 pr-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                                pathname.startsWith(item.path)
-                                                    ? 'text-indigo-600 bg-indigo-50'
-                                                    : 'text-gray-700 hover:bg-gray-50'
-                                            }`}
-                                        >
-                                            <span className="text-gray-400">{item.icon}</span>
-                                            {item.name}
-                                        </Link>
-                                    ))}
-                                </div>
-                            ))}
-                        </div>
+                                <p className="px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-400">My Workspace</p>
+                                {WORKSPACE_SECTIONS.map((section) => (
+                                    <div key={section.label}>
+                                        <p className={`flex items-center gap-1.5 px-4 py-1 text-[11px] font-semibold uppercase tracking-wider ${section.color}`}>
+                                            {section.icon} {section.label}
+                                        </p>
+                                        {section.items.map((item) => (
+                                            <Link
+                                                key={item.path}
+                                                href={item.path}
+                                                className={`flex items-center gap-3 pl-8 pr-4 py-2 rounded-lg text-sm font-medium transition-colors ${pathname.startsWith(item.path)
+                                                    ? 'text-primary bg-primary/8'
+                                                    : 'text-text-medium hover:bg-neutral-dark hover:text-text-dark'
+                                                    }`}
+                                            >
+                                                <span className="text-gray-400">{item.icon}</span>
+                                                {item.name}
+                                            </Link>
+                                        ))}
+                                    </div>
+                                ))}
+                            </div>
                         )}
 
                         {/* Account actions */}

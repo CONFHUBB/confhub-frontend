@@ -74,7 +74,7 @@ export default function UsersPage() {
 
             {/* Stats */}
             <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-                <StatCard label="Total Users" value={users.length} icon={Users} iconBg="bg-violet-50" iconColor="text-violet-600" isLoading={isLoading} />
+                <StatCard label="Total Users" value={users.length} icon={Users} iconBg="bg-primary/10" iconColor="text-primary" isLoading={isLoading} />
                 <StatCard label="Active" value={users.filter(u => u.isActive !== false).length} icon={Users} iconBg="bg-emerald-50" iconColor="text-emerald-600" isLoading={isLoading} />
                 <StatCard label="Countries" value={new Set(users.map(u => u.country).filter(Boolean)).size} icon={Users} iconBg="bg-blue-50" iconColor="text-blue-600" isLoading={isLoading} />
                 <StatCard label="Shown" value={filtered.length} icon={Users} iconBg="bg-amber-50" iconColor="text-amber-600" isLoading={isLoading} />
@@ -141,7 +141,7 @@ export default function UsersPage() {
                                             <tr key={u.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                                                 <td className="py-3 px-6">
                                                     <div className="flex items-center gap-2.5">
-                                                        <div className="h-8 w-8 rounded-full bg-violet-100 flex items-center justify-center text-violet-700 font-semibold text-xs shrink-0">
+                                                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs shrink-0">
                                                             {(u.firstName?.[0] || "") + (u.lastName?.[0] || "")}
                                                         </div>
                                                         <div>

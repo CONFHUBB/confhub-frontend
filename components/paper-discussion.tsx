@@ -182,16 +182,16 @@ export function PaperDiscussion({ paperId, currentUserId, isChair = false, anony
                     </CardContent>
                 </Card>
             ) : (
-                <Card className="border-indigo-200">
+                <Card className="border-primary/20">
                     <CardContent className="p-4 space-y-3">
                         <input
-                            className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            className="w-full px-3 py-2 text-sm border border-secondary/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
                             placeholder="Title (optional)"
                             value={newTitle}
                             onChange={e => setNewTitle(e.target.value)}
                         />
                         <textarea
-                            className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[80px] resize-y"
+                            className="w-full px-3 py-2 text-sm border border-secondary/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[80px] resize-y"
                             placeholder="Write a discussion comment about this paper..."
                             value={newContent}
                             onChange={e => setNewContent(e.target.value)}
@@ -224,18 +224,18 @@ export function PaperDiscussion({ paperId, currentUserId, isChair = false, anony
                         const isOwnPost = post.userId === currentUserId
 
                         return (
-                            <Card key={post.id} className={`${isOwnPost ? 'border-l-4 border-l-indigo-400' : ''}`}>
+                            <Card key={post.id} className={`${isOwnPost ? 'border-l-4 border-l-primary' : ''}`}>
                                 <CardContent className="p-4">
                                     {/* Post header */}
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
                                             <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                                                isOwnPost ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'
+                                                isOwnPost ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-600'
                                             }`}>
                                                 <User2 className="h-3.5 w-3.5" />
                                             </div>
                                             <div>
-                                                <span className={`text-sm font-semibold ${isOwnPost ? 'text-indigo-700' : 'text-gray-800'}`}>
+                                                <span className={`text-sm font-semibold ${isOwnPost ? 'text-primary' : 'text-gray-800'}`}>
                                                     {displayName}
                                                 </span>
                                                 {isChair && (
@@ -266,7 +266,7 @@ export function PaperDiscussion({ paperId, currentUserId, isChair = false, anony
                                         {discussionEnabled && (
                                             <button
                                                 onClick={() => { setReplyingTo(replyingTo === post.id ? null : post.id); setReplyContent('') }}
-                                                className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+                                                className="flex items-center gap-1 text-xs text-primary hover:text-primary-dark font-medium transition-colors"
                                             >
                                                 <Reply className="h-3.5 w-3.5" />
                                                 Reply
@@ -287,7 +287,7 @@ export function PaperDiscussion({ paperId, currentUserId, isChair = false, anony
                                     {replyingTo === post.id && (
                                         <div className="mt-3 flex gap-2">
                                             <input
-                                                className="flex-1 px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                                className="flex-1 px-3 py-1.5 text-sm border border-secondary/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
                                                 placeholder="Write a reply..."
                                                 value={replyContent}
                                                 onChange={e => setReplyContent(e.target.value)}
@@ -302,7 +302,7 @@ export function PaperDiscussion({ paperId, currentUserId, isChair = false, anony
 
                                     {/* Replies thread */}
                                     {isExpanded && replies.length > 0 && (
-                                        <div className="mt-3 ml-4 pl-4 border-l-2 border-indigo-100 space-y-3">
+                                        <div className="mt-3 ml-4 pl-4 border-l-2 border-primary/20 space-y-3">
                                             {replies.map(reply => {
                                                 const replyName = nameMap.get(reply.userId) || `User #${reply.userId}`
                                                 const isOwnReply = reply.userId === currentUserId
@@ -310,7 +310,7 @@ export function PaperDiscussion({ paperId, currentUserId, isChair = false, anony
                                                     <div key={reply.id} className="py-2">
                                                         <div className="flex items-center justify-between mb-1">
                                                             <div className="flex items-center gap-1.5">
-                                                                <span className={`text-xs font-semibold ${isOwnReply ? 'text-indigo-600' : 'text-gray-700'}`}>
+                                                                <span className={`text-xs font-semibold ${isOwnReply ? 'text-primary' : 'text-gray-700'}`}>
                                                                     {replyName}
                                                                 </span>
                                                                 <span className="text-[10px] text-muted-foreground">· {formatDate(reply.createdAt)}</span>

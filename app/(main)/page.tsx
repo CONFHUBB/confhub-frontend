@@ -9,7 +9,7 @@ import { HowItWorks } from "@/components/home/how-it-works"
 import { AudienceSection } from "@/components/home/audience-section"
 import { DynamicDataSection } from "@/components/home/dynamic-data-section"
 import { CTASection } from "@/components/home/cta-section"
-import { HomeFooter } from "@/components/home/home-footer"
+
 import { Loader2 } from "lucide-react"
 
 export default function Home() {
@@ -42,7 +42,6 @@ export default function Home() {
       <AudienceSection />
       <DynamicDataSection />
       <CTASection />
-      <HomeFooter />
     </div>
   )
 }

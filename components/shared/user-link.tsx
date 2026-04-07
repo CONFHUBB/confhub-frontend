@@ -28,7 +28,7 @@ export function UserLink({ userId, name, className = '', plain = false }: UserLi
         <Link
             href={`/user/${userId}`}
             onClick={(e) => e.stopPropagation()}
-            className={`text-indigo-600 hover:text-indigo-800 hover:underline underline-offset-2 transition-colors cursor-pointer inline ${className}`}
+            className={`text-primary hover:text-primary-dark hover:underline underline-offset-2 transition-colors cursor-pointer inline ${className}`}
             title={`View ${name}'s profile`}
         >
             {name || 'Unknown'}

@@ -17,7 +17,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { AIChatWidget } from "@/components/ai-chat-widget"
 import { AppErrorBoundary } from "@/components/shared/app-error-boundary"
-import { AppFooter } from "@/components/app-footer"
+import { HomeFooter } from "@/components/home/home-footer"
 import { Loader2 } from "lucide-react"
 
 export default function MainLayout({
@@ -96,13 +96,13 @@ export default function MainLayout({
     return (
         <UserRolesProvider>
             <div className={`flex flex-col min-h-screen ${isHomePage ? 'bg-white' : 'bg-gray-50'}`}>
-                <AppNavbar isLandingPage={isHomePage} />
+                <AppNavbar />
                 <main className="flex-1">
                     <AppErrorBoundary>
                         {children}
                     </AppErrorBoundary>
                 </main>
-                <AppFooter />
+                <HomeFooter />
                 <AIChatWidget />
             </div>
         </UserRolesProvider>

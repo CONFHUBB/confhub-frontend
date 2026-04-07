@@ -75,13 +75,12 @@ function CustomStepIcon(props: any) {
 
     return (
         <div
-            className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
-                active
-                    ? 'border-indigo-500 bg-indigo-500 text-white shadow-lg shadow-indigo-200 scale-110'
-                    : completed
-                        ? 'border-indigo-500 bg-indigo-500 text-white'
-                        : 'border-gray-300 bg-white text-gray-400'
-            }`}
+            className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${active
+                ? 'border-indigo-500 bg-indigo-500 text-white shadow-lg shadow-indigo-200 scale-110'
+                : completed
+                    ? 'border-indigo-500 bg-indigo-500 text-white'
+                    : 'border-gray-300 bg-white text-gray-400'
+                }`}
         >
             {completed ? <Check className="h-5 w-5" /> : <IconComponent className="h-5 w-5" />}
         </div>
@@ -326,7 +325,7 @@ export function SetupWizard({ onSubmit, isSubmitting, backendErrors }: SetupWiza
             <div className="min-h-[320px]">
                 {/* Step 1: Basics */}
                 {currentStep === 0 && (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <div className="space-y-6">
                         <FieldSet>
                             <FieldGroup>
                                 <Field data-invalid={!!errors.name || undefined}>
@@ -414,7 +413,7 @@ export function SetupWizard({ onSubmit, isSubmitting, backendErrors }: SetupWiza
 
                 {/* Step 2: Location & Dates */}
                 {currentStep === 1 && (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <div className="space-y-6">
                         <FieldSet>
                             <FieldGroup>
                                 <Field data-invalid={!!errors.location || undefined}>
@@ -497,7 +496,7 @@ export function SetupWizard({ onSubmit, isSubmitting, backendErrors }: SetupWiza
 
                 {/* Step 3: Web & Media */}
                 {currentStep === 2 && (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <div className="space-y-6">
                         <FieldSet>
                             <FieldGroup>
                                 <Field data-invalid={!!errors.websiteUrl || undefined}>
@@ -590,7 +589,7 @@ export function SetupWizard({ onSubmit, isSubmitting, backendErrors }: SetupWiza
 
                 {/* Step 4: Contacts & Review */}
                 {currentStep === 3 && (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <div className="space-y-6">
                         <FieldSet>
                             <FieldGroup>
                                 <Field data-invalid={!!errors.contactInformation || undefined}>

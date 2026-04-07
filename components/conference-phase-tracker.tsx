@@ -45,7 +45,7 @@ function CustomPhaseIcon(props: any) {
             ${completed
                 ? 'bg-emerald-500 border-emerald-500 text-white'
                 : active
-                    ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-200'
+                    ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20'
                     : 'bg-white border-muted-foreground/25 text-muted-foreground/40'
             } ${className || ''}
         `}>
@@ -150,8 +150,8 @@ export function ConferencePhaseTracker({ conferenceId }: ConferencePhaseTrackerP
                 className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
             >
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
-                        <FileText className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-primary/10">
+                        <FileText className="h-5 w-5 text-primary" />
                     </div>
                     <div className="text-left">
                         <h3 className="text-sm font-bold tracking-tight">Conference Progress</h3>
@@ -168,7 +168,7 @@ export function ConferencePhaseTracker({ conferenceId }: ConferencePhaseTrackerP
                     <div className="flex items-center gap-2">
                         <div className="w-20 h-2 rounded-full bg-muted overflow-hidden">
                             <div
-                                className={`h-full rounded-full transition-all duration-700 ease-out ${progressPercent === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                                className={`h-full rounded-full transition-all duration-700 ease-out ${progressPercent === 100 ? 'bg-emerald-500' : 'bg-primary'}`}
                                 style={{ width: `${progressPercent}%` }}
                             />
                         </div>
@@ -199,13 +199,13 @@ export function ConferencePhaseTracker({ conferenceId }: ConferencePhaseTrackerP
                                             StepIconProps={{ icon: step.key } as any}
                                         >
                                             <div className="flex flex-col items-center">
-                                                <p className={`text-xs font-semibold leading-tight ${isPast ? 'text-emerald-700' : isActive ? 'text-indigo-700' : 'text-muted-foreground/50'}`}>
+                                                <p className={`text-xs font-semibold leading-tight ${isPast ? 'text-emerald-700' : isActive ? 'text-primary' : 'text-muted-foreground/50'}`}>
                                                     {step.label}
                                                 </p>
                                                 
                                                 {/* Status badge */}
                                                 {isActive && (
-                                                    <span className="mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 animate-pulse">
+                                                    <span className="mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary animate-pulse">
                                                         In Progress
                                                     </span>
                                                 )}
@@ -217,7 +217,7 @@ export function ConferencePhaseTracker({ conferenceId }: ConferencePhaseTrackerP
 
                                                 {/* Deadline */}
                                                 {step.deadline && (
-                                                    <p className={`text-[10px] mt-1 ${isPast ? 'text-emerald-600/60' : isActive ? 'text-indigo-600' : 'text-muted-foreground/40'}`}>
+                                                    <p className={`text-[10px] mt-1 ${isPast ? 'text-emerald-600/60' : isActive ? 'text-primary' : 'text-muted-foreground/40'}`}>
                                                         {fmtDate(step.deadline)}
                                                     </p>
                                                 )}
@@ -241,15 +241,15 @@ export function ConferencePhaseTracker({ conferenceId }: ConferencePhaseTrackerP
                                             {isPast ? (
                                                 <CheckCircle2 className="h-[18px] w-[18px] text-emerald-500" />
                                             ) : step.isActive ? (
-                                                <div className="h-[18px] w-[18px] rounded-full border-2 border-indigo-500 bg-indigo-100 flex items-center justify-center">
-                                                    <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                                                <div className="h-[18px] w-[18px] rounded-full border-2 border-primary bg-primary/10 flex items-center justify-center">
+                                                    <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                                                 </div>
                                             ) : (
                                                 <Circle className="h-[18px] w-[18px] text-muted-foreground/40" />
                                             )}
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <p className={`text-sm leading-tight ${isPast ? 'font-semibold text-emerald-700' : step.isActive ? 'font-semibold text-indigo-700' : 'text-muted-foreground/50'}`}>
+                                            <p className={`text-sm leading-tight ${isPast ? 'font-semibold text-emerald-700' : step.isActive ? 'font-semibold text-primary' : 'text-muted-foreground/50'}`}>
                                                 {step.label}
                                             </p>
                                             {step.deadline && (
@@ -258,7 +258,7 @@ export function ConferencePhaseTracker({ conferenceId }: ConferencePhaseTrackerP
                                                 </p>
                                             )}
                                         </div>
-                                        {step.isActive && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 shrink-0">Active</span>}
+                                        {step.isActive && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary shrink-0">Active</span>}
                                         {isPast && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 shrink-0">Done</span>}
                                     </div>
                                 )

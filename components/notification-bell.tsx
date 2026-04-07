@@ -126,7 +126,7 @@ export function NotificationBell() {
             >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold px-1 ring-2 ring-indigo-600">
+                    <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold px-1 ring-2 ring-primary">
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                 )}
@@ -141,7 +141,7 @@ export function NotificationBell() {
                         <div className="flex items-center gap-2">
                             <button
                                     onClick={handleMarkAllRead}
-                                    className="text-xs text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-2.5 py-1 rounded-full font-medium flex items-center gap-1 cursor-pointer transition-colors border border-indigo-200"
+                                    className="text-xs text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-full font-medium flex items-center gap-1 cursor-pointer transition-colors border border-primary/20"
                                 >
                                     <CheckCheck className="h-3 w-3" /> Mark all read
                                 </button>
@@ -165,7 +165,7 @@ export function NotificationBell() {
                                 <button
                                     key={notif.id}
                                     onClick={() => handleClickNotification(notif)}
-                                    className={`w-full text-left px-4 py-3 border-b last:border-0 hover:bg-gray-50 transition-colors flex gap-3 cursor-pointer ${!notif.isRead ? 'bg-indigo-50/50' : ''
+                                    className={`w-full text-left px-4 py-3 border-b last:border-0 hover:bg-neutral-dark transition-colors flex gap-3 cursor-pointer ${!notif.isRead ? 'bg-primary/5' : ''}
                                         }`}
                                 >
                                     <span className="text-lg shrink-0 mt-0.5">
@@ -177,7 +177,7 @@ export function NotificationBell() {
                                                 {notif.title}
                                             </p>
                                             {!notif.isRead && (
-                                                <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0 mt-1.5" />
+                                                <span className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1.5" />
                                             )}
                                         </div>
                                         {notif.message && (

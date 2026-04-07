@@ -70,7 +70,7 @@ export function SuccessCelebration({
                         cx="48"
                         cy="48"
                         r="44"
-                        stroke="#e0e7ff"
+                        stroke="#8EACBB"
                         strokeWidth="4"
                         className="opacity-50"
                     />
@@ -78,7 +78,7 @@ export function SuccessCelebration({
                         cx="48"
                         cy="48"
                         r="44"
-                        stroke="#4f46e5"
+                        stroke="#4A6FA5"
                         strokeWidth="4"
                         strokeLinecap="round"
                         className="animate-[drawCircle_0.6s_ease-out_forwards]"
@@ -90,7 +90,7 @@ export function SuccessCelebration({
                     {/* Checkmark path with draw animation */}
                     <path
                         d="M30 50 L42 62 L66 38"
-                        stroke="#4f46e5"
+                        stroke="#4A6FA5"
                         strokeWidth="5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -103,7 +103,7 @@ export function SuccessCelebration({
                     />
                 </svg>
                 {/* Pulse ring */}
-                <div className="absolute inset-0 rounded-full border-2 border-indigo-300 animate-ping opacity-20" />
+                <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-ping opacity-20" />
             </div>
 
             {/* Title */}
@@ -120,7 +120,7 @@ export function SuccessCelebration({
 
             {/* Detail */}
             {detail && (
-                <p className={`text-sm text-indigo-600 font-medium text-center mb-6 transition-all duration-500 delay-[800ms] ${show ? 'opacity-100' : 'opacity-0'}`}>
+                <p className={`text-sm text-primary font-medium text-center mb-6 transition-all duration-500 delay-[800ms] ${show ? 'opacity-100' : 'opacity-0'}`}>
                     {detail}
                 </p>
             )}
@@ -130,7 +130,7 @@ export function SuccessCelebration({
                 <div className={`transition-all duration-500 delay-[900ms] ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
                     <Button
                         size="lg"
-                        className="gap-2 bg-indigo-600 hover:bg-indigo-700 px-8"
+                        className="gap-2 bg-primary hover:bg-primary-dark px-8"
                         onClick={() => router.push(ctaUrl)}
                     >
                         {ctaLabel}
@@ -145,7 +145,7 @@ export function SuccessCelebration({
                     Redirecting in {countdown}s...
                     <button
                         onClick={onDismiss || (() => router.push(autoRedirectUrl))}
-                        className="ml-2 text-indigo-600 hover:underline"
+                        className="ml-2 text-primary hover:underline"
                     >
                         Go now
                     </button>
