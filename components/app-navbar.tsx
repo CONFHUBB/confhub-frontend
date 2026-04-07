@@ -74,7 +74,7 @@ const PRIMARY_NAV = [
     { name: 'Create Conference', path: '/conference/create',  exact: false },
 ]
 
-export function AppNavbar() {
+export function AppNavbar({ isLandingPage = false }: { isLandingPage?: boolean }) {
     const pathname  = usePathname()
     const router    = useRouter()
     const { hasAnyRole, getRolesInConference, userId } = useUserRoles()
@@ -82,6 +82,15 @@ export function AppNavbar() {
     // Allow checking auth state safely
     const [isMounted, setIsMounted] = React.useState(false)
     React.useEffect(() => { setIsMounted(true) }, [])
+
+    // Glassmorphism scroll border for landing page
+    const [hasScrolled, setHasScrolled] = React.useState(false)
+    React.useEffect(() => {
+        if (!isLandingPage) return
+        const onScroll = () => setHasScrolled(window.scrollY > 10)
+        window.addEventListener('scroll', onScroll, { passive: true })
+        return () => window.removeEventListener('scroll', onScroll)
+    }, [isLandingPage])
 
     const [isMenuOpen,      setIsMenuOpen]      = React.useState(false)
     const [userMenuOpen,    setUserMenuOpen]    = React.useState(false)
@@ -182,28 +191,46 @@ export function AppNavbar() {
                             : ''
 
     return (
-        <header className="sticky top-0 left-0 w-full z-50">
+        <header className={`sticky top-0 left-0 w-full z-50 transition-all duration-300 ${
+            isLandingPage
+                ? `bg-white/80 backdrop-blur-xl ${hasScrolled ? 'border-b border-secondary/20 shadow-sm' : 'border-b border-transparent'}`
+                : ''
+        }`}>
             {/* Main navbar */}
-            <div className="bg-gradient-to-r from-[#1e1b4b] via-[#272463] to-[#312e81] shadow-lg">
+            <div className={isLandingPage
+                ? 'max-w-7xl mx-auto'
+                : 'bg-gradient-to-r from-[#1e1b4b] via-[#272463] to-[#312e81] shadow-lg'
+            }>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
 
                         {/* ── Logo ── */}
-                        <Link href="/" className="shrink-0 flex items-center gap-2.5">
-                            <Image
-                                src="/images/Favicon-White.png"
-                                alt="Confhub"
-                                width={36} height={36}
-                                className="h-9 w-auto object-contain"
-                                priority
-                            />
-                            <Image
-                                src="/images/White.png"
-                                alt="Confhub"
-                                width={110} height={40}
-                                className="h-7 w-auto object-contain hidden sm:block"
-                                priority
-                            />
+                        <Link href="/" className="shrink-0 flex items-center gap-2.5 group">
+                            {isLandingPage ? (
+                                <>
+                                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center group-hover:bg-primary-dark transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>
+                                    </div>
+                                    <span className="font-heading font-bold text-xl text-text-dark">Conf<span className="text-primary">Hub</span></span>
+                                </>
+                            ) : (
+                                <>
+                                    <Image
+                                        src="/images/Favicon-White.png"
+                                        alt="Confhub"
+                                        width={36} height={36}
+                                        className="h-9 w-auto object-contain"
+                                        priority
+                                    />
+                                    <Image
+                                        src="/images/White.png"
+                                        alt="Confhub"
+                                        width={110} height={40}
+                                        className="h-7 w-auto object-contain hidden sm:block"
+                                        priority
+                                    />
+                                </>
+                            )}
                         </Link>
 
                         {/* ── Center: Primary Nav + Workspace Dropdown (Desktop) ── */}
@@ -215,9 +242,13 @@ export function AppNavbar() {
                                         key={href}
                                         href={href}
                                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                            isPrimaryActive(link.path, link.exact, link.query)
-                                                ? 'text-white bg-white/20'
-                                                : 'text-white/75 hover:text-white hover:bg-white/10'
+                                            isLandingPage
+                                                ? isPrimaryActive(link.path, link.exact, link.query)
+                                                    ? 'text-primary bg-primary/8'
+                                                    : 'text-text-medium hover:text-primary hover:bg-primary/5'
+                                                : isPrimaryActive(link.path, link.exact, link.query)
+                                                    ? 'text-white bg-white/20'
+                                                    : 'text-white/75 hover:text-white hover:bg-white/10'
                                         }`}
                                     >
                                         {link.name}
@@ -231,9 +262,13 @@ export function AppNavbar() {
                                     <button
                                         onClick={() => setWorkspaceOpen(prev => !prev)}
                                         className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                            isWorkspaceActive || workspaceOpen
-                                                ? 'text-white bg-white/20'
-                                                : 'text-white/75 hover:text-white hover:bg-white/10'
+                                            isLandingPage
+                                                ? isWorkspaceActive || workspaceOpen
+                                                    ? 'text-primary bg-primary/8'
+                                                    : 'text-text-medium hover:text-primary hover:bg-primary/5'
+                                                : isWorkspaceActive || workspaceOpen
+                                                    ? 'text-white bg-white/20'
+                                                    : 'text-white/75 hover:text-white hover:bg-white/10'
                                         }`}
                                     >
                                         <Globe className="h-4 w-4" />
@@ -365,11 +400,17 @@ export function AppNavbar() {
                                 </>
                             ) : isMounted ? (
                                 <div className="flex items-center gap-3 ml-2">
-                                    <Link href="/auth/login" className="text-sm font-medium text-white/90 hover:text-white transition-colors">
+                                    <Link href="/auth/login" className={`text-sm font-medium transition-colors ${
+                                        isLandingPage ? 'text-text-medium hover:text-primary' : 'text-white/90 hover:text-white'
+                                    }`}>
                                         Log in
                                     </Link>
-                                    <Link href="/auth/register" className="text-sm font-medium bg-white text-indigo-900 hover:bg-gray-100 px-4 py-2 rounded-lg transition-colors">
-                                        Sign up
+                                    <Link href="/auth/register" className={`text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors ${
+                                        isLandingPage
+                                            ? 'bg-primary text-white hover:bg-primary-dark shadow-sm'
+                                            : 'bg-white text-indigo-900 hover:bg-gray-100 px-4 py-2'
+                                    }`}>
+                                        {isLandingPage ? 'Create Conference' : 'Sign up'}
                                     </Link>
                                 </div>
                             ) : null}
@@ -377,7 +418,11 @@ export function AppNavbar() {
 
                         {/* ── Mobile: Hamburger ── */}
                         <button
-                            className="lg:hidden p-2 rounded-lg text-white hover:bg-white/10 transition-colors"
+                            className={`lg:hidden p-2 rounded-lg transition-colors ${
+                                isLandingPage
+                                    ? 'text-text-dark hover:bg-neutral-dark'
+                                    : 'text-white hover:bg-white/10'
+                            }`}
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
                         >
                             {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -389,7 +434,9 @@ export function AppNavbar() {
 
             {/* ── Mobile Menu ── */}
             {isMenuOpen && (
-                <div className="lg:hidden bg-white border-t shadow-xl">
+                <div className={`lg:hidden border-t shadow-xl ${
+                    isLandingPage ? 'bg-white/95 backdrop-blur-xl border-neutral-dark' : 'bg-white'
+                }`}>
                     <div className="max-w-7xl mx-auto px-4 py-3 space-y-1">
                         {/* Primary links */}
                         {PRIMARY_NAV.map((link) => (
@@ -398,8 +445,8 @@ export function AppNavbar() {
                                 href={link.path}
                                 className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                                     isPrimaryActive(link.path, link.exact)
-                                        ? 'text-indigo-600 bg-indigo-50'
-                                        : 'text-gray-700 hover:bg-gray-50'
+                                        ? 'text-primary bg-primary/8'
+                                        : 'text-text-medium hover:bg-neutral-dark hover:text-text-dark'
                                 }`}
                             >
                                 {link.name}

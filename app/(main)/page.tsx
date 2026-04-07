@@ -3,11 +3,13 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useUserRole } from "@/hooks/useUserRole"
+import { HeroSection } from "@/components/hero-section"
 import { StatsSection } from "@/components/home/stats-section"
-import { FeaturedConferences } from "@/components/home/featured-conferences"
 import { HowItWorks } from "@/components/home/how-it-works"
-import { DemoConference } from "@/components/home/demo-conference"
-import { LatestPapers } from "@/components/home/latest-papers"
+import { AudienceSection } from "@/components/home/audience-section"
+import { DynamicDataSection } from "@/components/home/dynamic-data-section"
+import { CTASection } from "@/components/home/cta-section"
+import { HomeFooter } from "@/components/home/home-footer"
 import { Loader2 } from "lucide-react"
 
 export default function Home() {
@@ -28,17 +30,19 @@ export default function Home() {
     )
   }
 
-  // Admin/staff đang được redirect, không render gì thêm
+  // Admin/staff are being redirected — render nothing
   if (isAdminOrStaff) return null
 
-  // Người dùng thông thường → hiển thị landing page
+  // Regular users → new landing page
   return (
     <div className="flex flex-col">
+      <HeroSection />
       <StatsSection />
-      <FeaturedConferences />
       <HowItWorks />
-      <DemoConference />
-      <LatestPapers />
+      <AudienceSection />
+      <DynamicDataSection />
+      <CTASection />
+      <HomeFooter />
     </div>
   )
 }
