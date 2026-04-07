@@ -10,6 +10,7 @@ import { Calendar, MapPin, Loader2, CheckCircle, Search, Filter } from 'lucide-r
 import { StandardPagination } from '@/components/ui/standard-pagination'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
+import Image from 'next/image'
 import { CardGridSkeleton, PageHeaderSkeleton } from '@/components/shared/skeletons'
 import { toast } from 'sonner'
 import { fmtDate } from '@/lib/utils'
@@ -327,12 +328,12 @@ function ConferencesPageInner() {
                                     {/* Banner Image */}
                                     <div className="relative w-full aspect-[16/9] bg-gradient-to-br from-indigo-500 to-purple-600 overflow-hidden shrink-0">
                                         {conference.bannerImageUrl ? (
-                                            <img
+                                            <Image
                                                 src={conference.bannerImageUrl}
                                                 alt={conference.name}
-                                                loading="lazy"
-                                                decoding="async"
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                fill
+                                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                                                className="object-cover group-hover:scale-105 transition-transform duration-500"
                                             />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center">
