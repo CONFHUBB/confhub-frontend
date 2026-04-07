@@ -9,8 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
     "@hookform/resolvers": "^5.2.2",
     "@lexical/react": "^0.41.0",
+    "@mui/material": "^7.3.9",
     "@radix-ui/react-dialog": "^1.1.15",
     "@react-oauth/google": "^0.13.4",
     "@types/qrcode": "^1.5.6",

@@ -208,7 +208,7 @@ export default function ConferenceDetailsPage() {
                     <img src={conference.bannerImageUrl} alt={conference.name} fetchPriority="high" decoding="async"
                         className="w-full h-[280px] lg:h-[340px] object-cover" />
                 ) : (
-                    <div className="w-full h-[280px] lg:h-[340px] bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700" />
+                    <div className="w-full h-[280px] lg:h-[340px] bg-primary" />
                 )}
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
@@ -426,7 +426,7 @@ export default function ConferenceDetailsPage() {
                                     {c.bannerImageUrl ? (
                                         <img src={c.bannerImageUrl} alt={c.name} className="w-full h-28 object-cover" />
                                     ) : (
-                                        <div className="w-full h-28 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                                        <div className="w-full h-28 bg-primary flex items-center justify-center">
                                             <span className="text-white/70 text-lg font-bold">{c.acronym}</span>
                                         </div>
                                     )}

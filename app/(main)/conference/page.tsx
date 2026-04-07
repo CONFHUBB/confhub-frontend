@@ -152,15 +152,15 @@ function ConferencesPageInner() {
             {/* Eye-catching Page Header */}
             <div className="relative mb-8 p-8 sm:p-10 bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-sm border border-slate-200/80 dark:border-slate-800">
                 {/* Decorative background blobs */}
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-indigo-500/10 to-purple-500/10 dark:from-indigo-500/20 dark:to-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
-                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-gradient-to-tr from-blue-500/10 to-teal-500/10 dark:from-blue-500/20 dark:to-teal-500/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3 pointer-events-none"></div>
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 dark:bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-secondary/10 dark:bg-secondary/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3 pointer-events-none"></div>
 
                 <div className="relative z-10 max-w-4xl">
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
                         {filters.status === 'ONGOING' ? (
-                            <>Open for <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">Submissions</span></>
+                            <>Open for <span className="text-primary">Submissions</span></>
                         ) : (
-                            <>All <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">Conferences</span></>
+                            <>All <span className="text-primary">Conferences</span></>
                         )}
                     </h1>
                     
@@ -326,7 +326,7 @@ function ConferencesPageInner() {
                             >
                                 <div className="h-full flex flex-col rounded-xl overflow-hidden border bg-card shadow-sm hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1">
                                     {/* Banner Image */}
-                                    <div className="relative w-full aspect-[16/9] bg-gradient-to-br from-indigo-500 to-purple-600 overflow-hidden shrink-0">
+                                    <div className="relative w-full aspect-[16/9] bg-primary overflow-hidden shrink-0">
                                         {conference.bannerImageUrl ? (
                                             <Image
                                                 src={conference.bannerImageUrl}

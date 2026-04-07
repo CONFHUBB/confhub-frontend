@@ -386,7 +386,7 @@ export default function PublishedPapersClient() {
                         <div className="flex flex-col items-center justify-center gap-2 mb-1">
                             <BookOpen className="h-12 w-12 text-indigo-500 mb-2" />
                             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                                Published <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">Papers</span>
+                                Published <span className="text-primary">Papers</span>
                             </h1>
                         </div>
                         <p className="text-lg text-slate-600 dark:text-slate-300 font-medium">

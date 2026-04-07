@@ -167,8 +167,8 @@ export default function MyConferencesPage() {
             {/* ── Eye-catching Header ──────────────────────────────────── */}
             <div className="relative mb-4 p-8 sm:p-10 bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-sm border border-slate-200/80 dark:border-slate-800">
                 {/* Decorative background blobs */}
-                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-br from-indigo-500/10 to-purple-500/10 dark:from-indigo-500/20 dark:to-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
-                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-gradient-to-tr from-blue-500/10 to-teal-500/10 dark:from-blue-500/20 dark:to-teal-500/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3 pointer-events-none"></div>
+                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-primary/10 dark:bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-secondary/10 dark:bg-secondary/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3 pointer-events-none"></div>
 
                 <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
                     <div>
@@ -177,7 +177,7 @@ export default function MyConferencesPage() {
                                 <Building2 className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
                             </div>
                             <div>
-                                My <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">Conferences</span>
+                                My <span className="text-primary">Conferences</span>
                             </div>
                         </h1>
                         <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300 font-medium">
