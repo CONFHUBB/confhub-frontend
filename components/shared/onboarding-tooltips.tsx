@@ -114,13 +114,13 @@ export function OnboardingTooltips({ storageKey, steps, forceShow }: OnboardingT
         <>
             {/* Backdrop — only when there's a target to highlight */}
             {hasTarget && (
-                <div className="fixed inset-0 z-40 bg-black/20 animate-in fade-in duration-200" onClick={dismiss} />
+                <div className="fixed inset-0 z-40 bg-black/20" onClick={dismiss} />
             )}
 
             {/* Tooltip card */}
             <div
                 className={cn(
-                    'z-50 w-80 bg-white rounded-xl shadow-2xl border border-secondary/20 overflow-hidden animate-in fade-in zoom-in-95 duration-300',
+                    'z-50 w-80 bg-white rounded-xl shadow-2xl border border-secondary/20 overflow-hidden',
                     hasTarget ? 'absolute' : 'fixed bottom-24 right-6'
                 )}
                 style={hasTarget ? {
