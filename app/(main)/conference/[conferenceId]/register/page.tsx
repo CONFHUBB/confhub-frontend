@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Label } from '@/components/ui/label'
 import { Loader2, CheckCircle, CreditCard, Users, Calendar, Ticket } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { getCurrentUserId } from '@/lib/auth'
 
 const CATEGORY_LABELS: Record<string, string> = {
   AUTHOR: 'Author / Presenter',
@@ -31,7 +32,8 @@ function RegisterContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const conferenceId = Number(params.conferenceId)
-  const userId = Number(searchParams.get('userId') || 0)
+  // Prefer query param (for staff registering others), fallback to current logged-in user
+  const userId = Number(searchParams.get('userId')) || getCurrentUserId() || 0
 
   const [ticketTypes, setTicketTypes] = useState<TicketTypeResponse[]>([])
   const [selected, setSelected] = useState<TicketTypeResponse | null>(null)
@@ -68,7 +70,11 @@ function RegisterContent() {
   }, [conferenceId, userId])
 
   const handleRegister = async () => {
-    if (!selected || !userId) return
+    if (!selected) return
+    if (!userId) {
+      setError('You must be logged in to register. Please sign in and try again.')
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
