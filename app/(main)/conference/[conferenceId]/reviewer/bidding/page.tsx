@@ -377,7 +377,7 @@ export default function BiddingPage() {
                                                 </button>
                                                 <div className="flex flex-wrap items-center gap-2 mt-1.5">
                                                     {paper.trackName && (
-                                                        <Badge variant="outline" className="text-xs border-purple-200 text-purple-700 bg-purple-50">
+                                                        <Badge variant="outline" className="text-xs border-indigo-200 text-indigo-700 bg-indigo-50">
                                                             {paper.trackName}
                                                         </Badge>
                                                     )}

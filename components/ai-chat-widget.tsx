@@ -364,7 +364,7 @@ export function AIChatWidget() {
                                     const ungrouped: ActionSuggestion[] = []
                                     
                                     msg.actions.forEach(action => {
-                                        // Try to extract conference name from label like "📄 Nộp bài: ICML2026" or "🔍 Xem: GSRE2026"
+                                        // Try to extract conference name from label like "📄 Submit: ICML2026" or "🔍 View: GSRE2026"
                                         const match = action.label.match(/:\s*(.+)$/)
                                         if (match) {
                                             const confName = match[1].trim()

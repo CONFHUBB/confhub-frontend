@@ -4,10 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { getConferenceActivities } from '@/app/api/conference.api'
 import type { ConferenceActivityDTO } from '@/types/conference'
 import { CheckCircle2, Circle, ChevronDown, ChevronUp, Loader2, FileText, Search, Bell, Camera, Send, Users, MessageSquare, Ticket, CalendarDays } from 'lucide-react'
-import Box from '@mui/material/Box'
-import MUIStepper from '@mui/material/Stepper'
-import Step from '@mui/material/Step'
-import StepLabel from '@mui/material/StepLabel'
 import { fmtDate } from '@/lib/utils'
 
 interface PhaseStep {
@@ -186,24 +182,20 @@ export function ConferencePhaseTracker({ conferenceId }: ConferencePhaseTrackerP
             {!collapsed && (
                 <div className="border-t px-4 pb-5 pt-4">
                     {/* Horizontal stepper for larger screens */}
-                    <Box sx={{ width: '100%', display: { xs: 'none', sm: 'block' }, pt: 2, pb: 2 }}>
-                        <MUIStepper activeStep={currentIdx} alternativeLabel>
+                    <div className="hidden sm:block w-full pt-2 pb-2">
+                        <div className="flex items-start justify-between">
                             {steps.map((step, idx) => {
                                 const isPast = step.done
                                 const isActive = step.isActive
 
                                 return (
-                                    <Step key={step.key} completed={isPast}>
-                                        <StepLabel 
-                                            StepIconComponent={CustomPhaseIcon}
-                                            StepIconProps={{ icon: step.key } as any}
-                                        >
+                                    <div key={step.key} className="flex items-center flex-1 last:flex-initial">
+                                        <div className="flex flex-col items-center gap-1.5">
+                                            <CustomPhaseIcon active={isActive} completed={isPast} icon={step.key} />
                                             <div className="flex flex-col items-center">
                                                 <p className={`text-xs font-semibold leading-tight ${isPast ? 'text-emerald-700' : isActive ? 'text-primary' : 'text-muted-foreground/50'}`}>
                                                     {step.label}
                                                 </p>
-                                                
-                                                {/* Status badge */}
                                                 {isActive && (
                                                     <span className="mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary animate-pulse">
                                                         In Progress
@@ -214,20 +206,25 @@ export function ConferencePhaseTracker({ conferenceId }: ConferencePhaseTrackerP
                                                         Completed
                                                     </span>
                                                 )}
-
-                                                {/* Deadline */}
                                                 {step.deadline && (
                                                     <p className={`text-[10px] mt-1 ${isPast ? 'text-emerald-600/60' : isActive ? 'text-primary' : 'text-muted-foreground/40'}`}>
                                                         {fmtDate(step.deadline)}
                                                     </p>
                                                 )}
                                             </div>
-                                        </StepLabel>
-                                    </Step>
+                                        </div>
+                                        {idx < steps.length - 1 && (
+                                            <div className="flex-1 mx-2 mt-[-40px]">
+                                                <div className={`h-0.5 w-full rounded-full transition-colors ${
+                                                    isPast ? 'bg-emerald-400' : 'bg-gray-200'
+                                                }`} />
+                                            </div>
+                                        )}
+                                    </div>
                                 )
                             })}
-                        </MUIStepper>
-                    </Box>
+                        </div>
+                    </div>
 
                     {/* Vertical layout for mobile */}
                     <div className="sm:hidden space-y-1">

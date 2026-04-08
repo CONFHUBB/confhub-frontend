@@ -812,7 +812,7 @@ export default function ConferenceUpdatePage() {
 
     // ── Role label helpers ────────────────────────────────────────
     const roleLabel = userRole === 'CONFERENCE_CHAIR' ? 'Conference Chair' : userRole === 'PROGRAM_CHAIR' ? 'Program Chair' : userRole === 'BOTH' ? 'Conference & Program Chair' : ''
-    const roleBadgeColor = userRole === 'CONFERENCE_CHAIR' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : userRole === 'PROGRAM_CHAIR' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' : 'bg-violet-100 text-violet-800 border-violet-200'
+    const roleBadgeColor = userRole === 'CONFERENCE_CHAIR' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : userRole === 'PROGRAM_CHAIR' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' : 'bg-indigo-100 text-indigo-800 border-indigo-200'
     const roleIcon = userRole === 'CONFERENCE_CHAIR' ? <Shield className="h-3.5 w-3.5" /> : <GraduationCap className="h-3.5 w-3.5" />
     const backLink = userRole === 'PROGRAM_CHAIR' ? '/conference/program-conference' : '/conference/my-conference'
     const backLabel = userRole === 'PROGRAM_CHAIR' ? 'Back to Program Conferences' : 'Back to My Conferences'
@@ -882,7 +882,7 @@ export default function ConferenceUpdatePage() {
                                                 ? 'bg-emerald-100 text-emerald-600'
                                                 : userRole === 'PROGRAM_CHAIR'
                                                     ? 'bg-blue-100 text-blue-600'
-                                                    : 'bg-violet-100 text-violet-600'
+                                                    : 'bg-indigo-100 text-indigo-600'
                                         }`}>
                                             {roleIcon}
                                         </div>
@@ -893,7 +893,7 @@ export default function ConferenceUpdatePage() {
                                                     ? 'text-emerald-700'
                                                     : userRole === 'PROGRAM_CHAIR'
                                                         ? 'text-blue-700'
-                                                        : 'text-violet-700'
+                                                        : 'text-indigo-700'
                                             }`}>{roleLabel}</p>
                                         </div>
                                     </div>

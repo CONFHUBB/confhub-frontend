@@ -240,7 +240,7 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
             <div className="rounded-lg border p-6 space-y-5">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <Settings2 className="h-5 w-5 text-violet-600" />
+                        <Settings2 className="h-5 w-5 text-indigo-600" />
                         <h3 className="text-lg font-bold">Conflict Detection Settings</h3>
                     </div>
                     {tracks.length > 1 && (

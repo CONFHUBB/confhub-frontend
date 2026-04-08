@@ -45,7 +45,7 @@ const ACADEMIC_LINKS = [
         key: 'semanticScholarId' as const,
         label: 'Semantic Scholar',
         icon: <BookOpen className="h-4 w-4" />,
-        color: 'bg-purple-500/10 text-purple-600',
+        color: 'bg-indigo-500/10 text-indigo-600',
         buildUrl: (id: string) => id.startsWith('http') ? id : `https://www.semanticscholar.org/author/${id}`,
     },
 ]

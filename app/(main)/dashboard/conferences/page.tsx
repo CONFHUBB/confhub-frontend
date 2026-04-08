@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
@@ -103,7 +103,7 @@ export default function ConferencesPage() {
                     <h1 className="text-2xl font-bold tracking-tight">Conferences</h1>
                     <p className="text-muted-foreground text-sm mt-0.5">Manage all conferences in the system</p>
                 </div>
-                <Button asChild size="sm" className="gap-1.5 bg-violet-600 hover:bg-violet-700">
+                <Button asChild size="sm" className="gap-1.5 bg-indigo-600 hover:bg-indigo-700">
                     <Link href="/conference/create">
                         <PlusCircle className="h-4 w-4" />
                         Create Conference
@@ -113,7 +113,7 @@ export default function ConferencesPage() {
 
             {/* Stat Cards */}
             <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-                <StatCard label="Total" value={counts.total} icon={FolderOpen} iconBg="bg-violet-50" iconColor="text-violet-600" isLoading={isLoading} />
+                <StatCard label="Total" value={counts.total} icon={FolderOpen} iconBg="bg-indigo-50" iconColor="text-indigo-600" isLoading={isLoading} />
                 <StatCard label="Active" value={counts.active} icon={CheckCircle2} iconBg="bg-emerald-50" iconColor="text-emerald-600" isLoading={isLoading} />
                 <StatCard label="Pending Approval" value={counts.pending} icon={FolderOpen} iconBg="bg-amber-50" iconColor="text-amber-600" isLoading={isLoading} />
                 <StatCard label="Completed" value={counts.completed} icon={FolderOpen} iconBg="bg-blue-50" iconColor="text-blue-600" isLoading={isLoading} />
@@ -147,7 +147,7 @@ export default function ConferencesPage() {
                                 onClick={() => setActiveFilter(s)}
                                 className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${
                                     activeFilter === s
-                                        ? "bg-violet-600 text-white"
+                                        ? "bg-indigo-600 text-white"
                                         : "bg-muted text-muted-foreground hover:bg-muted/80"
                                 }`}
                             >
@@ -192,7 +192,7 @@ export default function ConferencesPage() {
                                             <tr key={c.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                                                 <td className="py-3 px-6">
                                                     <div>
-                                                        <Link href={`/conference/${c.id}`} className="font-semibold hover:text-violet-600 transition-colors">
+                                                        <Link href={`/conference/${c.id}`} className="font-semibold hover:text-indigo-600 transition-colors">
                                                             {c.acronym || c.name}
                                                         </Link>
                                                         <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{c.name}</p>

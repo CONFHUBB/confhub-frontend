@@ -40,7 +40,7 @@ export const ROLE_DISPLAY: Record<string, string> = {
 }
 
 export const ROLE_COLORS: Record<string, string> = {
-    CONFERENCE_CHAIR: "bg-violet-500/15 text-violet-700 border-violet-500/25 dark:text-violet-400",
+    CONFERENCE_CHAIR: "bg-indigo-500/15 text-indigo-700 border-indigo-500/25 dark:text-indigo-400",
     PROGRAM_CHAIR: "bg-sky-500/15 text-sky-700 border-sky-500/25 dark:text-sky-400",
     REVIEWER: "bg-emerald-500/15 text-emerald-700 border-emerald-500/25 dark:text-emerald-400",
     AUTHOR: "bg-amber-500/15 text-amber-700 border-amber-500/25 dark:text-amber-400",

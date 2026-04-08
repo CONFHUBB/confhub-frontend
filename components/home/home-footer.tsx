@@ -35,14 +35,14 @@ export function HomeFooter() {
                     <div className="lg:col-span-2">
                         <Link href="/" className="inline-flex items-center gap-2 mb-4">
                             <Image
-                                src="/images/Favicon-White.png"
+                                src="/images/favicon-blue.png"
                                 alt="ConfHub"
                                 width={32}
                                 height={32}
                                 className="h-8 w-auto object-contain"
                             />
                             <Image
-                                src="/images/White.png"
+                                src="/images/logo-blue.png"
                                 alt="ConfHub"
                                 width={100}
                                 height={40}

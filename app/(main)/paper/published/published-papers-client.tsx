@@ -37,7 +37,7 @@ function PaperCard({ paper, onReadPaper }: { paper: PublishedPaperDTO; onReadPap
     return (
         <Card className="flex flex-col h-full border border-gray-200 rounded-xl shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 bg-white overflow-hidden group">
             {/* Top accent bar */}
-            <div className="h-1 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500" />
+            <div className="h-1 w-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-400" />
 
             <CardHeader className="pb-2 pt-4 px-5 gap-2">
                 {paper.conferenceName && (
@@ -174,7 +174,7 @@ function PaperDetailDialog({
                             <div className="flex flex-wrap gap-2">
                                 {paper.authorNames.map((name, i) => (
                                     <div key={i} className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5">
-                                        <div className="h-6 w-6 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                                        <div className="h-6 w-6 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
                                             {name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                                         </div>
                                         <span className="text-sm font-medium text-gray-700">{name}</span>
@@ -379,7 +379,7 @@ export default function PublishedPapersClient() {
             <div className="page-wide pb-0">
                 <div className="relative mb-2 p-10 sm:p-14 bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-sm border border-slate-200/80 dark:border-slate-800 text-center">
                     {/* Decorative background blobs */}
-                    <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-gradient-to-br from-indigo-500/15 to-purple-500/15 dark:from-indigo-500/20 dark:to-purple-500/10 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/4 pointer-events-none"></div>
+                    <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-gradient-to-br from-indigo-500/15 to-indigo-400/15 dark:from-indigo-500/20 dark:to-indigo-400/10 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/4 pointer-events-none"></div>
                     <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-gradient-to-tr from-blue-500/15 to-teal-500/15 dark:from-blue-500/20 dark:to-teal-500/10 rounded-full blur-3xl translate-y-1/3 translate-x-1/4 pointer-events-none"></div>
 
                     <div className="relative z-10 max-w-2xl mx-auto space-y-6">

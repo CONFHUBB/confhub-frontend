@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React from 'react'
 import { AdvancedProgram } from '@/types/program'
@@ -236,7 +236,7 @@ export function ProgramViewer({ program, allPapers }: ProgramViewerProps) {
                                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
                                     pMode === 'Oral Presentation' ? 'bg-blue-100 text-blue-700' :
                                     pMode === 'Poster' ? 'bg-amber-100 text-amber-700' :
-                                    pMode === 'Tutorial' ? 'bg-purple-100 text-purple-700' :
+                                    pMode === 'Tutorial' ? 'bg-indigo-100 text-indigo-700' :
                                     pMode === 'Workshop' ? 'bg-emerald-100 text-emerald-700' :
                                     'bg-gray-100 text-gray-600'
                                   }`}>

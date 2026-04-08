@@ -8,11 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field'
 import { CountrySelect } from '@/components/ui/country-select'
 import { Select } from 'antd'
-import Box from '@mui/material/Box'
-import MUIStepper from '@mui/material/Stepper'
-import Step from '@mui/material/Step'
-import StepLabel from '@mui/material/StepLabel'
-import StepButton from '@mui/material/StepButton'
 import { AREA_OPTIONS, SOCIETY_SPONSOR_OPTIONS } from '@/lib/constants/conference-options'
 import { toast } from 'sonner'
 import {
@@ -283,37 +278,49 @@ export function SetupWizard({ onSubmit, isSubmitting, backendErrors }: SetupWiza
     return (
         <div className="space-y-8">
             {/* ── Progress Stepper ── */}
-            <Box sx={{ width: '100%' }}>
-                <MUIStepper activeStep={currentStep} alternativeLabel nonLinear>
+            <div className="w-full">
+                <div className="flex items-center justify-between">
                     {STEPS.map((step, idx) => {
                         const isClickable = visited.has(idx) || idx <= currentStep
+                        const isCompleted = idx < currentStep
+                        const isActive = idx === currentStep
 
                         return (
-                            <Step key={step.id} completed={idx < currentStep}>
-                                <StepButton
-                                    color="inherit"
+                            <div key={step.id} className="flex items-center flex-1 last:flex-initial">
+                                {/* Step circle + label */}
+                                <button
+                                    type="button"
                                     onClick={() => isClickable && goToStep(idx)}
                                     disabled={!isClickable}
+                                    className="flex flex-col items-center gap-2 group cursor-pointer disabled:cursor-not-allowed"
                                 >
-                                    <StepLabel StepIconComponent={CustomStepIcon}>
-                                        <div className="text-center">
-                                            <p className={cn(
-                                                'text-xs font-semibold transition-colors',
-                                                idx === currentStep ? 'text-indigo-600' : idx < currentStep ? 'text-indigo-500' : 'text-gray-400'
-                                            )}>
-                                                {step.title}
-                                            </p>
-                                            <p className="text-[10px] text-muted-foreground mt-0.5 hidden sm:block">
-                                                {step.description}
-                                            </p>
-                                        </div>
-                                    </StepLabel>
-                                </StepButton>
-                            </Step>
+                                    <CustomStepIcon active={isActive} completed={isCompleted} icon={idx + 1} />
+                                    <div className="text-center">
+                                        <p className={cn(
+                                            'text-xs font-semibold transition-colors',
+                                            isActive ? 'text-indigo-600' : isCompleted ? 'text-indigo-500' : 'text-gray-400'
+                                        )}>
+                                            {step.title}
+                                        </p>
+                                        <p className="text-[10px] text-muted-foreground mt-0.5 hidden sm:block">
+                                            {step.description}
+                                        </p>
+                                    </div>
+                                </button>
+                                {/* Connector line */}
+                                {idx < STEPS.length - 1 && (
+                                    <div className="flex-1 mx-3 mt-[-24px]">
+                                        <div className={cn(
+                                            'h-0.5 w-full rounded-full transition-colors',
+                                            idx < currentStep ? 'bg-indigo-500' : 'bg-gray-200'
+                                        )} />
+                                    </div>
+                                )}
+                            </div>
                         )
                     })}
-                </MUIStepper>
-            </Box>
+                </div>
+            </div>
 
             {/* ── Step Hint ── */}
             <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-100 rounded-lg px-4 py-3">
