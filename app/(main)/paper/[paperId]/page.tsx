@@ -391,9 +391,9 @@ export default function PaperWorkspacePage() {
                                         {subjectAreas.filter(sa => sa.id.toString() === primarySubjectAreaId).map(sa => (
                                             <Badge key={sa.id} variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-700">Primary: {sa.name}</Badge>
                                         ))}
-                                        {secondarySubjectAreaIds.map(id => {
+                                        {[...new Set(secondarySubjectAreaIds)].map((id, idx) => {
                                             const sa = subjectAreas.find(s => s.id === id)
-                                            return sa ? <Badge key={sa.id} variant="outline" className="text-muted-foreground">{sa.name}</Badge> : null
+                                            return sa ? <Badge key={`sec-${idx}-${sa.id}`} variant="outline" className="text-muted-foreground">{sa.name}</Badge> : null
                                         })}
                                     </div>
                                 </div>
