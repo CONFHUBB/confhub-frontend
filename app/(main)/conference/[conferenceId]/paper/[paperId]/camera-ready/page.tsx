@@ -158,6 +158,33 @@ export default function DedicatedCameraReadyPage() {
         if (!selectedTicketId || !userId || !paperId) return
         try {
             setRegistering(true)
+
+            // Pre-check: verify no existing ticket before attempting registration
+            // This prevents duplicate registration_number constraint violations on the backend
+            try {
+                const existingTicket = await getMyTicket(conferenceId, userId)
+                if (existingTicket) {
+                    setMyTicket(existingTicket)
+                    if (existingTicket.paymentStatus === 'COMPLETED') {
+                        toast.info('You are already registered for this conference.')
+                        setCurrentStep('upload')
+                    } else if (existingTicket.paymentStatus === 'PENDING') {
+                        toast.info('You have a pending payment. Please complete it.')
+                        setCurrentStep('pending-payment')
+                    } else {
+                        // FAILED ticket — let backend handle it (cancel + re-register)
+                        // fall through to register call below
+                        throw new Error('no_ticket') // signal to proceed
+                    }
+                    return
+                }
+            } catch (preCheckErr: any) {
+                // If it's our signal to proceed, fall through; otherwise ticket doesn't exist — proceed normally
+                if (preCheckErr?.message !== 'no_ticket' && preCheckErr?.response?.status !== 404) {
+                    // Unexpected error on pre-check — still try to register
+                }
+            }
+
             const result = await registerForConference(conferenceId, userId, {
                 ticketTypeId: selectedTicketId,
                 paperId: paperId,
@@ -176,7 +203,8 @@ export default function DedicatedCameraReadyPage() {
         } catch (err: any) {
             const msg = err?.response?.data?.message || 'Registration failed. Please try again.'
             toast.error(msg)
-            if (msg.includes('already registered')) {
+            // Fallback: if backend still says already registered, fetch and route correctly
+            if (msg.includes('already registered') || msg.includes('duplicate') || err?.response?.status === 409) {
                 try {
                     const ticket = await getMyTicket(conferenceId, userId)
                     setMyTicket(ticket)

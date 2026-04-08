@@ -21,6 +21,7 @@ import { getConferenceUsersWithRoles } from "@/app/api/conference-user-track.api
 import { getPapersByConference } from '@/app/api/paper.api'
 import { saveConferenceSubmissionForm, getConferenceSubmissionForm } from '@/app/api/submission-form.api'
 import { getReviewQuestionsByTrack } from '@/app/api/review.api'
+import type { CheckInHistoryEntry } from './registration/checkin-inline'
 
 // ── Eagerly imported (used in initial render / always needed) ──
 import { ConferenceForm } from '../../create/conference-form'
@@ -249,6 +250,14 @@ export default function ConferenceUpdatePage() {
     const [trackRefreshKey, setTrackRefreshKey] = useState(0)
     const [workflowRefreshKey, setWorkflowRefreshKey] = useState(0)
     const refreshWorkflow = () => setWorkflowRefreshKey(k => k + 1)
+
+    // Check-in: persist history across tab switches + trigger attendees refresh
+    const [checkinRefreshKey, setCheckinRefreshKey] = useState(0)
+    const [checkinHistory, setCheckinHistory] = useState<CheckInHistoryEntry[]>([])
+    const handleCheckInSuccess = (entry: CheckInHistoryEntry) => {
+        setCheckinHistory(prev => [entry, ...prev.slice(0, 49)]) // keep last 50
+        setCheckinRefreshKey(k => k + 1) // trigger AttendeesManagement re-fetch
+    }
 
     // Task 5: Track Chair filtered view — null means full access (chair), array means restricted
     const [chairTrackIds, setChairTrackIds] = useState<number[] | null>(null)
@@ -777,7 +786,7 @@ export default function ConferenceUpdatePage() {
                             <h2 className="text-xl font-bold mb-2">Attendees</h2>
                             <p className="text-sm text-muted-foreground">View and manage all registered attendees.</p>
                         </div>
-                        <AttendeesManagement conferenceId={conferenceId} />
+                        <AttendeesManagement conferenceId={conferenceId} refreshKey={checkinRefreshKey} />
                     </div>
                 )
 
@@ -789,7 +798,11 @@ export default function ConferenceUpdatePage() {
                             <h2 className="text-xl font-bold mb-2">Check-In Scanner</h2>
                             <p className="text-sm text-muted-foreground">Scan QR codes or enter registration numbers to check in attendees on-site.</p>
                         </div>
-                        <CheckInInline conferenceId={conferenceId} />
+                        <CheckInInline
+                            conferenceId={conferenceId}
+                            checkInHistory={checkinHistory}
+                            onCheckInSuccess={handleCheckInSuccess}
+                        />
                     </div>
                 )
 

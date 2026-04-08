@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Loader2, Search, Users, Download, QrCode, MailCheck, CheckCircle2, XCircle, Clock } from 'lucide-react'
+import { Loader2, Search, Users, Download, QrCode, MailCheck, CheckCircle2, XCircle, Clock, RefreshCcw } from 'lucide-react'
 import { StandardPagination } from '@/components/ui/standard-pagination'
 import { FilterPanel } from '@/components/ui/filter-panel'
 import { TableSkeleton } from '@/components/ui/table-skeleton'
@@ -38,9 +38,11 @@ const STATUS_CONFIG: Record<string, { label: string; badge: React.ReactNode }> =
 
 interface Props {
   conferenceId: number
+  /** Increment this to force a re-fetch from the parent (e.g., after a check-in) */
+  refreshKey?: number
 }
 
-export default function AttendeesManagement({ conferenceId }: Props) {
+export default function AttendeesManagement({ conferenceId, refreshKey = 0 }: Props) {
   const [attendees, setAttendees] = useState<TicketResponse[]>([])
   const [totalElements, setTotalElements] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
@@ -87,15 +89,15 @@ export default function AttendeesManagement({ conferenceId }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [conferenceId, currentPage, debouncedSearch, statusFilter])
+  }, [conferenceId, currentPage, debouncedSearch, statusFilter, refreshKey])
 
-  // Fetch stats independently (all, no filter)
+  // Fetch stats independently (all, no filter) — re-runs when refreshKey changes
   useEffect(() => {
     getAttendees(conferenceId, { page: 0, size: 100 }).then((res) => {
       setStatsPaid(res.content.filter((a) => a.paymentStatus === 'COMPLETED').length)
       setStatsCheckedIn(res.content.filter((a) => a.isCheckedIn).length)
     })
-  }, [conferenceId])
+  }, [conferenceId, refreshKey])
 
   useEffect(() => {
     setCurrentPage(0)
@@ -207,6 +209,9 @@ export default function AttendeesManagement({ conferenceId }: Props) {
             },
           ]}
         />
+        <Button variant="outline" size="sm" className="gap-2 text-xs h-9" onClick={fetchAttendees} disabled={loading} title="Refresh attendee list">
+          <RefreshCcw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+        </Button>
         <Button variant="outline" size="sm" className="gap-2 text-xs h-9" onClick={exportCsv} disabled={loading || totalElements === 0}>
           <Download className="h-3.5 w-3.5" /> Export CSV
         </Button>

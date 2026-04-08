@@ -736,8 +736,8 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
             let hasAttendees = false
             try {
                 const { getAttendees } = await import('@/app/api/registration.api')
-                const attendees = await getAttendees(conferenceId)
-                hasAttendees = Array.isArray(attendees) && attendees.length > 0
+                const attendees = await getAttendees(conferenceId, { page: 0, size: 1 })
+                hasAttendees = attendees.totalElements > 0
             } catch { hasAttendees = false }
 
             setPapers(merged)
