@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { checkIn, CheckInResponse, getConferencePaymentHistory } from '@/app/api/registration.api'
+import { useState } from 'react'
+import { checkIn, CheckInResponse } from '@/app/api/registration.api'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,14 +10,24 @@ import { CheckCircle2, XCircle, ScanLine, Loader2, AlertCircle } from 'lucide-re
 // ─────────────────────────────────────────────
 // CHECK-IN INLINE (for Chair sidebar)
 // ─────────────────────────────────────────────
-interface CheckInInlineProps { conferenceId: number }
+export interface CheckInHistoryEntry {
+  code: string
+  response: CheckInResponse
+}
 
-export function CheckInInline({ conferenceId }: CheckInInlineProps) {
+interface CheckInInlineProps {
+  conferenceId: number
+  /** Persisted history from parent — survives tab switches */
+  checkInHistory: CheckInHistoryEntry[]
+  /** Called after each successful check-in so parent can persist history */
+  onCheckInSuccess: (entry: CheckInHistoryEntry) => void
+}
+
+export function CheckInInline({ conferenceId, checkInHistory, onCheckInSuccess }: CheckInInlineProps) {
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<CheckInResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [history, setHistory] = useState<{ code: string; response: CheckInResponse }[]>([])
 
   const handleCheckIn = async (e?: React.FormEvent) => {
     e?.preventDefault()
@@ -28,7 +38,7 @@ export function CheckInInline({ conferenceId }: CheckInInlineProps) {
     try {
       const res = await checkIn(code.trim())
       setResult(res)
-      setHistory(prev => [{ code: code.trim(), response: res }, ...prev.slice(0, 19)])
+      onCheckInSuccess({ code: code.trim(), response: res })
       setCode('')
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Check-in failed. Please verify the code.')
@@ -91,11 +101,11 @@ export function CheckInInline({ conferenceId }: CheckInInlineProps) {
         </div>
       )}
 
-      {history.length > 0 && (
+      {checkInHistory.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Recent Check-ins</p>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Recent Check-ins ({checkInHistory.length})</p>
           <div className="space-y-2">
-            {history.map((h, i) => (
+            {checkInHistory.map((h, i) => (
               <div key={i} className="flex items-center justify-between bg-white rounded-lg border px-4 py-3 text-sm">
                 <div>
                   <p className="font-medium text-gray-900">{h.response.attendeeName}</p>
