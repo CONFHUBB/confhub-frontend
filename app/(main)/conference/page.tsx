@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { useEffect, useState, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -114,7 +114,7 @@ function ConferencesPageInner() {
             case 'ONGOING': return 'bg-green-100 text-green-800'
             case 'SCHEDULED': return 'bg-indigo-100 text-indigo-800'
             case 'PENDING': return 'bg-amber-100 text-amber-800'
-            case 'BIDDING': return 'bg-purple-100 text-purple-800'
+            case 'BIDDING': return 'bg-indigo-100 text-indigo-800'
             case 'COMPLETED': return 'bg-gray-100 text-gray-600'
             case 'CANCELLED': return 'bg-red-100 text-red-800'
             default: return 'bg-gray-100 text-gray-800'

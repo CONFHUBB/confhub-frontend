@@ -28,7 +28,7 @@ export interface PaperForBidding {
     keywords: string[]
     trackName: string
     relevanceScore: number        // 0.0 - 1.0
-    currentBid: BidValue | null   // null = chưa bid
+    currentBid: BidValue | null   // null = no bid yet
     isDoubleBlind: boolean
     authorNames: string[]
 }

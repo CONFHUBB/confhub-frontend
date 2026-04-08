@@ -373,7 +373,7 @@ export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
                                                 <span className={`inline-flex items-center text-[10px] font-medium rounded-full px-2 py-0.5 ${
                                                     row.isChild
                                                         ? 'text-indigo-700 bg-indigo-50 border border-indigo-200'
-                                                        : 'text-purple-700 bg-purple-50 border border-purple-200'
+                                                        : 'text-indigo-700 bg-indigo-50 border border-indigo-200'
                                                 }`}>
                                                     {row.isChild ? 'Sub' : 'Primary'}
                                                 </span>

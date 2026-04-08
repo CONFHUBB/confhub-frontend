@@ -184,7 +184,7 @@ export default function UserSubmissionsPage() {
             {/* ── Eye-catching Header ──────────────────────────────────── */}
             <div className="relative mb-4 p-8 sm:p-10 bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-sm border border-slate-200/80 dark:border-slate-800">
                 {/* Decorative background blobs */}
-                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-br from-indigo-500/10 to-purple-500/10 dark:from-indigo-500/20 dark:to-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-br from-indigo-500/10 to-indigo-400/10 dark:from-indigo-500/20 dark:to-indigo-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
                 <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-gradient-to-tr from-blue-500/10 to-teal-500/10 dark:from-blue-500/20 dark:to-teal-500/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3 pointer-events-none"></div>
 
                 <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -208,7 +208,7 @@ export default function UserSubmissionsPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                     { label: "Total", value: stats.total, color: "text-indigo-600", bg: "bg-indigo-50 border-indigo-100" },
-                    { label: "Under Review", value: stats.underReview, color: "text-purple-600", bg: "bg-purple-50 border-purple-100" },
+                    { label: "Under Review", value: stats.underReview, color: "text-indigo-600", bg: "bg-indigo-50 border-indigo-100" },
                     { label: "Accepted", value: stats.accepted, color: "text-green-600", bg: "bg-green-50 border-green-100" },
                     { label: "Needs Action", value: stats.needsAction, color: stats.needsAction > 0 ? "text-amber-600" : "text-gray-600", bg: stats.needsAction > 0 ? "bg-amber-50 border-amber-200 ring-1 ring-amber-200" : "bg-gray-50 border-gray-100" },
                 ].map((stat) => (

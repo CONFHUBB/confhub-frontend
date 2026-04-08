@@ -245,7 +245,7 @@ export default function ReviewerConsolePage() {
                                 {pagedConferences.map((conf, idx) => {
                                     const statusInfo = getStatusInfo(conf.status || 'draft')
                                     return (
-                                        <tr key={conf.id} className="transition-colors hover:bg-amber-50/30">
+                                        <tr key={conf.id} className="transition-colors hover:bg-indigo-50/30">
                                             <td className="px-5 py-4 text-xs text-muted-foreground font-medium">
                                                 {currentPage * PAGE_SIZE + idx + 1}
                                             </td>
@@ -275,8 +275,8 @@ export default function ReviewerConsolePage() {
                                             </td>
                                             <td className="px-5 py-4 text-right">
                                                 <Link href={`/conference/${conf.id}/reviewer`}>
-                                                    <Button variant="outline" size="sm" className="gap-2 shrink-0 border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800">
-                                                        Open Console <ArrowRight className="h-4 w-4" />
+                                                    <Button size="sm" className="gap-1.5 h-8 text-[11px] font-semibold tracking-wide bg-indigo-600 hover:bg-indigo-700 text-white border-0 shrink-0">
+                                                        Open Workspace <ArrowRight className="h-3.5 w-3.5" />
                                                     </Button>
                                                 </Link>
                                             </td>

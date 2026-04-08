@@ -203,7 +203,7 @@ export function AnalyticsDashboard({ conferenceId }: AnalyticsDashboardProps) {
                             label="Decisions Made"
                             value={stats.accepted + stats.rejected}
                             max={stats.submitted}
-                            color="bg-purple-500"
+                            color="bg-indigo-500"
                         />
                         <ProgressBar
                             label="Check-in Rate"
@@ -227,7 +227,7 @@ export function AnalyticsDashboard({ conferenceId }: AnalyticsDashboardProps) {
                             { label: 'Under Review', value: stats.underReview, icon: BarChart3, cls: 'text-amber-600 bg-amber-50' },
                             { label: 'Accepted', value: stats.accepted, icon: CheckCircle2, cls: 'text-emerald-600 bg-emerald-50' },
                             { label: 'Rejected', value: stats.rejected, icon: XCircle, cls: 'text-red-600 bg-red-50' },
-                            { label: 'Review Completion', value: `${stats.reviewCompletionRate ? Math.round(stats.reviewCompletionRate) : 0}%`, icon: TrendingUp, cls: 'text-violet-600 bg-violet-50' },
+                            { label: 'Review Completion', value: `${stats.reviewCompletionRate ? Math.round(stats.reviewCompletionRate) : 0}%`, icon: TrendingUp, cls: 'text-indigo-600 bg-indigo-50' },
                         ].map(({ label, value, icon: Icon, cls }) => (
                             <div key={label} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100">
                                 <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${cls}`}>

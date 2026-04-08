@@ -317,7 +317,7 @@ export default function ReviewerConsole() {
 
                 {/* Header Area — Vibrant hero banner */}
                 <div className="mb-6 shrink-0">
-                    <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-700 p-6 md:px-8 md:py-7 shadow-lg">
+                    <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-indigo-700 via-indigo-600 to-indigo-500 p-6 md:px-8 md:py-7 shadow-lg">
                         {/* Decorative circles */}
                         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
                         <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/5 blur-xl" />
@@ -710,8 +710,8 @@ function DashboardTab({
 
                 <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigate('profile')}>
                     <CardContent className="p-4 flex items-center gap-3">
-                        <div className={`rounded-full p-2.5 ${interestsCount > 0 ? 'bg-emerald-100' : 'bg-purple-100'}`}>
-                            <Target className={`h-5 w-5 ${interestsCount > 0 ? 'text-emerald-600' : 'text-purple-600'}`} />
+                        <div className={`rounded-full p-2.5 ${interestsCount > 0 ? 'bg-emerald-100' : 'bg-indigo-100'}`}>
+                            <Target className={`h-5 w-5 ${interestsCount > 0 ? 'text-emerald-600' : 'text-indigo-600'}`} />
                         </div>
                         <div>
                             <p className="text-sm font-semibold">Subject Areas</p>

@@ -71,7 +71,7 @@ const PRIMARY_NAV = [
     { name: 'All Conferences', path: '/conference', exact: true, chairOnly: false },
     { name: 'Submit Paper', path: '/conference', exact: false, chairOnly: false, query: '?status=ONGOING' },
     { name: 'Published Papers', path: '/paper/published', exact: false, chairOnly: false },
-    { name: 'Create Conference', path: '/conference/create', exact: false },
+    { name: 'Create Conference', path: '/conference/create', exact: false, chairOnly: false },
 ]
 
 export function AppNavbar() {
@@ -197,11 +197,15 @@ export function AppNavbar() {
                     <div className="flex items-center justify-between h-16">
 
                         {/* ── Logo ── */}
-                        <Link href="/" className="shrink-0 flex items-center gap-2.5 group">
-                            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center group-hover:bg-primary-dark transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" /><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" /><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" /></svg>
-                            </div>
-                            <span className="font-heading font-bold text-xl text-text-dark">Conf<span className="text-primary">Hub</span></span>
+                        <Link href="/" className="shrink-0 flex items-center group">
+                            <Image
+                                src="/images/logo-blue.png"
+                                alt="ConfHub"
+                                width={140}
+                                height={36}
+                                className="h-9 w-auto"
+                                priority
+                            />
                         </Link>
 
                         {/* ── Center: Primary Nav + Workspace Dropdown (Desktop) ── */}
@@ -366,7 +370,7 @@ export function AppNavbar() {
                                         Log in
                                     </Link>
                                     <Link href="/auth/register" className="text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors bg-primary text-white hover:bg-primary-dark shadow-sm">
-                                        Create Conference
+                                        Sign Up
                                     </Link>
                                 </div>
                             ) : null}

@@ -157,9 +157,7 @@ export function DashboardSidebar({ ...props }: React.ComponentProps<typeof Sideb
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
                             <Link href="/dashboard">
-                                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                                    <Command className="size-4" />
-                                </div>
+                                <img src="/images/favicon-blue.png" alt="ConfHub" className="size-8 rounded-lg" />
                                 <div className="grid flex-1 text-left text-sm leading-tight">
                                     <span className="truncate font-semibold">ConfHub</span>
                                     <span className="truncate text-xs text-muted-foreground">Admin Dashboard</span>

@@ -304,7 +304,7 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged, bidCounts:
                                                     <div className="mt-1 flex items-center gap-2">
                                                         <Badge variant="outline" className="text-[10px] bg-slate-100 text-slate-600 border-slate-200">
                                                             <Lock className="h-3 w-3 mr-1" />
-                                                            Đã ẩn do chế độ Double-Blind
+                                                            Hidden due to Double-Blind mode
                                                         </Badge>
                                                     </div>
                                                 ) : (
@@ -313,7 +313,7 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged, bidCounts:
                                                     )
                                                 )}
                                                 <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                                                    {paper.trackName && <Badge variant="outline" className="text-xs border-purple-200 text-purple-700 bg-purple-50">{paper.trackName}</Badge>}
+                                                    {paper.trackName && <Badge variant="outline" className="text-xs border-indigo-200 text-indigo-700 bg-indigo-50">{paper.trackName}</Badge>}
                                                     {paper.primarySubjectArea && <Badge variant="secondary" className="text-xs">{paper.primarySubjectArea}</Badge>}
                                                     {paper.secondarySubjectAreas?.slice(0, 2).map((sa, i) => <Badge key={i} variant="outline" className="text-xs">{sa}</Badge>)}
                                                     {(paper.secondarySubjectAreas?.length || 0) > 2 && <span className="text-xs text-gray-400">+{paper.secondarySubjectAreas!.length - 2}</span>}

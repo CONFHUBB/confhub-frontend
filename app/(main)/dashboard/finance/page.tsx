@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
@@ -148,7 +148,7 @@ export default function FinancePage() {
                     label="Total Revenue"
                     value={(totalRevenue / 1_000_000).toFixed(2)}
                     suffix="M VND"
-                    icon={CreditCard} iconBg="bg-violet-50" iconColor="text-violet-600" isLoading={isLoading}
+                    icon={CreditCard} iconBg="bg-indigo-50" iconColor="text-indigo-600" isLoading={isLoading}
                 />
                 <StatCard label="Completed" value={completedCount} icon={CreditCard} iconBg="bg-emerald-50" iconColor="text-emerald-600" isLoading={isLoading} />
                 <StatCard label="Failed" value={failedCount} icon={CreditCard} iconBg="bg-rose-50" iconColor="text-rose-600" isLoading={isLoading} />
@@ -159,7 +159,7 @@ export default function FinancePage() {
             <Card className="border-0 shadow-sm">
                 <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
-                        <CreditCard className="h-4 w-4 text-violet-600" />
+                        <CreditCard className="h-4 w-4 text-indigo-600" />
                         Revenue Trend (Last 6 Months)
                     </CardTitle>
                     <CardDescription>VNPay payment outcomes aggregated by month</CardDescription>
@@ -221,7 +221,7 @@ export default function FinancePage() {
                         {["ALL", "PAID", "FAILED", "INVALID"].map(o => (
                             <button key={o} onClick={() => setOutcomeFilter(o)}
                                 className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${
-                                    outcomeFilter === o ? "bg-violet-600 text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                    outcomeFilter === o ? "bg-indigo-600 text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"
                                 }`}
                             >{o}</button>
                         ))}

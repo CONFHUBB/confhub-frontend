@@ -296,7 +296,7 @@ export default function ConferenceDetailsPage() {
                 </div>
                 <div className="bg-white dark:bg-card rounded-xl border shadow-lg p-4 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
                     <div className="flex items-center gap-2 mb-2">
-                        <div className="h-8 w-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center shrink-0"><Calendar className="h-4 w-4 text-violet-600 dark:text-violet-400" /></div>
+                        <div className="h-8 w-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0"><Calendar className="h-4 w-4 text-indigo-600 dark:text-indigo-400" /></div>
                         <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Event Dates</p>
                     </div>
                     <p className="text-sm font-semibold">{fmt(conference.startDate)}</p>
