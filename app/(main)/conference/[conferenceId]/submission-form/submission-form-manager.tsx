@@ -97,7 +97,7 @@ export function SubmissionFormManager({ conferenceId, onConfigChanged }: Submiss
     // ─── Edit Mode ────────────────────────────────────────────────────────────
     if (isEditMode) {
         return (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="space-y-6">
                 {/* Header context for edit mode */}
                 {definitionJson && (
                     <div className="flex items-center justify-between bg-muted/50 p-4 rounded-lg border">
@@ -127,7 +127,7 @@ export function SubmissionFormManager({ conferenceId, onConfigChanged }: Submiss
 
     // ─── Preview Mode (Locked / View-only) ────────────────────────────────────
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="space-y-6">
             {/* Lock / Status Banner */}
             <Card className="border-primary/20 bg-primary/5">
                 <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
