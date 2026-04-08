@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { Settings2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,7 +13,7 @@ export default function SettingsPage() {
             <Card className="border-0 shadow-sm">
                 <CardHeader>
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
-                        <Settings2 className="h-4 w-4 text-violet-600" />
+                        <Settings2 className="h-4 w-4 text-indigo-600" />
                         System Settings
                     </CardTitle>
                     <CardDescription>Configuration options will be available in a future update.</CardDescription>

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -230,7 +230,7 @@ export default function MyInvitationsPage() {
 
     const roleConfig: Record<string, { label: string; color: string }> = {
         'REVIEWER': { label: 'Reviewer', color: 'bg-blue-100 text-blue-700' },
-        'PROGRAM_CHAIR': { label: 'Program Chair', color: 'bg-purple-100 text-purple-700' },
+        'PROGRAM_CHAIR': { label: 'Program Chair', color: 'bg-indigo-100 text-indigo-700' },
         'CONFERENCE_CHAIR': { label: 'Conference Chair', color: 'bg-indigo-100 text-indigo-700' },
         'TRACK_CHAIR': { label: 'Track Chair', color: 'bg-teal-100 text-teal-700' },
         'AUTHOR': { label: 'Author', color: 'bg-orange-100 text-orange-700' },

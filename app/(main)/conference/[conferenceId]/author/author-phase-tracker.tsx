@@ -23,7 +23,7 @@ const COLOR_MAP: Record<string, { bg: string; text: string; light: string }> = {
     sky:     { bg: 'bg-sky-500',     text: 'text-sky-700',     light: 'bg-sky-50' },
     amber:   { bg: 'bg-amber-500',   text: 'text-amber-700',   light: 'bg-amber-50' },
     orange:  { bg: 'bg-orange-500',  text: 'text-orange-700',  light: 'bg-orange-50' },
-    purple:  { bg: 'bg-purple-600',  text: 'text-purple-700',  light: 'bg-purple-50' },
+    purple:  { bg: 'bg-indigo-600',  text: 'text-indigo-700',  light: 'bg-indigo-50' },
     cyan:    { bg: 'bg-cyan-500',    text: 'text-cyan-700',    light: 'bg-cyan-50' },
     rose:    { bg: 'bg-rose-500',    text: 'text-rose-700',    light: 'bg-rose-50' },
     emerald: { bg: 'bg-emerald-600', text: 'text-emerald-700', light: 'bg-emerald-50' },

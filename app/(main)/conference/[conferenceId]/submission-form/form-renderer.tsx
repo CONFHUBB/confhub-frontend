@@ -265,7 +265,7 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false, t
                         size="sm"
                         onClick={handleCheckWriting}
                         disabled={checkingWriting}
-                        className="gap-2 text-violet-600 border-violet-200 hover:bg-violet-50 hover:text-violet-700"
+                        className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
                     >
                         {checkingWriting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PenLine className="h-3.5 w-3.5" />}
                         {checkingWriting ? "Analyzing Writing..." : "✨ Check Academic Writing"}
@@ -309,9 +309,9 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false, t
                 )}
                 {/* Writing Suggestions Panel */}
                 {writingSuggestions.length > 0 && (
-                    <div className="rounded-lg border border-violet-200 bg-violet-50/50 p-4 space-y-3">
+                    <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-4 space-y-3">
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-violet-700 font-medium text-sm">
+                            <div className="flex items-center gap-2 text-indigo-700 font-medium text-sm">
                                 <PenLine className="h-4 w-4" />
                                 Writing Suggestions ({writingSuggestions.length})
                             </div>
@@ -384,7 +384,7 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false, t
                             </div>
                         ))}
                         {writingAssessment && (
-                            <p className="text-xs text-violet-600 italic pt-1">📝 {writingAssessment}</p>
+                            <p className="text-xs text-indigo-600 italic pt-1">📝 {writingAssessment}</p>
                         )}
                     </div>
                 )}

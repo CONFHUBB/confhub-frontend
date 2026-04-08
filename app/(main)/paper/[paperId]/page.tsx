@@ -840,8 +840,8 @@ export default function PaperWorkspacePage() {
                             {showReviews && (
                                 <Dialog>
                                     <DialogTrigger asChild>
-                                        <Button variant="outline" className="w-full justify-start gap-3 h-11 border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-800 shadow-sm">
-                                            <Star className="h-4 w-4 text-purple-600" /> View Reviews Result
+                                        <Button variant="outline" className="w-full justify-start gap-3 h-11 border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 shadow-sm">
+                                            <Star className="h-4 w-4 text-indigo-600" /> View Reviews Result
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">

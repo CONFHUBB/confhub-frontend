@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
@@ -21,7 +21,7 @@ const STATUS_OPTIONS: (PaperStatus | "ALL")[] = [
 
 const STATUS_COLOR: Record<PaperStatus | string, string> = {
     SUBMITTED:    "bg-blue-100 text-blue-700 border-blue-200",
-    UNDER_REVIEW: "bg-violet-100 text-violet-700 border-violet-200",
+    UNDER_REVIEW: "bg-indigo-100 text-indigo-700 border-indigo-200",
     ACCEPTED:     "bg-emerald-100 text-emerald-700 border-emerald-200",
     REJECTED:     "bg-rose-100 text-rose-700 border-rose-200",
     PUBLISHED:    "bg-amber-100 text-amber-700 border-amber-200",
@@ -109,9 +109,9 @@ export default function PapersPage() {
 
             {/* Stat Cards */}
             <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
-                <StatCard label="Total" value={counts.total} icon={FileText} iconBg="bg-violet-50" iconColor="text-violet-600" isLoading={isLoading} />
+                <StatCard label="Total" value={counts.total} icon={FileText} iconBg="bg-indigo-50" iconColor="text-indigo-600" isLoading={isLoading} />
                 <StatCard label="Submitted" value={counts.submitted} icon={FileText} iconBg="bg-blue-50" iconColor="text-blue-600" isLoading={isLoading} />
-                <StatCard label="Under Review" value={counts.underReview} icon={FileText} iconBg="bg-violet-50" iconColor="text-violet-600" isLoading={isLoading} />
+                <StatCard label="Under Review" value={counts.underReview} icon={FileText} iconBg="bg-indigo-50" iconColor="text-indigo-600" isLoading={isLoading} />
                 <StatCard label="Accepted" value={counts.accepted} icon={FileText} iconBg="bg-emerald-50" iconColor="text-emerald-600" isLoading={isLoading} />
                 <StatCard label="Rejected" value={counts.rejected} icon={FileText} iconBg="bg-rose-50" iconColor="text-rose-600" isLoading={isLoading} />
             </div>
@@ -134,7 +134,7 @@ export default function PapersPage() {
                         {STATUS_OPTIONS.map(s => (
                             <button key={s} onClick={() => setActiveFilter(s)}
                                 className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${
-                                    activeFilter === s ? "bg-violet-600 text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                    activeFilter === s ? "bg-indigo-600 text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"
                                 }`}
                             >{s}</button>
                         ))}
@@ -168,7 +168,7 @@ export default function PapersPage() {
                                         : filtered.map(p => (
                                             <tr key={p.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                                                 <td className="py-3 px-6 max-w-[260px]">
-                                                    <Link href={`/paper/${p.id}`} className="font-medium hover:text-violet-600 transition-colors line-clamp-2">
+                                                    <Link href={`/paper/${p.id}`} className="font-medium hover:text-indigo-600 transition-colors line-clamp-2">
                                                         {p.title}
                                                     </Link>
                                                 </td>

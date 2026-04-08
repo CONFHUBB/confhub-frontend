@@ -160,7 +160,7 @@ export default function ReviewerInterestsPage() {
                 key={area.id}
                 className={`flex items-center justify-between p-3 rounded-lg transition-all ${
                     isPrimary
-                        ? 'bg-violet-50 ring-2 ring-violet-300'
+                        ? 'bg-indigo-50 ring-2 ring-indigo-300'
                         : isSecondary
                             ? 'bg-indigo-50 ring-1 ring-indigo-200'
                             : 'hover:bg-gray-50'
@@ -168,11 +168,11 @@ export default function ReviewerInterestsPage() {
             >
                 <div className="flex items-center gap-2 min-w-0">
                     {isChild && <span className="text-gray-300 ml-4">└</span>}
-                    <span className={`text-sm font-medium ${isPrimary ? 'text-violet-900' : isSecondary ? 'text-indigo-900' : 'text-gray-700'}`}>
+                    <span className={`text-sm font-medium ${isPrimary ? 'text-indigo-900' : isSecondary ? 'text-indigo-900' : 'text-gray-700'}`}>
                         {area.name}
                     </span>
                     {isPrimary && (
-                        <Badge className="bg-violet-600 text-white text-[10px] px-1.5 py-0">
+                        <Badge className="bg-indigo-600 text-white text-[10px] px-1.5 py-0">
                             <Star className="h-3 w-3 mr-0.5 fill-current" /> PRIMARY
                         </Badge>
                     )}
@@ -190,11 +190,11 @@ export default function ReviewerInterestsPage() {
                         onClick={() => handleSetPrimary(area.id)}
                         className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-all flex items-center gap-1.5 ${
                             isPrimary
-                                ? 'bg-violet-100 border-violet-400 text-violet-700 ring-1 ring-violet-300'
-                                : 'bg-white border-gray-200 text-gray-500 hover:border-violet-300 hover:text-violet-600'
+                                ? 'bg-indigo-100 border-indigo-400 text-indigo-700 ring-1 ring-indigo-300'
+                                : 'bg-white border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600'
                         }`}
                     >
-                        <Star className={`h-3.5 w-3.5 ${isPrimary ? 'fill-violet-500' : ''}`} />
+                        <Star className={`h-3.5 w-3.5 ${isPrimary ? 'fill-indigo-500' : ''}`} />
                         Primary
                     </button>
 
@@ -238,8 +238,8 @@ export default function ReviewerInterestsPage() {
 
             {/* Legend */}
             <div className="flex flex-wrap gap-3">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium bg-violet-100 border-violet-300 text-violet-700">
-                    <Star className="h-4 w-4 fill-violet-500" />
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium bg-indigo-100 border-indigo-300 text-indigo-700">
+                    <Star className="h-4 w-4 fill-indigo-500" />
                     Primary (1 only)
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium bg-indigo-100 border-indigo-300 text-indigo-700">
@@ -295,7 +295,7 @@ export default function ReviewerInterestsPage() {
             <div className="sticky bottom-4 flex items-center justify-between bg-white/90 backdrop-blur-sm rounded-xl border p-4 shadow-lg">
                 <div className="text-sm text-muted-foreground space-y-0.5">
                     <div>
-                        <span className="font-medium text-violet-700">
+                        <span className="font-medium text-indigo-700">
                             Primary: {primarySelection ? allSubjectAreas.find(a => a.id === primarySelection.subjectAreaId)?.name || '—' : 'None selected'}
                         </span>
                     </div>

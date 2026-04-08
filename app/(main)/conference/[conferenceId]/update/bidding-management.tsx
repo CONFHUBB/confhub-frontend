@@ -176,7 +176,7 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
             setRows(builtRows)
         } catch (err) {
             console.error("Failed to load reviewer data:", err)
-            toast.error("Không thể tải dữ liệu reviewer")
+            toast.error("Failed to load reviewer data")
         } finally {
             setLoading(false)
         }
@@ -236,7 +236,7 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
         const wb = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(wb, ws, "Reviewers")
         XLSX.writeFile(wb, `reviewers_conference_${conferenceId}.xlsx`)
-        toast.success("Đã xuất file Excel!")
+        toast.success("Excel file exported successfully!")
     }
 
     // Open detail sheet
@@ -257,7 +257,7 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
         setDetailLoading(true)
         getBidsByReviewerAndConference(reviewerId, conferenceId)
             .then(bids => setDetailBids(bids || []))
-            .catch(() => toast.error("Không thể tải chi tiết bids"))
+            .catch(() => toast.error("Failed to load bid details"))
             .finally(() => setDetailLoading(false))
     }
 
@@ -291,14 +291,14 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                     <CardContent className="p-4 text-center">
                         <Zap className="h-5 w-5 mx-auto mb-1 text-emerald-500" />
                         <p className="text-2xl font-bold">{reviewersWithBids}</p>
-                        <p className="text-xs text-muted-foreground">Đã đặt Bid</p>
+                        <p className="text-xs text-muted-foreground">Has Bids</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent className="p-4 text-center">
                         <ThumbsUp className="h-5 w-5 mx-auto mb-1 text-amber-500" />
                         <p className="text-2xl font-bold">{totalBidsAll}</p>
-                        <p className="text-xs text-muted-foreground">Tổng Bids</p>
+                        <p className="text-xs text-muted-foreground">Total Bids</p>
                     </CardContent>
                 </Card>
             </div>
@@ -489,7 +489,7 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                                 <div className="space-y-5">
                                     {/* Basic info */}
                                     <div className="space-y-3">
-                                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Thông tin cơ bản</h4>
+                                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Basic Information</h4>
                                         <div className="grid gap-3">
                                             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
                                                 <Mail className="h-4 w-4 text-indigo-500 shrink-0" />
@@ -554,7 +554,7 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                                     {/* Conference stats */}
                                     {detailReviewer && (
                                         <div className="space-y-3">
-                                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Thống kê Conference</h4>
+                                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Conference Statistics</h4>
                                             <div className="grid grid-cols-3 gap-2">
                                                 <div className="text-center p-3 rounded-lg bg-indigo-50 border border-indigo-100">
                                                     <p className="text-lg font-bold text-indigo-700">{detailReviewer.quota ?? "—"}</p>
@@ -575,7 +575,7 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                                     {/* Biography */}
                                     {detailProfile?.biography && (
                                         <div className="space-y-2">
-                                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tiểu sử</h4>
+                                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Biography</h4>
                                             <p className="text-sm text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-3">
                                                 {detailProfile.biography}
                                             </p>
@@ -585,7 +585,7 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                                     {/* Academic links */}
                                     {(detailProfile?.orcid || detailProfile?.googleScholarLink || detailProfile?.dblpId) && (
                                         <div className="space-y-2">
-                                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Liên kết học thuật</h4>
+                                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Academic Links</h4>
                                             <div className="flex flex-wrap gap-2">
                                                 {detailProfile.orcid && (
                                                     <a href={`https://orcid.org/${detailProfile.orcid}`} target="_blank" rel="noopener noreferrer"
@@ -610,7 +610,7 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                                     )}
 
                                     {!detailProfile && !profileLoading && (
-                                        <p className="text-sm text-muted-foreground text-center py-6">Reviewer chưa cập nhật profile.</p>
+                                        <p className="text-sm text-muted-foreground text-center py-6">Reviewer has not updated their profile.</p>
                                     )}
                                 </div>
                             )
@@ -623,7 +623,7 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                                     <Loader2 className="h-5 w-5 animate-spin" />
                                 </div>
                             ) : detailBids.length === 0 ? (
-                                <p className="text-sm text-muted-foreground py-8 text-center">Reviewer này chưa đặt bid nào.</p>
+                                <p className="text-sm text-muted-foreground py-8 text-center">This reviewer has not placed any bids.</p>
                             ) : (
                                 <div className="space-y-4">
                                     {/* Bid summary */}
@@ -643,7 +643,7 @@ export function BiddingManagement({ conferenceId }: BiddingManagementProps) {
                                     {/* Bid list */}
                                     <div className="space-y-1.5">
                                         <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
-                                            Tất cả Bids ({detailBids.length})
+                                            All Bids ({detailBids.length})
                                         </p>
                                         {detailBids.map(bid => {
                                             const bidInfo = BID_LABELS[bid.bidValue]

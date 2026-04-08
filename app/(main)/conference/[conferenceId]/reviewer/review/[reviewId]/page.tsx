@@ -397,7 +397,7 @@ export default function ReviewPaperPage() {
                             {review.paper?.isDoubleBlind ? (
                                 <Badge variant="outline" className="mt-2 text-xs bg-slate-100 text-slate-600 border-slate-200">
                                     <Lock className="h-3 w-3 mr-1" />
-                                    Đã ẩn do chế độ Double-Blind
+                                    Hidden due to Double-Blind mode
                                 </Badge>
                             ) : (
                                 review.paper?.authorNames && review.paper.authorNames.length > 0 && (

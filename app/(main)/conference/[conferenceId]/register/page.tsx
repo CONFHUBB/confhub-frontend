@@ -22,7 +22,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   AUTHOR: 'bg-indigo-100 text-indigo-800 border-indigo-200',
   STUDENT: 'bg-green-100 text-green-800 border-green-200',
   STANDARD: 'bg-gray-100 text-gray-800 border-gray-200',
-  STAFF: 'bg-purple-100 text-purple-800 border-purple-200',
+  STAFF: 'bg-indigo-100 text-indigo-800 border-indigo-200',
   VIP: 'bg-amber-100 text-amber-800 border-amber-200',
 }
 
@@ -149,7 +149,7 @@ function RegisterContent() {
                   </span>
                 )}
                 {tt.category === 'STAFF' && !isDisabled && (
-                  <span className="absolute -top-3 left-4 bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                  <span className="absolute -top-3 left-4 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full">
                     ✦ Staff Exclusive
                   </span>
                 )}

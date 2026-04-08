@@ -167,7 +167,7 @@ export default function AttendeesManagement({ conferenceId }: Props) {
         {[
           { label: 'Total Registered', value: totalElements || 0, icon: <Users className="w-5 h-5 text-indigo-500" /> },
           { label: 'Paid', value: statsPaid, icon: <CheckCircle2 className="w-5 h-5 text-green-500" /> },
-          { label: 'Checked In', value: statsCheckedIn, icon: <Clock className="w-5 h-5 text-purple-500" /> },
+          { label: 'Checked In', value: statsCheckedIn, icon: <Clock className="w-5 h-5 text-indigo-500" /> },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-xl border p-4 flex items-center gap-3">
             {s.icon}

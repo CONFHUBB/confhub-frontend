@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState, useCallback } from "react"
 import { BookOpen } from "lucide-react"
@@ -81,7 +81,7 @@ export default function ReviewsPage() {
 
             {/* Stat Cards */}
             <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
-                <StatCard label="Total Reviews" value={counts.total} icon={BookOpen} iconBg="bg-violet-50" iconColor="text-violet-600" isLoading={isLoading} />
+                <StatCard label="Total Reviews" value={counts.total} icon={BookOpen} iconBg="bg-indigo-50" iconColor="text-indigo-600" isLoading={isLoading} />
                 <StatCard label="Assigned" value={counts.assigned} icon={BookOpen} iconBg="bg-blue-50" iconColor="text-blue-600" isLoading={isLoading} />
                 <StatCard label="In Progress" value={counts.inProgress} icon={BookOpen} iconBg="bg-amber-50" iconColor="text-amber-600" isLoading={isLoading} />
                 <StatCard label="Completed" value={counts.completed} icon={BookOpen} iconBg="bg-emerald-50" iconColor="text-emerald-600" isLoading={isLoading} />
@@ -132,7 +132,7 @@ export default function ReviewsPage() {
                             {(["ALL", "ASSIGNED", "IN_PROGRESS", "COMPLETED", "DECLINED"] as const).map(s => (
                                 <button key={s} onClick={() => setStatusFilter(s)}
                                     className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${
-                                        statusFilter === s ? "bg-violet-600 text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                        statusFilter === s ? "bg-indigo-600 text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"
                                     }`}
                                 >{s}</button>
                             ))}
