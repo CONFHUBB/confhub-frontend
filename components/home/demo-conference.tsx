@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import Link from "next/link"
 import { Play, Calendar, MapPin, Users, FileText, CheckCircle2 } from "lucide-react"
@@ -145,7 +145,7 @@ export function DemoConference() {
                                 {/* Reviewers */}
                                 <div className="flex items-center gap-2">
                                     <div className="flex -space-x-2">
-                                        {["bg-blue-500", "bg-purple-500", "bg-pink-500", "bg-amber-500"].map((c, i) => (
+                                        {["bg-blue-500", "bg-indigo-500", "bg-pink-500", "bg-amber-500"].map((c, i) => (
                                             <div
                                                 key={i}
                                                 className={`w-7 h-7 rounded-full ${c} border-2 border-gray-800 flex items-center justify-center`}
@@ -162,7 +162,7 @@ export function DemoConference() {
 
                         {/* Decorative glow */}
                         <div
-                            className="absolute -inset-px rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-20 blur-sm -z-10"
+                            className="absolute -inset-px rounded-2xl bg-gradient-to-r from-indigo-500 via-indigo-400 to-indigo-500 opacity-20 blur-sm -z-10"
                             aria-hidden="true"
                         />
                     </div>

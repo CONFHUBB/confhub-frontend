@@ -265,7 +265,7 @@ const COLOR_MAP: Record<string, { bg: string; text: string; border: string; ligh
     teal:    { bg: 'bg-teal-500',    text: 'text-teal-700',    border: 'border-teal-300',    light: 'bg-teal-50',    dot: 'bg-teal-500',    btn: 'bg-teal-500 hover:bg-teal-600 text-white' },
     amber:   { bg: 'bg-amber-500',   text: 'text-amber-700',   border: 'border-amber-300',   light: 'bg-amber-50',   dot: 'bg-amber-500',   btn: 'bg-amber-500 hover:bg-amber-600 text-white' },
     orange:  { bg: 'bg-orange-500',  text: 'text-orange-700',  border: 'border-orange-300',  light: 'bg-orange-50',  dot: 'bg-orange-500',  btn: 'bg-orange-500 hover:bg-orange-600 text-white' },
-    purple:  { bg: 'bg-purple-600',  text: 'text-purple-700',  border: 'border-purple-300',  light: 'bg-purple-50',  dot: 'bg-purple-500',  btn: 'bg-purple-600 hover:bg-purple-700 text-white' },
+    purple:  { bg: 'bg-indigo-600',  text: 'text-indigo-700',  border: 'border-indigo-300',  light: 'bg-indigo-50',  dot: 'bg-indigo-500',  btn: 'bg-indigo-600 hover:bg-indigo-700 text-white' },
     cyan:    { bg: 'bg-cyan-500',    text: 'text-cyan-700',    border: 'border-cyan-300',    light: 'bg-cyan-50',    dot: 'bg-cyan-500',    btn: 'bg-cyan-500 hover:bg-cyan-600 text-white' },
     rose:    { bg: 'bg-rose-500',    text: 'text-rose-700',    border: 'border-rose-300',    light: 'bg-rose-50',    dot: 'bg-rose-500',    btn: 'bg-rose-500 hover:bg-rose-600 text-white' },
     emerald: { bg: 'bg-emerald-600', text: 'text-emerald-700', border: 'border-emerald-300', light: 'bg-emerald-50', dot: 'bg-emerald-500', btn: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
@@ -447,7 +447,7 @@ function PhaseStatusCard({
                                 </span>
                             )}
                             {pendingDecision > 0 && activePhaseIdx >= 2 && (
-                                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
+                                <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
                                     ⚠ {pendingDecision} paper(s) awaiting decision
                                 </span>
                             )}

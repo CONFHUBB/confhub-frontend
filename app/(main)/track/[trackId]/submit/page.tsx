@@ -11,10 +11,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select as AntdSelect } from 'antd'
-import Box from '@mui/material/Box'
-import MUIStepper from '@mui/material/Stepper'
-import Step from '@mui/material/Step'
-import StepLabel from '@mui/material/StepLabel'
 import { Loader2, ArrowLeft, Check, FileText, Users, Upload, Search, Trash2, Send, FileUp, Eye } from 'lucide-react'
 import { SuccessCelebration } from '@/components/shared/success-celebration'
 import { UploadProgress } from '@/components/shared/upload-progress'
@@ -65,17 +61,37 @@ function Stepper({ currentStep }: { currentStep: number }) {
         'Add Authors',
         'Upload Manuscript',
     ]
+    const activeIdx = currentStep - 1
 
     return (
-        <Box sx={{ width: '100%', mb: 4 }}>
-            <MUIStepper activeStep={currentStep - 1} alternativeLabel>
-                {steps.map((label) => (
-                    <Step key={label}>
-                        <StepLabel StepIconComponent={CustomStepIcon}>{label}</StepLabel>
-                    </Step>
-                ))}
-            </MUIStepper>
-        </Box>
+        <div className="w-full mb-4">
+            <div className="flex items-center justify-between">
+                {steps.map((label, idx) => {
+                    const isCompleted = idx < activeIdx
+                    const isActive = idx === activeIdx
+
+                    return (
+                        <div key={label} className="flex items-center flex-1 last:flex-initial">
+                            <div className="flex flex-col items-center gap-2">
+                                <CustomStepIcon active={isActive} completed={isCompleted} icon={idx + 1} />
+                                <span className={`text-xs font-semibold transition-colors ${
+                                    isActive ? 'text-indigo-600' : isCompleted ? 'text-indigo-500' : 'text-gray-400'
+                                }`}>
+                                    {label}
+                                </span>
+                            </div>
+                            {idx < steps.length - 1 && (
+                                <div className="flex-1 mx-3 mt-[-24px]">
+                                    <div className={`h-0.5 w-full rounded-full transition-colors ${
+                                        idx < activeIdx ? 'bg-indigo-500' : 'bg-gray-200'
+                                    }`} />
+                                </div>
+                            )}
+                        </div>
+                    )
+                })}
+            </div>
+        </div>
     )
 }
 

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
@@ -114,7 +114,7 @@ export function FeaturedConferences() {
                                                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                             />
                                         ) : (
-                                            <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600" />
+                                            <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-indigo-600" />
                                         )}
                                         {/* Status badge */}
                                         <div className="absolute top-3 left-3">

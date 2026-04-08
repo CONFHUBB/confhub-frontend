@@ -58,6 +58,19 @@
   --color-text-dark: var(--text-dark);
   --color-text-medium: var(--text-medium);
   --color-text-light: var(--text-light);
+
+  /* ── Override indigo palette → brand primary #4A6FA5 family ── */
+  --color-indigo-50:  #EFF3F9;
+  --color-indigo-100: #DCE5F0;
+  --color-indigo-200: #B9CBE1;
+  --color-indigo-300: #8FAED0;
+  --color-indigo-400: #6B91BF;
+  --color-indigo-500: #4A6FA5;
+  --color-indigo-600: #3B5A87;
+  --color-indigo-700: #2D446A;
+  --color-indigo-800: #1F304D;
+  --color-indigo-900: #141F33;
+  --color-indigo-950: #0A1019;
 }
 
 :root {
@@ -347,4 +360,36 @@
 .dark .bg-indigo-50 { background-color: oklch(0.25 0.05 270) !important; }
 .dark .text-indigo-700 { color: oklch(0.7 0.15 270) !important; }
 .dark .text-indigo-800 { color: oklch(0.75 0.12 270) !important; }
-.dark .border-indigo-200 { border-color: oklch(0.4 0.1 270) !important; }
+.dark .border-indigo-200 { border-color: oklch(0.4 0.1 270) !important; }
+
+/* ── Brand Consistency: Remap purple/violet → indigo ────────────────────
+   All purple-* and violet-* Tailwind utilities are remapped to their
+   indigo-* equivalents to maintain a unified blue brand palette.
+   This avoids editing 30+ component files individually. */
+:root {
+  /* Violet → Indigo remap */
+  --color-violet-50:  var(--color-indigo-50);
+  --color-violet-100: var(--color-indigo-100);
+  --color-violet-200: var(--color-indigo-200);
+  --color-violet-300: var(--color-indigo-300);
+  --color-violet-400: var(--color-indigo-400);
+  --color-violet-500: var(--color-indigo-500);
+  --color-violet-600: var(--color-indigo-600);
+  --color-violet-700: var(--color-indigo-700);
+  --color-violet-800: var(--color-indigo-800);
+  --color-violet-900: var(--color-indigo-900);
+  --color-violet-950: var(--color-indigo-950);
+
+  /* Purple → Indigo remap */
+  --color-purple-50:  var(--color-indigo-50);
+  --color-purple-100: var(--color-indigo-100);
+  --color-purple-200: var(--color-indigo-200);
+  --color-purple-300: var(--color-indigo-300);
+  --color-purple-400: var(--color-indigo-400);
+  --color-purple-500: var(--color-indigo-500);
+  --color-purple-600: var(--color-indigo-600);
+  --color-purple-700: var(--color-indigo-700);
+  --color-purple-800: var(--color-indigo-800);
+  --color-purple-900: var(--color-indigo-900);
+  --color-purple-950: var(--color-indigo-950);
+}

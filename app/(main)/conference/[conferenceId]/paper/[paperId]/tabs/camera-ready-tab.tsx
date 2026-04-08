@@ -120,8 +120,8 @@ export function CameraReadyTab({ paperId, conferenceId, paper, isChair }: Camera
                     {/* Copyright Files */}
                     <div className="rounded-lg border bg-card p-5">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="p-1.5 bg-purple-50 rounded-md">
-                                <Scale className="h-4 w-4 text-purple-600" />
+                            <div className="p-1.5 bg-indigo-50 rounded-md">
+                                <Scale className="h-4 w-4 text-indigo-600" />
                             </div>
                             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                 Copyright Submissions ({copyrightFiles.length})
@@ -132,16 +132,16 @@ export function CameraReadyTab({ paperId, conferenceId, paper, isChair }: Camera
                         ) : (
                             <div className="space-y-2">
                                 {copyrightFiles.map((file, idx) => (
-                                    <div key={file.id} className="flex items-center justify-between p-3 bg-background border rounded-lg hover:border-purple-300 transition-colors">
+                                    <div key={file.id} className="flex items-center justify-between p-3 bg-background border rounded-lg hover:border-indigo-300 transition-colors">
                                         <div className="flex items-center gap-3 min-w-0">
-                                            <div className="p-1.5 bg-purple-50 rounded-md shrink-0">
-                                                <Scale className="h-4 w-4 text-purple-600" />
+                                            <div className="p-1.5 bg-indigo-50 rounded-md shrink-0">
+                                                <Scale className="h-4 w-4 text-indigo-600" />
                                             </div>
                                             <div className="min-w-0">
                                                 <p className="font-medium text-sm truncate">
                                                     {decodeURIComponent(file.url.split('/').pop() || 'copyright.pdf')}
                                                 </p>
-                                                <Badge variant="outline" className="text-[10px] mt-0.5 border-purple-200 bg-purple-50/50 text-purple-700">
+                                                <Badge variant="outline" className="text-[10px] mt-0.5 border-indigo-200 bg-indigo-50/50 text-indigo-700">
                                                     Ver. {idx + 1}
                                                 </Badge>
                                             </div>

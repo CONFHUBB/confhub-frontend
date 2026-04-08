@@ -316,7 +316,7 @@ function OverviewTab({ papers, tickets, conferenceId, reviewData, onNavigate }: 
         { label: 'Total Papers', value: String(papers.length), color: 'bg-indigo-500', accent: 'text-indigo-600' },
         { label: 'Accepted', value: String(accepted), color: 'bg-emerald-500', accent: 'text-emerald-600' },
         { label: 'Under Review', value: String(underReview), color: 'bg-amber-500', accent: 'text-amber-600' },
-        { label: 'Avg. Score', value: avgScore, color: 'bg-purple-500', accent: 'text-purple-600' },
+        { label: 'Avg. Score', value: avgScore, color: 'bg-indigo-500', accent: 'text-indigo-600' },
     ]
 
     return (

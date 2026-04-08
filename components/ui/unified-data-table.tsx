@@ -23,13 +23,13 @@ import {
 // ─── TYPES & INTERFACES ──────────────────────────────────────────────
 
 export interface DataTableColumn<T> {
-    /** Tiêu đề hiển thị trên Header của cột (hỗ trợ text hoặc Component như Checkbox) */
+    /** Column header title displayed in the Header row (supports text or Component like Checkbox) */
     header: React.ReactNode
-    /** Key để lấy data trực tiếp từ object T (bỏ qua nếu dùng cell custom) */
+    /** Key to access data directly from object T (skip if using custom cell) */
     accessorKey?: keyof T
-    /** Hàm render UI custom (dùng cho Badge, Avatar, Format Date...) */
+    /** Custom UI render function (used for Badge, Avatar, Date formatting...) */
     cell?: (item: T) => React.ReactNode
-    /** Class để custom độ rộng, align text, truncate... */
+    /** Class for custom width, text alignment, truncation... */
     className?: string
 }
 
@@ -43,7 +43,7 @@ export interface UnifiedDataTableProps<T> {
     data: T[]
     isLoading?: boolean
     
-    /** Hàm trả về unique key (string | number) cho mỗi row */
+    /** Function returning a unique key (string | number) for each row */
     keyExtractor: (item: T) => string | number
     
     // ── Search & Filters ──
@@ -52,9 +52,9 @@ export interface UnifiedDataTableProps<T> {
     onSearchChange?: (value: string) => void
     
     // ── Actions ──
-    /** Nút Action chính (VD: <Button>Add New</Button>), đặt bên phải thanh Search */
+    /** Primary action button (e.g. <Button>Add New</Button>), placed to the right of the Search bar */
     primaryAction?: React.ReactNode
-    /** Hàm trả về các <DropdownMenuItem> cho cột Kebab menu (dấu 3 chấm) */
+    /** Function returning <DropdownMenuItem> elements for the kebab menu column (three dots) */
     renderRowActions?: (item: T) => React.ReactNode
     
     // ── Pagination (Gold Standard) ──
@@ -128,7 +128,7 @@ export function UnifiedDataTable<T>({
                                         {col.header}
                                     </TableHead>
                                 ))}
-                                {/* Header cho cột Action (nếu có) */}
+                                {/* Header for Action column (if present) */}
                                 {renderRowActions && (
                                     <TableHead className="w-[80px] text-right">Actions</TableHead>
                                 )}
@@ -165,7 +165,7 @@ export function UnifiedDataTable<T>({
                                     <TableRow key={keyExtractor(item)} className="group transition-colors">
                                         {columns.map((col, idx) => (
                                             <TableCell key={idx} className={col.className}>
-                                                {/* Ưu tiên custom 'cell', nếu không dùng 'accessorKey' */}
+                                                {/* Prioritize custom 'cell', otherwise use 'accessorKey' */}
                                                 {col.cell 
                                                     ? col.cell(item) 
                                                     : col.accessorKey 
@@ -179,7 +179,7 @@ export function UnifiedDataTable<T>({
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        {/* Nút mờ đi, chỉ hiện rõ khi hover row (Giảm noise) */}
+                                                        {/* Button faded out, only visible on row hover (reduces noise) */}
                                                         <Button 
                                                             variant="ghost" 
                                                             className="h-8 w-8 p-0 opacity-50 group-hover:opacity-100 transition-opacity"

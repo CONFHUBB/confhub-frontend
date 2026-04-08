@@ -209,7 +209,7 @@ export function ConferenceWorkflowTracker({
                 {
                     title: "Final Phase",
                     icon: <Award className="h-4 w-4" />,
-                    accentColor: "text-purple-600",
+                    accentColor: "text-indigo-600",
                     steps: [
                         {
                             key: "decisions",

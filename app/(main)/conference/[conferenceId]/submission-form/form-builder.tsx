@@ -121,7 +121,7 @@ export function FormBuilder({ initialDefinition, onSave, isSaving = false }: For
         t === QuestionType.OPTIONS || t === QuestionType.OPTIONS_WITH_VALUE
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="space-y-6">
             <div className="flex justify-end mb-4">
                 <Button onClick={handleSave} disabled={isSaving}>
                     {isSaving ? "Saving..." : "Save Configuration"}
