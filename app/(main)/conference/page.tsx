@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useEffect, useState, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -10,7 +10,7 @@ import { Calendar, MapPin, Loader2, CheckCircle, Search, Filter } from 'lucide-r
 import { StandardPagination } from '@/components/ui/standard-pagination'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
-import Image from 'next/image'
+
 import { CardGridSkeleton, PageHeaderSkeleton } from '@/components/shared/skeletons'
 import { toast } from 'sonner'
 import { fmtDate } from '@/lib/utils'
@@ -38,7 +38,7 @@ function ConferencesPageInner() {
     })
     const [searchQuery, setSearchQuery] = useState('')
     const [currentPage, setCurrentPage] = useState(0)
-    const PAGE_SIZE = 8
+    const PAGE_SIZE = 12
 
     // Sync status filter when URL param changes (user navigates via nav)
     useEffect(() => {
@@ -125,7 +125,7 @@ function ConferencesPageInner() {
         return (
             <div className="page-wide">
                 <PageHeaderSkeleton />
-                <CardGridSkeleton count={8} />
+                <CardGridSkeleton count={12} />
             </div>
         )
     }
@@ -327,21 +327,23 @@ function ConferencesPageInner() {
                                         <div className="h-full flex flex-col rounded-xl overflow-hidden border bg-card shadow-sm hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1">
                                             {/* Banner Image */}
                                             <div className="relative w-full aspect-[16/9] bg-primary overflow-hidden shrink-0">
-                                                {conference.bannerImageUrl ? (
-                                                    <Image
+                                                {conference.bannerImageUrl && (
+                                                    <img
                                                         src={conference.bannerImageUrl}
                                                         alt={conference.name}
-                                                        fill
-                                                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
-                                                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                                        loading="lazy"
+                                                        decoding="async"
+                                                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 z-[1]"
+                                                        onError={(e) => {
+                                                            e.currentTarget.style.display = 'none'
+                                                        }}
                                                     />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center">
-                                                        <span className="text-white/60 text-4xl font-bold tracking-wider">
-                                                            {conference.acronym}
-                                                        </span>
-                                                    </div>
                                                 )}
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    <span className="text-white/60 text-4xl font-bold tracking-wider">
+                                                        {conference.acronym}
+                                                    </span>
+                                                </div>
                                                 <div className="absolute top-3 left-3">
                                                     <span className={`text-xs px-2.5 py-1 rounded-full font-semibold backdrop-blur-sm ${getStatusColor(conference.status)}`}>
                                                         {conference.status}

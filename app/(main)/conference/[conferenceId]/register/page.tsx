@@ -2,14 +2,15 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { getTicketTypes, getTicketTypesForUser, registerForConference, TicketTypeResponse } from '@/app/api/registration.api'
+import { getTicketTypes, getTicketTypesForUser, registerForConference, getMyTicket, retryPayment, cancelPendingTicket, TicketTypeResponse, TicketResponse } from '@/app/api/registration.api'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { Loader2, CheckCircle, CreditCard, Users, Calendar, Ticket } from 'lucide-react'
+import { Loader2, CheckCircle, CreditCard, Users, Calendar, Ticket, AlertTriangle, RotateCcw, XCircle } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { getCurrentUserId } from '@/lib/auth'
+import { toast } from 'sonner'
 
 const CATEGORY_LABELS: Record<string, string> = {
   AUTHOR: 'Author / Presenter',
@@ -32,7 +33,6 @@ function RegisterContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const conferenceId = Number(params.conferenceId)
-  // Prefer query param (for staff registering others), fallback to current logged-in user
   const userId = Number(searchParams.get('userId')) || getCurrentUserId() || 0
 
   const [ticketTypes, setTicketTypes] = useState<TicketTypeResponse[]>([])
@@ -42,31 +42,57 @@ function RegisterContent() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const loadTickets = async () => {
+  // Existing ticket state — handles pending/failed recovery flow
+  const [existingTicket, setExistingTicket] = useState<TicketResponse | null>(null)
+  const [cancelling, setCancelling] = useState(false)
+
+  const loadTicketTypes = async () => {
+    if (userId) {
       try {
-        // Try role-based filtering first (shows only eligible ticket types)
-        if (userId) {
-          const filtered = await getTicketTypesForUser(conferenceId, userId)
-          setTicketTypes(filtered)
-        } else {
-          // Fallback: show all active tickets if no userId
-          const all = await getTicketTypes(conferenceId, true)
-          setTicketTypes(all)
-        }
+        const filtered = await getTicketTypesForUser(conferenceId, userId)
+        setTicketTypes(filtered)
       } catch {
-        // Fallback: show all active tickets if filtered endpoint fails
-        try {
-          const all = await getTicketTypes(conferenceId, true)
-          setTicketTypes(all)
-        } catch {
-          setError('Failed to load ticket types.')
+        const all = await getTicketTypes(conferenceId, true)
+        setTicketTypes(all)
+      }
+    } else {
+      const all = await getTicketTypes(conferenceId, true)
+      setTicketTypes(all)
+    }
+  }
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        // 1. Check if user already has a ticket for this conference
+        if (userId) {
+          try {
+            const ticket = await getMyTicket(conferenceId, userId)
+            if (ticket) {
+              if (ticket.paymentStatus === 'COMPLETED') {
+                router.replace(`/conference/${conferenceId}/my-ticket`)
+                return
+              }
+              if (ticket.paymentStatus === 'PENDING' || ticket.paymentStatus === 'FAILED') {
+                setExistingTicket(ticket)
+                setLoading(false)
+                return
+              }
+            }
+          } catch {
+            // No existing ticket → continue to normal registration flow
+          }
         }
+
+        // 2. Load ticket types for new registration
+        await loadTicketTypes()
+      } catch {
+        setError('Failed to load ticket types.')
       } finally {
         setLoading(false)
       }
     }
-    loadTickets()
+    init()
   }, [conferenceId, userId])
 
   const handleRegister = async () => {
@@ -88,9 +114,53 @@ function RegisterContent() {
         router.push(`/conference/${conferenceId}/my-ticket?userId=${userId}&status=success`)
       }
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Registration failed. Please try again.')
+      const msg = e?.response?.data?.message || ''
+      // If backend says already registered, switch to recovery flow
+      if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already has') || e?.response?.status === 409) {
+        try {
+          const ticket = await getMyTicket(conferenceId, userId)
+          if (ticket) {
+            setExistingTicket(ticket)
+            return
+          }
+        } catch { /* ignore */ }
+      }
+      setError(msg || 'Registration failed. Please try again.')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleRetryPayment = async () => {
+    setSubmitting(true)
+    setError(null)
+    try {
+      const res = await retryPayment(conferenceId, userId)
+      if (res.paymentUrl) {
+        window.location.href = res.paymentUrl
+      } else {
+        router.push(`/conference/${conferenceId}/my-ticket?userId=${userId}&status=success`)
+      }
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Failed to retry payment. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleCancelAndReregister = async () => {
+    if (!confirm('Cancel your current registration and choose a different ticket?')) return
+    setCancelling(true)
+    setError(null)
+    try {
+      await cancelPendingTicket(conferenceId, userId)
+      setExistingTicket(null)
+      toast.success('Registration cancelled. You can now choose a new ticket.')
+      await loadTicketTypes()
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Failed to cancel registration.')
+    } finally {
+      setCancelling(false)
     }
   }
 
@@ -102,6 +172,103 @@ function RegisterContent() {
     )
   }
 
+  // ═══════ Existing ticket recovery UI ═══════
+  if (existingTicket) {
+    const isPending = existingTicket.paymentStatus === 'PENDING'
+    return (
+      <div className="page-narrow">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Register to Attend</h1>
+          <p className="text-gray-500 mt-2">Choose your ticket type to confirm your registration.</p>
+        </div>
+
+        <Card className={`border-2 ${isPending ? 'border-amber-300 bg-amber-50/30' : 'border-red-300 bg-red-50/30'}`}>
+          <CardContent className="p-8 text-center space-y-5">
+            <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center ${isPending ? 'bg-amber-100' : 'bg-red-100'}`}>
+              {isPending ? (
+                <CreditCard className="w-7 h-7 text-amber-600" />
+              ) : (
+                <AlertTriangle className="w-7 h-7 text-red-600" />
+              )}
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                {isPending ? 'Payment Pending' : 'Payment Failed'}
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                {isPending
+                  ? 'You have an existing registration that hasn\'t been paid yet.'
+                  : 'Your previous payment was unsuccessful.'}
+              </p>
+            </div>
+
+            {/* Ticket summary */}
+            <div className="bg-white rounded-xl border p-4 text-left max-w-md mx-auto space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Ticket</span>
+                <span className="font-semibold text-gray-900">{existingTicket.ticketTypeName}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Amount</span>
+                <span className="font-semibold text-gray-900">
+                  {existingTicket.price === 0 ? 'Free' : `${existingTicket.price.toLocaleString()} ${existingTicket.currency}`}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Status</span>
+                <Badge className={isPending
+                  ? 'bg-amber-100 text-amber-700 border-amber-200 border'
+                  : 'bg-red-100 text-red-700 border-red-200 border'
+                }>
+                  {isPending ? 'Pending Payment' : 'Payment Failed'}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-col sm:flex-row justify-center gap-3 pt-2">
+              <Button
+                size="lg"
+                onClick={handleRetryPayment}
+                disabled={submitting || cancelling}
+                className="min-w-[200px]"
+              >
+                {submitting ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                )}
+                Retry Payment
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleCancelAndReregister}
+                disabled={submitting || cancelling}
+                className="min-w-[200px] text-gray-600 border-gray-300 hover:bg-gray-50"
+              >
+                {cancelling ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <XCircle className="w-4 h-4 mr-2" />
+                )}
+                Cancel & Choose Different Ticket
+              </Button>
+            </div>
+
+            {error && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // ═══════ Normal registration UI ═══════
   return (
     <div className="page-narrow">
       {/* Header */}

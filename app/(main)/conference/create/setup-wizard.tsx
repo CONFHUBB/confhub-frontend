@@ -147,8 +147,8 @@ export function SetupWizard({ onSubmit, isSubmitting, backendErrors }: SetupWiza
             toast.error('Please select a JPEG, PNG, or GIF image.')
             return
         }
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error('Image must be less than 5MB.')
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error('Image must be less than 10MB.')
             return
         }
         if (bannerPreviewUrl && bannerPreviewUrl.startsWith('blob:')) {
@@ -586,7 +586,7 @@ export function SetupWizard({ onSubmit, isSubmitting, backendErrors }: SetupWiza
                                             <Upload className="h-4 w-4 mr-2" /> {pendingBannerFile ? 'Change' : 'Upload'}
                                         </Button>
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-1">JPEG, PNG or GIF. Max 5MB.</p>
+                                    <p className="text-xs text-muted-foreground mt-1">JPEG, PNG or GIF. Max 10MB.</p>
                                     {errors.bannerImageUrl && <FieldError>{errors.bannerImageUrl}</FieldError>}
                                 </Field>
                             </FieldGroup>
