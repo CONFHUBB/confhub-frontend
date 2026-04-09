@@ -12,6 +12,12 @@ export interface ActionSuggestion {
     label: string
     action: 'NAVIGATE' | 'CHAT' | 'UPLOAD'
     value: string
+    // Optional conference metadata for enriched cards
+    location?: string
+    deadline?: string
+    area?: string
+    dates?: string
+    conferenceId?: number
 }
 
 export interface AIChatResponse {

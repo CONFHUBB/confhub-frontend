@@ -394,26 +394,60 @@ export function AIChatWidget() {
 
                                     return (
                                         <div className="mt-2 ml-9 space-y-2">
-                                            {Array.from(grouped.entries()).map(([confName, actions]) => (
-                                                <div key={confName} className="bg-white rounded-xl border border-secondary/15 p-3 shadow-sm hover:border-primary/30 transition-colors">
-                                                    <p className="text-xs font-semibold text-gray-800 mb-2">{confName}</p>
-                                                    <div className="flex flex-wrap gap-1.5">
-                                                        {actions.map((action, j) => {
-                                                            // Extract just the action part (before the colon)
-                                                            const actionLabel = action.label.replace(/:\s*.+$/, '').trim()
-                                                            return (
-                                                                <button
-                                                                    key={j}
-                                                                    onClick={() => handleActionClick(action)}
-                                                                    className="text-[11px] px-3 py-1.5 rounded-lg border border-primary/20 bg-primary/8 text-primary hover:bg-primary/15 hover:border-primary/30 transition-colors font-medium"
-                                                                >
-                                                                    {actionLabel}
-                                                                </button>
-                                                            )
-                                                        })}
+                                            {Array.from(grouped.entries()).map(([confName, actions]) => {
+                                                // Extract metadata from the first action that has it
+                                                const meta = actions.find(a => a.location || a.area || a.deadline || a.dates)
+                                                return (
+                                                    <div key={confName} className="bg-white rounded-xl border border-secondary/15 p-3 shadow-sm hover:border-primary/30 transition-colors">
+                                                        <p className="text-xs font-semibold text-gray-800">{confName}</p>
+                                                        {/* Conference metadata */}
+                                                        {meta && (
+                                                            <div className="mt-1.5 mb-2 space-y-0.5 text-[10.5px] text-gray-500">
+                                                                {(meta.location || meta.area) && (
+                                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                                        {meta.location && (
+                                                                            <span className="flex items-center gap-0.5">
+                                                                                📍 {meta.location}
+                                                                            </span>
+                                                                        )}
+                                                                        {meta.area && (
+                                                                            <span className="flex items-center gap-0.5">
+                                                                                🔬 {meta.area}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                                {meta.dates && (
+                                                                    <div className="flex items-center gap-0.5">
+                                                                        📅 {meta.dates}
+                                                                    </div>
+                                                                )}
+                                                                {meta.deadline && (
+                                                                    <div className="flex items-center gap-0.5 text-amber-600 font-medium">
+                                                                        ⏰ Deadline: {meta.deadline}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        {!meta && <div className="mb-2" />}
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {actions.map((action, j) => {
+                                                                // Extract just the action part (before the colon)
+                                                                const actionLabel = action.label.replace(/:\s*.+$/, '').trim()
+                                                                return (
+                                                                    <button
+                                                                        key={j}
+                                                                        onClick={() => handleActionClick(action)}
+                                                                        className="text-[11px] px-3 py-1.5 rounded-lg border border-primary/20 bg-primary/8 text-primary hover:bg-primary/15 hover:border-primary/30 transition-colors font-medium"
+                                                                    >
+                                                                        {actionLabel}
+                                                                    </button>
+                                                                )
+                                                            })}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                )
+                                            })}
                                             {/* Ungrouped actions (no conference name) */}
                                             {ungrouped.length > 0 && (
                                                 <div className="flex flex-wrap gap-1.5">

@@ -182,8 +182,8 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
             toast.error('Please select a JPEG, PNG, or GIF image.')
             return
         }
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error('Image must be less than 5MB.')
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error('Image must be less than 10MB.')
             return
         }
         // Revoke old preview
@@ -467,7 +467,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
                                             <Upload className="h-4 w-4 mr-2" /> {pendingBannerFile ? 'Change' : 'Upload'}
                                         </Button>
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-1">Image will be uploaded to cloud when you save. Max 5MB.</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Image will be uploaded to cloud when you save. Max 10MB.</p>
                                     {errors.bannerImageUrl && (
                                         <FieldError>{errors.bannerImageUrl}</FieldError>
                                     )}
