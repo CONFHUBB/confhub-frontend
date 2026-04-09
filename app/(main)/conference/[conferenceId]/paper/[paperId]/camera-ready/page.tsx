@@ -116,7 +116,7 @@ export default function DedicatedCameraReadyPage() {
                 getPaperById(paperId),
                 getTicketTypes(conferenceId, true).catch(() => []),
             ])
-            
+
             setConference(conf)
             setPaper(targetPaper)
             setTicketTypes(tickets)
@@ -158,6 +158,33 @@ export default function DedicatedCameraReadyPage() {
         if (!selectedTicketId || !userId || !paperId) return
         try {
             setRegistering(true)
+
+            // Pre-check: verify no existing ticket before attempting registration
+            // This prevents duplicate registration_number constraint violations on the backend
+            try {
+                const existingTicket = await getMyTicket(conferenceId, userId)
+                if (existingTicket) {
+                    setMyTicket(existingTicket)
+                    if (existingTicket.paymentStatus === 'COMPLETED') {
+                        toast.info('You are already registered for this conference.')
+                        setCurrentStep('upload')
+                    } else if (existingTicket.paymentStatus === 'PENDING') {
+                        toast.info('You have a pending payment. Please complete it.')
+                        setCurrentStep('pending-payment')
+                    } else {
+                        // FAILED ticket — let backend handle it (cancel + re-register)
+                        // fall through to register call below
+                        throw new Error('no_ticket') // signal to proceed
+                    }
+                    return
+                }
+            } catch (preCheckErr: any) {
+                // If it's our signal to proceed, fall through; otherwise ticket doesn't exist — proceed normally
+                if (preCheckErr?.message !== 'no_ticket' && preCheckErr?.response?.status !== 404) {
+                    // Unexpected error on pre-check — still try to register
+                }
+            }
+
             const result = await registerForConference(conferenceId, userId, {
                 ticketTypeId: selectedTicketId,
                 paperId: paperId,
@@ -176,7 +203,8 @@ export default function DedicatedCameraReadyPage() {
         } catch (err: any) {
             const msg = err?.response?.data?.message || 'Registration failed. Please try again.'
             toast.error(msg)
-            if (msg.includes('already registered')) {
+            // Fallback: if backend still says already registered, fetch and route correctly
+            if (msg.includes('already registered') || msg.includes('duplicate') || err?.response?.status === 409) {
                 try {
                     const ticket = await getMyTicket(conferenceId, userId)
                     setMyTicket(ticket)
@@ -312,14 +340,14 @@ export default function DedicatedCameraReadyPage() {
             <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-5 shadow-sm">
                 <h3 className="text-xs font-bold uppercase text-emerald-600 mb-1 tracking-wider">Target Paper</h3>
                 <p className="text-lg font-semibold text-emerald-950 line-clamp-2">{paper.title}</p>
-                <p className="text-sm text-emerald-700 mt-1 flex items-center gap-1.5"><Layers className="w-4 h-4"/> Track: {paper.track?.name}</p>
+                <p className="text-sm text-emerald-700 mt-1 flex items-center gap-1.5"><Layers className="w-4 h-4" /> Track: {paper.track?.name}</p>
             </div>
 
             <Stepper currentStep={(currentStep === 'register' || currentStep === 'pending-payment') ? 1 : 2} />
 
             {/* ── STEP 1: REGISTRATION ── */}
             {currentStep === 'register' && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+                <div className="space-y-6">
                     <Card className="border-indigo-100 shadow-sm">
                         <CardContent className="p-6">
                             <div className="flex items-center gap-3 mb-6">
@@ -333,17 +361,16 @@ export default function DedicatedCameraReadyPage() {
                             <div className="space-y-8">
                                 {authorTickets.length > 0 && (
                                     <div className="space-y-3">
-                                        <h4 className="text-sm font-semibold text-slate-900 flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-emerald-600"/> Author Admission</h4>
+                                        <h4 className="text-sm font-semibold text-slate-900 flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-emerald-600" /> Author Admission</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {authorTickets.map(ticket => (
                                                 <div
                                                     key={ticket.id}
                                                     onClick={() => setSelectedTicketId(ticket.id)}
-                                                    className={`relative p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                                                        selectedTicketId === ticket.id
+                                                    className={`relative p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 ${selectedTicketId === ticket.id
                                                             ? 'border-indigo-600 bg-indigo-50/50 shadow-md transform scale-[1.02]'
                                                             : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {selectedTicketId === ticket.id && (
                                                         <div className="absolute -top-3 -right-3 bg-indigo-600 text-white rounded-full p-1 shadow-md">
@@ -370,11 +397,10 @@ export default function DedicatedCameraReadyPage() {
                                                 <div
                                                     key={ticket.id}
                                                     onClick={() => setSelectedTicketId(ticket.id)}
-                                                    className={`relative p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                                                        selectedTicketId === ticket.id
+                                                    className={`relative p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 ${selectedTicketId === ticket.id
                                                             ? 'border-indigo-600 bg-indigo-50/50 shadow-sm'
                                                             : 'border-slate-200 hover:border-indigo-300'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <div className="flex justify-between items-start mb-2">
                                                         <h4 className="font-medium text-slate-900">{ticket.name}</h4>
@@ -391,10 +417,10 @@ export default function DedicatedCameraReadyPage() {
                     </Card>
 
                     <div className="flex justify-end pt-4">
-                        <Button 
-                            size="lg" 
-                            className="w-full sm:w-auto px-8 gap-2 shadow-md bg-indigo-600 hover:bg-indigo-700" 
-                            disabled={!selectedTicketId || registering} 
+                        <Button
+                            size="lg"
+                            className="w-full sm:w-auto px-8 gap-2 shadow-md bg-indigo-600 hover:bg-indigo-700"
+                            disabled={!selectedTicketId || registering}
                             onClick={handleRegister}
                         >
                             {registering ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
@@ -416,7 +442,7 @@ export default function DedicatedCameraReadyPage() {
                             <p className="text-amber-800 max-w-md">
                                 We found an incomplete payment for your ticket. You must complete the payment before you can upload files.
                             </p>
-                            
+
                             <div className="flex flex-col sm:flex-row gap-3 mt-4">
                                 <Button size="lg" className="gap-2 bg-amber-600 hover:bg-amber-700" onClick={handleRetryPayment} disabled={retrying}>
                                     {retrying ? <Loader2 className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" />}
@@ -430,7 +456,7 @@ export default function DedicatedCameraReadyPage() {
 
             {/* ── STEP 2: UPLOAD CAMERA-READY + COPYRIGHT ── */}
             {currentStep === 'upload' && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+                <div className="space-y-6">
                     {/* Registration Verified Banner */}
                     <Card className="border-emerald-200 bg-emerald-50/30 overflow-hidden shadow-sm">
                         <div className="bg-emerald-600 px-6 py-4 flex items-center justify-between text-white">
@@ -582,9 +608,9 @@ export default function DedicatedCameraReadyPage() {
 
                     {/* Submit & Complete Button */}
                     <div className="flex justify-end pt-4">
-                        <Button 
-                            size="lg" 
-                            className="w-full sm:w-auto px-8 gap-2 shadow-md bg-emerald-600 hover:bg-emerald-700" 
+                        <Button
+                            size="lg"
+                            className="w-full sm:w-auto px-8 gap-2 shadow-md bg-emerald-600 hover:bg-emerald-700"
                             disabled={cameraReadyFiles.length === 0}
                             onClick={() => {
                                 toast.success('Camera-Ready submission completed!');

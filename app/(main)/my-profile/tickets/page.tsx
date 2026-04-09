@@ -2,14 +2,14 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { getMyTickets, TicketResponse } from "@/app/api/registration.api"
+import { getMyTickets, retryPayment, cancelPendingTicket, TicketResponse } from "@/app/api/registration.api"
 import { getPapersByAuthor } from "@/app/api/paper.api"
 import { getUserByEmail } from "@/app/api/user.api"
 import { PaperResponse } from "@/types/paper"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, ChevronUp, Download, Loader2, Ticket } from "lucide-react"
+import { ChevronDown, ChevronUp, CreditCard, Download, Loader2, Ticket, XCircle } from "lucide-react"
 import QRCode from "qrcode"
 import { downloadAcceptanceLetter, downloadCertificate, downloadInvoice } from "@/app/api/document.api"
 import { toast } from 'sonner'
@@ -23,6 +23,8 @@ export default function MyGlobalTicketsPage() {
     const [expandedId, setExpandedId] = useState<number | null>(null)
     const [qrDataUrls, setQrDataUrls] = useState<Record<number, string>>({})
     const [downloading, setDownloading] = useState<{ type: string; id: number } | null>(null)
+    const [actionState, setActionState] = useState<{ id: number; type: 'retry' | 'cancel' } | null>(null)
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null)
 
     useEffect(() => {
         fetchData()
@@ -34,7 +36,8 @@ export default function MyGlobalTicketsPage() {
             if (!email) return router.push("/auth/login")
             const user = await getUserByEmail(email)
             if (!user || !user.id) return
-            
+            setCurrentUserId(user.id)
+
             const [tData, pData] = await Promise.all([
                 getMyTickets(user.id),
                 getPapersByAuthor(user.id)
@@ -70,6 +73,38 @@ export default function MyGlobalTicketsPage() {
         finally { setDownloading(null) }
     }
 
+    const handleRetryPayment = async (ticket: TicketResponse) => {
+        if (!currentUserId) return
+        setActionState({ id: ticket.id, type: 'retry' })
+        try {
+            const res = await retryPayment(ticket.conferenceId, currentUserId)
+            if (res.paymentUrl) {
+                window.location.href = res.paymentUrl
+            } else {
+                toast.error('Could not generate a payment link. Please try again.')
+            }
+        } catch (e: any) {
+            toast.error(e?.response?.data?.message || 'Failed to initiate payment.')
+        } finally {
+            setActionState(null)
+        }
+    }
+
+    const handleCancelTicket = async (ticket: TicketResponse) => {
+        if (!currentUserId) return
+        if (!confirm('Cancel this pending registration? You can re-register afterwards.')) return
+        setActionState({ id: ticket.id, type: 'cancel' })
+        try {
+            await cancelPendingTicket(ticket.conferenceId, currentUserId)
+            toast.success('Registration cancelled. You can now register again.')
+            await fetchData()
+        } catch (e: any) {
+            toast.error(e?.response?.data?.message || 'Failed to cancel registration.')
+        } finally {
+            setActionState(null)
+        }
+    }
+
     if (loading) return <div className="p-12 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
 
     return (
@@ -100,8 +135,14 @@ export default function MyGlobalTicketsPage() {
                         <TableBody>
                             {tickets.map(ticket => {
                                 const isPaid = ticket.paymentStatus === 'COMPLETED'
+                                const isPending = ticket.paymentStatus === 'PENDING'
+                                const isFailed = ticket.paymentStatus === 'FAILED'
+                                const canRetry = isPending || isFailed
                                 const isExpanded = expandedId === ticket.id
                                 const qrDataUrl = qrDataUrls[ticket.id]
+                                const isRetrying = actionState?.id === ticket.id && actionState?.type === 'retry'
+                                const isCancelling = actionState?.id === ticket.id && actionState?.type === 'cancel'
+                                const isActioning = isRetrying || isCancelling
                                 
                                 const acceptedPaper = papers.find(p => p.conferenceId === ticket.conferenceId && ['ACCEPTED', 'PUBLISHED'].includes(p.status))
 
@@ -109,8 +150,12 @@ export default function MyGlobalTicketsPage() {
                                     { label: 'Registration Number', value: <span className="font-mono font-semibold">{ticket.registrationNumber}</span> },
                                     { label: 'Ticket Type', value: ticket.ticketTypeName },
                                     { label: 'Payment Status', value: (
-                                        <Badge className={isPaid ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-800 border-amber-200'}>
-                                            {isPaid ? '✅ Confirmed' : '⏳ Pending'}
+                                        <Badge className={
+                                            isPaid ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                                            isFailed ? 'bg-red-100 text-red-800 border-red-200' :
+                                            'bg-amber-100 text-amber-800 border-amber-200'
+                                        }>
+                                            {isPaid ? '✅ Confirmed' : isFailed ? '❌ Payment Failed' : '⏳ Pending'}
                                         </Badge>
                                     )},
                                     { label: 'Amount', value: ticket.price === 0 ? 'Free' : `${ticket.price.toLocaleString()} ${ticket.currency || 'VND'}` },
@@ -126,8 +171,12 @@ export default function MyGlobalTicketsPage() {
                                             <TableCell className="font-medium text-indigo-700">{ticket.conferenceName}</TableCell>
                                             <TableCell className="text-sm text-muted-foreground">{ticket.ticketTypeName}</TableCell>
                                             <TableCell className="text-center">
-                                                <Badge className={isPaid ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-800 border-amber-200'}>
-                                                    {isPaid ? '✅ Confirmed' : '⏳ Pending'}
+                                                <Badge className={
+                                                    isPaid ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                                                    isFailed ? 'bg-red-100 text-red-800 border-red-200' :
+                                                    'bg-amber-100 text-amber-800 border-amber-200'
+                                                }>
+                                                    {isPaid ? '✅ Confirmed' : isFailed ? '❌ Failed' : '⏳ Pending'}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
@@ -143,7 +192,7 @@ export default function MyGlobalTicketsPage() {
                                                     <div className="flex flex-col xl:flex-row gap-6">
                                                         {/* Ticket Fields Table */}
                                                         <div className="flex-1 rounded-lg border overflow-hidden bg-background max-w-xl shadow-sm">
-                                                            <div className={`h-1.5 ${isPaid ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-amber-400 to-amber-300'}`} />
+                                                            <div className={`h-1.5 ${isPaid ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : canRetry ? 'bg-gradient-to-r from-amber-400 to-amber-300' : 'bg-gradient-to-r from-gray-300 to-gray-200'}`} />
                                                             <Table>
                                                                 <TableBody>
                                                                     {ticketFields.map(f => (
@@ -154,6 +203,35 @@ export default function MyGlobalTicketsPage() {
                                                                     ))}
                                                                 </TableBody>
                                                             </Table>
+                                                            {/* Actions for PENDING or FAILED payment */}
+                                                            {canRetry && (
+                                                                <div className="border-t p-4 bg-amber-50">
+                                                                    <p className="text-xs text-amber-700 font-medium mb-3">
+                                                                        {isFailed ? '❌ Payment failed — retry payment or cancel to re-register with a different ticket.' : '⏳ Payment incomplete — complete payment or cancel to re-register.'}
+                                                                    </p>
+                                                                    <div className="flex gap-2">
+                                                                        <Button
+                                                                            size="sm"
+                                                                            className="flex-1 h-8 text-xs"
+                                                                            disabled={isActioning}
+                                                                            onClick={(e) => { e.stopPropagation(); handleRetryPayment(ticket); }}
+                                                                        >
+                                                                            {isRetrying ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5 mr-1.5" />}
+                                                                            {isRetrying ? 'Redirecting...' : 'Retry Payment'}
+                                                                        </Button>
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            className="flex-1 h-8 text-xs border-red-200 text-red-600 hover:bg-red-50"
+                                                                            disabled={isActioning}
+                                                                            onClick={(e) => { e.stopPropagation(); handleCancelTicket(ticket); }}
+                                                                        >
+                                                                            {isCancelling ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5 mr-1.5" />}
+                                                                            {isCancelling ? 'Cancelling...' : 'Cancel & Re-register'}
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
 
                                                         {/* Documents and QR */}
