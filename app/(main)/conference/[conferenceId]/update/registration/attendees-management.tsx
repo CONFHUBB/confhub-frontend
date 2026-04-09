@@ -3,7 +3,7 @@
 // app/(main)/conference/[conferenceId]/update/attendees-management.tsx
 
 import { useState, useEffect, useCallback } from 'react'
-import { getAttendees, refundTicket, TicketResponse } from '@/app/api/registration.api'
+import { getAttendees, TicketResponse } from '@/app/api/registration.api'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -30,10 +30,7 @@ const STATUS_CONFIG: Record<string, { label: string; badge: React.ReactNode }> =
     label: 'Failed',
     badge: <Badge className="bg-red-100 text-red-700 border-red-200 border">Failed</Badge>,
   },
-  REFUNDED: {
-    label: 'Refunded',
-    badge: <Badge className="bg-gray-100 text-gray-600 border">Refunded</Badge>,
-  },
+
 }
 
 interface Props {
@@ -151,16 +148,6 @@ export default function AttendeesManagement({ conferenceId, refreshKey = 0 }: Pr
   }
 
 
-  const handleRefund = async (ticketId: number, name: string) => {
-    if (!window.confirm(`Are you sure you want to refund the ticket for ${name}?`)) return
-    try {
-      await refundTicket(conferenceId, ticketId)
-      toast.success('Ticket refunded successfully')
-      fetchAttendees()
-    } catch {
-      toast.error('Failed to refund ticket')
-    }
-  }
 
   return (
     <div>
@@ -202,7 +189,7 @@ export default function AttendeesManagement({ conferenceId, refreshKey = 0 }: Pr
                 { value: 'COMPLETED', label: 'Paid' },
                 { value: 'PENDING', label: 'Pending' },
                 { value: 'FAILED', label: 'Failed' },
-                { value: 'REFUNDED', label: 'Refunded' },
+
               ],
               value: statusFilter,
               onChange: (v) => { setStatusFilter(v); setCurrentPage(0) },
@@ -221,7 +208,7 @@ export default function AttendeesManagement({ conferenceId, refreshKey = 0 }: Pr
       {loading ? (
         <TableSkeleton
           rows={8}
-          headers={['#', 'Reg #', 'Name', 'Email', 'Ticket Type', 'Amount', 'Payment', 'Check-in', 'Actions']}
+          headers={['#', 'Reg #', 'Name', 'Email', 'Ticket Type', 'Amount', 'Payment', 'Check-in']}
           className="rounded-lg border overflow-hidden"
         />
       ) : attendees.length === 0 ? (
@@ -244,7 +231,7 @@ export default function AttendeesManagement({ conferenceId, refreshKey = 0 }: Pr
                 <TableHead>Amount</TableHead>
                 <TableHead className="w-28 text-center">Payment</TableHead>
                 <TableHead className="w-24 text-center">Check-in</TableHead>
-                <TableHead className="w-24 text-center">Actions</TableHead>
+
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -276,18 +263,7 @@ export default function AttendeesManagement({ conferenceId, refreshKey = 0 }: Pr
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-center">
-                    {a.paymentStatus === 'COMPLETED' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                        onClick={() => handleRefund(a.id, a.userName)}
-                      >
-                        Refund
-                      </Button>
-                    )}
-                  </TableCell>
+
                 </TableRow>
               ))}
             </TableBody>

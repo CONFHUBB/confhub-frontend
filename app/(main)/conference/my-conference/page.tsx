@@ -91,7 +91,8 @@ export default function MyConferencesPage() {
                 }
 
                 const data = await getChairedConferences(user.id, 0, 100)
-                setConferences(data.content || [])
+                const sorted = [...(data.content || [])].sort((a, b) => b.id - a.id)
+                setConferences(sorted)
             } catch (err: any) {
                 console.error("Error fetching chaired conferences:", err)
                 if (err.response?.status === 401 || err.response?.status === 403) {

@@ -327,7 +327,21 @@ export default function ReviewPaperPage() {
         )
     }
 
-    const isReadOnly = review.status === 'COMPLETED' || review.status === 'DECLINED' || !!activityClosed
+    const isReadOnly = (() => {
+        // Declined → always read-only
+        if (review.status === 'DECLINED') return true
+        // COMPLETED → read-only (user can unlock via "Edit Review" button)
+        if (review.status === 'COMPLETED') return true
+        // Activity closed (REVIEW_SUBMISSION disabled/expired), BUT if discussion
+        // is active and the setting allows review updates → NOT read-only
+        if (activityClosed) {
+            if (discussionEnabled && settings.allowReviewUpdateDuringDiscussion) {
+                return false // Allow editing during discussion
+            }
+            return true
+        }
+        return false
+    })()
 
     return (
         <div className="page-wide space-y-6">
@@ -368,14 +382,24 @@ export default function ReviewPaperPage() {
 
             {/* Activity closed warning */}
             {activityClosed && (
-                <div className="p-4 rounded-lg border border-red-200 bg-red-50 text-center">
-                    <div className="flex items-center justify-center gap-2 text-red-700">
-                        <AlertTriangle className="h-5 w-5" />
-                        <p className="font-semibold">Review Submission Closed</p>
+                discussionEnabled && settings.allowReviewUpdateDuringDiscussion ? (
+                    <div className="p-4 rounded-lg border border-blue-200 bg-blue-50 text-center">
+                        <div className="flex items-center justify-center gap-2 text-blue-700">
+                            <MessageSquare className="h-5 w-5" />
+                            <p className="font-semibold">Discussion Phase — Review Editing Allowed</p>
+                        </div>
+                        <p className="text-sm text-blue-600 mt-1">Review submission has closed, but you can still update your review during the discussion phase.</p>
                     </div>
-                    <p className="text-sm text-red-600 mt-1">{activityClosed}</p>
-                    <p className="text-xs text-red-500 mt-1">The form is read-only. You can view your existing answers but cannot make changes.</p>
-                </div>
+                ) : (
+                    <div className="p-4 rounded-lg border border-red-200 bg-red-50 text-center">
+                        <div className="flex items-center justify-center gap-2 text-red-700">
+                            <AlertTriangle className="h-5 w-5" />
+                            <p className="font-semibold">Review Submission Closed</p>
+                        </div>
+                        <p className="text-sm text-red-600 mt-1">{activityClosed}</p>
+                        <p className="text-xs text-red-500 mt-1">The form is read-only. You can view your existing answers but cannot make changes.</p>
+                    </div>
+                )
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
