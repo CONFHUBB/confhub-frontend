@@ -97,7 +97,9 @@ export function ExcelImport({
         preview?.conferencePreview ? [preview.conferencePreview] :
         (preview?.trackPreviews?.length ?? 0) > 0 ? preview!.trackPreviews! :
         (preview?.subjectAreaPreviews?.length ?? 0) > 0 ? preview!.subjectAreaPreviews! :
-        (preview?.memberPreviews?.length ?? 0) > 0 ? preview!.memberPreviews! : []
+        (preview?.memberPreviews?.length ?? 0) > 0 ? preview!.memberPreviews! :
+        (preview?.ticketTypePreviews?.length ?? 0) > 0 ? preview!.ticketTypePreviews! :
+        preview?.ticketTypePreview ? [preview.ticketTypePreview] : []
 
     return (
         <div className="space-y-4">
@@ -233,6 +235,7 @@ export function ExcelImport({
                         {importResult.tracksCreated > 0 && ` — ${importResult.tracksCreated} tracks`}
                         {importResult.subjectAreasCreated > 0 && ` — ${importResult.subjectAreasCreated} subject areas`}
                         {importResult.membersCreated !== undefined && importResult.membersCreated > 0 && ` — ${importResult.membersCreated} members`}
+                        {importResult.ticketTypesCreated !== undefined && importResult.ticketTypesCreated > 0 && ` — ${importResult.ticketTypesCreated} ticket types`}
                     </p>
                 </div>
             )}
