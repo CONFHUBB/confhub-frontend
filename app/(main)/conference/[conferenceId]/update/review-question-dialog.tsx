@@ -122,13 +122,7 @@ export function ReviewQuestionDialog({ open, onClose, onSave, initialData, isSav
     ]
 
     const VISIBILITY_SETTINGS = [
-        { key: "isRequired", label: "Required", desc: "Reviewer must answer this question" },
-        { key: "lockedForEdit", label: "Locked for Edit", desc: "Cannot be modified once submitted" },
         { key: "visibleToOtherReviewers", label: "Visible to other reviewers", desc: "During the discussion phase" },
-        { key: "visibleToAuthorsDuringFeedback", label: "Visible to authors (Feedback)", desc: "During author feedback phase" },
-        { key: "visibleToAuthorsAfterNotification", label: "Visible to authors (Notification)", desc: "After decisions are sent" },
-        { key: "visibleToMetaReviewers", label: "Visible to meta-reviewers", desc: "Can be seen by meta-reviewers" },
-        { key: "visibleToSeniorMetaReviewers", label: "Visible to senior meta-reviewers", desc: "Can be seen by senior meta-reviewers" },
     ] as const
 
     return (

@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Loader2, Search, Zap, ThumbsUp, Minus, ThumbsDown, ChevronDown, ChevronUp, AlertTriangle, Target, Tag, Pencil, XCircle, Lock, Download } from 'lucide-react'
+import { Loader2, Search, Zap, ThumbsUp, Minus, ThumbsDown, ChevronDown, ChevronUp, AlertTriangle, Target, Tag, Pencil, XCircle, Lock, Download, FileText } from 'lucide-react'
 import { StandardPagination } from '@/components/ui/standard-pagination'
 import { FilterPanel } from '@/components/ui/filter-panel'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -336,6 +336,18 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged, bidCounts:
                                                 </div>
                                             </div>
                                         </div>
+                                        {paper.abstractText && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 w-fit -mt-1"
+                                                onClick={() => setExpandedPaper(isExpanded ? null : paper.paperId)}
+                                            >
+                                                <FileText className="h-3.5 w-3.5" />
+                                                {isExpanded ? 'Hide Abstract' : 'Read Abstract'}
+                                                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                                            </Button>
+                                        )}
                                         {isExpanded && paper.abstractText && (
                                             <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-4 border">
                                                 <p className="font-medium text-gray-700 mb-1">Abstract</p>

@@ -180,34 +180,9 @@ export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
             description: "Reviewers can see the names of other reviewers in discussion.",
         },
         {
-            key: "showAggregateColumns",
-            label: "Show Aggregate Columns",
-            description: "Display average score columns on the Chair Console.",
-        },
-        {
-            key: "allowReviewerSeeStatusBeforeNotification",
-            label: "Allow Reviewer See Status Before Notification",
-            description: "Reviewers can see paper status before Author Notification is sent.",
-        },
-        {
-            key: "enableAllPapersForDiscussion",
-            label: "Enable All Papers for Discussion",
-            description: "Automatically enable discussion for all papers when Discussion activity is enabled.",
-        },
-        {
             key: "allowDiscussNonAssignedPapers",
             label: "Allow Discuss Non-Assigned Papers",
             description: "Reviewers can discuss papers they are not assigned to (if no conflict).",
-        },
-        {
-            key: "allowAuthorDiscuss",
-            label: "Allow Author Discuss",
-            description: "Authors can participate in discussion (only after PC posts first).",
-        },
-        {
-            key: "doNotShowWithdrawnPapers",
-            label: "Do Not Show Withdrawn Papers",
-            description: "Hide withdrawn papers from the Reviewer Console.",
         },
     ]
 
@@ -250,24 +225,7 @@ export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
                         ))}
                     </div>
 
-                    {/* Reviewer Invite Expiration Days */}
-                    <div>
-                        <label className="text-sm font-semibold block mb-2">
-                            Reviewer Invite Expiration (days)
-                        </label>
-                        <Input
-                            type="number"
-                            className="h-12 text-base max-w-xs"
-                            min={1}
-                            value={settings.reviewerInviteExpirationDays ?? 0}
-                            onChange={(e) =>
-                                setSettings((prev) => ({
-                                    ...prev,
-                                    reviewerInviteExpirationDays: Number(e.target.value),
-                                }))
-                            }
-                        />
-                    </div>
+
 
                     {/* Reviewer Instructions */}
                     <div>
