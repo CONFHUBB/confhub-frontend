@@ -61,7 +61,7 @@ interface SetupWizardProps {
 // ── Max lengths ──────────────────────────────────────────────────────────────
 
 const SHORT_MAX = 255
-const LONG_MAX = 1000
+const LONG_MAX = 2000
 
 function CustomStepIcon(props: any) {
     const { active, completed, icon } = props;

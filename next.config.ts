@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
+        source: "/ws",
+        destination: `${process.env.BACKEND_URL || "http://localhost:8080"}/ws`,
+      },
+      {
         source: "/api/:path*",
         destination: `${process.env.BACKEND_URL || "http://localhost:8080"}/api/:path*`,
       },
