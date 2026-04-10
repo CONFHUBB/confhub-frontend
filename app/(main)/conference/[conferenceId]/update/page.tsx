@@ -522,6 +522,15 @@ export default function ConferenceUpdatePage() {
 
     const handleSaveTrack = async (data: TrackData) => {
         try {
+            // Check for duplicate track name (case-insensitive)
+            const existingTracks = await getTracksByConference(conferenceId).catch(() => [])
+            const isDuplicate = existingTracks.some(
+                (t: any) => t.name.trim().toLowerCase() === data.name.trim().toLowerCase()
+            )
+            if (isDuplicate) {
+                toast.error(`A track named "${data.name}" already exists in this conference.`)
+                return
+            }
             await createTrack({
                 name: data.name,
                 description: data.description,
@@ -695,7 +704,7 @@ export default function ConferenceUpdatePage() {
                             <p className="text-sm text-muted-foreground">Manage tracks in this conference.</p>
                         </div>
                         {!viewOnly && <AddTrack conferenceId={conferenceId} onSubmit={handleSaveTrack} onImportSuccess={() => setTrackRefreshKey(k => k + 1)} />}
-                        <TrackList conferenceId={conferenceId} refreshKey={trackRefreshKey} />
+                        <TrackList conferenceId={conferenceId} refreshKey={trackRefreshKey} onTrackDeleted={() => setTrackRefreshKey(k => k + 1)} />
                     </div>
                 )
 
@@ -726,12 +735,12 @@ export default function ConferenceUpdatePage() {
                             <h2 className="text-xl font-bold mb-2">Review Settings</h2>
                             <p className="text-sm text-muted-foreground">Configure review type, reviewer quota, discussion settings and more.</p>
                         </div>
-                        <ReviewSettingsComponent conferenceId={conferenceId} />
+                        <ReviewSettingsComponent conferenceId={conferenceId} isReadOnly={viewOnly} />
                     </div>
                 )
 
             case 'features-conflict-settings':
-                return <>{ViewOnlyBanner}<ConflictManagement conferenceId={conferenceId} /></>
+                return <>{ViewOnlyBanner}<ConflictManagement conferenceId={conferenceId} isReadOnly={viewOnly} /></>
 
             case 'features-review-management':
                 return <>{ViewOnlyBanner}<ReviewManagement conferenceId={conferenceId} /></>

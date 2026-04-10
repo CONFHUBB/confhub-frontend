@@ -31,6 +31,10 @@ export const updateTrack = async (id: number, body: UpdateTrackRequest): Promise
     return response.data
 }
 
+export const deleteTrack = async (id: number): Promise<void> => {
+    await http.delete(`/conferences-track/${id}`)
+}
+
 export const getConference = async (id: number): Promise<ConferenceResponse> => {
     const response = await http.get<ConferenceResponse>(`/conferences/${id}`)
     return response.data
