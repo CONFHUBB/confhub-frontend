@@ -504,9 +504,11 @@ export default function PaperWorkspacePage() {
                                                             <a href={pf.url} target="_blank" rel="noopener noreferrer">
                                                                 <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-slate-600 hover:text-slate-900"><ExternalLink className="h-3.5 w-3.5" /> Open</Button>
                                                             </a>
-                                                            <Button variant="ghost" size="sm" className="p-1 h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteFile(pf.id)}>
-                                                                <Trash2 className="h-3.5 w-3.5" />
-                                                            </Button>
+                                                            {isEditable && (
+                                                                <Button variant="ghost" size="sm" className="p-1 h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteFile(pf.id)}>
+                                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -645,9 +647,11 @@ export default function PaperWorkspacePage() {
                                                                 <a href={pf.url} target="_blank" rel="noopener noreferrer">
                                                                     <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100"><ExternalLink className="h-3.5 w-3.5" /> Open</Button>
                                                                 </a>
-                                                                <Button variant="ghost" size="sm" className="p-1 h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteFile(pf.id)}>
-                                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                                </Button>
+                                                                {isEditable && (
+                                                                    <Button variant="ghost" size="sm" className="p-1 h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteFile(pf.id)}>
+                                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                                    </Button>
+                                                                )}
                                                             </div>
                                                         </td>
                                                     </tr>

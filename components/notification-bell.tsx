@@ -6,6 +6,7 @@ import { Bell, Check, CheckCheck, X } from 'lucide-react'
 import { getNotificationsByUser, getUnreadCount, markAsRead, markAllAsRead } from '@/app/api/notification.api'
 import type { NotificationResponse } from '@/types/notification'
 import { useUserRoles } from '@/hooks/useUserConferenceRoles'
+import { useWebSocket } from '@/hooks/useWebSocket'
 
 const NOTIFICATION_TYPE_ICONS: Record<string, string> = {
     INVITATION: '📩',
@@ -32,7 +33,10 @@ export function NotificationBell() {
     const [loading, setLoading] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
 
-    // Fetch unread count (polling every 10s + on window focus)
+    // ── WebSocket connection ──
+    useWebSocket(userId ?? null)
+
+    // Fetch unread count (fallback polling every 60s + on window focus)
     const fetchUnreadCount = useCallback(async () => {
         if (!userId) return
         try {
@@ -43,7 +47,8 @@ export function NotificationBell() {
 
     useEffect(() => {
         fetchUnreadCount()
-        const interval = setInterval(fetchUnreadCount, 30000)
+        // Keep a slower polling as fallback (WebSocket handles real-time)
+        const interval = setInterval(fetchUnreadCount, 60000)
         const handleFocus = () => fetchUnreadCount()
         window.addEventListener('focus', handleFocus)
         return () => {
@@ -51,6 +56,23 @@ export function NotificationBell() {
             window.removeEventListener('focus', handleFocus)
         }
     }, [fetchUnreadCount])
+
+    // ── Listen for real-time WebSocket notifications ──
+    useEffect(() => {
+        const handleNewNotification = (e: Event) => {
+            const notification = (e as CustomEvent).detail as NotificationResponse
+            // Increment unread count
+            setUnreadCount(prev => prev + 1)
+            // Prepend to notification list if dropdown has been opened before
+            setNotifications(prev => {
+                // Avoid duplicates (in case WS + polling race)
+                if (prev.some(n => n.id === notification.id)) return prev
+                return [notification, ...prev]
+            })
+        }
+        window.addEventListener('notification:new', handleNewNotification)
+        return () => window.removeEventListener('notification:new', handleNewNotification)
+    }, [])
 
     // Fetch full list when dropdown opens
     const fetchNotifications = useCallback(async () => {
@@ -126,7 +148,7 @@ export function NotificationBell() {
             >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold px-1 ring-2 ring-primary">
+                    <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold px-1 ring-2 ring-primary animate-pulse">
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                 )}

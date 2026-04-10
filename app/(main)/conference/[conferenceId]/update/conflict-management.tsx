@@ -23,6 +23,7 @@ import { UserLink } from '@/components/shared/user-link'
 
 interface ConflictManagementProps {
     conferenceId: number
+    isReadOnly?: boolean
 }
 
 interface PaperOption {
@@ -42,7 +43,7 @@ interface ConflictSettings {
     allowAuthorConfigureConflict: boolean
 }
 
-export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
+export function ConflictManagement({ conferenceId, isReadOnly = false }: ConflictManagementProps) {
     const [conflicts, setConflicts] = useState<PaperConflictResponse[]>([])
     const [papers, setPapers] = useState<PaperOption[]>([])
     const [users, setUsers] = useState<UserOption[]>([])
@@ -293,6 +294,7 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                                 setSettings((prev) => ({ ...prev, enableDomainConflict: checked }))
                             }
                             aria-label="Toggle domain conflict detection"
+                            disabled={isReadOnly}
                         />
                     </div>
 
@@ -313,12 +315,13 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                                 setSettings((prev) => ({ ...prev, allowAuthorConfigureConflict: checked }))
                             }
                             aria-label="Toggle author conflict declaration"
+                            disabled={isReadOnly}
                         />
                     </div>
                 </div>
 
                 <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t py-4 -mx-8 px-8 md:-mx-12 md:px-12 flex justify-end">
-                    <Button onClick={handleSaveSettings} disabled={savingSettings} size="sm">
+                    <Button onClick={handleSaveSettings} disabled={savingSettings || isReadOnly} size="sm">
                         {savingSettings ? (
                             <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Saving...</>
                         ) : (
@@ -339,7 +342,7 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                         Manually block specific reviewer–paper pairs. Select a conflict type for each entry.
                     </p>
                 </div>
-                <Button onClick={() => setShowAddForm(!showAddForm)} size="lg" className="text-base">
+                <Button onClick={() => setShowAddForm(!showAddForm)} size="lg" className="text-base" disabled={isReadOnly}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Conflict
                 </Button>
@@ -504,6 +507,7 @@ export function ConflictManagement({ conferenceId }: ConflictManagementProps) {
                                             variant="ghost"
                                             className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                             onClick={() => handleDelete(conflict.id)}
+                                            disabled={isReadOnly}
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>

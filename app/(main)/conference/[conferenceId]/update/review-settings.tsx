@@ -19,6 +19,7 @@ import { V } from "@/lib/validation"
 
 interface ReviewSettingsProps {
     conferenceId: number
+    isReadOnly?: boolean
 }
 
 const DEFAULT_SETTINGS: TrackReviewSetting = {
@@ -40,7 +41,7 @@ const DEFAULT_SETTINGS: TrackReviewSetting = {
     allowAuthorConfigureConflict: false,
 }
 
-export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
+export function ReviewSettings({ conferenceId, isReadOnly = false }: ReviewSettingsProps) {
     const [tracks, setTracks] = useState<TrackResponse[]>([])
     const [selectedTrackId, setSelectedTrackId] = useState<number | null>(null)
     const [settings, setSettings] = useState<TrackReviewSetting>(DEFAULT_SETTINGS)
@@ -220,6 +221,7 @@ export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
                                 <Switch
                                     checked={settings[key] as boolean}
                                     onCheckedChange={() => toggleField(key)}
+                                    disabled={isReadOnly}
                                 />
                             </div>
                         ))}
@@ -236,6 +238,7 @@ export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
                             className="min-h-[150px] text-base"
                             placeholder="Provide detailed instructions for reviewers..."
                             value={settings.reviewerInstructions ?? ""}
+                            readOnly={isReadOnly}
                             onChange={(e) =>
                                 setSettings((prev) => ({
                                     ...prev,
@@ -247,7 +250,7 @@ export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
 
                     {/* Action Buttons */}
                     <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t py-4 -mx-8 px-8 md:-mx-12 md:px-12 flex items-center gap-4">
-                        <Button onClick={handleSave} disabled={isSaving} size="lg" className="text-base px-6">
+                        <Button onClick={handleSave} disabled={isSaving || isReadOnly} size="lg" className="text-base px-6">
                             {isSaving ? (
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             ) : (
@@ -260,6 +263,7 @@ export function ReviewSettings({ conferenceId }: ReviewSettingsProps) {
                             size="lg"
                             className="text-base px-6"
                             onClick={() => setShowCopyDialog(true)}
+                            disabled={isReadOnly}
                         >
                             <Copy className="h-4 w-4 mr-2" />
                             Copy Settings To Other Tracks

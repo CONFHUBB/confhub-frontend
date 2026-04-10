@@ -97,7 +97,7 @@ export function ConferenceForm({ initialData, onSubmit, isSubmitting, submitLabe
 
     // Max length constraints matching DB varchar columns
     const SHORT_MAX = 255
-    const LONG_MAX = 1000
+    const LONG_MAX = 2000
 
     const validate = () => {
         const newErrors: Record<string, string> = {}
