@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { getConference, getConferenceActivities } from '@/app/api/conference.api'
 import { getReviewsByReviewerAndConference } from '@/app/api/review.api'
@@ -97,17 +97,36 @@ const BID_ICONS: Record<string, { icon: React.ReactNode; color: string; label: s
     NOT_WILLING: { icon: <ThumbsDown className="h-4 w-4" />, color: 'text-red-600', label: 'Not Willing' },
 }
 
+// ──────────────────────────── Helpers ────────────────────────────
+const VALID_TABS: ReviewerTab[] = ['dashboard', 'profile', 'bidding', 'reviews', 'discussion']
+
 // ──────────────────────────── Component ────────────────────────────
 export default function ReviewerConsole() {
     const params = useParams()
     const router = useRouter()
+    const searchParams = useSearchParams()
     const conferenceId = Number(params.conferenceId)
 
     const { settings } = useTrackSettings(conferenceId)
 
     const [conference, setConference] = useState<ConferenceResponse | null>(null)
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState<ReviewerTab>('dashboard')
+
+    // URL-synced tab state
+    const tabFromUrl = searchParams.get('tab') as ReviewerTab | null
+    const activeTab: ReviewerTab = tabFromUrl && VALID_TABS.includes(tabFromUrl) ? tabFromUrl : 'dashboard'
+
+    const setActiveTab = useCallback((tab: ReviewerTab) => {
+        const newParams = new URLSearchParams(searchParams.toString())
+        if (tab === 'dashboard') {
+            newParams.delete('tab')
+        } else {
+            newParams.set('tab', tab)
+        }
+        const query = newParams.toString()
+        router.replace(`/conference/${conferenceId}/reviewer${query ? `?${query}` : ''}`, { scroll: false })
+    }, [searchParams, router, conferenceId])
+
     const [expandedGroups, setExpandedGroups] = useState<string[]>(
         TAB_GROUPS.map(g => g.title)
     )

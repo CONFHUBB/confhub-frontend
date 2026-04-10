@@ -22,7 +22,7 @@ export interface BiddingResponse {
 export interface PaperForBidding {
     paperId: number
     title: string
-    abstractText: string | null   // null khi isDoubleBlind = true
+    abstractText: string | null   // abstract of the paper (always provided for bidding)
     primarySubjectArea: string
     secondarySubjectAreas: string[]
     keywords: string[]

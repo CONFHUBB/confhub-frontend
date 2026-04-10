@@ -20,12 +20,7 @@ export function ReviewQuestionsPreview({ open, onClose, questions }: ReviewQuest
     const renderVisibilityTags = (q: ReviewQuestionDTO) => {
         const tags: string[] = []
         if (q.isRequired) tags.push("Required")
-        if (q.lockedForEdit) tags.push("Locked for edit")
         if (q.visibleToOtherReviewers) tags.push("Visible to other reviewers during discussion")
-        if (q.visibleToAuthorsDuringFeedback) tags.push("Visible to authors (feedback phase)")
-        if (q.visibleToAuthorsAfterNotification) tags.push("Visible to authors (after notification)")
-        if (q.visibleToMetaReviewers) tags.push("Visible to meta-reviewers")
-        if (q.visibleToSeniorMetaReviewers) tags.push("Visible to senior meta-reviewers")
 
         if (tags.length === 0) return null
 

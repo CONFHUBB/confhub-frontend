@@ -348,6 +348,7 @@ export function SetupWizard({ onSubmit, isSubmitting, backendErrors }: SetupWiza
                                         onChange={handleChange}
                                         autoFocus
                                     />
+                                    <p className="text-xs text-muted-foreground mt-1">{formData.name.length}/{SHORT_MAX}</p>
                                     {errors.name && <FieldError>{errors.name}</FieldError>}
                                 </Field>
 
@@ -363,6 +364,7 @@ export function SetupWizard({ onSubmit, isSubmitting, backendErrors }: SetupWiza
                                         value={formData.acronym}
                                         onChange={handleChange}
                                     />
+                                    <p className="text-xs text-muted-foreground mt-1">{formData.acronym.length}/20</p>
                                     {errors.acronym && <FieldError>{errors.acronym}</FieldError>}
                                 </Field>
 
@@ -436,6 +438,7 @@ export function SetupWizard({ onSubmit, isSubmitting, backendErrors }: SetupWiza
                                         onChange={handleChange}
                                         autoFocus
                                     />
+                                    <p className="text-xs text-muted-foreground mt-1">{formData.location.length}/{SHORT_MAX}</p>
                                     {errors.location && <FieldError>{errors.location}</FieldError>}
                                 </Field>
 
