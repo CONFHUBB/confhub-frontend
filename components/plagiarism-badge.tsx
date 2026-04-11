@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { ShieldCheck, ShieldAlert, ShieldX, Loader2, RefreshCw, AlertTriangle, Globe, FileText, ExternalLink, CheckCircle2, Search } from "lucide-react"
 import {
@@ -22,6 +22,8 @@ interface PlagiarismBadgeProps {
     status?: string | null
     showDetail?: boolean
     className?: string
+    autoOpen?: boolean
+    onAutoOpenDone?: () => void
 }
 
 function getScoreColor(score: number) {
@@ -50,7 +52,7 @@ function parseDetails(raw: any): PlagiarismDetails | null {
     return raw as PlagiarismDetails
 }
 
-export function PlagiarismBadge({ paperId, score, status, showDetail = true, className }: PlagiarismBadgeProps) {
+export function PlagiarismBadge({ paperId, score, status, showDetail = true, className, autoOpen, onAutoOpenDone }: PlagiarismBadgeProps) {
     const [open, setOpen] = useState(false)
     const [details, setDetails] = useState<PlagiarismDetails | null>(null)
     const [loading, setLoading] = useState(false)
@@ -58,6 +60,15 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
     // Local score that updates from API results
     const [localScore, setLocalScore] = useState<number | null>(null)
     const [localStatus, setLocalStatus] = useState<string | null>(null)
+
+    // Auto-open dialog when parent signals (e.g. after plagiarism check completes)
+    useEffect(() => {
+        if (autoOpen) {
+            setOpen(true)
+            loadDetails()
+            onAutoOpenDone?.()
+        }
+    }, [autoOpen])
 
     const loadDetails = async () => {
         setLoading(true)
@@ -80,8 +91,8 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
             await recheckPlagiarism(paperId)
             setLocalStatus("CHECKING")
 
-            // Poll for completion every 3 seconds, max 60 seconds
-            const maxPolls = 20
+            // Poll for completion every 3 seconds, max 90 seconds
+            const maxPolls = 30
             for (let i = 0; i < maxPolls; i++) {
                 await new Promise(r => setTimeout(r, 3000))
                 const res = await getPlagiarismResult(paperId)
@@ -206,11 +217,24 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
                         )}
 
                         {/* Score Summary Cards */}
-                        <div className="grid grid-cols-3 gap-3">
-                            <ScoreCard label="Internal" score={details.internalScore} />
-                            <ScoreCard label="Web Search" score={details.webSearchScore} />
-                            <ScoreCard label="Final" score={details.finalScore} highlight />
-                        </div>
+                        {(() => {
+                            const scholarMatches = details.webSearchMatches?.filter(wm => wm.source === 'scholar') ?? []
+                            const webMatches = details.webSearchMatches?.filter(wm => !wm.source || wm.source === 'web') ?? []
+                            const scholarScore = scholarMatches.length > 0
+                                ? scholarMatches.reduce((sum, m) => sum + (m.similarity ?? 0), 0) / scholarMatches.length
+                                : 0
+                            const webScore = webMatches.length > 0
+                                ? webMatches.reduce((sum, m) => sum + (m.similarity ?? 0), 0) / webMatches.length
+                                : 0
+                            return (
+                                <div className="grid grid-cols-4 gap-2">
+                                    <ScoreCard label="Internal" score={details.internalScore} />
+                                    <ScoreCard label="Scholar" score={scholarScore} />
+                                    <ScoreCard label="Web" score={webScore} />
+                                    <ScoreCard label="Final" score={details.finalScore} highlight />
+                                </div>
+                            )
+                        })()}
 
                         {/* ═══ Internal Matches ═══ */}
                         <div>
@@ -248,39 +272,81 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
                             )}
                         </div>
 
-                        {/* ═══ Web Search Results ═══ */}
-                        <div>
-                            <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                                <Globe className="h-4 w-4 text-blue-500" />
-                                Web Search Results
-                            </h4>
-                            {details.webSearchMatches && details.webSearchMatches.length > 0 ? (
-                                <div className="space-y-2">
-                                    {details.webSearchMatches.map((wm, i) => (
-                                        <div key={i} className="text-sm bg-blue-50/50 dark:bg-blue-950/20 rounded-lg px-3 py-2.5 space-y-1 border border-blue-100 dark:border-blue-900">
-                                            <div className="flex items-start justify-between gap-3">
-                                                <a href={wm.url} target="_blank" rel="noopener noreferrer"
-                                                    className="flex-1 text-blue-700 dark:text-blue-400 font-medium hover:underline leading-relaxed flex items-start gap-1 mt-0.5">
-                                                    <span className="break-words">{wm.title}</span>
-                                                    <ExternalLink className="h-3.5 w-3.5 shrink-0 mt-1" />
-                                                </a>
-                                                <span className={cn("font-mono text-xs font-bold shrink-0",
-                                                    (wm.similarity ?? 0) > 60 ? "text-red-600" : "text-yellow-600"
-                                                )}>
-                                                    {(wm.similarity ?? 0).toFixed(1)}%
-                                                </span>
+                        {/* ═══ Google Scholar Results ═══ */}
+                        {(() => {
+                            const scholarMatches = details.webSearchMatches?.filter(wm => wm.source === 'scholar') ?? []
+                            const webMatches = details.webSearchMatches?.filter(wm => !wm.source || wm.source === 'web') ?? []
+                            return (
+                                <>
+                                    <div>
+                                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                                            <Search className="h-4 w-4 text-purple-500" />
+                                            Google Scholar Results
+                                        </h4>
+                                        {scholarMatches.length > 0 ? (
+                                            <div className="space-y-2">
+                                                {scholarMatches.map((wm, i) => (
+                                                    <div key={i} className="text-sm bg-purple-50/50 dark:bg-purple-950/20 rounded-lg px-3 py-2.5 space-y-1 border border-purple-100 dark:border-purple-900">
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <a href={wm.url} target="_blank" rel="noopener noreferrer"
+                                                                className="flex-1 text-purple-700 dark:text-purple-400 font-medium hover:underline leading-relaxed flex items-start gap-1 mt-0.5">
+                                                                <span className="break-words">{wm.title}</span>
+                                                                <ExternalLink className="h-3.5 w-3.5 shrink-0 mt-1" />
+                                                            </a>
+                                                            <span className={cn("font-mono text-xs font-bold shrink-0",
+                                                                (wm.similarity ?? 0) > 50 ? "text-red-600" : (wm.similarity ?? 0) > 25 ? "text-yellow-600" : "text-green-600"
+                                                            )}>
+                                                                {(wm.similarity ?? 0).toFixed(1)}%
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground line-clamp-2">{wm.snippet}</p>
+                                                    </div>
+                                                ))}
                                             </div>
-                                            <p className="text-xs text-muted-foreground line-clamp-2">{wm.snippet}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50/50 dark:bg-green-950/20 rounded-lg px-3 py-2.5 border border-green-100 dark:border-green-900">
-                                    <CheckCircle2 className="h-4 w-4 shrink-0" />
-                                    {(details as any).webSearchSummary || "No similar content found on the web."}
-                                </div>
-                            )}
-                        </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50/50 dark:bg-green-950/20 rounded-lg px-3 py-2.5 border border-green-100 dark:border-green-900">
+                                                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                                No similar academic papers found.
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* ═══ Web Search Results ═══ */}
+                                    <div>
+                                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                                            <Globe className="h-4 w-4 text-blue-500" />
+                                            Web Search Results
+                                        </h4>
+                                        {webMatches.length > 0 ? (
+                                            <div className="space-y-2">
+                                                {webMatches.map((wm, i) => (
+                                                    <div key={i} className="text-sm bg-blue-50/50 dark:bg-blue-950/20 rounded-lg px-3 py-2.5 space-y-1 border border-blue-100 dark:border-blue-900">
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <a href={wm.url} target="_blank" rel="noopener noreferrer"
+                                                                className="flex-1 text-blue-700 dark:text-blue-400 font-medium hover:underline leading-relaxed flex items-start gap-1 mt-0.5">
+                                                                <span className="break-words">{wm.title}</span>
+                                                                <ExternalLink className="h-3.5 w-3.5 shrink-0 mt-1" />
+                                                            </a>
+                                                            <span className={cn("font-mono text-xs font-bold shrink-0",
+                                                                (wm.similarity ?? 0) > 50 ? "text-red-600" : (wm.similarity ?? 0) > 25 ? "text-yellow-600" : "text-green-600"
+                                                            )}>
+                                                                {(wm.similarity ?? 0).toFixed(1)}%
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground line-clamp-2">{wm.snippet}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50/50 dark:bg-green-950/20 rounded-lg px-3 py-2.5 border border-green-100 dark:border-green-900">
+                                                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                                {(details as any).webSearchSummary || "No similar content found on the web."}
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )
+                        })()}
 
 
 

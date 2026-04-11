@@ -12,6 +12,7 @@ export interface WebSearchMatch {
     title: string
     snippet: string
     similarity: number
+    source?: 'scholar' | 'web'
 }
 
 export interface FlaggedSection {

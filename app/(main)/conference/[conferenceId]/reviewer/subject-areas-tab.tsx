@@ -82,13 +82,18 @@ export function SubjectAreasTab({ conferenceId, reviewerId, onSaved }: SubjectAr
         setSaving(true)
         try {
             const myInterests = await getInterestsByReviewer(reviewerId).catch(() => [])
-            for (const interest of myInterests) { await deleteInterest(interest.id) }
+            // Only delete interests that belong to THIS conference's subject areas
+            const conferenceAreaIds = new Set(allSubjectAreas.map(a => a.id))
+            for (const interest of myInterests) {
+                if (conferenceAreaIds.has(interest.subjectAreaId)) {
+                    await deleteInterest(interest.id)
+                }
+            }
             for (const sel of selections) {
                 await createInterest({ reviewerId, subjectAreaId: sel.subjectAreaId, isPrimary: sel.isPrimary })
             }
             toast.success('Subject areas saved!')
             const updated = await getInterestsByReviewer(reviewerId).catch(() => [])
-            const conferenceAreaIds = new Set(allSubjectAreas.map(a => a.id))
             setSelections(updated.filter(i => conferenceAreaIds.has(i.subjectAreaId)).map(i => ({
                 subjectAreaId: i.subjectAreaId, isPrimary: i.isPrimary, savedId: i.id,
             })))
