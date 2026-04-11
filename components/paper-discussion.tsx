@@ -32,20 +32,25 @@ export function PaperDiscussion({ paperId, currentUserId, isChair = false, anony
     const [replyContent, setReplyContent] = useState('')
     const [expandedReplies, setExpandedReplies] = useState<Set<number>>(new Set())
 
-    const fetchPosts = useCallback(async () => {
+    const fetchPosts = useCallback(async (showLoader = true) => {
         try {
-            setLoading(true)
+            if (showLoader) setLoading(true)
             const data = await getDiscussionByPaper(paperId)
             setPosts(data)
         } catch (err) {
             console.error('Failed to load discussion:', err)
         } finally {
-            setLoading(false)
+            if (showLoader) setLoading(false)
         }
     }, [paperId])
 
     useEffect(() => {
-        fetchPosts()
+        fetchPosts(true)
+        // Auto-refresh every 15 seconds for near-realtime updates
+        const interval = setInterval(() => {
+            fetchPosts(false)
+        }, 15000)
+        return () => clearInterval(interval)
     }, [fetchPosts])
 
     // Build anonymized name map

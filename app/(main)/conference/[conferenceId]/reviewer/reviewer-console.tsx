@@ -7,6 +7,7 @@ import { getConference, getConferenceActivities } from '@/app/api/conference.api
 import { getReviewsByReviewerAndConference } from '@/app/api/review.api'
 import { getUserProfile, createOrUpdateUserProfile } from '@/app/api/user.api'
 import { getInterestsByReviewer } from '@/app/api/reviewer-interest.api'
+import { getBidsSummary } from '@/app/api/bidding.api'
 import type { ConferenceResponse, ConferenceActivityDTO } from '@/types/conference'
 
 import type { ReviewResponse } from '@/types/review'
@@ -177,7 +178,16 @@ export default function ReviewerConsole() {
 
             // Compute workflow status
             const profileComplete = !!(profileData && profileData.institution) && (Array.isArray(interests) && interests.length > 0)
-            const biddingDone = false // Will be updated via onBidCountsChanged callback from BiddingTab
+            // Fetch bid summary to initialize bidding-done status
+            let biddingDone = false
+            try {
+                const bidsSummary = await getBidsSummary(reviewerId, conferenceId)
+                if (bidsSummary && bidsSummary.totalBids > 0) {
+                    biddingDone = true
+                    setBidCounts(bidsSummary.bidCounts as Record<string, number>)
+                }
+            } catch { /* ignore — bidding may not be set up yet */ }
+
             const reviewsDone = reviewList.length > 0 && reviewList.every((r: ReviewResponse) => r.status === 'COMPLETED')
 
             setWorkflowStatus({

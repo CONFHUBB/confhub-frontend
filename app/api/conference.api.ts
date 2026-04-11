@@ -110,11 +110,14 @@ export interface ImportResult {
     tracksCreated: number
     subjectAreasCreated: number
     membersCreated: number
+    ticketTypesCreated?: number
     errors: ImportError[]
     conferencePreview?: Record<string, string>
     trackPreviews?: Record<string, string>[]
     subjectAreaPreviews?: Record<string, string>[]
     memberPreviews?: Record<string, string>[]
+    ticketTypePreview?: Record<string, string>
+    ticketTypePreviews?: Record<string, string>[]
 }
 
 const uploadFile = (url: string, file: File) => {
@@ -172,4 +175,4 @@ export const getConferenceStats = async (conferenceId: number): Promise<Conferen
 export const exportAttendeesCsv = async (conferenceId: number): Promise<Blob> => {
     const response = await http.get(`/conferences/${conferenceId}/export/attendees`, { responseType: 'blob' })
     return new Blob([response.data], { type: 'text/csv' })
-}
+}

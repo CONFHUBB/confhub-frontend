@@ -283,10 +283,10 @@ export function DiscussionTab({ reviews, conferenceId, currentUserId, activities
                                         <p className="font-medium text-sm text-gray-900 mb-2">Q{idx + 1}. {q.text}</p>
                                         <div className="bg-white p-3 rounded border border-gray-100 text-sm">
                                             {ans ? (
-                                                ans.selectedChoice ? (
-                                                    <span className="font-semibold text-indigo-700">{ans.selectedChoice.text}</span>
-                                                ) : ans.value ? (
-                                                    <span className="text-gray-700 whitespace-pre-wrap">{ans.value}</span>
+                                                ans.selectedChoiceText ? (
+                                                    <span className="font-semibold text-indigo-700">{ans.selectedChoiceText}</span>
+                                                ) : ans.answerValue ? (
+                                                    <span className="text-gray-700 whitespace-pre-wrap">{ans.answerValue}</span>
                                                 ) : (
                                                     <span className="text-gray-400 italic">No answer provided.</span>
                                                 )

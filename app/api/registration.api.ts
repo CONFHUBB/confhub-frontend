@@ -1,4 +1,5 @@
 import http from '@/lib/http'
+import type { ImportResult } from '@/app/api/conference.api'
 
 export interface TicketTypeResponse {
   id: number
@@ -102,6 +103,23 @@ export const updateTicketType = async (id: number, body: TicketTypeRequest): Pro
 export const deleteTicketType = async (id: number): Promise<void> => {
   await http.delete(`/ticket-types/${id}`)
 }
+
+// ── Ticket Type Import ──
+
+const uploadImportFile = (url: string, file: File) => {
+  const fd = new FormData()
+  fd.append('file', file)
+  return http.post<ImportResult>(url, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+}
+
+const downloadImportBlob = async (url: string): Promise<Blob> => {
+  const response = await http.get(url, { responseType: 'blob' })
+  return new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+}
+
+export const downloadTicketTypeTemplate = (conferenceId: number) => downloadImportBlob(`/conferences/${conferenceId}/ticket-types/import/template`)
+export const previewTicketTypeImport = (conferenceId: number, file: File) => uploadImportFile(`/conferences/${conferenceId}/ticket-types/import/preview`, file).then(r => r.data)
+export const importTicketTypes = (conferenceId: number, file: File) => uploadImportFile(`/conferences/${conferenceId}/ticket-types/import`, file).then(r => r.data)
 
 // ── Registration ──
 
