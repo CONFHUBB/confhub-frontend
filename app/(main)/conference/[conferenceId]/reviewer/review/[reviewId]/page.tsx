@@ -853,7 +853,7 @@ export default function ReviewPaperPage() {
                             <p className="mt-1 font-semibold">Total Score: {review.totalScore}</p>
                         )}
                     </div>
-                    {review.status === 'COMPLETED' && !activityClosed && (
+                    {review.status === 'COMPLETED' && (!activityClosed || (discussionEnabled && settings.allowReviewUpdateDuringDiscussion)) && (
                         canEditDuringDiscussion ? (
                             <Button 
                                 variant="outline" 
@@ -946,7 +946,7 @@ export default function ReviewPaperPage() {
                                                                 <div key={ans.id || aIdx} className="p-3 bg-white rounded-lg border">
                                                                     <p className="text-xs font-medium text-gray-500 mb-1">Q{aIdx + 1}</p>
                                                                     <p className="text-sm text-gray-800">
-                                                                        {ans.selectedChoice?.text || ans.answerValue || ans.value || <span className="italic text-gray-400">No answer</span>}
+                                                                        {ans.selectedChoiceText || ans.answerValue || <span className="italic text-gray-400">No answer</span>}
                                                                     </p>
                                                                 </div>
                                                             ))

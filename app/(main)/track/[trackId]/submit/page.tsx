@@ -27,7 +27,7 @@ import type { ConferenceActivityDTO } from '@/types/conference'
 import { isActivityOpen } from '@/lib/activity'
 import { getUserByEmail } from '@/app/api/user.api'
 import { FormRenderer } from '@/app/(main)/conference/[conferenceId]/submission-form/form-renderer'
-import { getPlagiarismResult, resetPlagiarism, type PlagiarismResult } from '@/app/api/plagiarism.api'
+import { getPlagiarismResult, recheckPlagiarism, resetPlagiarism, type PlagiarismResult } from '@/app/api/plagiarism.api'
 import { PlagiarismBadge } from '@/components/plagiarism-badge'
 import { getCurrentUserEmail } from '@/lib/auth'
 
@@ -290,33 +290,42 @@ function StepUploadManuscript({
         fetchExistingFiles()
     }, [paperId])
 
+    const [plagiarismAutoOpen, setPlagiarismAutoOpen] = useState(false)
+
     const handleCheckPlagiarism = async () => {
         setCheckingPlagiarism(true)
+        setPlagiarismAutoOpen(false)
         try {
-            let res = await getPlagiarismResult(paperId)
-            setPlagiarismResult(res)
+            // Trigger actual plagiarism check
+            await recheckPlagiarism(paperId)
+            setPlagiarismResult({ paperId, score: null, status: 'CHECKING', details: null })
 
-            if (res.status === 'CHECKING' || res.status === 'PENDING') {
-                let attempts = 0
-                const pollInterval = setInterval(async () => {
-                    try {
-                        attempts++
-                        const newRes = await getPlagiarismResult(paperId)
-                        setPlagiarismResult(newRes)
+            // Poll for completion
+            const maxAttempts = 30 // 30 × 3s = 90s max
+            for (let i = 0; i < maxAttempts; i++) {
+                await new Promise(r => setTimeout(r, 3000))
+                const newRes = await getPlagiarismResult(paperId)
+                setPlagiarismResult(newRes)
 
-                        if (newRes.status === 'COMPLETED' || newRes.status === 'FAILED' || attempts > 20) {
-                            clearInterval(pollInterval)
-                            setCheckingPlagiarism(false)
-                        }
-                    } catch (error) {
-                        clearInterval(pollInterval)
-                        setCheckingPlagiarism(false)
-                    }
-                }, 3000)
-                return
+                if (newRes.status === 'COMPLETED') {
+                    setCheckingPlagiarism(false)
+                    // Auto-open the report dialog
+                    setPlagiarismAutoOpen(true)
+                    const s = newRes.score ?? 0
+                    const label = s <= 20 ? '✅ Low' : s <= 40 ? '⚠️ Moderate' : '🚨 High'
+                    toast.success(`Plagiarism Check Complete! ${label} Similarity: ${s.toFixed(1)}%`)
+                    return
+                }
+                if (newRes.status === 'FAILED') {
+                    setCheckingPlagiarism(false)
+                    toast.error('Plagiarism check failed. Please try again.')
+                    return
+                }
             }
+            // Timeout
+            toast.info('Plagiarism check is still running. Please check back later.')
         } catch (err: any) {
-            toast.error("Failed to fetch plagiarism status")
+            toast.error('Failed to run plagiarism check')
             console.error(err)
         }
         setCheckingPlagiarism(false)
@@ -474,14 +483,23 @@ function StepUploadManuscript({
                                     <p className="text-xs text-muted-foreground mt-1">Our system automatically checks your manuscript for originality.</p>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    {plagiarismResult ? (
+                                    {plagiarismResult && plagiarismResult.status === 'COMPLETED' ? (
                                         <PlagiarismBadge
                                             paperId={paperId}
                                             score={plagiarismResult.score}
                                             status={plagiarismResult.status}
+                                            autoOpen={plagiarismAutoOpen}
+                                            onAutoOpenDone={() => setPlagiarismAutoOpen(false)}
                                         />
+                                    ) : plagiarismResult && plagiarismResult.status === 'CHECKING' ? (
+                                        <span className="text-sm font-medium text-blue-600 flex items-center gap-2">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            Checking...
+                                        </span>
+                                    ) : plagiarismResult && plagiarismResult.status === 'FAILED' ? (
+                                        <span className="text-sm font-medium text-red-500">Check Failed</span>
                                     ) : (
-                                        <span className="text-sm font-medium text-slate-500 italic">Check not started yet</span>
+                                        <span className="text-sm font-medium text-slate-500 italic">Not checked yet</span>
                                     )}
                                     <Button
                                         variant="secondary"
@@ -491,7 +509,7 @@ function StepUploadManuscript({
                                         className="ml-auto"
                                     >
                                         {checkingPlagiarism ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
-                                        {plagiarismResult ? "Refresh Status" : "Check Plagiarism Status"}
+                                        {checkingPlagiarism ? 'Checking...' : plagiarismResult?.status === 'COMPLETED' ? 'Re-check' : 'Check Plagiarism'}
                                     </Button>
                                 </div>
                             </div>
