@@ -5,6 +5,7 @@ import {
   getTicketTypes, createTicketType, updateTicketType, deleteTicketType,
   TicketTypeResponse, TicketTypeRequest,
 } from '@/app/api/registration.api'
+import { TicketTypeImport } from './ticket-type-import'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -184,8 +185,13 @@ export default function TicketTypesConfig({ conferenceId }: Props) {
           <p className="text-sm text-gray-500 mt-0.5">Configure registration fee tiers for this conference.</p>
         </div>
         <Button onClick={openCreate} className="gap-2">
-          <Plus className="w-4 h-4" /> Add Ticket Type
+          <Plus className="w-4 h-4" /> Create Ticket Type
         </Button>
+      </div>
+
+      {/* Import */}
+      <div className="mb-6">
+        <TicketTypeImport conferenceId={conferenceId} onImportSuccess={load} />
       </div>
 
       {/* Stats */}
@@ -253,7 +259,7 @@ export default function TicketTypesConfig({ conferenceId }: Props) {
         </div>
       ) : types.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm">
-          No ticket types configured yet. Click "Add Ticket Type" to create the first one.
+          No ticket types configured yet. Click "Create Ticket Type" to create the first one.
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm">
