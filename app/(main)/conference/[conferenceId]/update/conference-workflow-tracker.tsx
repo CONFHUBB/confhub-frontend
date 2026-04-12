@@ -7,10 +7,11 @@ import { getConferenceSubmissionForm } from "@/app/api/submission-form.api"
 import { getConferenceMembers } from "@/app/api/user.api"
 import { getPapersByConference } from "@/app/api/paper.api"
 import { getReviewQuestionsByTrack } from "@/app/api/review.api"
+import { getProgram } from "@/app/api/program.api"
 import type { ConferenceActivityDTO } from "@/types/conference"
 import {
     CheckCircle2, Circle, ChevronDown, ChevronUp, Loader2,
-    Settings, Users, FileText, Search, Award
+    Settings, Users, FileText, Search, Award, Ticket
 } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────
@@ -56,13 +57,25 @@ export function ConferenceWorkflowTracker({
                 formConfig,
                 membersData,
                 papers,
+                programResult,
             ] = await Promise.all([
                 getTracksByConference(conferenceId).catch(() => []),
                 getConferenceActivities(conferenceId).catch(() => [] as ConferenceActivityDTO[]),
                 getConferenceSubmissionForm(conferenceId).catch(() => null),
                 getConferenceMembers(conferenceId, 0).catch(() => ({ content: [], totalElements: 0 })),
                 getPapersByConference(conferenceId).catch(() => []),
+                getProgram(conferenceId).catch(() => null),
             ])
+
+            // Check if program has sessions (i.e. has been built)
+            let isProgramBuilt = false
+            try {
+                const parsed = (typeof programResult === 'string' && programResult.trim() !== '')
+                    ? JSON.parse(programResult.trim()) : programResult
+                isProgramBuilt = parsed?.schedule?.days?.some(
+                    (day: any) => day.sessions && day.sessions.length > 0
+                ) || false
+            } catch { isProgramBuilt = false }
 
             // Check review questions - fetch for first track if exists
             let hasReviewQuestions = false
@@ -224,6 +237,29 @@ export function ConferenceWorkflowTracker({
                             description: "Accept final camera-ready paper versions",
                             tabKey: "features-camera-ready",
                             done: isEnabled("CAMERA_READY_SUBMISSION"),
+                        },
+                    ],
+                },
+                {
+                    title: "Registration & Event",
+                    icon: <Ticket className="h-4 w-4" />,
+                    accentColor: "text-rose-600",
+                    steps: [
+                        {
+                            key: "build-program",
+                            label: "Build Conference Program",
+                            description: "Create the schedule with sessions and paper assignments",
+                            tabKey: "features-program-builder",
+                            done: isProgramBuilt,
+                        },
+                        {
+                            key: "open-registration",
+                            label: "Open Registration",
+                            description: isProgramBuilt
+                                ? "Enable registration for attendees to purchase tickets"
+                                : "⚠️ Build program first before opening registration",
+                            tabKey: "features-activity-timeline",
+                            done: isEnabled("REGISTRATION"),
                         },
                     ],
                 },

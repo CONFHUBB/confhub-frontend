@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { getConferenceActivities, updateConferenceActivities, getActivityAuditLogs } from "@/app/api/conference.api"
+import { getProgram } from "@/app/api/program.api"
 import type { ConferenceActivityDTO, ActivityAuditLogDTO } from "@/types/conference"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Loader2, Calendar, Info, ExternalLink, ChevronDown, ChevronUp, Clock, User, ArrowRight, ToggleLeft, ToggleRight, CalendarClock, Settings, History, Search, Filter, ChevronLeft, ChevronRight, Download, Check, AlertTriangle } from "lucide-react"
@@ -92,6 +93,7 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
     const [auditLogs, setAuditLogs] = useState<ActivityAuditLogDTO[]>([])
     const [activeTab, setActiveTab] = useState<'config' | 'log'>('config')
     const [auditLoading, setAuditLoading] = useState(false)
+    const [isProgramBuilt, setIsProgramBuilt] = useState<boolean | null>(null) // null = not checked yet
 
     // Log table state
     const [logSearch, setLogSearch] = useState('')
@@ -131,6 +133,24 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
         fetchActivities()
     }, [conferenceId])
 
+    // Check if conference program has been built (required before REGISTRATION)
+    useEffect(() => {
+        const checkProgram = async () => {
+            try {
+                const progResult = await getProgram(conferenceId)
+                const parsed = (typeof progResult === 'string' && progResult.trim() !== '')
+                    ? JSON.parse(progResult.trim()) : progResult
+                const hasSessions = parsed?.schedule?.days?.some(
+                    (day: any) => day.sessions && day.sessions.length > 0
+                )
+                setIsProgramBuilt(!!hasSessions)
+            } catch {
+                setIsProgramBuilt(false)
+            }
+        }
+        checkProgram()
+    }, [conferenceId])
+
     // Fetch audit logs when section is opened
     useEffect(() => {
         if (activeTab !== 'log') return
@@ -148,7 +168,19 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
         fetchAuditLogs()
     }, [activeTab, conferenceId])
 
-    const handleToggle = (id: number, checked: boolean) => {
+    const handleToggle = async (id: number, checked: boolean) => {
+        // Gate: REGISTRATION requires program to be built first
+        if (checked) {
+            const target = activities.find(a => a.id === id)
+            if (target?.activityType === 'REGISTRATION' && !isProgramBuilt) {
+                toast.error(
+                    'You must build the conference program before opening registration.\nGo to Event → Program to create your schedule.',
+                    { duration: 5000 }
+                )
+                return
+            }
+        }
+
         setActivities(prev => 
             prev.map(activity => {
                 if (activity.id === id) {
@@ -368,6 +400,7 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
 
                             const description = ACTIVITY_DESCRIPTIONS[activity.activityType] || ""
                             const quickAction = QUICK_ACTIONS[activity.activityType]
+                            const isRegistrationBlocked = activity.activityType === 'REGISTRATION' && !isProgramBuilt
                             const icon = ACTIVITY_ICONS[activity.activityType] || "⚙️"
 
                             // Determine phase status for visual cue
@@ -456,11 +489,25 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
                                             {/* Toggle */}
                                             <Switch 
                                                 checked={activity.isEnabled}
+                                                disabled={isRegistrationBlocked && !activity.isEnabled}
                                                 onCheckedChange={(checked) => handleToggle(activity.id, checked)}
                                                 aria-label={`Toggle ${activity.name}`}
                                             />
                                         </div>
                                     </div>
+
+                                    {/* Registration blocked warning */}
+                                    {isRegistrationBlocked && (
+                                        <div className="ml-11 flex items-start gap-2 p-2.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+                                            <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+                                            <div>
+                                                <span className="font-medium">Program required.</span> You must build the conference program before opening registration.
+                                                {onNavigate && (
+                                                    <button className="ml-1 text-indigo-600 hover:underline font-medium" onClick={() => onNavigate('features-program-builder')}>Go to Program Builder →</button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Row 2: Quick Action */}
                                     {quickAction && onNavigate && (

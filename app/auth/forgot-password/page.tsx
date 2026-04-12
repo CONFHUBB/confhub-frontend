@@ -55,7 +55,7 @@ export default function ForgotPasswordPage() {
     const errs: Record<string, string> = {}
     const otpErr = validate(otp, V.required)
     if (otpErr) errs.otp = otpErr
-    const passErr = validate(newPassword, V.required, (v) => V.minLen(v, 6))
+    const passErr = validate(newPassword, V.required, (v) => V.minLen(v, 8))
     if (passErr) errs.newPassword = passErr
     if (newPassword !== confirmPassword) errs.confirmPassword = "Passwords do not match"
     if (!confirmPassword) errs.confirmPassword = "Please confirm your new password"
@@ -148,7 +148,7 @@ export default function ForgotPasswordPage() {
                       onChange={(e) => { setNewPassword(e.target.value); setErrors(p => { const n = {...p}; delete n.newPassword; return n }) }}
                     />
                     {errors.newPassword && <p className="text-xs text-red-500 mt-1">{errors.newPassword}</p>}
-                    <FieldDescription>Must be at least 6 characters.</FieldDescription>
+                    <FieldDescription>Must be at least 8 characters.</FieldDescription>
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="confirmPassword">Confirm New Password</FieldLabel>
