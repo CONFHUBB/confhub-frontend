@@ -46,6 +46,8 @@ export function NavUser({
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken")
+    document.cookie = "accessToken=; path=/; max-age=0"
+    document.cookie = "profileCompleted=; path=/; max-age=0"
     window.location.href = "/"
   }
 

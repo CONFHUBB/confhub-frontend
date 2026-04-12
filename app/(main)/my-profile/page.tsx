@@ -66,6 +66,10 @@ export default function MyProfilePage() {
         if (!userId) return
         const updated = await createOrUpdateUserProfile(userId, data)
         setProfile(updated)
+        // Mark profile as completed for middleware check
+        if (updated?.userType && updated?.institution) {
+            document.cookie = `profileCompleted=true; path=/; max-age=${60 * 60 * 24 * 365}`
+        }
     }
 
     if (loading) {
