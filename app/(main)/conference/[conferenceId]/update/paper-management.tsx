@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { 
     FileText, Search, Shield, Filter, ChevronDown, Check,
-    Download, UserPlus, Eye, Gavel, Loader2
+    Download, UserPlus, Eye, Gavel, Loader2, Send, AlertTriangle
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,14 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 import {
     Popover,
     PopoverContent,
@@ -81,6 +89,7 @@ export function PaperManagement({ conferenceId, trackIds }: PaperManagementProps
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
     const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
     const [isNotifying, setIsNotifying] = useState(false)
+    const [showNotifyConfirm, setShowNotifyConfirm] = useState(false)
 
     // Navigation to dedicated Paper Detail page
 
@@ -529,12 +538,76 @@ export function PaperManagement({ conferenceId, trackIds }: PaperManagementProps
                 variant="outline"
                 size="sm"
                 className="h-9 shadow-sm bg-white"
-                onClick={handleBatchNotify}
+                onClick={() => setShowNotifyConfirm(true)}
                 disabled={isNotifying || isLoading}
             >
-                {isNotifying ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin text-slate-500" /> : <FileText className="h-4 w-4 mr-1.5 text-slate-500" />}
+                {isNotifying ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin text-slate-500" /> : <Send className="h-4 w-4 mr-1.5 text-slate-500" />}
                 Notify Authors
             </Button>
+
+            {/* Notify Authors Confirmation Dialog */}
+            <Dialog open={showNotifyConfirm} onOpenChange={setShowNotifyConfirm}>
+                <DialogContent className="sm:max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Send className="h-5 w-5 text-indigo-600" />
+                            Confirm: Send Decision Notifications
+                        </DialogTitle>
+                        <DialogDescription>
+                            This will send email notifications to all authors whose papers have decisions.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-3 py-2">
+                        <div className="grid grid-cols-3 gap-3">
+                            <div className="rounded-lg border bg-emerald-50 border-emerald-200 p-3 text-center">
+                                <p className="text-2xl font-bold text-emerald-700">
+                                    {enrichedPapers.filter(p => p.metaReviewStatus === 'APPROVE').length}
+                                </p>
+                                <p className="text-xs text-emerald-600 font-medium">Accepted</p>
+                            </div>
+                            <div className="rounded-lg border bg-red-50 border-red-200 p-3 text-center">
+                                <p className="text-2xl font-bold text-red-700">
+                                    {enrichedPapers.filter(p => p.metaReviewStatus === 'REJECT').length}
+                                </p>
+                                <p className="text-xs text-red-600 font-medium">Rejected</p>
+                            </div>
+                            <div className="rounded-lg border bg-amber-50 border-amber-200 p-3 text-center">
+                                <p className="text-2xl font-bold text-amber-700">
+                                    {enrichedPapers.filter(p => !p.metaReviewStatus).length}
+                                </p>
+                                <p className="text-xs text-amber-600 font-medium">No Decision</p>
+                            </div>
+                        </div>
+
+                        {enrichedPapers.filter(p => !p.metaReviewStatus).length > 0 && (
+                            <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3">
+                                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                                <p className="text-sm text-amber-800">
+                                    <strong>{enrichedPapers.filter(p => !p.metaReviewStatus).length} paper(s)</strong> have no decision yet. Only papers with decisions will be notified.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowNotifyConfirm(false)} disabled={isNotifying}>
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={async () => {
+                                await handleBatchNotify()
+                                setShowNotifyConfirm(false)
+                            }}
+                            disabled={isNotifying}
+                            className="gap-2"
+                        >
+                            {isNotifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                            {isNotifying ? 'Sending...' : 'Send Notifications'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Export CSV Button */}
             <Button

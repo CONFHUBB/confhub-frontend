@@ -1,9 +1,13 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { PaperDiscussion } from '@/components/paper-discussion'
 import { useTrackSettings } from '@/hooks/useTrackSettings'
-import { AlertCircle, Eye } from 'lucide-react'
+import { getConferenceActivities } from '@/app/api/conference.api'
+import { getDiscussionByPaper } from '@/app/api/discussion.api'
+import { AlertCircle, Eye, Loader2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { isActivityOpen } from '@/lib/activity'
 
 interface DiscussionTabProps {
     paperId: number
@@ -16,6 +20,29 @@ interface DiscussionTabProps {
 
 export function DiscussionTab({ paperId, userId, isChair, isReviewer, isAuthor, conferenceId }: DiscussionTabProps) {
     const { settings } = useTrackSettings(conferenceId)
+    const [activityEnabled, setActivityEnabled] = useState<boolean | null>(null) // null = loading
+    const [hasExistingDiscussions, setHasExistingDiscussions] = useState(false)
+
+    // Fetch discussion activity status + existing posts
+    useEffect(() => {
+        const check = async () => {
+            try {
+                const [activities, posts] = await Promise.all([
+                    getConferenceActivities(conferenceId).catch(() => []),
+                    getDiscussionByPaper(paperId).catch(() => []),
+                ])
+                // Check if REVIEW_DISCUSSION activity is currently enabled/open
+                const discussionActivity = activities.find(a => a.activityType === 'REVIEW_DISCUSSION')
+                const isEnabled = discussionActivity?.isEnabled === true
+                const isOpen = isActivityOpen(discussionActivity)
+                setActivityEnabled(isEnabled || isOpen)
+                setHasExistingDiscussions(posts.length > 0)
+            } catch {
+                setActivityEnabled(false)
+            }
+        }
+        check()
+    }, [conferenceId, paperId])
 
     if (!userId) {
         return (
@@ -25,19 +52,29 @@ export function DiscussionTab({ paperId, userId, isChair, isReviewer, isAuthor, 
         )
     }
 
+    if (activityEnabled === null) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
+        )
+    }
+
     // ── Discussion posting rules ──
+    // Discussion is allowed if:
+    //   1. The REVIEW_DISCUSSION activity is enabled/open, OR
+    //   2. There are already existing discussions (phase was enabled before)
     // Chair: can VIEW all discussions, but CANNOT POST
-    // Reviewer: can POST to assigned papers; posting to non-assigned papers depends on allowDiscussNonAssignedPapers
-    // Author: can POST only if allowAuthorDiscuss setting is true
-    //
-    // For the `discussionEnabled` prop of PaperDiscussion:
-    //   - false = hides the post/reply forms (read-only mode)
-    //   - true  = shows post/reply forms
+    // Reviewer: can POST when discussion is active
+    // Author: can POST only if allowAuthorDiscuss setting is true AND discussion active
+    const discussionActive = activityEnabled || hasExistingDiscussions
+
     const canPost = (() => {
+        if (!discussionActive) return false
         // Chair can never post — they are observers
         if (isChair && !isReviewer && !isAuthor) return false
-        // Reviewer can post if discussion is globally enabled
-        if (isReviewer) return settings.enableAllPapersForDiscussion
+        // Reviewer can post
+        if (isReviewer) return true
         // Author can post only if track allows author discussion
         if (isAuthor) return settings.allowAuthorDiscuss
         return false

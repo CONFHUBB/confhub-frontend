@@ -6,12 +6,13 @@ import { getMyTicket, retryPayment, cancelPendingTicket, TicketResponse } from '
 import { getUserByEmail } from '@/app/api/user.api'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, CheckCircle2, XCircle, Clock, Download, CreditCard } from 'lucide-react'
+import { Loader2, CheckCircle2, XCircle, Clock, Download, CreditCard, FileUp } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import QRCode from 'qrcode'
 import { downloadAcceptanceLetter, downloadInvoice, downloadCertificate } from '@/app/api/document.api'
 import { toast } from 'sonner'
 import { getCurrentUserEmail } from '@/lib/auth'
+import Link from 'next/link'
 
 const STATUS_CONFIG = {
   COMPLETED: {
@@ -207,6 +208,24 @@ function MyTicketContent() {
                 </div>
               )}
               <p className="text-xs text-gray-400 mt-2 font-mono">{ticket.registrationNumber}</p>
+            </div>
+          )}
+
+          {/* Continue to Camera-Ready for Authors */}
+          {ticket.paymentStatus === 'COMPLETED' && ticket.paperId && (
+            <div className="border-t pt-5 mt-2">
+              <Link href={`/conference/${conferenceId}/paper/${ticket.paperId}/camera-ready`}>
+                <Button
+                  size="lg"
+                  className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
+                >
+                  <FileUp className="w-5 h-5" />
+                  Continue to Camera-Ready Submission
+                </Button>
+              </Link>
+              <p className="text-xs text-center text-muted-foreground mt-2">
+                Upload your final manuscript and copyright form
+              </p>
             </div>
           )}
 
