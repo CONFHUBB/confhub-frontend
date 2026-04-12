@@ -33,7 +33,7 @@ export function ProgramBuilder({ conferenceId }: ProgramBuilderProps) {
         if (parsed && parsed.settings) {
           setProgram({ ...DEFAULT_PROGRAM, ...parsed })
         }
-        setAllPapers(papersResult.filter((p: PaperResponse) => p.status === 'ACCEPTED'))
+        setAllPapers(papersResult.filter((p: PaperResponse) => p.status === 'ACCEPTED' || p.status === 'PUBLISHED'))
       } catch (e) { console.error(e) } finally { setLoading(false) }
     }
     loadData()

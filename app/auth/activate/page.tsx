@@ -239,10 +239,10 @@ function ActivateContent() {
                                     <Input
                                         id="password"
                                         type="password"
-                                        placeholder="At least 6 characters"
+                                        placeholder="At least 8 characters"
                                         value={newPassword}
                                         onChange={(e) => { setNewPassword(e.target.value); clearErr('newPassword') }}
-                                        minLength={6}
+                                        minLength={8}
                                         required
                                     />
                                     {errors.newPassword && <p className="text-xs text-red-500 mt-1">{errors.newPassword}</p>}
