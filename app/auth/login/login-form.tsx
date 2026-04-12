@@ -49,7 +49,7 @@ export function LoginForm({
     const errs: Record<string, string> = {}
     const emailErr = validate(email, V.required, V.email)
     if (emailErr) errs.email = emailErr
-    const passErr = validate(password, V.required, (v) => V.minLen(v, 6))
+    const passErr = validate(password, V.required, (v) => V.minLen(v, 8))
     if (passErr) errs.password = passErr
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
     setErrors({})
@@ -129,7 +129,7 @@ export function LoginForm({
                   id="password"
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setErrors(p => { const n = {...p}; delete n.password; return n }) }}
-                  onBlur={() => { const err = validate(password, V.required, (v) => V.minLen(v, 6)); setErrors(p => err ? {...p, password: err} : (() => { const n = {...p}; delete n.password; return n })()) }}
+                  onBlur={() => { const err = validate(password, V.required, (v) => V.minLen(v, 8)); setErrors(p => err ? {...p, password: err} : (() => { const n = {...p}; delete n.password; return n })()) }}
                 />
                 {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
               </Field>

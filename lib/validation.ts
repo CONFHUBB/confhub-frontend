@@ -31,7 +31,7 @@ export const V = {
     },
 
     password: (val: string): string | null =>
-        !val || val.length < 6 ? 'Password must be at least 6 characters' : null,
+        !val || val.length < 8 ? 'Password must be at least 8 characters' : null,
 
     matchField: (val: string, other: string, label = 'Passwords'): string | null =>
         val !== other ? `${label} do not match` : null,
