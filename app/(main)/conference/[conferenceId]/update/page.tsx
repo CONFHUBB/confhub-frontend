@@ -164,7 +164,7 @@ const TAB_GROUPS: TabGroupDef[] = [
         icon: <Clock className="h-4 w-4" />,
         accentColor: "text-amber-600",
         items: [
-            { key: "features-activity-timeline", label: "Timeline", completionKey: "set-timeline", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'view' } },
+            { key: "features-activity-timeline", label: "Timeline", completionKey: "set-timeline", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'edit' } },
         ]
     },
     {
