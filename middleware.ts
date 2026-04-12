@@ -6,11 +6,26 @@ const isPublicPath = (pathname: string) => {
     if (pathname.startsWith('/auth/')) return true
     if (pathname === '/conference') return true
     if (pathname === '/paper/published') return true
-    
+
     // Match exactly /conference/[id] but NOT sub-paths like /conference/[id]/update
     if (/^\/conference\/\d+$/.test(pathname)) return true
-    
+
     return false
+}
+
+// Lightweight JWT payload parser (no signature verification — middleware only reads, auth is done by API)
+function parseJwtPayload(token: string): Record<string, unknown> {
+    try {
+        const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+        const json = decodeURIComponent(
+            atob(base64).split('').map(c =>
+                '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+            ).join('')
+        )
+        return JSON.parse(json)
+    } catch {
+        return {}
+    }
 }
 
 export function middleware(request: NextRequest) {
@@ -27,17 +42,23 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(loginUrl)
     }
 
-    // ── Profile completion guard ──
-    // Skip this check for the complete-profile page itself to avoid redirect loops
+    // ── Admin/Staff bypass profile completion check ──
+    // Admins and staff should not be forced to complete their profile
+    const payload = parseJwtPayload(token)
+    const roles: string[] = (payload['roles'] as string[]) ?? []
+    const isAdminOrStaff = roles.some(r => r === 'ROLE_ADMIN' || r === 'ROLE_STAFF')
+
+    // Skip profile completion check for admin/staff and the complete-profile page itself
     if (pathname === '/complete-profile') {
         return NextResponse.next()
     }
 
-    // If logged in but profile not completed → redirect to complete-profile
-    const profileCompleted = request.cookies.get('profileCompleted')?.value
-    if (!profileCompleted) {
-        const completeUrl = new URL('/complete-profile', request.url)
-        return NextResponse.redirect(completeUrl)
+    if (!isAdminOrStaff) {
+        const profileCompleted = request.cookies.get('profileCompleted')?.value
+        if (!profileCompleted) {
+            const completeUrl = new URL('/complete-profile', request.url)
+            return NextResponse.redirect(completeUrl)
+        }
     }
 
     return NextResponse.next()

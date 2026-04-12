@@ -63,17 +63,22 @@ const revenueChartConfig: ChartConfig = {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-    ACTIVE:     "bg-emerald-100 text-emerald-700 border-emerald-200",
     PENDING:    "bg-amber-100 text-amber-700 border-amber-200",
-    COMPLETED:  "bg-blue-100 text-blue-700 border-blue-200",
+    SCHEDULED:  "bg-blue-100 text-blue-700 border-blue-200",
+    ONGOING:    "bg-emerald-100 text-emerald-700 border-emerald-200",
+    BIDDING:    "bg-violet-100 text-violet-700 border-violet-200",
+    COMPLETED:  "bg-gray-100 text-gray-600 border-gray-200",
     CANCELLED:  "bg-rose-100 text-rose-700 border-rose-200",
-    IN_REVIEW:  "bg-primary/10 text-primary border-primary/20",
 }
 
 interface SystemStats {
     totalConferences: number
-    activeConferences: number
     pendingConferences: number
+    scheduledConferences: number
+    ongoingConferences: number
+    biddingConferences: number
+    completedConferences: number
+    cancelledConferences: number
     totalPapers: number
     totalUsers: number
     totalRevenue: number
@@ -121,13 +126,16 @@ export default function DashboardPage() {
                 getUsers(),
             ])
 
-            const activeConferences = conferences.filter(c => c.status === "ACTIVE")
             const pendingConferences = conferences.filter(c => c.status === "PENDING")
+            const scheduledConferences = conferences.filter(c => c.status === "SCHEDULED")
+            const ongoingConferences = conferences.filter(c => c.status === "ONGOING")
+            const biddingConferences = conferences.filter(c => c.status === "BIDDING")
+            const completedConferences = conferences.filter(c => c.status === "COMPLETED")
+            const cancelledConferences = conferences.filter(c => c.status === "CANCELLED")
 
-            const sample = conferences.slice(0, 10)
             const [statsResults, paymentResults] = await Promise.all([
-                Promise.allSettled(sample.map(c => getConferenceStats(c.id))),
-                Promise.allSettled(sample.map(c => getConferencePaymentHistory(c.id))),
+                Promise.allSettled(conferences.map(c => getConferenceStats(c.id))),
+                Promise.allSettled(conferences.map(c => getConferencePaymentHistory(c.id))),
             ])
 
             const papersByStatus: Record<string, number> = {}
@@ -162,17 +170,21 @@ export default function DashboardPage() {
 
             const conferencesPapers = statsResults
                 .map((r, i) => ({
-                    name: sample[i]?.acronym || sample[i]?.name?.substring(0, 12) || "",
+                    name: conferences[i]?.acronym || conferences[i]?.name?.substring(0, 12) || "",
                     papers: r.status === "fulfilled" ? r.value.totalPapers : 0,
                 }))
                 .filter(c => c.papers > 0)
                 .sort((a, b) => b.papers - a.papers)
-                .slice(0, 8)
+                .slice(0, 10)
 
             setStats({
                 totalConferences: conferences.length,
-                activeConferences: activeConferences.length,
                 pendingConferences: pendingConferences.length,
+                scheduledConferences: scheduledConferences.length,
+                ongoingConferences: ongoingConferences.length,
+                biddingConferences: biddingConferences.length,
+                completedConferences: completedConferences.length,
+                cancelledConferences: cancelledConferences.length,
                 totalPapers,
                 totalUsers: users.length,
                 totalRevenue,
@@ -222,7 +234,7 @@ export default function DashboardPage() {
                 <StatCard
                     label={msg.totalConferences}
                     value={stats?.totalConferences ?? 0}
-                    change={`${stats?.activeConferences ?? 0} ${msg.active}, ${stats?.pendingConferences ?? 0} ${msg.pending}`}
+                    change={`${stats?.ongoingConferences ?? 0} ongoing, ${stats?.pendingConferences ?? 0} pending`}
                     changePositive
                     icon={FolderOpen}
                     iconBg="bg-primary/10"
