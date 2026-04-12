@@ -44,6 +44,7 @@ interface PhaseData {
     hasSubjectAreas: boolean
     hasMembers: boolean
     hasTickets: boolean
+    hasAuthorTicket: boolean
     hasSubmissionForm: boolean
     hasReviewForm: boolean
     hasReviewSettings: boolean
@@ -183,11 +184,11 @@ function getPhaseChecklist(phaseId: string, pd: PhaseData): { label: string; met
                 { label: 'At least 1 track created', met: pd.hasTracks, tab: 'features-tracks', blocking: true },
                 { label: 'Subject areas defined', met: pd.hasSubjectAreas, tab: 'features-subject-areas', blocking: true },
                 { label: 'Members & roles assigned', met: pd.hasMembers, tab: 'features-members', blocking: true },
-                { label: 'Tickets & fees configured', met: pd.hasTickets, tab: 'reg-ticket-types', blocking: true },
                 { label: 'Submission form configured', met: pd.hasSubmissionForm, tab: 'forms-submission', blocking: true },
-                { label: 'Review settings configured', met: pd.hasReviewSettings, tab: 'features-review-settings', blocking: true, requiresRole: 'PROGRAM_CHAIR' },
-                { label: 'Conflict settings configured', met: pd.hasConflictSettings, tab: 'features-conflict-settings', blocking: false, requiresRole: 'PROGRAM_CHAIR' },
+                { label: 'Review settings confirmed', met: pd.hasReviewSettings, tab: 'features-review-settings', blocking: true, requiresRole: 'PROGRAM_CHAIR' },
                 { label: 'Review form configured', met: pd.hasReviewForm, tab: 'forms-review', blocking: true, requiresRole: 'PROGRAM_CHAIR' },
+                { label: 'Conflict settings configured', met: pd.hasConflictSettings, tab: 'features-conflict-settings', blocking: false, requiresRole: 'PROGRAM_CHAIR' },
+                { label: 'Tickets & fees configured', met: pd.hasTickets, tab: 'reg-ticket-types', blocking: false },
             ]
         case 'submission':
             return [
@@ -220,12 +221,14 @@ function getPhaseChecklist(phaseId: string, pd: PhaseData): { label: string; met
             ]
         case 'camera-ready':
             return [
+                { label: 'Author/Presenter ticket type exists', met: pd.hasAuthorTicket, tab: 'reg-ticket-types', blocking: true },
                 { label: 'Camera-Ready Submission enabled', met: pd.cameraReadyEnabled, tab: 'features-activity-timeline', blocking: true },
                 { label: 'Camera-Ready deadline set', met: pd.cameraReadyDeadlineSet, tab: 'features-activity-timeline', blocking: true },
                 { label: 'Camera-Ready submissions received', met: pd.hasCameraReadySubmissions, tab: 'features-camera-ready', blocking: false },
             ]
         case 'registration':
             return [
+                { label: 'Tickets & fees configured', met: pd.hasTickets, tab: 'reg-ticket-types', blocking: true },
                 { label: 'Registration activity enabled', met: pd.registrationEnabled, tab: 'features-activity-timeline', blocking: true },
                 { label: 'Registration deadline set', met: pd.registrationDeadlineSet, tab: 'features-activity-timeline', blocking: false },
                 { label: 'At least 1 attendee registered', met: pd.hasAttendees, tab: 'reg-attendees', blocking: false },
@@ -605,6 +608,7 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
         hasSubjectAreas: false,
         hasMembers: false,
         hasTickets: false,
+        hasAuthorTicket: false,
         hasSubmissionForm: false,
         hasReviewSettings: false,
         hasConflictSettings: false,
@@ -665,22 +669,12 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                 hasSubjectAreas = Array.isArray(areas) && areas.length > 0
                 
                 if (reviewSettings) {
+                    // Review settings: confirmed if user explicitly saved at least once
+                    hasReviewSettings = typeof window !== 'undefined'
+                        ? localStorage.getItem(`conf-${conferenceId}-review-settings-confirmed`) === 'true'
+                        : false
+                    // Conflict settings: optional — any non-default change counts
                     const s = reviewSettings as Record<string, any>
-                    hasReviewSettings = !!(
-                        s.isDoubleBlind ||
-                        s.allowReviewerQuota ||
-                        s.allowOthersReviewAccessAfterSubmit ||
-                        s.allowReviewUpdateDuringDiscussion ||
-                        s.showReviewerIdentityToOtherReviewer ||
-                        s.showAggregateColumns ||
-                        s.allowReviewerSeeStatusBeforeNotification ||
-                        s.enableAllPapersForDiscussion ||
-                        s.allowDiscussNonAssignedPapers ||
-                        s.allowAuthorDiscuss ||
-                        s.doNotShowWithdrawnPapers ||
-                        (s.reviewerInstructions && s.reviewerInstructions.trim() !== '') ||
-                        (s.reviewerInviteExpirationDays !== null && s.reviewerInviteExpirationDays !== 7)
-                    )
                     hasConflictSettings = (
                         s.enableDomainConflict === false ||
                         s.allowAuthorConfigureConflict === true
@@ -740,6 +734,17 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                 hasAttendees = attendees.totalElements > 0
             } catch { hasAttendees = false }
 
+            // Program check
+            let hasProgram = false
+            try {
+                const { getProgram } = await import('@/app/api/program.api')
+                const program = await getProgram(conferenceId)
+                // Program has days with sessions
+                hasProgram = Array.isArray(program?.days) && program.days.some((d: any) =>
+                    Array.isArray(d.sessions) && d.sessions.length > 0
+                )
+            } catch { hasProgram = false }
+
             setPapers(merged)
             setActivities(activitiesData)
             setPhaseData({
@@ -747,6 +752,7 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                 hasSubjectAreas,
                 hasMembers: (membersData as { totalElements: number }).totalElements > 1,
                 hasTickets: Array.isArray(ticketTypes) && ticketTypes.length > 0,
+                hasAuthorTicket: Array.isArray(ticketTypes) && ticketTypes.some((t: any) => t.category === 'AUTHOR'),
                 hasSubmissionForm,
                 hasReviewSettings,
                 hasConflictSettings,
@@ -772,7 +778,7 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                 hasCameraReadySubmissions,
                 hasAttendees,
                 eventDayEnabled: isEnabled('EVENT_DAY'),
-                hasProgram: false, // TODO: fetch from program API when available
+                hasProgram,
             })
         } catch (err) {
             console.error('Failed to load dashboard:', err)

@@ -27,6 +27,19 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(loginUrl)
     }
 
+    // ── Profile completion guard ──
+    // Skip this check for the complete-profile page itself to avoid redirect loops
+    if (pathname === '/complete-profile') {
+        return NextResponse.next()
+    }
+
+    // If logged in but profile not completed → redirect to complete-profile
+    const profileCompleted = request.cookies.get('profileCompleted')?.value
+    if (!profileCompleted) {
+        const completeUrl = new URL('/complete-profile', request.url)
+        return NextResponse.redirect(completeUrl)
+    }
+
     return NextResponse.next()
 }
 

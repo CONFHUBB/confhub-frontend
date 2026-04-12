@@ -133,10 +133,10 @@ const TAB_GROUPS: TabGroupDef[] = [
         icon: <Settings className="h-4 w-4" />,
         accentColor: "text-indigo-600",
         items: [
-            { key: "general-detail", label: "Conference Details", completionKey: "edit-details", lockWhenDone: true, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
-            { key: "features-tracks", label: "Tracks", completionKey: "manage-tracks", lockWhenDone: true, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
-            { key: "features-subject-areas", label: "Subject Areas", completionKey: "add-subject-areas", lockWhenDone: true, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
-            { key: "reg-ticket-types", label: "Tickets & Fees", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
+            { key: "general-detail", label: "Conference Details", completionKey: "edit-details", lockWhenDone: true, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'view' } },
+            { key: "features-tracks", label: "Tracks", completionKey: "manage-tracks", lockWhenDone: true, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'view' } },
+            { key: "features-subject-areas", label: "Subject Areas", completionKey: "add-subject-areas", lockWhenDone: true, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'view' } },
+            { key: "reg-ticket-types", label: "Tickets & Fees", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'view' } },
         ]
     },
     {
@@ -144,7 +144,7 @@ const TAB_GROUPS: TabGroupDef[] = [
         icon: <Users className="h-4 w-4" />,
         accentColor: "text-sky-600",
         items: [
-            { key: "features-members", label: "Members & Roles", completionKey: "add-members", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
+            { key: "features-members", label: "Members & Roles", completionKey: "add-members", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'view' } },
         ]
     },
     {
@@ -152,7 +152,7 @@ const TAB_GROUPS: TabGroupDef[] = [
         icon: <ClipboardList className="h-4 w-4" />,
         accentColor: "text-teal-600",
         items: [
-            { key: "forms-submission", label: "Submission Form", completionKey: "config-submission-form", lockWhenDone: true, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
+            { key: "forms-submission", label: "Submission Form", completionKey: "config-submission-form", lockWhenDone: true, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'view' } },
             { key: "forms-review", label: "Review Form", completionKey: "config-review-form", lockWhenDone: true, permissions: { CONFERENCE_CHAIR: 'view', PROGRAM_CHAIR: 'edit' } },
             { key: "forms-mail", label: "Email Templates", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'edit' } },
             { key: "features-review-settings", label: "Review Settings", completionKey: "config-review-settings", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'view', PROGRAM_CHAIR: 'edit' } },
@@ -182,8 +182,8 @@ const TAB_GROUPS: TabGroupDef[] = [
         icon: <Ticket className="h-4 w-4" />,
         accentColor: "text-rose-600",
         items: [
-            { key: "reg-attendees", label: "Attendees", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
-            { key: "reg-payment-history", label: "Payments", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
+            { key: "reg-attendees", label: "Attendees", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'view' } },
+            { key: "reg-payment-history", label: "Payments", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'view' } },
         ]
     },
     {
@@ -192,7 +192,7 @@ const TAB_GROUPS: TabGroupDef[] = [
         accentColor: "text-indigo-600",
         items: [
             { key: "features-program-builder", label: "Program", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'hidden', PROGRAM_CHAIR: 'edit' } },
-            { key: "reg-checkin", label: "Check-in", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'hidden' } },
+            { key: "reg-checkin", label: "Check-in", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'view' } },
         ]
     }
 ]
@@ -430,25 +430,12 @@ export default function ConferenceUpdatePage() {
                 hasReviewQuestions = Array.isArray(questions) && questions.length > 0
                 hasSubjectAreas = Array.isArray(areas) && areas.length > 0
                 if (reviewSettings) {
+                    // Review settings: confirmed if user explicitly saved at least once
+                    hasReviewSettings = typeof window !== 'undefined'
+                        ? localStorage.getItem(`conf-${conferenceId}-review-settings-confirmed`) === 'true'
+                        : false
+                    // Conflict settings: optional — any non-default change counts
                     const s = reviewSettings as Record<string, any>
-                    // Review settings: consider configured if user changed any review-related value from default
-                    hasReviewSettings = !!(
-                        s.isDoubleBlind ||
-                        s.allowReviewerQuota ||
-                        s.allowOthersReviewAccessAfterSubmit ||
-                        s.allowReviewUpdateDuringDiscussion ||
-                        s.showReviewerIdentityToOtherReviewer ||
-                        s.showAggregateColumns ||
-                        s.allowReviewerSeeStatusBeforeNotification ||
-                        s.enableAllPapersForDiscussion ||
-                        s.allowDiscussNonAssignedPapers ||
-                        s.allowAuthorDiscuss ||
-                        s.doNotShowWithdrawnPapers ||
-                        (s.reviewerInstructions && s.reviewerInstructions.trim() !== '') ||
-                        (s.reviewerInviteExpirationDays !== null && s.reviewerInviteExpirationDays !== 7)
-                    )
-                    // Conflict settings: backend defaults are enableDomainConflict=true, allowAuthorConfigureConflict=false
-                    // Only mark as configured if user changed from defaults
                     hasConflictSettings = (
                         s.enableDomainConflict === false ||
                         s.allowAuthorConfigureConflict === true
