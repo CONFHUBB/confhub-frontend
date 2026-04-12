@@ -622,8 +622,8 @@ function MyPapersTab({ papers, reviewData, metaReviews, conferenceId }: {
                                         </TableRow>
                                         {isExpanded && (
                                             <TableRow key={`${paper.id}-detail`} className="bg-muted/10">
-                                                <TableCell colSpan={8} className="py-4 px-6">
-                                                    <div className="space-y-3">
+                                                <TableCell colSpan={8} className="py-5 px-8">
+                                                    <div className="space-y-4">
                                                         {paper.abstractField && (
                                                             <div>
                                                                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Abstract</p>
@@ -640,11 +640,11 @@ function MyPapersTab({ papers, reviewData, metaReviews, conferenceId }: {
                                                         {agg && agg.questionAggregates && agg.questionAggregates.length > 0 && (
                                                             <div>
                                                                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Review Score Breakdown</p>
-                                                                <div className="grid gap-1.5">
+                                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                                                                     {agg.questionAggregates.map(q => (
-                                                                        <div key={q.questionId} className="flex items-center justify-between text-sm bg-background rounded px-3 py-1.5 border">
-                                                                            <span className="text-xs text-gray-700 dark:text-gray-300 flex-1 min-w-0 truncate pr-3">{q.questionText}</span>
-                                                                            <span className="font-bold text-amber-700 text-sm shrink-0">{q.averageScore.toFixed(1)}<span className="text-xs font-normal text-muted-foreground"> / {q.maxScore}</span></span>
+                                                                        <div key={q.questionId} className="flex items-center justify-between text-sm bg-background rounded-lg px-4 py-2.5 border">
+                                                                            <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 min-w-0 pr-4">{q.questionText}</span>
+                                                                            <span className="font-bold text-amber-700 text-base shrink-0">{q.averageScore.toFixed(1)}<span className="text-xs font-normal text-muted-foreground"> / {q.maxScore}</span></span>
                                                                         </div>
                                                                     ))}
                                                                 </div>

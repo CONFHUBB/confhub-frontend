@@ -298,9 +298,8 @@ export default function DedicatedCameraReadyPage() {
         }
     }
 
-    // ── Derived data ──
+    // ── Derived data ── (Camera-ready only shows AUTHOR tickets)
     const authorTickets = useMemo(() => ticketTypes.filter(t => t.category === 'AUTHOR'), [ticketTypes])
-    const otherTickets = useMemo(() => ticketTypes.filter(t => t.category !== 'AUTHOR'), [ticketTypes])
     const selectedTicket = useMemo(() => ticketTypes.find(t => t.id === selectedTicketId), [ticketTypes, selectedTicketId])
 
     if (loading || currentStep === 'loading') {
@@ -391,29 +390,7 @@ export default function DedicatedCameraReadyPage() {
                                     </div>
                                 )}
 
-                                {otherTickets.length > 0 && (
-                                    <div className="space-y-3 pt-4 border-t border-slate-100">
-                                        <h4 className="text-sm font-semibold text-slate-900">Other Available Tickets</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-70 hover:opacity-100 transition-opacity">
-                                            {otherTickets.map(ticket => (
-                                                <div
-                                                    key={ticket.id}
-                                                    onClick={() => setSelectedTicketId(ticket.id)}
-                                                    className={`relative p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 ${selectedTicketId === ticket.id
-                                                            ? 'border-indigo-600 bg-indigo-50/50 shadow-sm'
-                                                            : 'border-slate-200 hover:border-indigo-300'
-                                                        }`}
-                                                >
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <h4 className="font-medium text-slate-900">{ticket.name}</h4>
-                                                        <span className="font-bold text-indigo-700">${ticket.price}</span>
-                                                    </div>
-                                                    <Badge variant="secondary" className="text-xs">{ticket.category}</Badge>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+
                             </div>
                         </CardContent>
                     </Card>
@@ -526,13 +503,13 @@ export default function DedicatedCameraReadyPage() {
                     {/* Two Upload Cards Side by Side */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* ── Camera-Ready Card ── */}
-                        <div className="space-y-4">
-                            <Card className="border-emerald-200 overflow-hidden shadow-sm">
+                        <div className="flex flex-col">
+                            <Card className="border-emerald-200 overflow-hidden shadow-sm flex flex-col h-full">
                                 <div className="bg-emerald-600 px-5 py-3 flex items-center gap-2 text-white">
                                     <Upload className="h-4 w-4" />
                                     <h3 className="font-semibold text-sm">Camera-Ready Manuscript</h3>
                                 </div>
-                                <CardContent className="p-5">
+                                <CardContent className="p-5 flex-1 flex flex-col">
                                     <div
                                         className="flex flex-col border-2 border-dashed border-emerald-300 bg-emerald-50/30 rounded-xl py-10 px-4 hover:border-emerald-500 hover:bg-emerald-50 transition-colors cursor-pointer text-center"
                                         onClick={handleUploadCameraReady}
@@ -593,13 +570,13 @@ export default function DedicatedCameraReadyPage() {
                         </div>
 
                         {/* ── Copyright Submission Card ── */}
-                        <div className="space-y-4">
-                            <Card className="border-indigo-200 overflow-hidden shadow-sm">
+                        <div className="flex flex-col">
+                            <Card className="border-indigo-200 overflow-hidden shadow-sm flex flex-col h-full">
                                 <div className="bg-primary px-5 py-3 flex items-center gap-2 text-white">
                                     <Scale className="h-4 w-4" />
                                     <h3 className="font-semibold text-sm">Copyright Submission</h3>
                                 </div>
-                                <CardContent className="p-5">
+                                <CardContent className="p-5 flex-1 flex flex-col">
                                     <div
                                         className="flex flex-col border-2 border-dashed border-indigo-300 bg-indigo-50/30 rounded-xl py-10 px-4 hover:border-indigo-500 hover:bg-indigo-50 transition-colors cursor-pointer text-center"
                                         onClick={handleUploadCopyright}

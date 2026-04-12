@@ -47,18 +47,18 @@ function RegisterContent() {
   const [cancelling, setCancelling] = useState(false)
 
   const loadTicketTypes = async () => {
+    let tickets: TicketTypeResponse[] = []
     if (userId) {
       try {
-        const filtered = await getTicketTypesForUser(conferenceId, userId)
-        setTicketTypes(filtered)
+        tickets = await getTicketTypesForUser(conferenceId, userId)
       } catch {
-        const all = await getTicketTypes(conferenceId, true)
-        setTicketTypes(all)
+        tickets = await getTicketTypes(conferenceId, true)
       }
     } else {
-      const all = await getTicketTypes(conferenceId, true)
-      setTicketTypes(all)
+      tickets = await getTicketTypes(conferenceId, true)
     }
+    // Exclude AUTHOR tickets — those are only available via Camera-Ready Submission Wizard
+    setTicketTypes(tickets.filter(t => t.category !== 'AUTHOR'))
   }
 
   useEffect(() => {

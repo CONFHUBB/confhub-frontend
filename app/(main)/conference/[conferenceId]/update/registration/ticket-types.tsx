@@ -348,7 +348,7 @@ export default function TicketTypesConfig({ conferenceId }: Props) {
 
       {/* Edit/Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>{editing ? 'Edit Ticket Type' : 'Create Ticket Type'}</DialogTitle>
           </DialogHeader>
