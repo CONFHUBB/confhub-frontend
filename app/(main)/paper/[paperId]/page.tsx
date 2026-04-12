@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { assignAuthorToPaper, getAuthorsByPaper, deleteAuthorFromPaper, getPaperById, getPaperFilesByPaperId, updatePaper, updatePaperFile, withdrawPaper, restorePaper, deletePaperFile, uploadSupplementaryFile, setActiveFile } from '@/app/api/paper.api'
 import type { PaperAuthorItem } from '@/app/api/paper.api'
 import { getUsers } from '@/app/api/user.api'
+import { getCurrentUserId } from '@/lib/auth'
 import { getSubjectAreasByTrack } from '@/app/api/track.api'
 import { getAggregateByPaper, type ReviewAggregate } from '@/app/api/review-aggregate.api'
 import { getMetaReviewByPaper } from '@/app/api/meta-review.api'
@@ -303,6 +304,10 @@ export default function PaperWorkspacePage() {
         )
     }
 
+    // ── Role detection ──
+    const currentUserId = getCurrentUserId()
+    const isAuthor = currentUserId != null && authors.some(a => a.user?.id === currentUserId)
+
     // ── Business logic flags ──
     const isPaperSubmissionOpen = activities.some(
         a => a.activityType === 'PAPER_SUBMISSION' && a.isEnabled && (!a.deadline || new Date(a.deadline) > new Date())
@@ -311,10 +316,10 @@ export default function PaperWorkspacePage() {
         a => a.activityType === 'CAMERA_READY_SUBMISSION' && a.isEnabled && (!a.deadline || new Date(a.deadline) > new Date())
     )
 
-    const isEditable = isPaperSubmissionOpen
+    const isEditable = isPaperSubmissionOpen && isAuthor
     const showReviews = ['ACCEPTED', 'REJECTED', 'CAMERA_READY', 'PUBLISHED'].includes(paper.status) || aggregate?.reviewCount! > 0
-    const showCameraReadyUpload = ['ACCEPTED'].includes(paper.status) && isCameraReadyOpen
-    const canWithdraw = ['SUBMITTED', 'UNDER_REVIEW'].includes(paper.status)
+    const showCameraReadyUpload = isAuthor && ['ACCEPTED'].includes(paper.status) && isCameraReadyOpen
+    const canWithdraw = isAuthor && ['SUBMITTED', 'UNDER_REVIEW'].includes(paper.status)
     const decision = metaReview?.finalDecision ? DECISION_CONFIG[metaReview.finalDecision as keyof typeof DECISION_CONFIG] : null
 
     // ── Separate Files ──
@@ -348,8 +353,8 @@ export default function PaperWorkspacePage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* ── Main Info Column (Left) ── */}
                 <div className="lg:col-span-2 space-y-8">
-                    {/* Lock banner */}
-                    {!isEditable && (
+                    {/* Lock banner — only relevant for authors */}
+                    {isAuthor && !isEditable && (
                         <div className="flex items-center gap-3 p-4 rounded-lg border border-indigo-200 bg-indigo-50 dark:bg-indigo-950/20 dark:border-indigo-800">
                             <Lock className="h-5 w-5 text-indigo-600 shrink-0" />
                             <p className="text-sm text-indigo-800 dark:text-indigo-300">
@@ -409,16 +414,16 @@ export default function PaperWorkspacePage() {
                     {/* Authors List */}
                     <div className="space-y-4">
                         <div className="flex items-center justify-between border-b pb-2">
-                            <h2 className="text-lg font-semibold flex items-center gap-2"><Users className="h-5 w-5" /> Co-Authors ({authors.length})</h2>
-                            {isEditable && (
+                            <h2 className="text-lg font-semibold flex items-center gap-2"><Users className="h-5 w-5" /> Authors ({authors.length})</h2>
+                            {isAuthor && isEditable && (
                                 <Dialog open={openAddAuthorDialog} onOpenChange={setOpenAddAuthorDialog}>
                                     <DialogTrigger asChild>
                                         <Button variant="outline" size="sm" className="gap-1.5"><UserPlus className="h-4 w-4" /> Add Author</Button>
                                     </DialogTrigger>
                                     <DialogContent>
                                         <DialogHeader>
-                                            <DialogTitle>Add Co-Author</DialogTitle>
-                                            <DialogDescription>Select a user to add as a co-author to this paper.</DialogDescription>
+                                            <DialogTitle>Add Author</DialogTitle>
+                                            <DialogDescription>Select a user to add as an author to this paper.</DialogDescription>
                                         </DialogHeader>
                                         <div className="space-y-4 py-4">
                                             <Select value={selectedUser} onValueChange={setSelectedUser}>
@@ -448,13 +453,13 @@ export default function PaperWorkspacePage() {
                                 </thead>
                                 <tbody>
                                     {authors.length === 0 ? (
-                                        <tr><td colSpan={3} className="px-4 py-4 text-center text-sm text-muted-foreground">No co-authors added yet</td></tr>
+                                        <tr><td colSpan={3} className="px-4 py-4 text-center text-sm text-muted-foreground">No authors added yet</td></tr>
                                     ) : authors.map(item => (
                                         <tr key={item.paperAuthorId} className="border-b last:border-0 hover:bg-muted/20">
                                             <td className="px-4 py-3 font-medium"><UserLink userId={item.user.id} name={item.user.fullName || item.user.email} className="font-medium" /></td>
                                             <td className="px-4 py-3 text-muted-foreground">{item.user.email}</td>
                                             <td className="px-4 py-3 text-right">
-                                                {isEditable && (
+                                            {isAuthor && isEditable && (
                                                     <Button variant="ghost" size="sm" onClick={() => handleRemoveAuthor(item.paperAuthorId, item.user.fullName || item.user.email)} className="text-destructive hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
                                                 )}
                                             </td>
@@ -520,8 +525,8 @@ export default function PaperWorkspacePage() {
                                 <p className="text-sm text-muted-foreground">No manuscript files uploaded yet.</p>
                             )}
 
-                            {/* Check Plagiarism Button */}
-                            {manuscriptFiles.length > 0 && (
+                            {/* Check Plagiarism Button — author only */}
+                            {isAuthor && manuscriptFiles.length > 0 && (
                                 <div className="flex items-center gap-3 pt-2">
                                     <Button
                                         variant="outline"
@@ -673,6 +678,9 @@ export default function PaperWorkspacePage() {
                             <CardTitle className="text-lg flex items-center gap-2"><Layers className="h-5 w-5 text-indigo-500" /> Actions</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
+                            {/* Author-only actions */}
+                            {isAuthor && (
+                                <>
                             {/* Update Metadata */}
                             <Dialog>
                                 <DialogTrigger asChild>
@@ -839,6 +847,8 @@ export default function PaperWorkspacePage() {
                             >
                                 <Camera className="h-4 w-4 text-emerald-600" /> Upload Camera Ready
                             </Button>
+                                </>
+                            )}
 
                             {/* View Reviews */}
                             {showReviews && (

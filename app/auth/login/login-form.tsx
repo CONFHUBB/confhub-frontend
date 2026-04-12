@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/ui/password-input"
 import { Loader2 } from "lucide-react"
 import { login, loginWithGoogle } from "@/app/api/account.api"
+import { getUserByEmail, getUserProfile } from "@/app/api/user.api"
+import { getCurrentUserEmail } from "@/lib/auth"
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google"
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""
@@ -59,6 +61,16 @@ export function LoginForm({
       const res = await login({ email, password })
       localStorage.setItem("accessToken", res.token)
       document.cookie = `accessToken=${res.token}; path=/; max-age=${60 * 60 * 24}` // 24 hours
+      // Check if profile is already complete
+      try {
+        const user = await getUserByEmail(email)
+        if (user?.id) {
+          const profile = await getUserProfile(user.id)
+          if (profile?.userType && profile?.institution) {
+            document.cookie = `profileCompleted=true; path=/; max-age=${60 * 60 * 24 * 365}`
+          }
+        }
+      } catch {}
       toast.success(res.message || "Login successful!")
       router.push("/")
     } catch (err: any) {
@@ -80,6 +92,19 @@ export function LoginForm({
       const res = await loginWithGoogle(credentialResponse.credential)
       localStorage.setItem("accessToken", res.token)
       document.cookie = `accessToken=${res.token}; path=/; max-age=${60 * 60 * 24}`
+      // Check if profile is already complete
+      try {
+        const gEmail = getCurrentUserEmail()
+        if (gEmail) {
+          const user = await getUserByEmail(gEmail)
+          if (user?.id) {
+            const profile = await getUserProfile(user.id)
+            if (profile?.userType && profile?.institution) {
+              document.cookie = `profileCompleted=true; path=/; max-age=${60 * 60 * 24 * 365}`
+            }
+          }
+        }
+      } catch {}
       toast.success("Logged in with Google!")
       router.push("/")
     } catch (err: any) {

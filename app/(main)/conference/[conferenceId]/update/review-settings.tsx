@@ -100,6 +100,8 @@ export function ReviewSettings({ conferenceId, isReadOnly = false }: ReviewSetti
         try {
             const updated = await updateTrackReviewSettings(selectedTrackId, settings)
             setSettings(updated)
+            // Mark review settings as explicitly confirmed for this conference
+            localStorage.setItem(`conf-${conferenceId}-review-settings-confirmed`, 'true')
             toast.success("Review settings saved successfully!")
         } catch (err) {
             console.error("Failed to save review settings:", err)

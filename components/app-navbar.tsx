@@ -143,6 +143,8 @@ export function AppNavbar() {
 
     const handleLogout = () => {
         clearToken()
+        document.cookie = "accessToken=; path=/; max-age=0"
+        document.cookie = "profileCompleted=; path=/; max-age=0"
         window.location.href = '/'
     }
 
