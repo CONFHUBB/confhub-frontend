@@ -14,8 +14,22 @@ export const updateReview = async (id: number, dto: ReviewRequest): Promise<Revi
 }
 
 export const getAllReviews = async (page: number = 0, size: number = 20) => {
-    const response = await http.get('/review', { params: { page, size } })
-    return response.data
+    const response = await http.get('/review')
+    const data = response.data
+
+    // Handle different backend response formats
+    // 1. Paginated response: { content: [], totalElements: n, ... }
+    if (data && typeof data === 'object' && !Array.isArray(data) && 'content' in data) {
+        return data
+    }
+
+    // 2. Non-paginated array response: [...]
+    if (Array.isArray(data)) {
+        return { content: data, totalElements: data.length }
+    }
+
+    // 3. Unexpected format — return empty page
+    return { content: [], totalElements: 0 }
 }
 
 export const getReviewsByReviewerAndConference = async (reviewerId: number, conferenceId: number): Promise<ReviewResponse[]> => {

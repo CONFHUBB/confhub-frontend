@@ -9,6 +9,10 @@ import {
     PlusCircle,
     Search,
     XCircle,
+    CalendarClock,
+    PlayCircle,
+    Gavel,
+    Check,
 } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -21,17 +25,27 @@ import {
     getConferences,
     approveConference,
     cancelConference,
-    completeConference,
 } from "@/app/api/conference.api"
 import type { ConferenceListResponse } from "@/types/conference"
 
-const STATUS_OPTIONS = ["ALL", "ACTIVE", "PENDING", "COMPLETED", "CANCELLED"]
+const STATUS_OPTIONS = ["ALL", "PENDING", "SCHEDULED", "ONGOING", "BIDDING", "COMPLETED", "CANCELLED"]
 
 const STATUS_COLOR: Record<string, string> = {
-    ACTIVE:    "bg-emerald-100 text-emerald-700 border-emerald-200",
     PENDING:   "bg-amber-100 text-amber-700 border-amber-200",
-    COMPLETED: "bg-blue-100 text-blue-700 border-blue-200",
+    SCHEDULED: "bg-blue-100 text-blue-700 border-blue-200",
+    ONGOING:   "bg-emerald-100 text-emerald-700 border-emerald-200",
+    BIDDING:   "bg-violet-100 text-violet-700 border-violet-200",
+    COMPLETED: "bg-gray-100 text-gray-600 border-gray-200",
     CANCELLED: "bg-rose-100 text-rose-700 border-rose-200",
+}
+
+const STATUS_ICON: Record<string, React.ReactNode> = {
+    PENDING:   <CalendarClock className="h-3 w-3" />,
+    SCHEDULED: <CalendarClock className="h-3 w-3" />,
+    ONGOING:   <PlayCircle className="h-3 w-3" />,
+    BIDDING:   <Gavel className="h-3 w-3" />,
+    COMPLETED: <Check className="h-3 w-3" />,
+    CANCELLED: <XCircle className="h-3 w-3" />,
 }
 
 export default function ConferencesPage() {
@@ -73,12 +87,11 @@ export default function ConferencesPage() {
         setFiltered(result)
     }, [conferences, activeFilter, search])
 
-    const handleAction = async (id: number, action: "approve" | "cancel" | "complete") => {
+    const handleAction = async (id: number, action: "approve" | "cancel") => {
         setActionLoading(id)
         try {
             if (action === "approve") await approveConference(id)
-            else if (action === "cancel") await cancelConference(id)
-            else await completeConference(id)
+            else await cancelConference(id)
             toast.success(`Conference ${action}d successfully`)
             await load()
         } catch {
@@ -90,20 +103,23 @@ export default function ConferencesPage() {
 
     const counts = {
         total: conferences.length,
-        active: conferences.filter(c => c.status === "ACTIVE").length,
         pending: conferences.filter(c => c.status === "PENDING").length,
+        scheduled: conferences.filter(c => c.status === "SCHEDULED").length,
+        ongoing: conferences.filter(c => c.status === "ONGOING").length,
+        bidding: conferences.filter(c => c.status === "BIDDING").length,
         completed: conferences.filter(c => c.status === "COMPLETED").length,
+        cancelled: conferences.filter(c => c.status === "CANCELLED").length,
     }
 
     return (
-        <div className="flex flex-col gap-6 pb-8">
+        <div className="flex flex-col gap-6 pb-8 min-w-0">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Conferences</h1>
                     <p className="text-muted-foreground text-sm mt-0.5">Manage all conferences in the system</p>
                 </div>
-                <Button asChild size="sm" className="gap-1.5 bg-indigo-600 hover:bg-indigo-700">
+                <Button asChild size="sm" className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 shrink-0">
                     <Link href="/conference/create">
                         <PlusCircle className="h-4 w-4" />
                         Create Conference
@@ -112,15 +128,18 @@ export default function ConferencesPage() {
             </div>
 
             {/* Stat Cards */}
-            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
                 <StatCard label="Total" value={counts.total} icon={FolderOpen} iconBg="bg-indigo-50" iconColor="text-indigo-600" isLoading={isLoading} />
-                <StatCard label="Active" value={counts.active} icon={CheckCircle2} iconBg="bg-emerald-50" iconColor="text-emerald-600" isLoading={isLoading} />
-                <StatCard label="Pending Approval" value={counts.pending} icon={FolderOpen} iconBg="bg-amber-50" iconColor="text-amber-600" isLoading={isLoading} />
-                <StatCard label="Completed" value={counts.completed} icon={FolderOpen} iconBg="bg-blue-50" iconColor="text-blue-600" isLoading={isLoading} />
+                <StatCard label="Pending" value={counts.pending} icon={CalendarClock} iconBg="bg-amber-50" iconColor="text-amber-600" isLoading={isLoading} />
+                <StatCard label="Scheduled" value={counts.scheduled} icon={CalendarClock} iconBg="bg-blue-50" iconColor="text-blue-600" isLoading={isLoading} />
+                <StatCard label="Ongoing" value={counts.ongoing} icon={PlayCircle} iconBg="bg-emerald-50" iconColor="text-emerald-600" isLoading={isLoading} />
+                <StatCard label="Bidding" value={counts.bidding} icon={Gavel} iconBg="bg-violet-50" iconColor="text-violet-600" isLoading={isLoading} />
+                <StatCard label="Completed" value={counts.completed} icon={Check} iconBg="bg-gray-50" iconColor="text-gray-600" isLoading={isLoading} />
+                <StatCard label="Cancelled" value={counts.cancelled} icon={XCircle} iconBg="bg-rose-50" iconColor="text-rose-600" isLoading={isLoading} />
             </div>
 
             {/* Table Card */}
-            <Card className="border-0 shadow-sm">
+            <Card className="border-0 shadow-sm min-w-0">
                 <CardHeader className="pb-4">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
                         <div>
@@ -145,7 +164,7 @@ export default function ConferencesPage() {
                             <button
                                 key={s}
                                 onClick={() => setActiveFilter(s)}
-                                className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${
+                                className={`text-xs px-3 py-1 rounded-full font-medium transition-colors whitespace-nowrap ${
                                     activeFilter === s
                                         ? "bg-indigo-600 text-white"
                                         : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -158,7 +177,7 @@ export default function ConferencesPage() {
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                        <table className="w-full text-sm min-w-[700px]">
                             <thead>
                                 <tr className="border-b text-muted-foreground bg-muted/30">
                                     <th className="text-left py-3 px-6 font-medium">Conference</th>
@@ -201,7 +220,8 @@ export default function ConferencesPage() {
                                                 <td className="py-3 pr-4 text-muted-foreground hidden md:table-cell">{c.area || "—"}</td>
                                                 <td className="py-3 pr-4 text-muted-foreground hidden lg:table-cell">{c.country || "—"}</td>
                                                 <td className="py-3 pr-4">
-                                                    <Badge variant="outline" className={`text-[10px] font-medium border ${STATUS_COLOR[c.status] || "bg-gray-100 text-gray-600"}`}>
+                                                    <Badge variant="outline" className={`text-[10px] font-medium border gap-1 ${STATUS_COLOR[c.status] || "bg-gray-100 text-gray-600"}`}>
+                                                        {STATUS_ICON[c.status]}
                                                         {c.status}
                                                     </Badge>
                                                 </td>
@@ -213,6 +233,7 @@ export default function ConferencesPage() {
                                                         <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
                                                             <Link href={`/conference/${c.id}`}>View</Link>
                                                         </Button>
+                                                        {/* Only PENDING conferences can be approved */}
                                                         {c.status === "PENDING" && (
                                                             <Button
                                                                 size="sm"
@@ -224,7 +245,8 @@ export default function ConferencesPage() {
                                                                 Approve
                                                             </Button>
                                                         )}
-                                                        {c.status === "ACTIVE" && (
+                                                        {/* Cancel only for conferences that are not already cancelled/completed */}
+                                                        {c.status !== "CANCELLED" && c.status !== "COMPLETED" && (
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"

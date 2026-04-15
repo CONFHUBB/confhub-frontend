@@ -1,7 +1,8 @@
 ﻿"use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { BookOpen } from "lucide-react"
+import { useSearchParams } from "next/navigation"
+import { BookOpen, Users, ListChecks } from "lucide-react"
 import { toast } from "sonner"
 import { RadialBar, RadialBarChart } from "recharts"
 import {
@@ -16,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { StatCard } from "@/components/dashboard/stat-card"
 import { getAllReviews } from "@/app/api/review.api"
 import type { ReviewResponse, ReviewStatus } from "@/types/review"
+import { Button } from "@/components/ui/button"
 
 const STATUS_COLOR: Record<ReviewStatus, string> = {
     ASSIGNED:    "bg-blue-100 text-blue-700 border-blue-200",
@@ -32,6 +34,9 @@ const radialConfig: ChartConfig = {
 }
 
 export default function ReviewsPage() {
+    const searchParams = useSearchParams()
+    const activeTab = searchParams.get("tab") ?? "pipeline"
+
     const [reviews, setReviews] = useState<ReviewResponse[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [statusFilter, setStatusFilter] = useState<ReviewStatus | "ALL">("ALL")
@@ -39,11 +44,15 @@ export default function ReviewsPage() {
     const load = useCallback(async () => {
         try {
             setIsLoading(true)
-            const data = await getAllReviews(0, 200)
-            const content: ReviewResponse[] = Array.isArray(data) ? data : (data?.content ?? [])
+            const data = await getAllReviews(0, 500)
+            // Handle both paginated ({ content: [] }) and non-paginated ([]) responses
+            const content: ReviewResponse[] = Array.isArray(data)
+                ? data
+                : (data?.content ?? [])
             setReviews(content)
-        } catch {
-            toast.error("Failed to load reviews")
+        } catch (err: any) {
+            console.error("Failed to load reviews:", err)
+            toast.error(err?.response?.data?.message || "Failed to load reviews. Please try again.")
         } finally {
             setIsLoading(false)
         }
@@ -72,11 +81,38 @@ export default function ReviewsPage() {
         ? reviews
         : reviews.filter(r => r.status === statusFilter)
 
+    const isPipeline = activeTab !== "assignments"
+
     return (
         <div className="flex flex-col gap-6 pb-8">
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight">Reviews</h1>
-                <p className="text-muted-foreground text-sm mt-0.5">Monitor the peer review pipeline across all conferences</p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight">Reviews</h1>
+                    <p className="text-muted-foreground text-sm mt-0.5">
+                        {isPipeline ? "Monitor the peer review pipeline across all conferences" : "Review assignments and workload distribution"}
+                    </p>
+                </div>
+                {/* Tab Switcher */}
+                <div className="flex gap-1 rounded-lg bg-muted p-1">
+                    <Button
+                        variant={isPipeline ? "default" : "ghost"}
+                        size="sm"
+                        className={`gap-1.5 text-xs ${isPipeline ? "bg-indigo-600 hover:bg-indigo-700" : ""}`}
+                        onClick={() => window.location.href = "/dashboard/reviews"}
+                    >
+                        <BookOpen className="h-3.5 w-3.5" />
+                        Pipeline
+                    </Button>
+                    <Button
+                        variant={!isPipeline ? "default" : "ghost"}
+                        size="sm"
+                        className={`gap-1.5 text-xs ${!isPipeline ? "bg-indigo-600 hover:bg-indigo-700" : ""}`}
+                        onClick={() => window.location.href = "/dashboard/reviews?tab=assignments"}
+                    >
+                        <ListChecks className="h-3.5 w-3.5" />
+                        Assignments
+                    </Button>
+                </div>
             </div>
 
             {/* Stat Cards */}

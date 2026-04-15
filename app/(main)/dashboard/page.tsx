@@ -12,18 +12,20 @@ import {
     Users,
     AlertCircle,
     RefreshCw,
+    Eye,
+    MoreHorizontal,
 } from "lucide-react"
 import {
     Bar,
     BarChart,
     CartesianGrid,
     Cell,
-    Line,
-    LineChart,
     Pie,
     PieChart,
     XAxis,
     YAxis,
+    Line,
+    LineChart,
 } from "recharts"
 import {
     ChartContainer,
@@ -37,6 +39,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { StatCard } from "@/components/dashboard/stat-card"
+import { DataTable } from "@/components/ui/data-table"
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header"
 import { getConferences, getConferenceStats } from "@/app/api/conference.api"
 import { getUsers } from "@/app/api/user.api"
 import { getConferencePaymentHistory } from "@/app/api/registration.api"
@@ -44,10 +48,12 @@ import type { ConferenceListResponse } from "@/types/conference"
 import type { PaymentHistoryResponse } from "@/app/api/registration.api"
 import { dashboardMessages as msg } from "@/lib/dashboard-messages"
 import { cn } from "@/lib/utils"
+import { fmtDate } from "@/lib/utils"
+import type { ColumnDef } from "@tanstack/react-table"
 
 // ── Chart Configs ──
 const barChartConfig: ChartConfig = {
-    papers: { label: "Papers", color: "hsl(262 83% 58%)" },
+    papers: { label: "Papers", color: "#8B5CF6" },
 }
 const pieChartConfig: ChartConfig = {
     SUBMITTED:    { label: "Submitted",    color: "hsl(217 91% 60%)" },
@@ -63,17 +69,22 @@ const revenueChartConfig: ChartConfig = {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-    ACTIVE:     "bg-emerald-100 text-emerald-700 border-emerald-200",
     PENDING:    "bg-amber-100 text-amber-700 border-amber-200",
-    COMPLETED:  "bg-blue-100 text-blue-700 border-blue-200",
+    SCHEDULED:  "bg-blue-100 text-blue-700 border-blue-200",
+    ONGOING:    "bg-emerald-100 text-emerald-700 border-emerald-200",
+    BIDDING:    "bg-violet-100 text-violet-700 border-violet-200",
+    COMPLETED:  "bg-gray-100 text-gray-600 border-gray-200",
     CANCELLED:  "bg-rose-100 text-rose-700 border-rose-200",
-    IN_REVIEW:  "bg-primary/10 text-primary border-primary/20",
 }
 
 interface SystemStats {
     totalConferences: number
-    activeConferences: number
     pendingConferences: number
+    scheduledConferences: number
+    ongoingConferences: number
+    biddingConferences: number
+    completedConferences: number
+    cancelledConferences: number
     totalPapers: number
     totalUsers: number
     totalRevenue: number
@@ -83,6 +94,8 @@ interface SystemStats {
     recentPayments: PaymentHistoryResponse[]
     revenueByMonth: { month: string; revenue: number; count: number }[]
     conferencesPapers: { name: string; papers: number }[]
+    allConferences: ConferenceListResponse[]
+    allPayments: PaymentHistoryResponse[]
 }
 
 function groupRevenueByMonth(payments: PaymentHistoryResponse[]): { month: string; revenue: number; count: number }[] {
@@ -106,6 +119,147 @@ function groupRevenueByMonth(payments: PaymentHistoryResponse[]): { month: strin
     return Object.entries(map).map(([month, v]) => ({ month, ...v }))
 }
 
+// ── Conference Table Column Definitions ──
+const conferenceColumns: ColumnDef<ConferenceListResponse>[] = [
+    {
+        accessorKey: "acronym",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Conference" />,
+        cell: ({ row }) => (
+            <div className="flex flex-col">
+                <Link
+                    href={`/conference/${row.original.id}`}
+                    className="font-semibold text-sm hover:text-primary transition-colors line-clamp-1"
+                >
+                    {row.original.acronym || row.original.name}
+                </Link>
+                <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                    {row.original.name}
+                </span>
+            </div>
+        ),
+    },
+    {
+        accessorKey: "area",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Area" />,
+        cell: ({ row }) => (
+            <span className="text-sm text-muted-foreground">
+                {row.original.area || "—"}
+            </span>
+        ),
+    },
+    {
+        accessorKey: "location",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Location" />,
+        cell: ({ row }) => (
+            <span className="text-sm text-muted-foreground">
+                {row.original.location || "—"}
+            </span>
+        ),
+    },
+    {
+        accessorKey: "status",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        cell: ({ row }) => (
+            <Badge
+                variant="outline"
+                className={cn(
+                    "text-[10px] font-medium border",
+                    STATUS_COLOR[row.original.status] || "bg-gray-100 text-gray-600"
+                )}
+            >
+                {row.original.status}
+            </Badge>
+        ),
+    },
+    {
+        accessorKey: "startDate",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Start Date" />,
+        cell: ({ row }) => (
+            <span className="text-sm text-muted-foreground">
+                {row.original.startDate ? fmtDate(row.original.startDate) : "—"}
+            </span>
+        ),
+    },
+    {
+        id: "actions",
+        cell: ({ row }) => (
+            <div className="flex items-center justify-end gap-1">
+                <Button variant="outline" size="sm" className="h-7 text-xs gap-1" asChild>
+                    <Link href={`/conference/${row.original.id}`}>
+                        <Eye className="h-3 w-3" />
+                        View
+                    </Link>
+                </Button>
+            </div>
+        ),
+    },
+]
+
+// ── Payment Table Column Definitions ──
+const paymentColumns: ColumnDef<PaymentHistoryResponse>[] = [
+    {
+        accessorKey: "vnpTxnRef",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Reference" />,
+        cell: ({ row }) => (
+            <span className="font-mono text-xs text-muted-foreground">
+                {row.original.vnpTxnRef?.slice(-12) || "—"}
+            </span>
+        ),
+    },
+    {
+        accessorKey: "amount",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Amount" />,
+        cell: ({ row }) => (
+            <span className="text-sm font-medium">
+                {row.original.amount
+                    ? `${(row.original.amount / 1000).toLocaleString()}K`
+                    : "—"}
+            </span>
+        ),
+    },
+    {
+        accessorKey: "bankCode",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Bank" />,
+        cell: ({ row }) => (
+            <span className="text-sm text-muted-foreground">
+                {row.original.bankCode || "—"}
+            </span>
+        ),
+    },
+    {
+        accessorKey: "outcome",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Outcome" />,
+        cell: ({ row }) => (
+            <Badge
+                variant="outline"
+                className={cn(
+                    "text-[10px] font-medium border",
+                    row.original.outcome === "PAID"
+                        ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                        : row.original.outcome === "FAILED"
+                        ? "bg-rose-100 text-rose-700 border-rose-200"
+                        : "bg-gray-100 text-gray-600"
+                )}
+            >
+                {row.original.outcome}
+            </Badge>
+        ),
+    },
+    {
+        accessorKey: "payDate",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
+        cell: ({ row }) => (
+            <span className="text-sm text-muted-foreground">
+                {row.original.payDate
+                    ? fmtDate(row.original.payDate)
+                    : row.original.recordedAt
+                    ? fmtDate(row.original.recordedAt)
+                    : "—"}
+            </span>
+        ),
+    },
+]
+
 export default function DashboardPage() {
     const [stats, setStats] = useState<SystemStats | null>(null)
     const [isLoading, setIsLoading] = useState(true)
@@ -121,18 +275,22 @@ export default function DashboardPage() {
                 getUsers(),
             ])
 
-            const activeConferences = conferences.filter(c => c.status === "ACTIVE")
-            const pendingConferences = conferences.filter(c => c.status === "PENDING")
+            const pendingConferences = conferences.filter((c) => c.status === "PENDING")
+            const scheduledConferences = conferences.filter((c) => c.status === "SCHEDULED")
+            const ongoingConferences = conferences.filter((c) => c.status === "ONGOING")
+            const biddingConferences = conferences.filter((c) => c.status === "BIDDING")
+            const completedConferences = conferences.filter((c) => c.status === "COMPLETED")
+            const cancelledConferences = conferences.filter((c) => c.status === "CANCELLED")
 
-            const sample = conferences.slice(0, 10)
             const [statsResults, paymentResults] = await Promise.all([
-                Promise.allSettled(sample.map(c => getConferenceStats(c.id))),
-                Promise.allSettled(sample.map(c => getConferencePaymentHistory(c.id))),
+                Promise.allSettled(conferences.map((c) => getConferenceStats(c.id))),
+                Promise.allSettled(conferences.map((c) => getConferencePaymentHistory(c.id))),
             ])
 
             const papersByStatus: Record<string, number> = {}
-            let totalPapers = 0, totalReviews = 0
-            statsResults.forEach(r => {
+            let totalPapers = 0,
+                totalReviews = 0
+            statsResults.forEach((r) => {
                 if (r.status === "fulfilled") {
                     const s = r.value
                     totalPapers += s.totalPapers
@@ -144,16 +302,18 @@ export default function DashboardPage() {
                         ["REJECTED", s.rejected],
                     ]
                     statuses.forEach(([k, v]) => {
-                        papersByStatus[k] = (papersByStatus[k] || 0) + v
+                        if (v > 0) {
+                            papersByStatus[k] = (papersByStatus[k] || 0) + v
+                        }
                     })
                 }
             })
 
             const allPayments: PaymentHistoryResponse[] = []
             let totalRevenue = 0
-            paymentResults.forEach(r => {
+            paymentResults.forEach((r) => {
                 if (r.status === "fulfilled") {
-                    r.value.forEach(p => {
+                    r.value.forEach((p) => {
                         allPayments.push(p)
                         if (p.outcome === "PAID" && p.amount) totalRevenue += p.amount
                     })
@@ -162,17 +322,21 @@ export default function DashboardPage() {
 
             const conferencesPapers = statsResults
                 .map((r, i) => ({
-                    name: sample[i]?.acronym || sample[i]?.name?.substring(0, 12) || "",
+                    name: conferences[i]?.acronym || conferences[i]?.name?.substring(0, 12) || "",
                     papers: r.status === "fulfilled" ? r.value.totalPapers : 0,
                 }))
-                .filter(c => c.papers > 0)
+                .filter((c) => c.papers > 0)
                 .sort((a, b) => b.papers - a.papers)
-                .slice(0, 8)
+                .slice(0, 10)
 
             setStats({
                 totalConferences: conferences.length,
-                activeConferences: activeConferences.length,
                 pendingConferences: pendingConferences.length,
+                scheduledConferences: scheduledConferences.length,
+                ongoingConferences: ongoingConferences.length,
+                biddingConferences: biddingConferences.length,
+                completedConferences: completedConferences.length,
+                cancelledConferences: cancelledConferences.length,
                 totalPapers,
                 totalUsers: users.length,
                 totalRevenue,
@@ -182,6 +346,8 @@ export default function DashboardPage() {
                 recentPayments: allPayments.slice(0, 8),
                 revenueByMonth: groupRevenueByMonth(allPayments),
                 conferencesPapers,
+                allConferences: conferences,
+                allPayments: allPayments,
             })
         } catch (err) {
             console.error("Failed to load dashboard stats:", err)
@@ -191,13 +357,15 @@ export default function DashboardPage() {
         }
     }, [])
 
-    useEffect(() => { loadStats() }, [loadStats])
+    useEffect(() => {
+        loadStats()
+    }, [loadStats])
 
     const pieData = stats
         ? Object.entries(stats.papersByStatus).map(([k, v]) => ({
-            name: k,
-            value: v,
-            fill: pieChartConfig[k]?.color ?? pieChartConfig.OTHER.color,
+              name: k,
+              value: v,
+              fill: pieChartConfig[k]?.color ?? pieChartConfig.OTHER.color,
           }))
         : []
 
@@ -222,7 +390,7 @@ export default function DashboardPage() {
                 <StatCard
                     label={msg.totalConferences}
                     value={stats?.totalConferences ?? 0}
-                    change={`${stats?.activeConferences ?? 0} ${msg.active}, ${stats?.pendingConferences ?? 0} ${msg.pending}`}
+                    change={`${stats?.ongoingConferences ?? 0} ongoing, ${stats?.pendingConferences ?? 0} pending`}
                     changePositive
                     icon={FolderOpen}
                     iconBg="bg-primary/10"
@@ -300,18 +468,22 @@ export default function DashboardPage() {
                     <CardContent>
                         {isLoading ? (
                             <div className="h-48 flex items-center justify-center text-muted-foreground text-sm" role="status" aria-live="polite">{msg.loading}</div>
-                        ) : stats?.conferencesPapers.length ? (
+                        ) : stats && stats.conferencesPapers.length > 0 ? (
                             <ChartContainer config={barChartConfig} className="h-48 w-full" role="img" aria-label={msg.papersPerConferenceDesc}>
                                 <BarChart data={stats.conferencesPapers} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
                                     <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border/40" />
                                     <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                                     <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                                     <ChartTooltip content={<ChartTooltipContent />} />
-                                    <Bar dataKey="papers" fill="var(--color-papers)" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="papers" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ChartContainer>
                         ) : (
-                            <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">{msg.noData}</div>
+                            <div className="h-48 flex flex-col items-center justify-center text-muted-foreground text-sm gap-1">
+                                <FileText className="h-8 w-8 text-muted-foreground/30 mb-1" aria-hidden="true" />
+                                <span>{msg.noData}</span>
+                                <span className="text-xs">Conference paper submissions will appear here once available.</span>
+                            </div>
                         )}
                     </CardContent>
                 </Card>
@@ -328,10 +500,18 @@ export default function DashboardPage() {
                     <CardContent>
                         {isLoading ? (
                             <div className="h-48 flex items-center justify-center text-muted-foreground text-sm" role="status" aria-live="polite">{msg.loading}</div>
-                        ) : pieData.length ? (
+                        ) : pieData.length > 0 ? (
                             <ChartContainer config={pieChartConfig} className="h-48 w-full" role="img" aria-label={msg.paperStatusDistributionDesc}>
                                 <PieChart>
-                                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={72} paddingAngle={2}>
+                                    <Pie
+                                        data={pieData}
+                                        dataKey="value"
+                                        nameKey="name"
+                                        cx="50%"
+                                        cy="50%"
+                                        outerRadius={72}
+                                        paddingAngle={2}
+                                    >
                                         {pieData.map((entry, i) => (
                                             <Cell key={i} fill={entry.fill} />
                                         ))}
@@ -341,7 +521,11 @@ export default function DashboardPage() {
                                 </PieChart>
                             </ChartContainer>
                         ) : (
-                            <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">{msg.noData}</div>
+                            <div className="h-48 flex flex-col items-center justify-center text-muted-foreground text-sm gap-1">
+                                <BarChart3 className="h-8 w-8 text-muted-foreground/30 mb-1" aria-hidden="true" />
+                                <span>{msg.noData}</span>
+                                <span className="text-xs">Paper statuses will appear once submissions are reviewed.</span>
+                            </div>
                         )}
                     </CardContent>
                 </Card>
@@ -364,8 +548,13 @@ export default function DashboardPage() {
                             <LineChart data={stats?.revenueByMonth ?? []} margin={{ top: 4, right: 16, left: -8, bottom: 0 }}>
                                 <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border/40" />
                                 <XAxis dataKey="month" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                                <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickLine={false} axisLine={false}
-                                    tickFormatter={v => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(0)}M` : v.toString()} />
+                                <YAxis
+                                    yAxisId="left"
+                                    tick={{ fontSize: 11 }}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tickFormatter={(v) => (v >= 1_000_000 ? `${(v / 1_000_000).toFixed(0)}M` : v.toString())}
+                                />
                                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                                 <ChartTooltip
                                     content={<ChartTooltipContent />}
@@ -385,122 +574,71 @@ export default function DashboardPage() {
                 </CardContent>
             </Card>
 
-            {/* ── Tables Row ── */}
-            <div className="grid gap-4 lg:grid-cols-2">
-                {/* Recent Conferences */}
+            {/* ── Tables Row — Full-width DataTables ── */}
+            <div className="flex flex-col gap-6">
+                {/* All Conferences Table */}
                 <Card className="border-0 shadow-sm">
-                    <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                        <div>
-                            <CardTitle className="text-base font-semibold flex items-center gap-2">
-                                <FolderOpen className="h-4 w-4 text-primary" aria-hidden="true" />
-                                {msg.recentConferences}
-                            </CardTitle>
-                            <CardDescription>{msg.recentConferencesDesc}</CardDescription>
+                    <CardHeader className="pb-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+                            <div>
+                                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                                    <FolderOpen className="h-4 w-4 text-primary" aria-hidden="true" />
+                                    All Conferences
+                                </CardTitle>
+                                <CardDescription>
+                                    {isLoading ? "Loading…" : `${stats?.allConferences.length ?? 0} conference${(stats?.allConferences.length ?? 0) !== 1 ? "s" : ""} in system`}
+                                </CardDescription>
+                            </div>
+                            <Link href="/dashboard/conferences" className="text-xs text-primary hover:underline font-medium shrink-0">
+                                {msg.viewAll}
+                            </Link>
                         </div>
-                        <Link href="/dashboard/conferences" className="text-xs text-primary hover:underline font-medium">
-                            {msg.viewAll}
-                        </Link>
                     </CardHeader>
-                    <CardContent className="p-0">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b text-muted-foreground">
-                                    <th scope="col" className="text-left py-2.5 px-6 font-medium">{msg.name}</th>
-                                    <th scope="col" className="text-left py-2.5 pr-6 font-medium">{msg.area}</th>
-                                    <th scope="col" className="text-left py-2.5 pr-4 font-medium">{msg.status}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {isLoading
-                                    ? Array.from({ length: 4 }).map((_, i) => (
-                                        <tr key={i} className="border-b last:border-0">
-                                            <td className="py-2.5 px-6"><div className="h-4 bg-muted rounded animate-pulse w-32" /></td>
-                                            <td className="py-2.5 pr-6"><div className="h-4 bg-muted rounded animate-pulse w-20" /></td>
-                                            <td className="py-2.5 pr-4"><div className="h-5 bg-muted rounded-full animate-pulse w-16" /></td>
-                                        </tr>
-                                    ))
-                                    : stats?.recentConferences.map(c => (
-                                        <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                                            <td className="py-2.5 px-6">
-                                                <Link href={`/conference/${c.id}`} className="font-medium hover:text-primary transition-colors line-clamp-1">
-                                                    {c.acronym || c.name}
-                                                </Link>
-                                            </td>
-                                            <td className="py-2.5 pr-6 text-muted-foreground text-xs">{c.area || "—"}</td>
-                                            <td className="py-2.5 pr-4">
-                                                <Badge variant="outline" className={cn(
-                                                    "text-[10px] font-medium border",
-                                                    STATUS_COLOR[c.status] || "bg-gray-100 text-gray-600"
-                                                )}>
-                                                    {c.status}
-                                                </Badge>
-                                            </td>
-                                        </tr>
-                                    ))}
-                            </tbody>
-                        </table>
+                    <CardContent className="p-0 px-4 pb-4">
+                        {isLoading ? (
+                            <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">Loading conferences…</div>
+                        ) : (
+                            <DataTable
+                                columns={conferenceColumns}
+                                data={stats?.allConferences ?? []}
+                                searchColumn="acronym"
+                                searchPlaceholder="Search conferences…"
+                            />
+                        )}
                     </CardContent>
                 </Card>
 
-                {/* Recent Payments */}
+                {/* All Payments Table */}
                 <Card className="border-0 shadow-sm">
-                    <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                        <div>
-                            <CardTitle className="text-base font-semibold flex items-center gap-2">
-                                <CreditCard className="h-4 w-4 text-amber-600" aria-hidden="true" />
-                                {msg.recentPayments}
-                            </CardTitle>
-                            <CardDescription>{msg.recentPaymentsDesc}</CardDescription>
+                    <CardHeader className="pb-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+                            <div>
+                                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                                    <CreditCard className="h-4 w-4 text-amber-600" aria-hidden="true" />
+                                    All Payments
+                                </CardTitle>
+                                <CardDescription>
+                                    {isLoading
+                                        ? "Loading…"
+                                        : `${stats?.allPayments.length ?? 0} transaction${(stats?.allPayments.length ?? 0) !== 1 ? "s" : ""} total`}
+                                </CardDescription>
+                            </div>
+                            <Link href="/dashboard/finance" className="text-xs text-primary hover:underline font-medium shrink-0">
+                                {msg.viewAll}
+                            </Link>
                         </div>
-                        <Link href="/dashboard/finance" className="text-xs text-primary hover:underline font-medium">
-                            {msg.viewAll}
-                        </Link>
                     </CardHeader>
-                    <CardContent className="p-0">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b text-muted-foreground">
-                                    <th scope="col" className="text-left py-2.5 px-6 font-medium">{msg.ref}</th>
-                                    <th scope="col" className="text-right py-2.5 pr-4 font-medium">{msg.amount}</th>
-                                    <th scope="col" className="text-left py-2.5 pr-6 font-medium">{msg.status}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {isLoading
-                                    ? Array.from({ length: 4 }).map((_, i) => (
-                                        <tr key={i} className="border-b last:border-0">
-                                            <td className="py-2.5 px-6"><div className="h-4 bg-muted rounded animate-pulse w-28" /></td>
-                                            <td className="py-2.5 pr-4"><div className="h-4 bg-muted rounded animate-pulse w-16 ml-auto" /></td>
-                                            <td className="py-2.5 pr-6"><div className="h-5 bg-muted rounded-full animate-pulse w-14" /></td>
-                                        </tr>
-                                    ))
-                                    : stats?.recentPayments.length
-                                        ? stats.recentPayments.map((p) => (
-                                            <tr key={p.vnpTxnRef ?? Math.random()} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                                                <td className="py-2.5 px-6 font-mono text-xs text-muted-foreground">{p.vnpTxnRef?.slice(-10)}</td>
-                                                <td className="py-2.5 pr-4 text-right font-medium">
-                                                    {p.amount ? `${(p.amount / 1000).toFixed(0)}K` : "—"}
-                                                </td>
-                                                <td className="py-2.5 pr-6">
-                                                    <Badge variant="outline" className={cn(
-                                                        "text-[10px] font-medium border",
-                                                        p.outcome === "PAID" ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                                                        : p.outcome === "FAILED" ? "bg-rose-100 text-rose-700 border-rose-200"
-                                                        : "bg-gray-100 text-gray-600"
-                                                    )}>
-                                                        {p.outcome}
-                                                    </Badge>
-                                                </td>
-                                            </tr>
-                                        ))
-                                        : (
-                                            <tr>
-                                                <td colSpan={3} className="py-8 text-center text-muted-foreground text-sm">{msg.noPayments}</td>
-                                            </tr>
-                                        )
-                                }
-                            </tbody>
-                        </table>
+                    <CardContent className="p-0 px-4 pb-4">
+                        {isLoading ? (
+                            <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">Loading payments…</div>
+                        ) : (
+                            <DataTable
+                                columns={paymentColumns}
+                                data={stats?.allPayments ?? []}
+                                searchColumn="vnpTxnRef"
+                                searchPlaceholder="Search transactions…"
+                            />
+                        )}
                     </CardContent>
                 </Card>
             </div>

@@ -2,7 +2,6 @@
 
 import { useEffect } from "react"
 import { usePathname } from "next/navigation"
-import { AppSidebar } from "@/components/app-sidebar"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { AppNavbar } from "@/components/app-navbar"
 import { useUserRole } from "@/hooks/useUserRole"
@@ -26,7 +25,6 @@ export default function MainLayout({
     children: React.ReactNode
 }) {
     const pathname = usePathname()
-    const isDashboard = pathname.startsWith("/dashboard")
     const isHomePage = pathname === "/"
     const { isAdminOrStaff, isLoading } = useUserRole()
 
@@ -69,26 +67,30 @@ export default function MainLayout({
         )
     }
 
-    // ADMIN / STAFF → sidebar layout
+    // ADMIN / STAFF → sidebar layout (always DashboardSidebar for all admin pages)
     if (isAdminOrStaff) {
         return (
-            <SidebarProvider>
-                {isDashboard ? <DashboardSidebar /> : <AppSidebar />}
-                <SidebarInset>
-                    <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-                        <div className="flex items-center gap-2 px-4">
-                            <SidebarTrigger className="-ml-1" />
-                            <Separator orientation="vertical" className="mr-2 h-4" />
+            <UserRolesProvider>
+                <SidebarProvider>
+                    <DashboardSidebar />
+                    <SidebarInset>
+                        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+                            <div className="flex items-center gap-2 px-4">
+                                <SidebarTrigger className="-ml-1" />
+                                <Separator orientation="vertical" className="mr-2 h-4" />
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto">
+                            <div className="flex flex-col gap-4 p-4">
+                                <AppErrorBoundary>
+                                    {children}
+                                </AppErrorBoundary>
+                            </div>
                         </div>
-                    </header>
-                    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-                        <AppErrorBoundary>
-                            {children}
-                        </AppErrorBoundary>
-                    </div>
-                </SidebarInset>
-                <AIChatWidget />
-            </SidebarProvider>
+                    </SidebarInset>
+                    <AIChatWidget />
+                </SidebarProvider>
+            </UserRolesProvider>
         )
     }
 
