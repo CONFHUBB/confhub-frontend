@@ -20,7 +20,8 @@ import { Loader2 } from "lucide-react"
 import { login, loginWithGoogle } from "@/app/api/account.api"
 import { getUserByEmail, getUserProfile } from "@/app/api/user.api"
 import { getCurrentUserEmail } from "@/lib/auth"
-import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google"
+import { GoogleOAuthProvider } from "@react-oauth/google"
+import { GoogleLoginButton } from "@/components/ui/google-login-button"
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""
 
@@ -169,17 +170,11 @@ export function LoginForm({
                     Or continue with
                   </FieldSeparator>
                   <Field className="w-full">
-                    <div className="w-full [&>div]:!w-full [&>div>div]:!w-full">
-                      <GoogleLogin
-                        onSuccess={handleGoogleSuccess}
-                        onError={() => toast.error("Google login failed.")}
-                        size="large"
-                        text="continue_with"
-                        shape="rectangular"
-                        theme="outline"
-                        width="100%"
-                      />
-                    </div>
+                    <GoogleLoginButton
+                      onSuccess={handleGoogleSuccess}
+                      onError={() => toast.error("Google login failed.")}
+                      text="continue_with"
+                    />
                   </Field>
                 </>
               )}

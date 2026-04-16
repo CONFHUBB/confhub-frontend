@@ -17,7 +17,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { CountrySelect } from "@/components/ui/country-select"
 import { signup, loginWithGoogle } from "@/app/api/account.api"
-import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google"
+import { GoogleOAuthProvider } from "@react-oauth/google"
+import { GoogleLoginButton } from "@/components/ui/google-login-button"
 import { z } from "zod"
 import { PasswordInput } from "@/components/ui/password-input"
 import { Loader2 } from "lucide-react"
@@ -327,17 +328,11 @@ export function SignupForm({
                     Or continue with
                   </FieldSeparator>
                   <Field className="w-full">
-                    <div className="w-full [&>div]:!w-full [&>div>div]:!w-full">
-                      <GoogleLogin
-                        onSuccess={handleGoogleSuccess}
-                        onError={() => toast.error("Google sign-up failed.")}
-                        size="large"
-                        text="signup_with"
-                        shape="rectangular"
-                        theme="outline"
-                        width="100%"
-                      />
-                    </div>
+                    <GoogleLoginButton
+                      onSuccess={handleGoogleSuccess}
+                      onError={() => toast.error("Google sign-up failed.")}
+                      text="signup_with"
+                    />
                   </Field>
                 </>
               )}
