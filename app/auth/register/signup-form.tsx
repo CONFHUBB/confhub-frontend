@@ -326,12 +326,11 @@ export function SignupForm({
                   <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
                     Or continue with
                   </FieldSeparator>
-                  <Field className="flex justify-center">
+                  <Field className="flex w-full justify-center">
                     <GoogleLogin
                       onSuccess={handleGoogleSuccess}
                       onError={() => toast.error("Google sign-up failed.")}
                       size="large"
-                      width="100%"
                       text="signup_with"
                       shape="rectangular"
                       theme="outline"
