@@ -168,15 +168,18 @@ export function LoginForm({
                   <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
                     Or continue with
                   </FieldSeparator>
-                  <Field className="flex w-full justify-center">
-                    <GoogleLogin
-                      onSuccess={handleGoogleSuccess}
-                      onError={() => toast.error("Google login failed.")}
-                      size="large"
-                      text="continue_with"
-                      shape="rectangular"
-                      theme="outline"
-                    />
+                  <Field className="w-full">
+                    <div className="w-full [&>div]:!w-full [&>div>div]:!w-full">
+                      <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={() => toast.error("Google login failed.")}
+                        size="large"
+                        text="continue_with"
+                        shape="rectangular"
+                        theme="outline"
+                        width="100%"
+                      />
+                    </div>
                   </Field>
                 </>
               )}
