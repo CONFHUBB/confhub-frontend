@@ -70,7 +70,7 @@ export function LoginForm({
             document.cookie = `profileCompleted=true; path=/; max-age=${60 * 60 * 24 * 365}`
           }
         }
-      } catch {}
+      } catch { }
       toast.success(res.message || "Login successful!")
       router.push("/")
     } catch (err: any) {
@@ -104,7 +104,7 @@ export function LoginForm({
             }
           }
         }
-      } catch {}
+      } catch { }
       toast.success("Logged in with Google!")
       router.push("/")
     } catch (err: any) {
@@ -135,8 +135,8 @@ export function LoginForm({
                   type="email"
                   placeholder="m@example.com"
                   value={email}
-                  onChange={(e) => { setEmail(e.target.value); setErrors(p => { const n = {...p}; delete n.email; return n }) }}
-                  onBlur={() => { const err = validate(email, V.required, V.email); setErrors(p => err ? {...p, email: err} : (() => { const n = {...p}; delete n.email; return n })()) }}
+                  onChange={(e) => { setEmail(e.target.value); setErrors(p => { const n = { ...p }; delete n.email; return n }) }}
+                  onBlur={() => { const err = validate(email, V.required, V.email); setErrors(p => err ? { ...p, email: err } : (() => { const n = { ...p }; delete n.email; return n })()) }}
                 />
                 {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
               </Field>
@@ -153,8 +153,8 @@ export function LoginForm({
                 <PasswordInput
                   id="password"
                   value={password}
-                  onChange={(e) => { setPassword(e.target.value); setErrors(p => { const n = {...p}; delete n.password; return n }) }}
-                  onBlur={() => { const err = validate(password, V.required, (v) => V.minLen(v, 8)); setErrors(p => err ? {...p, password: err} : (() => { const n = {...p}; delete n.password; return n })()) }}
+                  onChange={(e) => { setPassword(e.target.value); setErrors(p => { const n = { ...p }; delete n.password; return n }) }}
+                  onBlur={() => { const err = validate(password, V.required, (v) => V.minLen(v, 8)); setErrors(p => err ? { ...p, password: err } : (() => { const n = { ...p }; delete n.password; return n })()) }}
                 />
                 {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
               </Field>
@@ -168,12 +168,11 @@ export function LoginForm({
                   <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
                     Or continue with
                   </FieldSeparator>
-                  <Field className="flex justify-center">
+                  <Field className="flex w-full justify-center">
                     <GoogleLogin
                       onSuccess={handleGoogleSuccess}
                       onError={() => toast.error("Google login failed.")}
                       size="large"
-                      width="100%"
                       text="continue_with"
                       shape="rectangular"
                       theme="outline"
