@@ -397,7 +397,7 @@ export function AppNavbar() {
                         {/* Primary links */}
                         {PRIMARY_NAV.map((link) => (
                             <Link
-                                key={link.path}
+                                key={link.name}
                                 href={link.path}
                                 className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${isPrimaryActive(link.path, link.exact)
                                     ? 'text-primary bg-primary/8'
