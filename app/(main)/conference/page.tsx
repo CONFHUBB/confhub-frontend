@@ -87,8 +87,15 @@ function ConferencesPageInner() {
         return [...new Set(conferences.map(c => c.area).filter(Boolean))].sort()
     }, [conferences])
 
+    // Admin/Staff: see all conferences including PENDING.
+    // Regular users: PENDING conferences are hidden from listing.
+    const visibleConferences = useMemo(() => {
+        if (isStaff) return conferences
+        return conferences.filter(c => c.status.toUpperCase() !== 'PENDING')
+    }, [conferences, isStaff])
+
     const filtered = useMemo(() => {
-        let list = filterConferences(conferences, filters)
+        let list = filterConferences(visibleConferences, filters)
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase()
             list = list.filter(c =>
@@ -99,7 +106,7 @@ function ConferencesPageInner() {
             )
         }
         return list
-    }, [conferences, filters, searchQuery])
+    }, [visibleConferences, filters, searchQuery])
 
     // Reset page when filters/search change
     React.useEffect(() => { setCurrentPage(0) }, [filters, searchQuery])
@@ -168,9 +175,9 @@ function ConferencesPageInner() {
                         <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 font-medium">
                             {pageSubtitle}
                         </p>
-                        {filtered.length !== conferences.length && (
+                        {filtered.length !== visibleConferences.length && (
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 border border-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-300 shadow-sm">
-                                Showing {filtered.length} of {conferences.length} matches
+                                Showing {filtered.length} of {visibleConferences.length} matches
                             </span>
                         )}
                     </div>
@@ -300,7 +307,7 @@ function ConferencesPageInner() {
                     {filtered.length === 0 ? (
                         <div className="text-center py-12">
                             <p className="text-muted-foreground text-lg">
-                                {conferences.length === 0 ? 'No conferences found' : 'No conferences match your filters'}
+                                {visibleConferences.length === 0 ? 'No conferences found' : 'No conferences match your filters'}
                             </p>
                             {conferences.length === 0 ? (
                                 <Link href="/conference/create">
