@@ -31,18 +31,10 @@ import { StandardPagination } from "@/components/ui/standard-pagination"
 import Link from "next/link"
 import { toast } from 'sonner'
 import { fmtDate } from '@/lib/utils'
+import { getConferenceStatus } from '@/lib/constants/status'
 
 // ── Status helpers ──────────────────────────────────────
-const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
-    active: { label: "Active", color: "bg-green-50 text-green-700 border-green-200", dot: "bg-green-500" },
-    upcoming: { label: "Upcoming", color: "bg-indigo-50 text-indigo-700 border-indigo-200", dot: "bg-indigo-500" },
-    completed: { label: "Completed", color: "bg-gray-100 text-gray-700 border-gray-200", dot: "bg-gray-400" },
-    draft: { label: "Draft", color: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" },
-}
-
-const getStatusInfo = (status: string) => {
-    return STATUS_CONFIG[status.toLowerCase()] ?? STATUS_CONFIG.draft
-}
+const getStatusInfo = (status: string) => getConferenceStatus(status)
 
 const PAGE_SIZE = 6
 
@@ -135,9 +127,9 @@ export default function ProgramConferencesPage() {
     // ── Stats ───────────────────────────────────────────
     const stats = useMemo(() => ({
         total: conferences.length,
-        active: conferences.filter(c => c.status?.toLowerCase() === 'active').length,
-        upcoming: conferences.filter(c => c.status?.toLowerCase() === 'upcoming').length,
-        completed: conferences.filter(c => c.status?.toLowerCase() === 'completed').length,
+        active: conferences.filter(c => c.status?.toLowerCase() === 'open').length,
+        upcoming: conferences.filter(c => ['pending_approval', 'setup'].includes(c.status?.toLowerCase() || '')).length,
+        completed: conferences.filter(c => ['completed', 'cancelled'].includes(c.status?.toLowerCase() || '')).length,
     }), [conferences])
 
     const formatDate = (dateString: string) => fmtDate(dateString)
@@ -230,10 +222,11 @@ export default function ProgramConferencesPage() {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="upcoming">Upcoming</SelectItem>
+                        <SelectItem value="pending_approval">Pending Approval</SelectItem>
+                        <SelectItem value="setup">Setup</SelectItem>
+                        <SelectItem value="open">Open</SelectItem>
                         <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
                     </SelectContent>
                 </Select>
 
@@ -279,7 +272,7 @@ export default function ProgramConferencesPage() {
                             </thead>
                             <tbody className="divide-y">
                                 {pagedConferences.map((conf, idx) => {
-                                    const statusInfo = getStatusInfo(conf.status)
+                                    const statusInfo = getStatusInfo(conf.status || 'PENDING_APPROVAL')
                                     return (
                                         <tr key={conf.id} className="transition-colors hover:bg-indigo-50/30">
                                             <td className="px-5 py-4 text-xs text-muted-foreground font-medium">
@@ -304,17 +297,22 @@ export default function ProgramConferencesPage() {
                                                 </div>
                                             </td>
                                             <td className="px-5 py-4">
-                                                <Badge variant="outline" className={`text-[10px] font-semibold ${statusInfo.color}`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${statusInfo.dot} mr-1.5`} />
+                                                <Badge variant="outline" className={`text-[10px] font-semibold ${statusInfo.bg} ${statusInfo.text} ${statusInfo.border}`}>
                                                     {statusInfo.label}
                                                 </Badge>
                                             </td>
                                             <td className="px-5 py-4 text-right">
-                                                <Link href={`/conference/${conf.id}/update`}>
-                                                    <Button size="sm" className="gap-1.5 h-8 text-[11px] font-semibold tracking-wide bg-indigo-600 hover:bg-indigo-700 text-white border-0 shrink-0">
-                                                        Open Workspace <ArrowRight className="h-3.5 w-3.5" />
+                                                {conf.status === 'CANCELLED' ? (
+                                                    <Button disabled size="sm" variant="secondary" className="h-8 text-[11px] font-semibold tracking-wide shrink-0">
+                                                        Cancelled
                                                     </Button>
-                                                </Link>
+                                                ) : (
+                                                    <Link href={`/conference/${conf.id}/update`}>
+                                                        <Button size="sm" className="gap-1.5 h-8 text-[11px] font-semibold tracking-wide bg-indigo-600 hover:bg-indigo-700 text-white border-0 shrink-0">
+                                                            Open Workspace <ArrowRight className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </Link>
+                                                )}
                                             </td>
                                         </tr>
                                     )

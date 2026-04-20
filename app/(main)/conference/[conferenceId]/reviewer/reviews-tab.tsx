@@ -13,7 +13,6 @@ import { FilterPanel } from '@/components/ui/filter-panel'
 import { TableSkeleton } from '@/components/ui/table-skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { PlagiarismBadge } from '@/components/plagiarism-badge'
 import { toast } from 'sonner'
 import { reviewStatusClass } from '@/lib/constants/status'
 
@@ -137,7 +136,6 @@ export function ReviewsTab({ reviews, conferenceId, loading = false }: ReviewsTa
                                 <TableHead>Paper Title</TableHead>
                                 <TableHead className="w-32">Status</TableHead>
                                 <TableHead className="w-24 text-center">Score</TableHead>
-                                <TableHead className="w-32 text-center">Plagiarism</TableHead>
                                 <TableHead className="w-28 text-right">Action</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -156,9 +154,6 @@ export function ReviewsTab({ reviews, conferenceId, loading = false }: ReviewsTa
                                         </TableCell>
                                         <TableCell className="text-center font-mono">
                                             {review.totalScore != null ? review.totalScore : '—'}
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            <PlagiarismBadge paperId={review.paper?.id!} score={review.paper?.plagiarismScore} status={review.paper?.plagiarismStatus} />
                                         </TableCell>
                                         <TableCell className="text-right" onClick={e => e.stopPropagation()}>
                                             {review.status !== 'DECLINED' && (

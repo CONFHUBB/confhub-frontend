@@ -26,6 +26,7 @@ import { getConferenceActivities } from '@/app/api/conference.api'
 import type { ConferenceActivityDTO } from '@/types/conference'
 import { isActivityOpen } from '@/lib/activity'
 import { getUserByEmail } from '@/app/api/user.api'
+import { signup } from '@/app/api/account.api'
 import { FormRenderer } from '@/app/(main)/conference/[conferenceId]/submission-form/form-renderer'
 import { getPlagiarismResult, recheckPlagiarism, resetPlagiarism, type PlagiarismResult } from '@/app/api/plagiarism.api'
 import { PlagiarismBadge } from '@/components/plagiarism-badge'
@@ -109,6 +110,9 @@ function StepAddAuthors({
     const [loadingAuthors, setLoadingAuthors] = useState(true)
     const [searchEmail, setSearchEmail] = useState('')
     const [addingAuthor, setAddingAuthor] = useState(false)
+    const [authorNotFound, setAuthorNotFound] = useState(false)
+    const [newAuthorFirstName, setNewAuthorFirstName] = useState('')
+    const [newAuthorLastName, setNewAuthorLastName] = useState('')
 
     const fetchAuthors = useCallback(async () => {
         try {
@@ -133,19 +137,66 @@ function StepAddAuthors({
         }
         try {
             setAddingAuthor(true)
-            const user = await getUserByEmail(searchEmail.trim())
-            if (!user || !user.id) {
-                toast.error('User not found with that email')
-                return
+            
+            let user = null;
+            try {
+                user = await getUserByEmail(searchEmail.trim())
+            } catch (err) {
+                // Not found
             }
+            
+            if (!user || !user.id) {
+                if (!authorNotFound) {
+                    setAuthorNotFound(true)
+                    toast.info('Author not found in the system. Please provide their name.')
+                    setAddingAuthor(false)
+                    return
+                } else {
+                    if (!newAuthorFirstName.trim() || !newAuthorLastName.trim()) {
+                        toast.error('Please provide both first and last name')
+                        setAddingAuthor(false)
+                        return
+                    }
+                    
+                    const randomPassword = Array(16).fill('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*').map(x => x[Math.floor(Math.random() * x.length)]).join('')
+                    
+                    const signupBody = {
+                        firstName: newAuthorFirstName.trim(),
+                        lastName: newAuthorLastName.trim(),
+                        email: searchEmail.trim(),
+                        password: randomPassword,
+                        roles: ['AUTHOR'], // AUTHOR role is standard
+                        phoneNumber: '',
+                        country: ''
+                    }
+                    
+                    try {
+                        await signup(signupBody)
+                        user = await getUserByEmail(searchEmail.trim())
+                    } catch (err: any) {
+                        toast.error('Failed to register author placeholder: ' + (err.response?.data?.message || err.message))
+                        setAddingAuthor(false)
+                        return
+                    }
+                }
+            }
+
             // Check if already added
             if (authors.some((a) => a.user.id === user.id)) {
                 toast.error('This author is already added')
+                setAuthorNotFound(false)
+                setNewAuthorFirstName('')
+                setNewAuthorLastName('')
+                setSearchEmail('')
+                setAddingAuthor(false)
                 return
             }
             await assignAuthorToPaper(paperId, user.id)
             toast.success('Author added successfully!')
             setSearchEmail('')
+            setAuthorNotFound(false)
+            setNewAuthorFirstName('')
+            setNewAuthorLastName('')
             fetchAuthors()
         } catch (err: any) {
             toast.error(err.response?.data?.message || 'Failed to add author')
@@ -211,21 +262,57 @@ function StepAddAuthors({
                     )}
 
                     {/* Add Author */}
-                    <div className="mt-4 flex gap-3">
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                className="pl-10"
-                                placeholder="Enter author email address..."
-                                value={searchEmail}
-                                onChange={(e) => setSearchEmail(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleAddAuthor()}
-                            />
+                    <div className="mt-4 flex flex-col gap-3">
+                        <div className="flex gap-3">
+                            <div className="flex-1 relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    className="pl-10"
+                                    placeholder="Enter author email address..."
+                                    value={searchEmail}
+                                    disabled={authorNotFound}
+                                    onChange={(e) => setSearchEmail(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddAuthor()}
+                                />
+                            </div>
+                            <Button onClick={handleAddAuthor} disabled={addingAuthor} className="gap-2 shrink-0">
+                                {addingAuthor ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+                                {authorNotFound ? 'Save New Author' : 'Add Author'}
+                            </Button>
                         </div>
-                        <Button onClick={handleAddAuthor} disabled={addingAuthor} className="gap-2 shrink-0">
-                            {addingAuthor ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
-                            Add Author
-                        </Button>
+
+                        {authorNotFound && (
+                            <div className="p-4 border rounded-lg bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800 space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                                <p className="text-sm font-medium text-indigo-800 dark:text-indigo-300">
+                                    This user does not have an account in the system yet. You can create a placeholder for them. 
+                                    When they register using this email, their profile will be automatically linked!
+                                </p>
+                                <div className="flex gap-3">
+                                    <div className="flex-1 space-y-1">
+                                        <Label className="text-xs">First Name *</Label>
+                                        <Input 
+                                            placeholder="First name" 
+                                            value={newAuthorFirstName} 
+                                            onChange={(e) => setNewAuthorFirstName(e.target.value)} 
+                                            autoFocus
+                                            onKeyDown={(e) => e.key === 'Enter' && handleAddAuthor()}
+                                        />
+                                    </div>
+                                    <div className="flex-1 space-y-1">
+                                        <Label className="text-xs">Last Name *</Label>
+                                        <Input 
+                                            placeholder="Last name" 
+                                            value={newAuthorLastName} 
+                                            onChange={(e) => setNewAuthorLastName(e.target.value)} 
+                                            onKeyDown={(e) => e.key === 'Enter' && handleAddAuthor()}
+                                        />
+                                    </div>
+                                </div>
+                                <Button variant="ghost" size="sm" className="text-muted-foreground w-full bg-white dark:bg-black/20 hover:bg-muted border" onClick={() => setAuthorNotFound(false)}>
+                                    Cancel
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </CardContent>
             </Card>

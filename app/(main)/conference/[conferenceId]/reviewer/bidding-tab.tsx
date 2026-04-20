@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { getPapersForBidding, submitBid, deleteBid, getBidsByReviewerAndConference } from '@/app/api/bidding.api'
 import { getInterestsByReviewer } from '@/app/api/reviewer-interest.api'
 import { getConferenceActivities } from '@/app/api/conference.api'
+import { getTracksByConference, getSubjectAreasByTrack } from '@/app/api/track.api'
 import type { PaperForBidding, BidValue } from '@/types/bidding'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -47,6 +48,7 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged, bidCounts:
     const [editingBidPaperId, setEditingBidPaperId] = useState<number | null>(null)
     const [bidIdMap, setBidIdMap] = useState<Record<number, number>>({})
     const [activityClosed, setActivityClosed] = useState<string | null>(null)
+    const [biddingNotOpen, setBiddingNotOpen] = useState(false)
     const [currentPage, setCurrentPage] = useState(0)
     const PAGE_SIZE = 15
 
@@ -55,20 +57,29 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged, bidCounts:
             setLoading(true)
             setNeedsSubjectAreas(false)
             setActivityClosed(null)
+            setBiddingNotOpen(false)
 
             try {
                 const activities = await getConferenceActivities(conferenceId)
                 const biddingActivity = activities.find(a => a.activityType === 'REVIEWER_BIDDING')
-                if (biddingActivity) {
-                    if (!biddingActivity.isEnabled) { setActivityClosed('Reviewer bidding is currently disabled.') }
-                    else if (biddingActivity.deadline && new Date(biddingActivity.deadline) < new Date()) {
-                        setActivityClosed(`Bidding deadline has passed (${new Date(biddingActivity.deadline).toLocaleString()}).`)
-                    }
+                if (!biddingActivity || !biddingActivity.isEnabled) {
+                    setBiddingNotOpen(true)
+                    setLoading(false)
+                    return
+                } else if (biddingActivity.deadline && new Date(biddingActivity.deadline) < new Date()) {
+                    setActivityClosed(`Bidding deadline has passed (${new Date(biddingActivity.deadline).toLocaleString()}).`)
                 }
             } catch { /* ignore */ }
 
             const interests = await getInterestsByReviewer(reviewerId).catch(() => [])
-            if (!interests || interests.length === 0) { setNeedsSubjectAreas(true); setLoading(false); return }
+            let hasValidInterests = false
+            if (interests && interests.length > 0) {
+                const tracksData = await getTracksByConference(conferenceId).catch(() => [])
+                const areasArrays = await Promise.all(tracksData.map((t: any) => getSubjectAreasByTrack(t.id).catch(() => [])))
+                const conferenceAreaIds = new Set(areasArrays.flat().map((a: any) => a.id))
+                hasValidInterests = interests.some((i: any) => conferenceAreaIds.has(i.subjectAreaId))
+            }
+            if (!hasValidInterests) { setNeedsSubjectAreas(true); setLoading(false); return }
 
             const [papersData, bidsData] = await Promise.all([
                 getPapersForBidding(reviewerId, conferenceId),
@@ -190,6 +201,18 @@ export function BiddingTab({ conferenceId, reviewerId, onDataChanged, bidCounts:
     }
 
     if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+
+    if (biddingNotOpen) return (
+        <Card className="border-gray-200 bg-gray-50 mt-4">
+            <CardContent className="p-8 text-center space-y-4">
+                <div className="mx-auto w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center"><Lock className="h-8 w-8 text-gray-500" /></div>
+                <h2 className="text-xl font-bold text-gray-700">Bidding Not Open</h2>
+                <p className="text-gray-500 max-w-md mx-auto">
+                    The paper bidding phase has not started yet. Papers will be available here once the conference Chair opens the bidding activity.
+                </p>
+            </CardContent>
+        </Card>
+    )
 
     if (needsSubjectAreas) return (
         <Card className="border-amber-200 bg-amber-50">

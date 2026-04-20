@@ -8,6 +8,7 @@ import { getReviewsByReviewerAndConference } from '@/app/api/review.api'
 import { getUserProfile, createOrUpdateUserProfile } from '@/app/api/user.api'
 import { getInterestsByReviewer } from '@/app/api/reviewer-interest.api'
 import { getBidsSummary } from '@/app/api/bidding.api'
+import { getTracksByConference, getSubjectAreasByTrack } from '@/app/api/track.api'
 import type { ConferenceResponse, ConferenceActivityDTO } from '@/types/conference'
 
 import type { ReviewResponse } from '@/types/review'
@@ -161,25 +162,34 @@ export default function ReviewerConsole() {
             setConference(conf)
             setActivities(activitiesData)
 
-            const [profileData, reviewsData, interests] = await Promise.all([
+            const [profileData, reviewsData, interests, tracksData] = await Promise.all([
                 getUserProfile(reviewerId).catch(() => null),
                 getReviewsByReviewerAndConference(reviewerId, conferenceId).catch(() => []),
                 getInterestsByReviewer(reviewerId).catch(() => []),
+                getTracksByConference(conferenceId).catch(() => []),
             ])
 
             setProfile(profileData)
             const reviewList = Array.isArray(reviewsData) ? reviewsData : (reviewsData as any)?.content || []
             setReviews(reviewList)
-            setInterestsCount(Array.isArray(interests) ? interests.length : 0)
+
+            let validInterestsCount = 0
+            if (Array.isArray(interests) && interests.length > 0 && Array.isArray(tracksData)) {
+                const areasArrays = await Promise.all(tracksData.map((t: any) => getSubjectAreasByTrack(t.id).catch(() => [])))
+                const conferenceAreaIds = new Set(areasArrays.flat().map((a: any) => a.id))
+                validInterestsCount = interests.filter((i: any) => conferenceAreaIds.has(i.subjectAreaId)).length
+            }
+            setInterestsCount(validInterestsCount)
 
             // Fetch user conflicts
             const conflicts = await getUserConflicts(reviewerId).catch(() => [])
             setUserConflicts(conflicts)
 
             // Compute workflow status
-            const profileComplete = !!(profileData && profileData.institution) && (Array.isArray(interests) && interests.length > 0)
+            const profileComplete = !!(profileData && profileData.institution) && (validInterestsCount > 0)
             // Fetch bid summary to initialize bidding-done status
-            let biddingDone = false
+            const isReviewOpen = activitiesData.some((a: ConferenceActivityDTO) => a.activityType === 'REVIEW_SUBMISSION' && a.isEnabled)
+            let biddingDone = reviewList.length > 0 || isReviewOpen
             try {
                 const bidsSummary = await getBidsSummary(reviewerId, conferenceId)
                 if (bidsSummary && bidsSummary.totalBids > 0) {
@@ -210,7 +220,7 @@ export default function ReviewerConsole() {
     const handleBidCountsChanged = useCallback((counts: Record<string, number>) => {
         setBidCounts(counts)
         const totalBids = Object.values(counts).reduce((sum, c) => sum + c, 0)
-        setWorkflowStatus(prev => ({ ...prev, 'bidding-done': totalBids > 0 }))
+        setWorkflowStatus(prev => ({ ...prev, 'bidding-done': prev['bidding-done'] || totalBids > 0 }))
     }, [])
 
     // Step access logic
@@ -237,6 +247,11 @@ export default function ReviewerConsole() {
             else if (allPreviousDone) map[step.key] = 'active'
             else map[step.key] = 'locked'
         }
+        
+        // Override: User requested to always have access to reviews tab
+        if (map['reviews'] === 'locked') map['reviews'] = 'active'
+        if (map['discussion'] === 'locked') map['discussion'] = 'active'
+
         return map
     }, [allOrderedSteps, workflowStatus])
 
@@ -262,6 +277,26 @@ export default function ReviewerConsole() {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        )
+    }
+
+    if (conference?.status === 'CANCELLED') {
+        return (
+            <div className="flex flex-col items-center justify-center min-vh-[400px] gap-4 my-20">
+                <div className="bg-rose-100 p-5 rounded-full mb-2">
+                    <Shield className="h-12 w-12 text-rose-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-800">Conference Cancelled</h2>
+                <p className="text-muted-foreground text-center max-w-md">
+                    This conference has been cancelled. Review operations are permanently locked.
+                </p>
+                <Link href={`/conference/reviewer-console`}>
+                    <Button variant="outline" className="mt-4 gap-2">
+                        <ArrowLeft className="h-4 w-4" />
+                        Return to My Reviews
+                    </Button>
+                </Link>
             </div>
         )
     }
@@ -462,12 +497,14 @@ export default function ReviewerConsole() {
                                                                                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                                                                     }`}
                                                                 >
-                                                                    {isLocked ? (
-                                                                        <Lock className="h-3.5 w-3.5" />
-                                                                    ) : isCompleted ? (
-                                                                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                                                                    ) : (
-                                                                        <Circle className="h-3.5 w-3.5" />
+                                                                    {item.key !== 'dashboard' && (
+                                                                        isLocked ? (
+                                                                            <Lock className="h-3.5 w-3.5" />
+                                                                        ) : isCompleted ? (
+                                                                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                                                                        ) : (
+                                                                            <Circle className="h-3.5 w-3.5" />
+                                                                        )
                                                                     )}
                                                                     <span>{item.label}</span>
                                                                 </button>
@@ -565,6 +602,7 @@ function ReviewerPhaseStatusCard({
 
     let activePhaseIdx = 0
     if (!isProfileDone) activePhaseIdx = 0
+    else if (!isBiddingOpen && !hasAssignments && !isReviewOpen) activePhaseIdx = 0 
     else if (!hasAssignments && !isReviewOpen) activePhaseIdx = 1 
     else if (hasAssignments && !isReviewsDone) activePhaseIdx = 2 
     else if (isDiscussionOpen) activePhaseIdx = 3

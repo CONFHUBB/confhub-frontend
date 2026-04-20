@@ -628,6 +628,26 @@ export default function ConferenceUpdatePage() {
         )
     }
 
+    if (conference.status === 'CANCELLED') {
+        return (
+            <div className="flex flex-col items-center justify-center min-vh-[400px] gap-4 my-20">
+                <div className="bg-rose-100 p-5 rounded-full mb-2">
+                    <Shield className="h-12 w-12 text-rose-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-800">Conference Cancelled</h2>
+                <p className="text-muted-foreground text-center max-w-md">
+                    This conference has been cancelled. All workspace operations and configurations are permanently locked.
+                </p>
+                <Link href={`/conference/my-conference`}>
+                    <Button variant="outline" className="mt-4 gap-2">
+                        <ArrowLeft className="h-4 w-4" />
+                        Return to My Conferences
+                    </Button>
+                </Link>
+            </div>
+        )
+    }
+
     const renderTabContent = () => {
         if (!conference) return null
         const viewOnly = isViewOnly(activeTab)
