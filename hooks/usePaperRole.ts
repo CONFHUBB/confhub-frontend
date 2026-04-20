@@ -72,7 +72,7 @@ export function usePaperRole(
     }, [userId, authors])
 
     const paperStatus = paper?.status as PaperStatus | undefined
-    const isAccepted = paperStatus === 'ACCEPTED' || paperStatus === 'CAMERA_READY'
+    const isAccepted = paperStatus === 'ACCEPTED' || paperStatus === 'AWAITING_REGISTRATION' || paperStatus === 'REGISTERED' || paperStatus === 'AWAITING_CAMERA_READY' || paperStatus === 'CAMERA_READY_SUBMITTED' || paperStatus === 'PUBLISHED'
     const isDecided = paperStatus === 'ACCEPTED' || paperStatus === 'REJECTED'
 
     // ── Permissions (strict role-based) ──

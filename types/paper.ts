@@ -1,12 +1,16 @@
 export type PaperStatus =
-    | "DRAFT"
     | "SUBMITTED"
     | "UNDER_REVIEW"
+    | "AWAITING_DECISION"
     | "ACCEPTED"
     | "REJECTED"
-    | "WITHDRAWN"
-    | "CAMERA_READY"
+    | "AWAITING_REGISTRATION"
+    | "REGISTERED"
+    | "AWAITING_CAMERA_READY"
+    | "CAMERA_READY_SUBMITTED"
+    | "CAMERA_READY_REJECTED"
     | "PUBLISHED"
+    | "WITHDRAWN"
 
 export interface PaperResponse {
     id: number

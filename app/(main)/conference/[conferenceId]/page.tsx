@@ -220,7 +220,7 @@ export default function ConferenceDetailsPage() {
                         <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold backdrop-blur-sm border ${
                             conference.status?.toUpperCase() === 'ACTIVE' || conference.status?.toUpperCase() === 'APPROVED'
                                 ? 'bg-emerald-500/25 text-emerald-100 border-emerald-400/40'
-                                : conference.status?.toUpperCase() === 'PENDING'
+                                : conference.status?.toUpperCase() === 'PENDING_APPROVAL'
                                     ? 'bg-amber-500/25 text-amber-100 border-amber-400/40'
                                     : 'bg-white/15 text-white/80 border-white/25'
                         }`}>
