@@ -135,10 +135,8 @@ export const withdrawPaper = async (paperId: number): Promise<PaperResponse> => 
     return response.data
 }
 
-export const restorePaper = async (paperId: number): Promise<PaperResponse> => {
-    const response = await http.put<PaperResponse>(`/paper/${paperId}/restore`)
-    return response.data
-}
+
+// WITHDRAWN is terminal — restorePaper removed
 
 export const getPapersByConference = async (
     conferenceId: number,

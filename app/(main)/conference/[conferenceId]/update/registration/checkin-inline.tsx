@@ -76,9 +76,9 @@ export function CheckInInline({ conferenceId, checkInHistory, onCheckInSuccess }
       </form>
 
       {result && (
-        <div className={`rounded-xl border p-5 ${result.isCheckedIn ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+        <div className={`rounded-xl border p-5 ${result.isCheckedIn || (result as any).checkedIn ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
           <div className="flex items-center gap-3">
-            {result.isCheckedIn
+            {result.isCheckedIn || (result as any).checkedIn
               ? <CheckCircle2 className="w-8 h-8 text-green-600 flex-shrink-0" />
               : <AlertCircle className="w-8 h-8 text-yellow-600 flex-shrink-0" />
             }
@@ -88,7 +88,7 @@ export function CheckInInline({ conferenceId, checkInHistory, onCheckInSuccess }
               <p className="text-xs font-mono text-gray-400 mt-0.5">{result.registrationNumber}</p>
             </div>
           </div>
-          <p className={`mt-3 text-sm font-semibold ${result.isCheckedIn ? 'text-green-700' : 'text-yellow-700'}`}>
+          <p className={`mt-3 text-sm font-semibold ${result.isCheckedIn || (result as any).checkedIn ? 'text-green-700' : 'text-yellow-700'}`}>
             {result.message}
           </p>
         </div>
@@ -111,8 +111,8 @@ export function CheckInInline({ conferenceId, checkInHistory, onCheckInSuccess }
                   <p className="font-medium text-gray-900">{h.response.attendeeName}</p>
                   <p className="text-xs text-gray-400 font-mono">{h.response.registrationNumber}</p>
                 </div>
-                <Badge className={h.response.isCheckedIn ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
-                  {h.response.isCheckedIn ? '✓ Checked In' : 'Issue'}
+                <Badge className={h.response.isCheckedIn || (h.response as any).checkedIn ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
+                  {h.response.isCheckedIn || (h.response as any).checkedIn ? '✓ Checked In' : 'Issue'}
                 </Badge>
               </div>
             ))}

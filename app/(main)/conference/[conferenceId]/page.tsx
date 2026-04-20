@@ -7,6 +7,7 @@ import { getConference, getConferenceActivities, getConferences } from '@/app/ap
 import { getTracksByConference } from '@/app/api/track.api'
 import { getPapersByConference } from '@/app/api/paper.api'
 import { getUserRoleAssignments, acceptInvitation, declineInvitation } from '@/app/api/conference-user-track.api'
+import { getMyTicket } from '@/app/api/registration.api'
 import { toast } from 'sonner'
 import type { ConferenceActivityDTO, ConferenceResponse, ConferenceListResponse, TrackResponse } from '@/types/conference'
 import { Card, CardContent } from '@/components/ui/card'
@@ -62,12 +63,10 @@ export default function ConferenceDetailsPage() {
 
                 if (userId) {
                     try {
-                        const ticketRes = await http.get(`/registration/my-tickets`)
-                        const myTickets = ticketRes.data as any[]
-                        const conferenceTicket = myTickets?.find((t: any) => t.conferenceId === conferenceId)
-                        if (conferenceTicket) {
+                        const ticket = await getMyTicket(conferenceId, userId)
+                        if (ticket) {
                             setHasTicket(true)
-                            if (conferenceTicket.isCheckedIn) setIsCheckedIn(true)
+                            if (ticket.isCheckedIn || (ticket as any).checkedIn) setIsCheckedIn(true)
                         }
                     } catch {}
                 }
@@ -221,7 +220,7 @@ export default function ConferenceDetailsPage() {
                         <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold backdrop-blur-sm border ${
                             conference.status?.toUpperCase() === 'ACTIVE' || conference.status?.toUpperCase() === 'APPROVED'
                                 ? 'bg-emerald-500/25 text-emerald-100 border-emerald-400/40'
-                                : conference.status?.toUpperCase() === 'PENDING'
+                                : conference.status?.toUpperCase() === 'PENDING_APPROVAL'
                                     ? 'bg-amber-500/25 text-amber-100 border-amber-400/40'
                                     : 'bg-white/15 text-white/80 border-white/25'
                         }`}>

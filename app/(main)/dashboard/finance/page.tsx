@@ -207,7 +207,7 @@ export default function FinancePage() {
     const chartData = groupByMonth(payments)
 
     return (
-        <div className="flex flex-col gap-6 pb-8">
+        <div className="flex flex-col gap-6 pb-8 min-w-0 overflow-hidden">
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Finance</h1>
                 <p className="text-muted-foreground text-sm mt-0.5">
@@ -261,13 +261,13 @@ export default function FinancePage() {
                     </CardTitle>
                     <CardDescription>VNPay payment outcomes aggregated by month</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0 min-w-0 overflow-x-auto">
                     {isLoading ? (
                         <div className="h-52 flex items-center justify-center text-muted-foreground text-sm">
                             Loading chart…
                         </div>
                     ) : (
-                        <ChartContainer config={revenueChartConfig} className="h-52 w-full">
+                        <ChartContainer config={revenueChartConfig} className="h-52 w-full min-w-[500px]">
                             <AreaChart data={chartData} margin={{ top: 4, right: 16, left: -8, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorPaid" x1="0" y1="0" x2="0" y2="1">
@@ -336,7 +336,7 @@ export default function FinancePage() {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="p-0 px-4 pb-4">
+                <CardContent className="p-0 min-w-0 overflow-x-auto">
                     {isLoading ? (
                         <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
                             Loading payments…

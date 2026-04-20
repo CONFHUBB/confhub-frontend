@@ -185,7 +185,7 @@ function MyTicketContent() {
               <p className="text-gray-400 uppercase text-xs font-semibold">Registered On</p>
               <p className="font-medium text-gray-800 mt-0.5">{formatDate(ticket.createdAt)}</p>
             </div>
-            {ticket.isCheckedIn && (
+            {(ticket.isCheckedIn || (ticket as any).checkedIn) && (
               <div className="col-span-2">
                 <p className="text-gray-400 uppercase text-xs font-semibold">Checked In</p>
                 <p className="font-medium text-green-700 mt-0.5 flex items-center gap-1">
@@ -273,7 +273,7 @@ function MyTicketContent() {
           {[
             { label: 'Acceptance Letter', type: 'acceptance', id: ticket.paperId, disabled: !ticket.paperId },
             { label: 'Invoice', type: 'invoice', id: ticket.id, disabled: false },
-            { label: 'Certificate', type: 'certificate', id: ticket.id, disabled: !ticket.isCheckedIn },
+            { label: 'Certificate', type: 'certificate', id: ticket.id, disabled: !(ticket.isCheckedIn || (ticket as any).checkedIn) },
           ].map((doc) => (
             <button
               key={doc.label}

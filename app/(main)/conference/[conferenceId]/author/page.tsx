@@ -196,8 +196,8 @@ export default function AuthorDashboardPage() {
                                         </span>
                                     )}
                                     <span className={`text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
-                                        conference?.status === 'ONGOING' ? 'bg-emerald-400/20 text-emerald-200' :
-                                        conference?.status === 'SCHEDULED' ? 'bg-blue-400/20 text-blue-200' :
+                                        conference?.status === 'OPEN' ? 'bg-emerald-400/20 text-emerald-200' :
+                                        conference?.status === 'SETUP' ? 'bg-blue-400/20 text-blue-200' :
                                         conference?.status === 'COMPLETED' ? 'bg-gray-400/20 text-gray-300' :
                                         'bg-amber-400/20 text-amber-200'
                                     }`}>
@@ -307,7 +307,7 @@ function OverviewTab({ papers, tickets, conferenceId, reviewData, onNavigate }: 
     reviewData: Record<number, ReviewAggregate | null>; onNavigate: (t: AuthorTab) => void
 }) {
     const ticket = tickets.find(t => t.conferenceId === conferenceId) || null
-    const accepted = papers.filter(p => ['ACCEPTED', 'PUBLISHED', 'CAMERA_READY'].includes(p.status)).length
+    const accepted = papers.filter(p => ['ACCEPTED', 'AWAITING_REGISTRATION', 'REGISTERED', 'AWAITING_CAMERA_READY', 'CAMERA_READY_SUBMITTED', 'CAMERA_READY_REJECTED', 'PUBLISHED'].includes(p.status)).length
     const underReview = papers.filter(p => p.status === 'UNDER_REVIEW').length
     const scores = Object.values(reviewData).filter(r => r && r.averageTotalScore).map(r => r!.averageTotalScore)
     const avgScore = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : '—'
@@ -608,7 +608,7 @@ function MyPapersTab({ papers, reviewData, metaReviews, conferenceId }: {
                                                         <DropdownMenuItem onClick={() => router.push(`/paper/${paper.id}`)}>
                                                             <ExternalLink className="h-3.5 w-3.5 mr-2" /> View Details
                                                         </DropdownMenuItem>
-                                                        {(paper.status === 'ACCEPTED' || paper.status === 'CAMERA_READY') && (
+                                                        {(['AWAITING_CAMERA_READY', 'CAMERA_READY_REJECTED'].includes(paper.status)) && (
                                                             <>
                                                                 <DropdownMenuSeparator />
                                                                 <DropdownMenuItem onClick={() => router.push(`/conference/${conferenceId}/author?tab=camera-ready`)}>

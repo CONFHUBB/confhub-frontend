@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { assignAuthorToPaper, getAuthorsByPaper, deleteAuthorFromPaper, getPaperById, getPaperFilesByPaperId, updatePaper, updatePaperFile, withdrawPaper, restorePaper, deletePaperFile, uploadSupplementaryFile, setActiveFile } from '@/app/api/paper.api'
+import { assignAuthorToPaper, getAuthorsByPaper, deleteAuthorFromPaper, getPaperById, getPaperFilesByPaperId, updatePaper, updatePaperFile, withdrawPaper, deletePaperFile, uploadSupplementaryFile, setActiveFile } from '@/app/api/paper.api'
 import type { PaperAuthorItem } from '@/app/api/paper.api'
 import { getUsers } from '@/app/api/user.api'
 import { getCurrentUserId } from '@/lib/auth'
@@ -124,7 +124,7 @@ export default function PaperWorkspacePage() {
 
                 await fetchFiles()
 
-                if (!['DRAFT', 'SUBMITTED', 'WITHDRAWN'].includes(data.status)) {
+                if (!['SUBMITTED', 'WITHDRAWN'].includes(data.status)) {
                     try { setAggregate(await getAggregateByPaper(paperId)) } catch { /* ignore */ }
                     try { setMetaReview(await getMetaReviewByPaper(paperId)) } catch { /* ignore */ }
                     try { 
@@ -190,16 +190,7 @@ export default function PaperWorkspacePage() {
         } finally { setWithdrawing(false) }
     }
 
-    const handleRestore = async () => {
-        try {
-            setWithdrawing(true)
-            const updated = await restorePaper(paperId)
-            setPaper(updated)
-            toast.success('Paper restored successfully')
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to restore paper')
-        } finally { setWithdrawing(false) }
-    }
+
 
     const handleUploadFile = async () => {
         if (!selectedFile) { toast.error('Please select a file to upload'); return }
@@ -317,9 +308,9 @@ export default function PaperWorkspacePage() {
     )
 
     const isEditable = isPaperSubmissionOpen && isAuthor
-    const showReviews = ['ACCEPTED', 'REJECTED', 'CAMERA_READY', 'PUBLISHED'].includes(paper.status) || aggregate?.reviewCount! > 0
-    const showCameraReadyUpload = isAuthor && ['ACCEPTED'].includes(paper.status) && isCameraReadyOpen
-    const canWithdraw = isAuthor && ['SUBMITTED', 'UNDER_REVIEW'].includes(paper.status)
+    const showReviews = ['AWAITING_DECISION', 'ACCEPTED', 'REJECTED', 'AWAITING_REGISTRATION', 'REGISTERED', 'AWAITING_CAMERA_READY', 'CAMERA_READY_SUBMITTED', 'CAMERA_READY_REJECTED', 'PUBLISHED'].includes(paper.status) || aggregate?.reviewCount! > 0
+    const showCameraReadyUpload = isAuthor && ['AWAITING_CAMERA_READY', 'CAMERA_READY_REJECTED'].includes(paper.status) && isCameraReadyOpen
+    const canWithdraw = isAuthor && ['SUBMITTED', 'UNDER_REVIEW', 'ACCEPTED'].includes(paper.status)
     const decision = metaReview?.finalDecision ? DECISION_CONFIG[metaReview.finalDecision as keyof typeof DECISION_CONFIG] : null
 
     // ── Separate Files ──
@@ -1036,14 +1027,7 @@ export default function PaperWorkspacePage() {
                                 </>
                             )}
                             
-                            {paper.status === 'WITHDRAWN' && (
-                                <>
-                                  <div className="my-2 border-t border-slate-100" />
-                                  <Button variant="ghost" className="w-full justify-start gap-3 h-10 text-gray-700" onClick={handleRestore} disabled={withdrawing}>
-                                      {withdrawing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />} Restore Submission
-                                  </Button>
-                                </>
-                            )}
+                            {/* WITHDRAWN is terminal — no restore */}
 
                         </CardContent>
                     </Card>

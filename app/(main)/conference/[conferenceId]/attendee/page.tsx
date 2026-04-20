@@ -249,7 +249,7 @@ export default function AttendeeWorkspacePage() {
                                             </div>
                                             <div className="flex justify-between">
                                                 <span className="text-sm text-gray-500">Check-in</span>
-                                                {ticket.isCheckedIn ? (
+                                                {ticket.isCheckedIn || (ticket as any).checkedIn ? (
                                                     <Badge className="bg-green-100 text-green-700 border-green-200">Checked In ✓</Badge>
                                                 ) : (
                                                     <Badge className="bg-gray-100 text-gray-500">Not Yet</Badge>

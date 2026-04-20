@@ -77,7 +77,7 @@ export default function AttendeesManagement({ conferenceId, refreshKey = 0 }: Pr
       // Compute stats from full unfiltered fetch for the summary cards on first load
       if (currentPage === 0 && !debouncedSearch && statusFilter === 'ALL') {
         const paid = result.content.filter((a) => a.paymentStatus === 'COMPLETED').length
-        const checkedIn = result.content.filter((a) => a.isCheckedIn).length
+        const checkedIn = result.content.filter((a) => a.isCheckedIn || (a as any).checkedIn).length
         setStatsPaid(paid)
         setStatsCheckedIn(checkedIn)
       }
@@ -92,7 +92,7 @@ export default function AttendeesManagement({ conferenceId, refreshKey = 0 }: Pr
   useEffect(() => {
     getAttendees(conferenceId, { page: 0, size: 100 }).then((res) => {
       setStatsPaid(res.content.filter((a) => a.paymentStatus === 'COMPLETED').length)
-      setStatsCheckedIn(res.content.filter((a) => a.isCheckedIn).length)
+      setStatsCheckedIn(res.content.filter((a) => a.isCheckedIn || (a as any).checkedIn).length)
     })
   }, [conferenceId, refreshKey])
 
@@ -131,7 +131,7 @@ export default function AttendeesManagement({ conferenceId, refreshKey = 0 }: Pr
           a.ticketTypeName,
           a.price,
           a.paymentStatus,
-          a.isCheckedIn ? 'Yes' : 'No',
+          a.isCheckedIn || (a as any).checkedIn ? 'Yes' : 'No',
         ])
         const csv = [headers, ...rows].map((r) => r.join(',')).join('\n')
         const blob = new Blob([csv], { type: 'text/csv' })
@@ -253,7 +253,7 @@ export default function AttendeesManagement({ conferenceId, refreshKey = 0 }: Pr
                   </TableCell>
                   <TableCell className="text-center">{STATUS_CONFIG[a.paymentStatus]?.badge}</TableCell>
                   <TableCell className="text-center">
-                    {a.isCheckedIn ? (
+                    {a.isCheckedIn || (a as any).checkedIn ? (
                       <Badge className="bg-green-100 text-green-700 border-green-200 border">
                         <CheckCircle2 className="w-3 h-3 mr-1" /> Yes
                       </Badge>

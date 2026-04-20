@@ -365,7 +365,7 @@ function PhaseStatusCard({
     const unmetBlocking = blockingItems.filter(i => !i.met)
 
     // Issues
-    const unassigned = papers.filter(p => p.status !== 'DRAFT' && p.reviewCount === 0).length
+    const unassigned = papers.filter(p => p.status !== 'WITHDRAWN' && p.reviewCount === 0).length
     const pendingDecision = papers.filter(p =>
         ['UNDER_REVIEW', 'SUBMITTED'].includes(p.status) &&
         p.completedReviewCount >= p.reviewCount && p.reviewCount > 0
@@ -653,21 +653,26 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                 getTicketTypes(conferenceId, false).catch(() => []),
             ])
 
-            // Review questions, settings & subject areas — check first track
+            // Review questions, settings & subject areas — check ALL tracks
             let hasReviewForm = false
             let hasSubjectAreas = false
             let hasReviewSettings = false
             let hasConflictSettings = false
             if (tracksData.length > 0) {
                 const { getTrackReviewSettings } = await import('@/app/api/track.api')
-                const [questions, areas, reviewSettings] = await Promise.all([
-                    getReviewQuestionsByTrack(tracksData[0].id).catch(() => []),
-                    getSubjectAreasByTrack(tracksData[0].id).catch(() => []),
-                    getTrackReviewSettings(tracksData[0].id).catch(() => null),
-                ])
-                hasReviewForm = Array.isArray(questions) && questions.length > 0
-                hasSubjectAreas = Array.isArray(areas) && areas.length > 0
-                
+
+                // Check all tracks for subject areas and review questions
+                const allTrackChecks = await Promise.all(
+                    tracksData.map((track: any) => Promise.all([
+                        getReviewQuestionsByTrack(track.id).catch(() => []),
+                        getSubjectAreasByTrack(track.id).catch(() => []),
+                    ]))
+                )
+                hasReviewForm = allTrackChecks.some(([questions]) => Array.isArray(questions) && questions.length > 0)
+                hasSubjectAreas = allTrackChecks.some(([, areas]) => Array.isArray(areas) && areas.length > 0)
+
+                // Review settings — check first track's settings (shared conference-level config)
+                const reviewSettings = await getTrackReviewSettings(tracksData[0].id).catch(() => null)
                 if (reviewSettings) {
                     // Review settings: confirmed if user explicitly saved at least once
                     hasReviewSettings = typeof window !== 'undefined'
@@ -708,7 +713,7 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                 }
             })
 
-            const hasPapers = papersData.filter((p: any) => p.status !== 'DRAFT').length > 0
+            const hasPapers = papersData.filter((p: any) => p.status !== 'WITHDRAWN').length > 0
             const reviewersAssigned = merged.some(p =>
                 ['UNDER_REVIEW', 'ACCEPTED', 'REJECTED', 'PUBLISHED'].includes(p.status)
             )
@@ -799,7 +804,7 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
 
     // Stats
     const totalPapers = papers.length
-    const submitted = papers.filter(p => p.status !== 'DRAFT').length
+    const submitted = papers.length
     const underReview = papers.filter(p => p.status === 'UNDER_REVIEW').length
     const accepted = papers.filter(p => ['ACCEPTED', 'PUBLISHED'].includes(p.status)).length
     const rejected = papers.filter(p => p.status === 'REJECTED').length
@@ -950,8 +955,7 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                 <CardContent>
                     <div className="space-y-2">
                         {[
-                            { label: 'Draft', count: papers.filter(p => p.status === 'DRAFT').length, color: 'bg-gray-400' },
-                            { label: 'Submitted', count: papers.filter(p => p.status === 'SUBMITTED').length, color: 'bg-indigo-500' },
+                            { label: 'Submitted', count: papers.filter(p => p.status === 'SUBMITTED').length, color: 'bg-blue-500' },
                             { label: 'Under Review', count: underReview, color: 'bg-amber-500' },
                             { label: 'Accepted', count: accepted, color: 'bg-emerald-500' },
                             { label: 'Rejected', count: rejected, color: 'bg-red-500' },

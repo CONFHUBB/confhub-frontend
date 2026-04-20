@@ -69,7 +69,7 @@ const WORKSPACE_PATHS: { path: string; exact: boolean }[] = [
 const PRIMARY_NAV = [
     { name: 'Home', path: '/', exact: true, chairOnly: false },
     { name: 'All Conferences', path: '/conference', exact: true, chairOnly: false },
-    { name: 'Submit Paper', path: '/conference', exact: false, chairOnly: false, query: '?status=ONGOING' },
+    { name: 'Submit Paper', path: '/conference', exact: false, chairOnly: false, query: '?status=OPEN' },
     { name: 'Published Papers', path: '/paper/published', exact: false, chairOnly: false },
     { name: 'Create Conference', path: '/conference/create', exact: false, chairOnly: false },
 ]

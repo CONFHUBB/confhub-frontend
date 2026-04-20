@@ -69,20 +69,18 @@ const revenueChartConfig: ChartConfig = {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-    PENDING:    "bg-amber-100 text-amber-700 border-amber-200",
-    SCHEDULED:  "bg-blue-100 text-blue-700 border-blue-200",
-    ONGOING:    "bg-emerald-100 text-emerald-700 border-emerald-200",
-    BIDDING:    "bg-violet-100 text-violet-700 border-violet-200",
-    COMPLETED:  "bg-gray-100 text-gray-600 border-gray-200",
-    CANCELLED:  "bg-rose-100 text-rose-700 border-rose-200",
+    PENDING_APPROVAL: "bg-amber-100 text-amber-700 border-amber-200",
+    SETUP:            "bg-blue-100 text-blue-700 border-blue-200",
+    OPEN:             "bg-emerald-100 text-emerald-700 border-emerald-200",
+    COMPLETED:        "bg-gray-100 text-gray-600 border-gray-200",
+    CANCELLED:        "bg-rose-100 text-rose-700 border-rose-200",
 }
 
 interface SystemStats {
     totalConferences: number
     pendingConferences: number
-    scheduledConferences: number
-    ongoingConferences: number
-    biddingConferences: number
+    setupConferences: number
+    openConferences: number
     completedConferences: number
     cancelledConferences: number
     totalPapers: number
@@ -275,10 +273,9 @@ export default function DashboardPage() {
                 getUsers(),
             ])
 
-            const pendingConferences = conferences.filter((c) => c.status === "PENDING")
-            const scheduledConferences = conferences.filter((c) => c.status === "SCHEDULED")
-            const ongoingConferences = conferences.filter((c) => c.status === "ONGOING")
-            const biddingConferences = conferences.filter((c) => c.status === "BIDDING")
+            const pendingConferences = conferences.filter((c) => c.status === "PENDING_APPROVAL")
+            const setupConferences = conferences.filter((c) => c.status === "SETUP")
+            const openConferences = conferences.filter((c) => c.status === "OPEN")
             const completedConferences = conferences.filter((c) => c.status === "COMPLETED")
             const cancelledConferences = conferences.filter((c) => c.status === "CANCELLED")
 
@@ -332,9 +329,8 @@ export default function DashboardPage() {
             setStats({
                 totalConferences: conferences.length,
                 pendingConferences: pendingConferences.length,
-                scheduledConferences: scheduledConferences.length,
-                ongoingConferences: ongoingConferences.length,
-                biddingConferences: biddingConferences.length,
+                setupConferences: setupConferences.length,
+                openConferences: openConferences.length,
                 completedConferences: completedConferences.length,
                 cancelledConferences: cancelledConferences.length,
                 totalPapers,
@@ -370,7 +366,7 @@ export default function DashboardPage() {
         : []
 
     return (
-        <div className="flex flex-col gap-6 pb-8">
+        <div className="flex flex-col gap-6 pb-8 min-w-0 overflow-hidden">
             {/* ── Header ── */}
             <div className="flex items-center justify-between">
                 <div>
@@ -390,7 +386,7 @@ export default function DashboardPage() {
                 <StatCard
                     label={msg.totalConferences}
                     value={stats?.totalConferences ?? 0}
-                    change={`${stats?.ongoingConferences ?? 0} ongoing, ${stats?.pendingConferences ?? 0} pending`}
+                    change={`${stats?.openConferences ?? 0} open, ${stats?.pendingConferences ?? 0} pending`}
                     changePositive
                     icon={FolderOpen}
                     iconBg="bg-primary/10"
@@ -455,7 +451,7 @@ export default function DashboardPage() {
             )}
 
             {/* ── Charts Row 1 ── */}
-            <div className="grid gap-4 lg:grid-cols-7">
+            <div className="grid gap-4 lg:grid-cols-7 min-w-0">
                 {/* Bar Chart: Papers per Conference */}
                 <Card className="lg:col-span-4 border-0 shadow-sm">
                     <CardHeader className="pb-2">
@@ -575,7 +571,7 @@ export default function DashboardPage() {
             </Card>
 
             {/* ── Tables Row — Full-width DataTables ── */}
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 min-w-0 overflow-hidden">
                 {/* All Conferences Table */}
                 <Card className="border-0 shadow-sm">
                     <CardHeader className="pb-4">
@@ -594,16 +590,18 @@ export default function DashboardPage() {
                             </Link>
                         </div>
                     </CardHeader>
-                    <CardContent className="p-0 px-4 pb-4">
+                    <CardContent className="p-0 min-w-0">
                         {isLoading ? (
                             <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">Loading conferences…</div>
                         ) : (
+                            <div className="min-w-0 overflow-x-auto">
                             <DataTable
                                 columns={conferenceColumns}
                                 data={stats?.allConferences ?? []}
                                 searchColumn="acronym"
                                 searchPlaceholder="Search conferences…"
                             />
+                            </div>
                         )}
                     </CardContent>
                 </Card>
@@ -628,16 +626,18 @@ export default function DashboardPage() {
                             </Link>
                         </div>
                     </CardHeader>
-                    <CardContent className="p-0 px-4 pb-4">
+                    <CardContent className="p-0 min-w-0">
                         {isLoading ? (
                             <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">Loading payments…</div>
                         ) : (
+                            <div className="min-w-0 overflow-x-auto">
                             <DataTable
                                 columns={paymentColumns}
                                 data={stats?.allPayments ?? []}
                                 searchColumn="vnpTxnRef"
                                 searchPlaceholder="Search transactions…"
                             />
+                            </div>
                         )}
                     </CardContent>
                 </Card>

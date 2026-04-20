@@ -161,7 +161,7 @@ export default function MyGlobalTicketsPage() {
                                     { label: 'Amount', value: ticket.price === 0 ? 'Free' : `${ticket.price.toLocaleString()} ${ticket.currency || 'VND'}` },
                                     { label: 'Attendee Name', value: ticket.userName },
                                     { label: 'Email', value: ticket.userEmail },
-                                    { label: 'Check-in', value: ticket.isCheckedIn ? <Badge className="bg-emerald-100 text-emerald-800">Checked In</Badge> : <span className="text-muted-foreground text-sm">Not checked in</span> },
+                                    { label: 'Check-in', value: ticket.isCheckedIn || (ticket as any).checkedIn ? <Badge className="bg-emerald-100 text-emerald-800">Checked In</Badge> : <span className="text-muted-foreground text-sm">Not checked in</span> },
                                 ]
 
                                 return (
@@ -253,7 +253,7 @@ export default function MyGlobalTicketsPage() {
                                                                                 {[
                                                                                     { label: 'Acceptance Letter', type: 'acceptance', docId: acceptedPaper?.id, available: !!acceptedPaper },
                                                                                     { label: 'Invoice', type: 'invoice', docId: ticket.id, available: isPaid },
-                                                                                    { label: 'Certificate', type: 'certificate', docId: ticket.id, available: !!ticket.isCheckedIn },
+                                                                                    { label: 'Certificate', type: 'certificate', docId: ticket.id, available: !!(ticket.isCheckedIn || (ticket as any).checkedIn) },
                                                                                 ].map(doc => {
                                                                                     const isDownloading = downloading?.type === doc.type && downloading?.id === ticket.id
                                                                                     return (

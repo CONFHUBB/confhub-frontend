@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useState, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
@@ -11,7 +11,7 @@ import {
     XCircle,
     CalendarClock,
     PlayCircle,
-    Gavel,
+
     Check,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -28,24 +28,22 @@ import {
 } from "@/app/api/conference.api"
 import type { ConferenceListResponse } from "@/types/conference"
 
-const STATUS_OPTIONS = ["ALL", "PENDING", "SCHEDULED", "ONGOING", "BIDDING", "COMPLETED", "CANCELLED"]
+const STATUS_OPTIONS = ["ALL", "PENDING_APPROVAL", "SETUP", "OPEN", "COMPLETED", "CANCELLED"]
 
 const STATUS_COLOR: Record<string, string> = {
-    PENDING:   "bg-amber-100 text-amber-700 border-amber-200",
-    SCHEDULED: "bg-blue-100 text-blue-700 border-blue-200",
-    ONGOING:   "bg-emerald-100 text-emerald-700 border-emerald-200",
-    BIDDING:   "bg-violet-100 text-violet-700 border-violet-200",
-    COMPLETED: "bg-gray-100 text-gray-600 border-gray-200",
-    CANCELLED: "bg-rose-100 text-rose-700 border-rose-200",
+    PENDING_APPROVAL: "bg-amber-100 text-amber-700 border-amber-200",
+    SETUP:            "bg-blue-100 text-blue-700 border-blue-200",
+    OPEN:             "bg-emerald-100 text-emerald-700 border-emerald-200",
+    COMPLETED:        "bg-gray-100 text-gray-600 border-gray-200",
+    CANCELLED:        "bg-rose-100 text-rose-700 border-rose-200",
 }
 
 const STATUS_ICON: Record<string, React.ReactNode> = {
-    PENDING:   <CalendarClock className="h-3 w-3" />,
-    SCHEDULED: <CalendarClock className="h-3 w-3" />,
-    ONGOING:   <PlayCircle className="h-3 w-3" />,
-    BIDDING:   <Gavel className="h-3 w-3" />,
-    COMPLETED: <Check className="h-3 w-3" />,
-    CANCELLED: <XCircle className="h-3 w-3" />,
+    PENDING_APPROVAL: <CalendarClock className="h-3 w-3" />,
+    SETUP:            <CalendarClock className="h-3 w-3" />,
+    OPEN:             <PlayCircle className="h-3 w-3" />,
+    COMPLETED:        <Check className="h-3 w-3" />,
+    CANCELLED:        <XCircle className="h-3 w-3" />,
 }
 
 export default function ConferencesPage() {
@@ -103,10 +101,9 @@ export default function ConferencesPage() {
 
     const counts = {
         total: conferences.length,
-        pending: conferences.filter(c => c.status === "PENDING").length,
-        scheduled: conferences.filter(c => c.status === "SCHEDULED").length,
-        ongoing: conferences.filter(c => c.status === "ONGOING").length,
-        bidding: conferences.filter(c => c.status === "BIDDING").length,
+        pending: conferences.filter(c => c.status === "PENDING_APPROVAL").length,
+        setup: conferences.filter(c => c.status === "SETUP").length,
+        open: conferences.filter(c => c.status === "OPEN").length,
         completed: conferences.filter(c => c.status === "COMPLETED").length,
         cancelled: conferences.filter(c => c.status === "CANCELLED").length,
     }
@@ -128,12 +125,11 @@ export default function ConferencesPage() {
             </div>
 
             {/* Stat Cards */}
-            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 min-w-0 overflow-x-auto">
                 <StatCard label="Total" value={counts.total} icon={FolderOpen} iconBg="bg-indigo-50" iconColor="text-indigo-600" isLoading={isLoading} />
                 <StatCard label="Pending" value={counts.pending} icon={CalendarClock} iconBg="bg-amber-50" iconColor="text-amber-600" isLoading={isLoading} />
-                <StatCard label="Scheduled" value={counts.scheduled} icon={CalendarClock} iconBg="bg-blue-50" iconColor="text-blue-600" isLoading={isLoading} />
-                <StatCard label="Ongoing" value={counts.ongoing} icon={PlayCircle} iconBg="bg-emerald-50" iconColor="text-emerald-600" isLoading={isLoading} />
-                <StatCard label="Bidding" value={counts.bidding} icon={Gavel} iconBg="bg-violet-50" iconColor="text-violet-600" isLoading={isLoading} />
+                <StatCard label="Setup" value={counts.setup} icon={CalendarClock} iconBg="bg-blue-50" iconColor="text-blue-600" isLoading={isLoading} />
+                <StatCard label="Open" value={counts.open} icon={PlayCircle} iconBg="bg-emerald-50" iconColor="text-emerald-600" isLoading={isLoading} />
                 <StatCard label="Completed" value={counts.completed} icon={Check} iconBg="bg-gray-50" iconColor="text-gray-600" isLoading={isLoading} />
                 <StatCard label="Cancelled" value={counts.cancelled} icon={XCircle} iconBg="bg-rose-50" iconColor="text-rose-600" isLoading={isLoading} />
             </div>
@@ -234,7 +230,7 @@ export default function ConferencesPage() {
                                                             <Link href={`/conference/${c.id}`}>View</Link>
                                                         </Button>
                                                         {/* Only PENDING conferences can be approved */}
-                                                        {c.status === "PENDING" && (
+                                                        {c.status === "PENDING_APPROVAL" && (
                                                             <Button
                                                                 size="sm"
                                                                 className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 gap-1"
