@@ -140,13 +140,18 @@ export default function TicketTypesConfig({ conferenceId }: Props) {
     load()
   }
 
-  const toggleActive = async (tt: TicketTypeResponse) => {
-    await updateTicketType(tt.id, {
+  const toggleActive = (tt: TicketTypeResponse) => {
+    const newIsActive = !tt.isActive
+    // Optimistically update local state
+    setTypes(prev => prev.map(t => t.id === tt.id ? { ...t, isActive: newIsActive } : t))
+    updateTicketType(tt.id, {
       name: tt.name, price: tt.price, currency: tt.currency, category: tt.category,
       description: tt.description ?? undefined, deadline: tt.deadline,
-      maxQuantity: tt.maxQuantity, isActive: !tt.isActive,
+      maxQuantity: tt.maxQuantity, isActive: newIsActive,
+    }).catch(() => {
+      // Revert on failure
+      setTypes(prev => prev.map(t => t.id === tt.id ? { ...t, isActive: !newIsActive } : t))
     })
-    load()
   }
 
   const exportCsv = () => {
