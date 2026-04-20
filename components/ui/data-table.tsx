@@ -139,10 +139,9 @@ export function DataTable<TData, TValue>({
             </div>
 
             {/* Table */}
-            <div className="rounded-md border bg-card shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
+            <div className="rounded-md border bg-card shadow-sm overflow-x-auto">
+                <Table style={{ tableLayout: "fixed" }}>
+                    <TableHeader>
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <TableRow key={headerGroup.id} className="bg-muted/30 hover:bg-muted/30">
                                     {headerGroup.headers.map((header) => {
@@ -177,7 +176,7 @@ export function DataTable<TData, TValue>({
                                         className="group transition-colors"
                                     >
                                         {row.getVisibleCells().map((cell) => (
-                                            <TableCell key={cell.id}>
+                                            <TableCell key={cell.id} className="overflow-hidden">
                                                 {flexRender(
                                                     cell.column.columnDef.cell,
                                                     cell.getContext(),
@@ -203,7 +202,6 @@ export function DataTable<TData, TValue>({
                             )}
                         </TableBody>
                     </Table>
-                </div>
 
                 {/* Pagination */}
                 <DataTablePagination table={table} />

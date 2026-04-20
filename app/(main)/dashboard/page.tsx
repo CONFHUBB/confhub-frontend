@@ -149,7 +149,7 @@ const conferenceColumns: ColumnDef<ConferenceListResponse>[] = [
         accessorKey: "location",
         header: ({ column }) => <DataTableColumnHeader column={column} title="Location" />,
         cell: ({ row }) => (
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-muted-foreground max-w-[200px] truncate block" title={row.original.location || ""}>
                 {row.original.location || "—"}
             </span>
         ),

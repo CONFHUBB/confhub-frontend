@@ -81,7 +81,7 @@ export default function MainLayout({
                             </div>
                         </header>
                         <div className="flex-1 overflow-y-auto">
-                            <div className="flex flex-col gap-4 p-4 min-w-0 overflow-x-hidden">
+                            <div className="flex flex-col gap-4 p-4 min-w-0 overflow-x-auto">
                                 <AppErrorBoundary>
                                     {children}
                                 </AppErrorBoundary>
@@ -110,4 +110,3 @@ export default function MainLayout({
         </UserRolesProvider>
     )
 }
-
