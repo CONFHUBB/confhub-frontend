@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select"
 import { toast } from 'sonner'
 import { fmtDate } from '@/lib/utils'
+import { getConferenceStatus } from '@/lib/constants/status'
 
 interface ConferenceInfo {
     id: number
@@ -263,7 +264,7 @@ export default function MyInvitationsPage() {
                 {[
                     { label: "Total", value: stats.total, color: "text-indigo-600", bg: "bg-indigo-50 border-indigo-100" },
                     { label: "Pending", value: stats.pending, color: "text-amber-600", bg: "bg-amber-50 border-amber-100" },
-                    { label: "Accepted", value: stats.accepted, color: "text-green-600", bg: "bg-green-50 border-green-100" },
+                    { label: "Joined", value: stats.accepted, color: "text-green-600", bg: "bg-green-50 border-green-100" },
                     { label: "Declined", value: stats.declined, color: "text-gray-600", bg: "bg-gray-50 border-gray-100" },
                 ].map((stat) => (
                     <div key={stat.label} className={`rounded-xl border p-3 ${stat.bg}`}>
@@ -289,7 +290,7 @@ export default function MyInvitationsPage() {
                     <SelectContent>
                         <SelectItem value="ALL">All Statuses</SelectItem>
                         <SelectItem value="PENDING">Pending</SelectItem>
-                        <SelectItem value="ACCEPTED">Accepted</SelectItem>
+                        <SelectItem value="ACCEPTED">Joined</SelectItem>
                         <SelectItem value="DECLINED">Declined</SelectItem>
                     </SelectContent>
                 </Select>
@@ -320,7 +321,8 @@ export default function MyInvitationsPage() {
                                     <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider">Conference</th>
                                     <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider">Role</th>
                                     <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider">Date</th>
-                                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider">Status</th>
+                                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider">Conf. Status</th>
+                                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider">Invite Status</th>
                                     <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -353,6 +355,16 @@ export default function MyInvitationsPage() {
                                             </div>
                                         </td>
                                         <td className="px-4 py-3">
+                                            {(() => {
+                                                const sCfg = getConferenceStatus(inv.conference?.status || 'PENDING_APPROVAL')
+                                                return (
+                                                    <Badge variant="outline" className={`text-[10px] font-semibold border-transparent ${sCfg.bg} ${sCfg.text}`}>
+                                                        {sCfg.label}
+                                                    </Badge>
+                                                )
+                                            })()}
+                                        </td>
+                                        <td className="px-4 py-3">
                                             <Badge variant="outline" className={`text-[10px] font-semibold border-transparent ${
                                                 inv.isAccepted === null ? "bg-amber-100 text-amber-700" :
                                                 inv.isAccepted === true ? "bg-green-100 text-green-700" :
@@ -362,7 +374,7 @@ export default function MyInvitationsPage() {
                                                     inv.isAccepted === null ? "bg-amber-600" :
                                                     inv.isAccepted === true ? "bg-green-600" : "bg-gray-600"
                                                 }`} />
-                                                {inv.isAccepted === null ? 'PENDING' : inv.isAccepted === true ? 'ACCEPTED' : 'DECLINED'}
+                                                {inv.isAccepted === null ? 'PENDING' : inv.isAccepted === true ? 'JOINED' : 'DECLINED'}
                                             </Badge>
                                         </td>
                                         <td className="px-4 py-3 text-right">

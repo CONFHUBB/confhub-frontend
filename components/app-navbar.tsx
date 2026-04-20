@@ -71,7 +71,7 @@ const PRIMARY_NAV = [
     { name: 'All Conferences', path: '/conference', exact: true, chairOnly: false },
     { name: 'Submit Paper', path: '/conference', exact: false, chairOnly: false, query: '?status=OPEN' },
     { name: 'Published Papers', path: '/paper/published', exact: false, chairOnly: false },
-    { name: 'Create Conference', path: '/conference/create', exact: false, chairOnly: false },
+    { name: 'Create Conference', path: '/conference/create', exact: false, chairOnly: false, authRequired: true },
 ]
 
 export function AppNavbar() {
@@ -213,6 +213,7 @@ export function AppNavbar() {
                         {/* ── Center: Primary Nav + Workspace Dropdown (Desktop) ── */}
                         <nav className="hidden lg:flex items-center gap-1">
                             {PRIMARY_NAV.map((link) => {
+                                if (link.authRequired && (!isMounted || !userId)) return null;
                                 const href = link.query ? `${link.path}${link.query}` : link.path
                                 return (
                                     <Link
@@ -395,9 +396,11 @@ export function AppNavbar() {
                 <div className="lg:hidden border-t shadow-xl bg-white/95 backdrop-blur-xl border-neutral-dark">
                     <div className="max-w-7xl mx-auto px-4 py-3 space-y-1">
                         {/* Primary links */}
-                        {PRIMARY_NAV.map((link) => (
-                            <Link
-                                key={link.name}
+                        {PRIMARY_NAV.map((link) => {
+                            if (link.authRequired && (!isMounted || !userId)) return null;
+                            return (
+                                <Link
+                                    key={link.name}
                                 href={link.path}
                                 className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${isPrimaryActive(link.path, link.exact)
                                     ? 'text-primary bg-primary/8'
@@ -406,7 +409,8 @@ export function AppNavbar() {
                             >
                                 {link.name}
                             </Link>
-                        ))}
+                            )
+                        })}
 
                         {/* Workspace section */}
                         {isMounted && userId && (

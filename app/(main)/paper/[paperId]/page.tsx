@@ -330,7 +330,6 @@ export default function PaperWorkspacePage() {
                         <Badge className={`px-2.5 py-0.5 text-white ${getPaperStatus(paper.status).dot}`}>
                             {getPaperStatus(paper.status).label}
                         </Badge>
-                        <PlagiarismBadge paperId={paper.id} score={paper.plagiarismScore} status={paper.plagiarismStatus} />
                         <span>·</span>
                         <span className="font-mono">#{paper.id}</span>
                         <span>·</span>
@@ -517,31 +516,7 @@ export default function PaperWorkspacePage() {
                             )}
 
                             {/* Check Plagiarism Button — author only */}
-                            {isAuthor && manuscriptFiles.length > 0 && (
-                                <div className="flex items-center gap-3 pt-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="gap-2 border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-800 shadow-sm"
-                                        onClick={handleCheckPlagiarism}
-                                        disabled={checkingPlagiarism}
-                                    >
-                                        {checkingPlagiarism ? (
-                                            <><Loader2 className="h-4 w-4 animate-spin" /> Checking Plagiarism...</>
-                                        ) : (
-                                            <><ShieldCheck className="h-4 w-4" /> Check Plagiarism</>
-                                        )}
-                                    </Button>
-                                    {paper && (
-                                        <PlagiarismBadge
-                                            key={plagiarismKey}
-                                            paperId={paper.id}
-                                            score={paper.plagiarismScore}
-                                            status={paper.plagiarismStatus}
-                                        />
-                                    )}
-                                </div>
-                            )}
+                            {/* Plagiarism check removed as requested */}
                         </div>
 
                         {/* Supplementary Files — Separate Section */}
