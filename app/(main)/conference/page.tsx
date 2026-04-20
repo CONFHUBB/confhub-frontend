@@ -87,12 +87,10 @@ function ConferencesPageInner() {
         return [...new Set(conferences.map(c => c.area).filter(Boolean))].sort()
     }, [conferences])
 
-    // Admin/Staff: see all conferences including PENDING.
-    // Regular users: PENDING conferences are hidden from listing.
+    // PENDING conferences are hidden from the public listing for all users.
     const visibleConferences = useMemo(() => {
-        if (isStaff) return conferences
         return conferences.filter(c => c.status.toUpperCase() !== 'PENDING')
-    }, [conferences, isStaff])
+    }, [conferences])
 
     const filtered = useMemo(() => {
         let list = filterConferences(visibleConferences, filters)

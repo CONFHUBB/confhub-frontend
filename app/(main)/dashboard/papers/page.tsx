@@ -101,7 +101,7 @@ export default function PapersPage() {
     }
 
     return (
-        <div className="flex flex-col gap-6 pb-8">
+        <div className="flex flex-col gap-6 pb-8 min-w-0 overflow-hidden">
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Papers</h1>
                 <p className="text-muted-foreground text-sm mt-0.5">Manage all research papers submitted across conferences</p>

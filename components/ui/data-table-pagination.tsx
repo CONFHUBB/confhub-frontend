@@ -19,7 +19,7 @@ export function DataTablePagination<TData>({
     table,
 }: DataTablePaginationProps<TData>) {
     return (
-        <div className="flex items-center justify-between px-2 py-3 border-t bg-muted/20">
+        <div className="flex items-center justify-between px-2 py-3 border-t bg-muted/20 gap-2 flex-wrap">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {table.getFilteredSelectedRowModel().rows.length > 0 && (
                     <span className="font-medium text-foreground">

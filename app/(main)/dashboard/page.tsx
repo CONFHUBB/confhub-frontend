@@ -370,7 +370,7 @@ export default function DashboardPage() {
         : []
 
     return (
-        <div className="flex flex-col gap-6 pb-8">
+        <div className="flex flex-col gap-6 pb-8 min-w-0 overflow-hidden">
             {/* ── Header ── */}
             <div className="flex items-center justify-between">
                 <div>
@@ -455,7 +455,7 @@ export default function DashboardPage() {
             )}
 
             {/* ── Charts Row 1 ── */}
-            <div className="grid gap-4 lg:grid-cols-7">
+            <div className="grid gap-4 lg:grid-cols-7 min-w-0">
                 {/* Bar Chart: Papers per Conference */}
                 <Card className="lg:col-span-4 border-0 shadow-sm">
                     <CardHeader className="pb-2">
@@ -575,7 +575,7 @@ export default function DashboardPage() {
             </Card>
 
             {/* ── Tables Row — Full-width DataTables ── */}
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 min-w-0 overflow-hidden">
                 {/* All Conferences Table */}
                 <Card className="border-0 shadow-sm">
                     <CardHeader className="pb-4">
@@ -594,16 +594,18 @@ export default function DashboardPage() {
                             </Link>
                         </div>
                     </CardHeader>
-                    <CardContent className="p-0 px-4 pb-4">
+                    <CardContent className="p-0 min-w-0">
                         {isLoading ? (
                             <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">Loading conferences…</div>
                         ) : (
+                            <div className="min-w-0 overflow-x-auto">
                             <DataTable
                                 columns={conferenceColumns}
                                 data={stats?.allConferences ?? []}
                                 searchColumn="acronym"
                                 searchPlaceholder="Search conferences…"
                             />
+                            </div>
                         )}
                     </CardContent>
                 </Card>
@@ -628,16 +630,18 @@ export default function DashboardPage() {
                             </Link>
                         </div>
                     </CardHeader>
-                    <CardContent className="p-0 px-4 pb-4">
+                    <CardContent className="p-0 min-w-0">
                         {isLoading ? (
                             <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">Loading payments…</div>
                         ) : (
+                            <div className="min-w-0 overflow-x-auto">
                             <DataTable
                                 columns={paymentColumns}
                                 data={stats?.allPayments ?? []}
                                 searchColumn="vnpTxnRef"
                                 searchPlaceholder="Search transactions…"
                             />
+                            </div>
                         )}
                     </CardContent>
                 </Card>

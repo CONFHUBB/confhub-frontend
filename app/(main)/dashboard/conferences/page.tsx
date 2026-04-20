@@ -128,7 +128,7 @@ export default function ConferencesPage() {
             </div>
 
             {/* Stat Cards */}
-            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 min-w-0 overflow-x-auto">
                 <StatCard label="Total" value={counts.total} icon={FolderOpen} iconBg="bg-indigo-50" iconColor="text-indigo-600" isLoading={isLoading} />
                 <StatCard label="Pending" value={counts.pending} icon={CalendarClock} iconBg="bg-amber-50" iconColor="text-amber-600" isLoading={isLoading} />
                 <StatCard label="Scheduled" value={counts.scheduled} icon={CalendarClock} iconBg="bg-blue-50" iconColor="text-blue-600" isLoading={isLoading} />

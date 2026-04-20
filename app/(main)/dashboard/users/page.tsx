@@ -154,7 +154,7 @@ export default function UsersPage() {
                         </CardDescription>
                     </div>
                 </CardHeader>
-                <CardContent className="p-0 px-4 pb-4">
+                <CardContent className="p-0 min-w-0 overflow-x-auto">
                     {isLoading ? (
                         <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
                             Loading users…

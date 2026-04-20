@@ -85,11 +85,11 @@ export function DataTable<TData, TValue>({
     })
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 min-w-0">
             {/* Toolbar: search + column toggle */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 {searchColumn !== undefined && (
-                    <div className="relative flex-1 max-w-sm">
+                    <div className="relative flex-1 max-w-sm w-full sm:w-auto">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                         <Input
                             placeholder={searchPlaceholder}
@@ -97,7 +97,7 @@ export function DataTable<TData, TValue>({
                             onChange={(event) =>
                                 setGlobalFilter(event.target.value)
                             }
-                            className="pl-8 h-9"
+                            className="pl-8 h-9 w-full"
                         />
                     </div>
                 )}
