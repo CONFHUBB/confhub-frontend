@@ -361,8 +361,8 @@ export default function ReviewerConsole() {
                                         </span>
                                     )}
                                     <span className={`text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
-                                        conference?.status === 'ONGOING' ? 'bg-emerald-400/20 text-emerald-200' :
-                                        conference?.status === 'SCHEDULED' ? 'bg-blue-400/20 text-blue-200' :
+                                        conference?.status === 'OPEN' ? 'bg-emerald-400/20 text-emerald-200' :
+                                        conference?.status === 'SETUP' ? 'bg-blue-400/20 text-blue-200' :
                                         conference?.status === 'COMPLETED' ? 'bg-gray-400/20 text-gray-300' :
                                         'bg-amber-400/20 text-amber-200'
                                     }`}>

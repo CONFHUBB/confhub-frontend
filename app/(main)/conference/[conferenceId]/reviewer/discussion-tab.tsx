@@ -68,7 +68,7 @@ export function DiscussionTab({ reviews, conferenceId, currentUserId, activities
 
         // Add non-assigned papers
         const extra = allPapers
-            .filter(p => !assignedPaperIds.has(p.id) && p.status !== 'WITHDRAWN' && p.status !== 'DRAFT')
+            .filter(p => !assignedPaperIds.has(p.id) && p.status !== 'WITHDRAWN')
             .map(p => ({
                 paperId: p.id,
                 title: p.title || `Paper #${p.id}`,

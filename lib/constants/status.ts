@@ -1,4 +1,4 @@
-﻿// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // Centralized Status Constants — Single Source of Truth
 // ═══════════════════════════════════════════════════════════════════════════════
 //
@@ -9,15 +9,18 @@
 // ── Paper Status ─────────────────────────────────────────────────────────────
 
 export const PAPER_STATUS = {
-    DRAFT:        { label: 'Draft',        bg: 'bg-slate-100',   text: 'text-slate-700',   dot: 'bg-slate-500',   border: 'border-slate-300',   icon: 'FileEdit' },
-    SUBMITTED:    { label: 'Submitted',    bg: 'bg-blue-100',    text: 'text-blue-700',    dot: 'bg-blue-500',    border: 'border-blue-300',    icon: 'Send' },
-    UNDER_REVIEW: { label: 'Under Review', bg: 'bg-indigo-100',  text: 'text-indigo-700',  dot: 'bg-indigo-500',  border: 'border-indigo-300',  icon: 'Eye' },
-    AWAITING_DECISION: { label: 'Awaiting Decision', bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500', border: 'border-amber-300', icon: 'Clock' },
-    ACCEPTED:     { label: 'Accepted',     bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500', border: 'border-emerald-300', icon: 'CheckCircle' },
-    REJECTED:     { label: 'Rejected',     bg: 'bg-red-100',     text: 'text-red-700',     dot: 'bg-red-500',     border: 'border-red-300',     icon: 'XCircle' },
-    WITHDRAWN:    { label: 'Withdrawn',    bg: 'bg-gray-100',    text: 'text-gray-500',    dot: 'bg-gray-400',    border: 'border-gray-300',    icon: 'MinusCircle' },
-    CAMERA_READY: { label: 'Camera Ready', bg: 'bg-teal-100',    text: 'text-teal-700',    dot: 'bg-teal-500',    border: 'border-teal-300',    icon: 'FileCheck' },
-    PUBLISHED:    { label: 'Published',    bg: 'bg-cyan-100',    text: 'text-cyan-700',    dot: 'bg-cyan-500',    border: 'border-cyan-300',    icon: 'Globe' },
+    SUBMITTED:              { label: 'Submitted',              bg: 'bg-blue-100',    text: 'text-blue-700',    dot: 'bg-blue-500',    border: 'border-blue-300',    icon: 'Send' },
+    UNDER_REVIEW:           { label: 'Under Review',           bg: 'bg-indigo-100',  text: 'text-indigo-700',  dot: 'bg-indigo-500',  border: 'border-indigo-300',  icon: 'Eye' },
+    AWAITING_DECISION:      { label: 'Awaiting Decision',      bg: 'bg-amber-100',   text: 'text-amber-700',   dot: 'bg-amber-500',   border: 'border-amber-300',   icon: 'Clock' },
+    ACCEPTED:               { label: 'Accepted',               bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500', border: 'border-emerald-300', icon: 'CheckCircle' },
+    REJECTED:               { label: 'Rejected',               bg: 'bg-red-100',     text: 'text-red-700',     dot: 'bg-red-500',     border: 'border-red-300',     icon: 'XCircle' },
+    AWAITING_REGISTRATION:  { label: 'Awaiting Registration',  bg: 'bg-orange-100',  text: 'text-orange-700',  dot: 'bg-orange-500',  border: 'border-orange-300',  icon: 'CreditCard' },
+    REGISTERED:             { label: 'Registered',             bg: 'bg-lime-100',    text: 'text-lime-700',    dot: 'bg-lime-500',    border: 'border-lime-300',    icon: 'BadgeCheck' },
+    AWAITING_CAMERA_READY:  { label: 'Awaiting Camera Ready',  bg: 'bg-violet-100',  text: 'text-violet-700',  dot: 'bg-violet-500',  border: 'border-violet-300',  icon: 'FileUp' },
+    CAMERA_READY_SUBMITTED: { label: 'Camera Ready Submitted', bg: 'bg-teal-100',    text: 'text-teal-700',    dot: 'bg-teal-500',    border: 'border-teal-300',    icon: 'FileCheck' },
+    CAMERA_READY_REJECTED:  { label: 'Camera Ready Rejected',  bg: 'bg-pink-100',    text: 'text-pink-700',    dot: 'bg-pink-500',    border: 'border-pink-300',    icon: 'FileX' },
+    PUBLISHED:              { label: 'Published',              bg: 'bg-cyan-100',    text: 'text-cyan-700',    dot: 'bg-cyan-500',    border: 'border-cyan-300',    icon: 'Globe' },
+    WITHDRAWN:              { label: 'Withdrawn',              bg: 'bg-gray-100',    text: 'text-gray-500',    dot: 'bg-gray-400',    border: 'border-gray-300',    icon: 'MinusCircle' },
 } as const
 
 export type PaperStatusKey = keyof typeof PAPER_STATUS
@@ -79,11 +82,11 @@ export function paymentStatusClass(status: string) {
 // ── Conference Status ────────────────────────────────────────────────────────
 
 export const CONFERENCE_STATUS = {
-    PENDING:   { label: 'Pending',   bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-300' },
-    SCHEDULED: { label: 'Scheduled', bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-300' },
-    ONGOING:   { label: 'Ongoing',   bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-300' },
-    COMPLETED: { label: 'Completed', bg: 'bg-gray-50',    text: 'text-gray-600',    border: 'border-gray-300' },
-    CANCELLED: { label: 'Cancelled', bg: 'bg-red-50',     text: 'text-red-600',     border: 'border-red-300' },
+    PENDING_APPROVAL: { label: 'Pending Approval', bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-300' },
+    SETUP:            { label: 'Setup',             bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-300' },
+    OPEN:             { label: 'Open',              bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-300' },
+    COMPLETED:        { label: 'Completed',         bg: 'bg-gray-50',    text: 'text-gray-600',    border: 'border-gray-300' },
+    CANCELLED:        { label: 'Cancelled',         bg: 'bg-red-50',     text: 'text-red-600',     border: 'border-red-300' },
 } as const
 
 export type ConferenceStatusKey = keyof typeof CONFERENCE_STATUS

@@ -36,7 +36,7 @@ export function ChairOverview({ conferenceId }: ChairOverviewProps) {
     }
 
     // Stats
-    const submitted = papers.filter(p => p.status !== 'DRAFT').length
+    const submitted = papers.length
     const underReview = papers.filter(p => p.status === 'UNDER_REVIEW').length
     const accepted = papers.filter(p => ['ACCEPTED', 'PUBLISHED'].includes(p.status)).length
     const rejected = papers.filter(p => p.status === 'REJECTED').length

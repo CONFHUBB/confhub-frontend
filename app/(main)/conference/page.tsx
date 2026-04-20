@@ -89,7 +89,10 @@ function ConferencesPageInner() {
 
     // PENDING conferences are hidden from the public listing for all users.
     const visibleConferences = useMemo(() => {
-        return conferences.filter(c => c.status.toUpperCase() !== 'PENDING')
+        return conferences.filter(c => {
+            const s = c.status.toUpperCase()
+            return s === 'OPEN' || s === 'COMPLETED'
+        })
     }, [conferences])
 
     const filtered = useMemo(() => {
@@ -116,10 +119,9 @@ function ConferencesPageInner() {
 
     const getStatusColor = (status: string) => {
         switch (status.toUpperCase()) {
-            case 'ONGOING': return 'bg-green-100 text-green-800'
-            case 'SCHEDULED': return 'bg-indigo-100 text-indigo-800'
-            case 'PENDING': return 'bg-amber-100 text-amber-800'
-            case 'BIDDING': return 'bg-indigo-100 text-indigo-800'
+            case 'OPEN': return 'bg-green-100 text-green-800'
+            case 'SETUP': return 'bg-indigo-100 text-indigo-800'
+            case 'PENDING_APPROVAL': return 'bg-amber-100 text-amber-800'
             case 'COMPLETED': return 'bg-gray-100 text-gray-600'
             case 'CANCELLED': return 'bg-red-100 text-red-800'
             default: return 'bg-gray-100 text-gray-800'
@@ -145,10 +147,10 @@ function ConferencesPageInner() {
     }
 
     // Page title changes when filtering by status
-    const pageTitle = filters.status === 'ONGOING'
+    const pageTitle = filters.status === 'OPEN'
         ? 'Open for Submissions'
         : 'All Conferences'
-    const pageSubtitle = filters.status === 'ONGOING'
+    const pageSubtitle = filters.status === 'OPEN'
         ? 'Conferences currently accepting paper submissions'
         : isStaff ? 'Manage and approve conferences' : 'Browse and discover conferences'
 
@@ -162,7 +164,7 @@ function ConferencesPageInner() {
 
                 <div className="relative z-10 max-w-4xl">
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                        {filters.status === 'ONGOING' ? (
+                        {filters.status === 'OPEN' ? (
                             <>Open for <span className="text-primary">Submissions</span></>
                         ) : (
                             <>All <span className="text-primary">Conferences</span></>
@@ -271,9 +273,9 @@ function ConferencesPageInner() {
                             <div>
                                 <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-200 mb-3">Status</h3>
                                 <div className="flex flex-wrap gap-2">
-                                    {(['all', 'ONGOING', 'SCHEDULED', 'PENDING', 'BIDDING', 'COMPLETED', 'CANCELLED'] as const).map(s => {
+                                    {(['all', 'OPEN', 'COMPLETED'] as const).map(s => {
                                         const label = s === 'all' ? 'All statuses'
-                                            : s === 'ONGOING' ? 'Open for Submissions'
+                                            : s === 'OPEN' ? 'Open for Submissions'
                                                 : s.charAt(0) + s.slice(1).toLowerCase()
                                         return (
                                             <button
@@ -386,7 +388,7 @@ function ConferencesPageInner() {
                                                     </div>
                                                 </div>
 
-                                                {isStaff && conference.status.toUpperCase() === 'PENDING' && (
+                                                {isStaff && conference.status.toUpperCase() === 'PENDING_APPROVAL' && (
                                                     <Button
                                                         className="w-full mt-4 gap-2 bg-green-600 hover:bg-green-700 text-white text-sm h-9 shrink-0"
                                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleApprove(conference.id) }}

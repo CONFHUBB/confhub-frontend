@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useState, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
@@ -20,14 +20,18 @@ const STATUS_OPTIONS: (PaperStatus | "ALL")[] = [
 ]
 
 const STATUS_COLOR: Record<PaperStatus | string, string> = {
-    SUBMITTED:    "bg-blue-100 text-blue-700 border-blue-200",
-    UNDER_REVIEW: "bg-indigo-100 text-indigo-700 border-indigo-200",
-    ACCEPTED:     "bg-emerald-100 text-emerald-700 border-emerald-200",
-    REJECTED:     "bg-rose-100 text-rose-700 border-rose-200",
-    PUBLISHED:    "bg-amber-100 text-amber-700 border-amber-200",
-    WITHDRAWN:    "bg-gray-100 text-gray-600 border-gray-200",
-    DRAFT:        "bg-gray-100 text-gray-500 border-gray-200",
-    CAMERA_READY: "bg-teal-100 text-teal-700 border-teal-200",
+    SUBMITTED:              "bg-blue-100 text-blue-700 border-blue-200",
+    UNDER_REVIEW:           "bg-indigo-100 text-indigo-700 border-indigo-200",
+    AWAITING_DECISION:      "bg-amber-100 text-amber-700 border-amber-200",
+    ACCEPTED:               "bg-emerald-100 text-emerald-700 border-emerald-200",
+    REJECTED:               "bg-rose-100 text-rose-700 border-rose-200",
+    AWAITING_REGISTRATION:  "bg-orange-100 text-orange-700 border-orange-200",
+    REGISTERED:             "bg-lime-100 text-lime-700 border-lime-200",
+    AWAITING_CAMERA_READY:  "bg-violet-100 text-violet-700 border-violet-200",
+    CAMERA_READY_SUBMITTED: "bg-teal-100 text-teal-700 border-teal-200",
+    CAMERA_READY_REJECTED:  "bg-pink-100 text-pink-700 border-pink-200",
+    PUBLISHED:              "bg-cyan-100 text-cyan-700 border-cyan-200",
+    WITHDRAWN:              "bg-gray-100 text-gray-600 border-gray-200",
 }
 
 export default function PapersPage() {

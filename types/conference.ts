@@ -1,27 +1,24 @@
 export type ConferenceStatus =
-    | "PENDING"
-    | "SCHEDULED"
-    | "ONGOING"
-    | "BIDDING"
+    | "PENDING_APPROVAL"
+    | "SETUP"
+    | "OPEN"
     | "COMPLETED"
     | "CANCELLED"
 
 export const CONFERENCE_STATUS_COLORS: Record<ConferenceStatus, string> = {
-    PENDING:    "bg-amber-100 text-amber-700 border-amber-200",
-    SCHEDULED:  "bg-blue-100 text-blue-700 border-blue-200",
-    ONGOING:    "bg-emerald-100 text-emerald-700 border-emerald-200",
-    BIDDING:    "bg-purple-100 text-purple-700 border-purple-200",
-    COMPLETED:  "bg-slate-100 text-slate-700 border-slate-200",
-    CANCELLED:  "bg-rose-100 text-rose-700 border-rose-200",
+    PENDING_APPROVAL: "bg-amber-100 text-amber-700 border-amber-200",
+    SETUP:            "bg-blue-100 text-blue-700 border-blue-200",
+    OPEN:             "bg-emerald-100 text-emerald-700 border-emerald-200",
+    COMPLETED:        "bg-slate-100 text-slate-700 border-slate-200",
+    CANCELLED:        "bg-rose-100 text-rose-700 border-rose-200",
 }
 
 export const CONFERENCE_STATUS_CONFIG: Record<ConferenceStatus, { label: string; color: string }> = {
-    PENDING:    { label: "Pending",    color: "bg-amber-500" },
-    SCHEDULED:  { label: "Scheduled",  color: "bg-blue-500" },
-    ONGOING:    { label: "Ongoing",    color: "bg-emerald-500" },
-    BIDDING:    { label: "Bidding",    color: "bg-purple-500" },
-    COMPLETED:  { label: "Completed",   color: "bg-slate-500" },
-    CANCELLED:  { label: "Cancelled",  color: "bg-rose-500" },
+    PENDING_APPROVAL: { label: "Pending Approval", color: "bg-amber-500" },
+    SETUP:            { label: "Setup",             color: "bg-blue-500" },
+    OPEN:             { label: "Open",              color: "bg-emerald-500" },
+    COMPLETED:        { label: "Completed",         color: "bg-slate-500" },
+    CANCELLED:        { label: "Cancelled",         color: "bg-rose-500" },
 }
 
 export interface CreateConferenceRequest {
