@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { getUserByEmail, getConferenceMembers, assignRole, deleteRoleAssignment } from "@/app/api/user.api"
 import { getTracksByConference } from "@/app/api/track.api"
 import { getConference, downloadMemberTemplate, previewMemberImport, importMembers } from "@/app/api/conference.api"
-import { sendInvitationEmail } from "@/app/api/email.api"
+import { sendInvitationEmail, sendExternalInvitation } from "@/app/api/email.api"
 import type { User, ConferenceUserTrack, MemberWithRoles } from "@/types/user"
 import type { TrackResponse } from "@/types/track"
 import type { ConferenceResponse } from "@/types/conference"
@@ -522,30 +522,19 @@ export function ConfigMembers({ conferenceId }: ConfigMembersProps) {
                                                     }
                                                     setIsSendingInvite(true)
                                                     try {
-                                                        const roleLabel = ROLE_DISPLAY[externalRole] || externalRole
-
-                                                        // Gather selected track names
-                                                        const selectedTracks = TRACK_BOUND_ROLES.includes(externalRole)
-                                                            ? externalTrackIds.map(id => tracks.find(t => String(t.id) === id)).filter(Boolean)
-                                                            : []
-                                                        const trackNames = selectedTracks.map(t => t!.name)
-                                                        const trackLabel = trackNames.length > 0
-                                                            ? ` — ${trackNames.join(', ')}`
-                                                            : ""
-
-                                                        const formData = new FormData()
-                                                        formData.append('to', searchEmail.trim())
-                                                        formData.append('recipientName', externalName.trim())
-                                                        formData.append('subject', `Invitation to ${conference?.name || 'Conference'} as ${roleLabel}${trackLabel}`)
-                                                        formData.append('conferenceName', conference?.name || '')
-                                                        formData.append('conferenceId', String(conferenceId))
-                                                        formData.append('role', roleLabel)
-                                                        if (trackNames.length > 0) {
-                                                            formData.append('trackName', trackNames.join(', '))
-                                                        }
-                                                        formData.append('invitationToken', 'external-' + Date.now())
-
-                                                        await sendInvitationEmail(formData)
+                                                        await sendExternalInvitation({
+                                                            email: searchEmail.trim(),
+                                                            recipientName: externalName.trim(),
+                                                            conferenceId,
+                                                            assignedRole: externalRole,
+                                                            trackId: TRACK_BOUND_ROLES.includes(externalRole) && externalTrackIds.length > 0
+                                                                ? parseInt(externalTrackIds[0])
+                                                                : undefined,
+                                                            trackName: TRACK_BOUND_ROLES.includes(externalRole) && externalTrackIds.length > 0
+                                                                ? tracks.find(t => String(t.id) === externalTrackIds[0])?.name
+                                                                : undefined,
+                                                            conferenceName: conference?.name,
+                                                        })
                                                         toast.success(`Invitation email sent to ${searchEmail}`)
                                                         setShowExternalInvite(false)
                                                         setSearchError(null)

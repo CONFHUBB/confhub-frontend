@@ -11,6 +11,18 @@ export const sendInvitationEmail = async (formData: FormData): Promise<void> => 
     })
 }
 
+export const sendExternalInvitation = async (body: {
+    email: string
+    recipientName: string
+    conferenceId: number
+    assignedRole: string
+    trackId?: number
+    trackName?: string
+    conferenceName?: string
+}): Promise<void> => {
+    await http.post('/email/external-invite', body)
+}
+
 export const sendBulkEmail = async (body: BulkEmailRequest): Promise<void> => {
     await http.post('/email/bulk', body)
 }
