@@ -17,8 +17,9 @@ function formatTime12(t: string): string {
   return `${h12}:${m.toString().padStart(2, '0')}${ampm}`
 }
 
-export default function ProgramPage({ params }: { params: { conferenceId: string } }) {
-  const conferenceId = Number(params.conferenceId)
+export default function ProgramPage({ params }: { params: Promise<{ conferenceId: string }> }) {
+  const { conferenceId: confId } = React.use(params)
+  const conferenceId = Number(confId)
   const [program, setProgram] = useState<AdvancedProgram | null>(null)
   const [loading, setLoading] = useState(true)
   const [bookmarks, setBookmarks] = useState<string[]>([])
