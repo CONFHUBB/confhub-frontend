@@ -53,9 +53,18 @@ export function CameraReadyManagement({ conferenceId }: CameraReadyManagementPro
             setLoading(true)
             const papers = await getPapersByConference(conferenceId)
 
-            // Only show accepted/published papers (eligible for camera-ready)
+            // Only show papers that have passed acceptance (eligible for camera-ready)
+            const ELIGIBLE_STATUSES = [
+                "ACCEPTED",
+                "AWAITING_REGISTRATION",
+                "REGISTERED",
+                "AWAITING_CAMERA_READY",
+                "CAMERA_READY_SUBMITTED",
+                "CAMERA_READY_REJECTED",
+                "PUBLISHED",
+            ]
             const eligible = (papers || []).filter(p =>
-                p.status === "ACCEPTED" || p.status === "PUBLISHED"
+                ELIGIBLE_STATUSES.includes(p.status)
             )
 
             const summaries: PaperCameraReadySummary[] = await Promise.all(
