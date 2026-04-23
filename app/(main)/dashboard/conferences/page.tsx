@@ -201,15 +201,23 @@ export default function ConferencesPage() {
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm min-w-[700px]">
+                        <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
+                            <colgroup>
+                                <col style={{ width: "200px" }} />
+                                <col style={{ width: "120px" }} className="hidden md:table-cell" />
+                                <col style={{ width: "160px" }} className="hidden lg:table-cell" />
+                                <col style={{ width: "120px" }} />
+                                <col style={{ width: "100px" }} className="hidden sm:table-cell" />
+                                <col style={{ width: "140px" }} />
+                            </colgroup>
                             <thead>
                                 <tr className="border-b text-muted-foreground bg-muted/30">
-                                    <th className="text-left py-3 px-6 font-medium">Conference</th>
-                                    <th className="text-left py-3 pr-4 font-medium hidden md:table-cell">Area</th>
-                                    <th className="text-left py-3 pr-4 font-medium hidden lg:table-cell">Location</th>
-                                    <th className="text-left py-3 pr-4 font-medium">Status</th>
-                                    <th className="text-left py-3 pr-6 font-medium hidden sm:table-cell">Start Date</th>
-                                    <th className="text-right py-3 pr-6 font-medium">Actions</th>
+                                    <th className="text-left py-3 px-6 font-medium overflow-hidden">Conference</th>
+                                    <th className="text-left py-3 pr-4 font-medium hidden md:table-cell overflow-hidden">Area</th>
+                                    <th className="text-left py-3 pr-4 font-medium hidden lg:table-cell overflow-hidden">Location</th>
+                                    <th className="text-left py-3 pr-4 font-medium overflow-hidden">Status</th>
+                                    <th className="text-left py-3 pr-6 font-medium hidden sm:table-cell overflow-hidden">Start Date</th>
+                                    <th className="text-right py-3 pr-6 font-medium overflow-hidden">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -233,26 +241,26 @@ export default function ConferencesPage() {
                                           )
                                         : filtered.map(c => (
                                             <tr key={c.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                                                <td className="py-3 px-6">
+                                                <td className="py-3 px-6 overflow-hidden">
                                                     <div>
                                                         <Link href={`/conference/${c.id}`} className="font-semibold hover:text-indigo-600 transition-colors">
                                                             {c.acronym || c.name}
                                                         </Link>
-                                                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{c.name}</p>
+                                                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5 overflow-hidden text-ellipsis">{c.name}</p>
                                                     </div>
                                                 </td>
-                                                <td className="py-3 pr-4 text-muted-foreground hidden md:table-cell">{c.area || "—"}</td>
-                                                <td className="py-3 pr-4 text-muted-foreground hidden lg:table-cell">{c.country || "—"}</td>
-                                                <td className="py-3 pr-4">
+                                                <td className="py-3 pr-4 text-muted-foreground hidden md:table-cell max-w-[120px] truncate overflow-hidden">{c.area || "—"}</td>
+                                                <td className="py-3 pr-4 text-muted-foreground hidden lg:table-cell max-w-[160px] truncate overflow-hidden">{c.country || "—"}</td>
+                                                <td className="py-3 pr-4 overflow-hidden">
                                                     <Badge variant="outline" className={`text-[10px] font-medium border gap-1 ${STATUS_COLOR[c.status] || "bg-gray-100 text-gray-600"}`}>
                                                         {STATUS_ICON[c.status]}
-                                                        {c.status}
+                                                        <span className="truncate">{c.status}</span>
                                                     </Badge>
                                                 </td>
-                                                <td className="py-3 pr-4 text-muted-foreground text-xs hidden sm:table-cell">
+                                                <td className="py-3 pr-4 text-muted-foreground text-xs hidden sm:table-cell max-w-[100px] truncate overflow-hidden">
                                                     {c.startDate ? new Date(c.startDate).toLocaleDateString() : "—"}
                                                 </td>
-                                                <td className="py-3 pr-6">
+                                                <td className="py-3 pr-6 overflow-hidden">
                                                     <div className="flex items-center justify-end gap-1.5">
                                                         <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
                                                             <Link href={`/conference/${c.id}`}>View</Link>
