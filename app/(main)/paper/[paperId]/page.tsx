@@ -365,7 +365,7 @@ export default function PaperWorkspacePage() {
                         <div className="space-y-4">
                             <div>
                                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Abstract</h3>
-                                <p className="text-sm leading-relaxed">{paper.abstractField || <span className="text-muted-foreground italic">No abstract provided</span>}</p>
+                                <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{paper.abstractField || <span className="text-muted-foreground italic">No abstract provided</span>}</p>
                             </div>
                             
                             {paper.keywords && paper.keywords.length > 0 && (

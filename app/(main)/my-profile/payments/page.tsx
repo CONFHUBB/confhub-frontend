@@ -56,7 +56,8 @@ export default function GlobalPaymentHistoryPage() {
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-muted/30">
-                                <TableHead className="w-24">Ticket ID</TableHead>
+                                <TableHead>Type</TableHead>
+                                <TableHead>Conference</TableHead>
                                 <TableHead className="w-32">Amount (VND)</TableHead>
                                 <TableHead>VNPay Ref</TableHead>
                                 <TableHead>Date / Time</TableHead>
@@ -68,8 +69,17 @@ export default function GlobalPaymentHistoryPage() {
                         <TableBody>
                             {history.map(item => (
                                 <TableRow key={item.id} className="hover:bg-muted/30">
-                                    <TableCell className="font-mono text-xs text-muted-foreground">
-                                        {item.ticketId ? `#${item.ticketId}` : '—'}
+                                    <TableCell>
+                                        {item.paymentType === 'SUBSCRIPTION' ? (
+                                            <Badge className="bg-purple-100 text-purple-800 border-purple-200">Subscription</Badge>
+                                        ) : (
+                                            <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                                                Ticket {item.ticketId ? `#${item.ticketId}` : ''}
+                                            </Badge>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-sm font-medium max-w-[200px] truncate">
+                                        {item.conferenceName || '—'}
                                     </TableCell>
                                     <TableCell className="font-semibold text-indigo-700">
                                         {item.amount?.toLocaleString() || '—'}

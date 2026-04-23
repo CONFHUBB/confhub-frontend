@@ -25,14 +25,18 @@ import {
     getConferences,
     approveConference,
     cancelConference,
+    rejectConference,
 } from "@/app/api/conference.api"
 import type { ConferenceListResponse } from "@/types/conference"
 
-const STATUS_OPTIONS = ["ALL", "PENDING_APPROVAL", "SETUP", "OPEN", "COMPLETED", "CANCELLED"]
+const STATUS_OPTIONS = ["ALL", "PENDING_APPROVAL", "SETUP", "APPROVED", "REJECTED", "PENDING_PAYMENT", "OPEN", "COMPLETED", "CANCELLED"]
 
 const STATUS_COLOR: Record<string, string> = {
     PENDING_APPROVAL: "bg-amber-100 text-amber-700 border-amber-200",
     SETUP:            "bg-blue-100 text-blue-700 border-blue-200",
+    APPROVED:         "bg-emerald-100 text-emerald-700 border-emerald-200",
+    REJECTED:         "bg-rose-100 text-rose-700 border-rose-200",
+    PENDING_PAYMENT:  "bg-orange-100 text-orange-700 border-orange-200",
     OPEN:             "bg-emerald-100 text-emerald-700 border-emerald-200",
     COMPLETED:        "bg-gray-100 text-gray-600 border-gray-200",
     CANCELLED:        "bg-rose-100 text-rose-700 border-rose-200",
@@ -41,6 +45,9 @@ const STATUS_COLOR: Record<string, string> = {
 const STATUS_ICON: Record<string, React.ReactNode> = {
     PENDING_APPROVAL: <CalendarClock className="h-3 w-3" />,
     SETUP:            <CalendarClock className="h-3 w-3" />,
+    APPROVED:         <CheckCircle2 className="h-3 w-3" />,
+    REJECTED:         <XCircle className="h-3 w-3" />,
+    PENDING_PAYMENT:  <CalendarClock className="h-3 w-3" />,
     OPEN:             <PlayCircle className="h-3 w-3" />,
     COMPLETED:        <Check className="h-3 w-3" />,
     CANCELLED:        <XCircle className="h-3 w-3" />,
@@ -56,6 +63,8 @@ export default function ConferencesPage() {
     const [activeFilter, setActiveFilter] = useState(initialStatus)
     const [search, setSearch] = useState("")
     const [actionLoading, setActionLoading] = useState<number | null>(null)
+    const [rejectDialogId, setRejectDialogId] = useState<number | null>(null)
+    const [rejectReason, setRejectReason] = useState("")
 
     const load = useCallback(async () => {
         try {
@@ -99,16 +108,35 @@ export default function ConferencesPage() {
         }
     }
 
+    const handleReject = async () => {
+        if (!rejectDialogId) return
+        setActionLoading(rejectDialogId)
+        try {
+            await rejectConference(rejectDialogId, rejectReason || 'No reason specified')
+            toast.success('Conference rejected successfully')
+            setRejectDialogId(null)
+            setRejectReason('')
+            await load()
+        } catch {
+            toast.error('Failed to reject conference')
+        } finally {
+            setActionLoading(null)
+        }
+    }
+
     const counts = {
         total: conferences.length,
         pending: conferences.filter(c => c.status === "PENDING_APPROVAL").length,
         setup: conferences.filter(c => c.status === "SETUP").length,
+        approved: conferences.filter(c => c.status === "APPROVED").length,
+        rejected: conferences.filter(c => c.status === "REJECTED").length,
         open: conferences.filter(c => c.status === "OPEN").length,
         completed: conferences.filter(c => c.status === "COMPLETED").length,
         cancelled: conferences.filter(c => c.status === "CANCELLED").length,
     }
 
     return (
+        <>
         <div className="flex flex-col gap-6 pb-8 min-w-0">
             {/* Header */}
             <div className="flex items-center justify-between shrink-0">
@@ -231,18 +259,30 @@ export default function ConferencesPage() {
                                                         </Button>
                                                         {/* Only PENDING conferences can be approved */}
                                                         {c.status === "PENDING_APPROVAL" && (
-                                                            <Button
-                                                                size="sm"
-                                                                className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 gap-1"
-                                                                onClick={() => handleAction(c.id, "approve")}
-                                                                disabled={actionLoading === c.id}
-                                                            >
-                                                                <CheckCircle2 className="h-3 w-3" />
-                                                                Approve
-                                                            </Button>
+                                                            <>
+                                                                <Button
+                                                                    size="sm"
+                                                                    className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 gap-1"
+                                                                    onClick={() => handleAction(c.id, "approve")}
+                                                                    disabled={actionLoading === c.id}
+                                                                >
+                                                                    <CheckCircle2 className="h-3 w-3" />
+                                                                    Approve
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    className="h-7 text-xs text-rose-600 border-rose-200 hover:bg-rose-50 gap-1"
+                                                                    onClick={() => { setRejectDialogId(c.id); setRejectReason('') }}
+                                                                    disabled={actionLoading === c.id}
+                                                                >
+                                                                    <XCircle className="h-3 w-3" />
+                                                                    Reject
+                                                                </Button>
+                                                            </>
                                                         )}
                                                         {/* Cancel only for conferences that are not already cancelled/completed */}
-                                                        {c.status !== "CANCELLED" && c.status !== "COMPLETED" && (
+                                                        {c.status !== "CANCELLED" && c.status !== "COMPLETED" && c.status !== "PENDING_APPROVAL" && (
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
@@ -265,5 +305,35 @@ export default function ConferencesPage() {
                 </CardContent>
             </Card>
         </div>
+
+        {/* Reject Dialog */}
+        {rejectDialogId && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md space-y-4">
+                    <h3 className="text-lg font-semibold">Reject Conference</h3>
+                    <p className="text-sm text-muted-foreground">Please provide a reason for rejecting this conference. The organizer will see this reason.</p>
+                    <textarea
+                        className="w-full border rounded-lg p-3 text-sm min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Enter rejection reason..."
+                        value={rejectReason}
+                        onChange={e => setRejectReason(e.target.value)}
+                    />
+                    <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setRejectDialogId(null)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            className="bg-rose-600 hover:bg-rose-700 text-white"
+                            onClick={handleReject}
+                            disabled={!rejectReason.trim() || actionLoading !== null}
+                        >
+                            Confirm Reject
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     )
 }

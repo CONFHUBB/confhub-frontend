@@ -373,30 +373,34 @@ function StepUploadManuscript({
             } finally {
                 setLoadingFiles(false)
             }
+            
+            // Fetch initial plagiarism state
+            try {
+                const res = await getPlagiarismResult(paperId)
+                setPlagiarismResult(res)
+                if (res.status === 'CHECKING') {
+                    setCheckingPlagiarism(true)
+                    pollPlagiarismResult()
+                }
+            } catch (err) {
+                console.error('Error fetching plagiarism result:', err)
+            }
         }
         fetchExistingFiles()
     }, [paperId])
 
     const [plagiarismAutoOpen, setPlagiarismAutoOpen] = useState(false)
 
-    const handleCheckPlagiarism = async () => {
-        setCheckingPlagiarism(true)
-        setPlagiarismAutoOpen(false)
-        try {
-            // Trigger actual plagiarism check
-            await recheckPlagiarism(paperId)
-            setPlagiarismResult({ paperId, score: null, status: 'CHECKING', details: null })
-
-            // Poll for completion
-            const maxAttempts = 30 // 30 × 3s = 90s max
-            for (let i = 0; i < maxAttempts; i++) {
-                await new Promise(r => setTimeout(r, 3000))
+    const pollPlagiarismResult = async () => {
+        const maxAttempts = 30 // 30 × 3s = 90s max
+        for (let i = 0; i < maxAttempts; i++) {
+            await new Promise(r => setTimeout(r, 3000))
+            try {
                 const newRes = await getPlagiarismResult(paperId)
                 setPlagiarismResult(newRes)
 
                 if (newRes.status === 'COMPLETED') {
                     setCheckingPlagiarism(false)
-                    // Auto-open the report dialog
                     setPlagiarismAutoOpen(true)
                     const s = newRes.score ?? 0
                     const label = s <= 20 ? '✅ Low' : s <= 40 ? '⚠️ Moderate' : '🚨 High'
@@ -408,14 +412,29 @@ function StepUploadManuscript({
                     toast.error('Plagiarism check failed. Please try again.')
                     return
                 }
+            } catch (err) {
+                console.error('Error polling plagiarism result:', err)
             }
-            // Timeout
-            toast.info('Plagiarism check is still running. Please check back later.')
+        }
+        setCheckingPlagiarism(false)
+        toast.info('Plagiarism check is still running. Please check back later.')
+    }
+
+    const handleCheckPlagiarism = async () => {
+        setCheckingPlagiarism(true)
+        setPlagiarismAutoOpen(false)
+        try {
+            // Trigger actual plagiarism check
+            await recheckPlagiarism(paperId)
+            setPlagiarismResult({ paperId, score: null, status: 'CHECKING', details: null })
+
+            pollPlagiarismResult()
+
         } catch (err: any) {
             toast.error('Failed to run plagiarism check')
             console.error(err)
+            setCheckingPlagiarism(false)
         }
-        setCheckingPlagiarism(false)
     }
 
     // Generate local preview URL when file is selected
@@ -457,6 +476,15 @@ function StepUploadManuscript({
             )
             if (activeManuscript) {
                 setExistingFile({ id: activeManuscript.id, url: activeManuscript.url })
+            }
+            
+            // Fetch the completed plagiarism result immediately since backend does it synchronously now
+            try {
+                const newRes = await getPlagiarismResult(paperId)
+                setPlagiarismResult(newRes)
+                setPlagiarismAutoOpen(true)
+            } catch (err) {
+                console.error('Error fetching plagiarism result:', err)
             }
         } catch (err: any) {
             toast.error(err.response?.data?.message || 'Failed to upload manuscript')

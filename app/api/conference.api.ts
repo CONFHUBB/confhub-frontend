@@ -41,7 +41,7 @@ export const getConference = async (id: number): Promise<ConferenceResponse> => 
 }
 
 export const getConferences = async (): Promise<ConferenceListResponse[]> => {
-    const response = await http.get<{ content: ConferenceListResponse[] }>('/conferences')
+    const response = await http.get<{ content: ConferenceListResponse[] }>('/conferences?page=0&size=100')
     return response.data.content
 }
 
@@ -86,6 +86,21 @@ export const completeConference = async (id: number): Promise<any> => {
 
 export const cancelConference = async (id: number): Promise<any> => {
     const response = await http.put(`/conferences/${id}/cancel`)
+    return response.data
+}
+
+export const submitForApproval = async (id: number): Promise<any> => {
+    const response = await http.put(`/conferences/${id}/submit-for-approval`)
+    return response.data
+}
+
+export const rejectConference = async (id: number, reason: string): Promise<any> => {
+    const response = await http.put(`/conferences/${id}/reject`, { reason })
+    return response.data
+}
+
+export const selectSubscriptionPlan = async (id: number, plan: string): Promise<any> => {
+    const response = await http.put(`/conferences/${id}/select-plan`, { plan })
     return response.data
 }
 

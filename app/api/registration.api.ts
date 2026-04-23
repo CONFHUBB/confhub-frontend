@@ -181,6 +181,9 @@ export interface PaymentHistoryResponse {
   id: number
   ticketId: number | null
   registrationNumber: string | null
+  conferenceId: number | null
+  conferenceName: string | null
+  paymentType: 'TICKET' | 'SUBSCRIPTION'
   vnpTxnRef: string
   vnpTransactionNo: string | null
   vnpTransactionStatus: string | null
