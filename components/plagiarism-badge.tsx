@@ -24,23 +24,24 @@ interface PlagiarismBadgeProps {
     className?: string
     autoOpen?: boolean
     onAutoOpenDone?: () => void
+    verdict?: 'success' | 'rejected' | null
 }
 
 function getScoreColor(score: number) {
     if (score <= 20) return { bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-700 dark:text-green-400", border: "border-green-200 dark:border-green-800" }
-    if (score <= 40) return { bg: "bg-yellow-100 dark:bg-yellow-900/30", text: "text-yellow-700 dark:text-yellow-400", border: "border-yellow-200 dark:border-yellow-800" }
+    if (score <= 50) return { bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-400", border: "border-amber-200 dark:border-amber-800" }
     return { bg: "bg-red-100 dark:bg-red-900/30", text: "text-red-700 dark:text-red-400", border: "border-red-200 dark:border-red-800" }
 }
 
 function getScoreIcon(score: number) {
-    if (score <= 20) return <ShieldCheck className="h-3.5 w-3.5" />
-    if (score <= 40) return <ShieldAlert className="h-3.5 w-3.5" />
-    return <ShieldX className="h-3.5 w-3.5" />
+    if (score <= 20) return <span className="h-2.5 w-2.5 rounded-full bg-green-500 inline-block" />
+    if (score <= 50) return <span className="h-2.5 w-2.5 rounded-full bg-amber-500 inline-block" />
+    return <span className="h-2.5 w-2.5 rounded-full bg-red-500 inline-block" />
 }
 
 function getScoreLabel(score: number) {
     if (score <= 20) return "Low Similarity"
-    if (score <= 40) return "Moderate Similarity"
+    if (score <= 50) return "Moderate Similarity"
     return "High Similarity"
 }
 
@@ -52,7 +53,7 @@ function parseDetails(raw: any): PlagiarismDetails | null {
     return raw as PlagiarismDetails
 }
 
-export function PlagiarismBadge({ paperId, score, status, showDetail = true, className, autoOpen, onAutoOpenDone }: PlagiarismBadgeProps) {
+export function PlagiarismBadge({ paperId, score, status, showDetail = true, className, autoOpen, onAutoOpenDone, verdict }: PlagiarismBadgeProps) {
     const [open, setOpen] = useState(false)
     const [details, setDetails] = useState<PlagiarismDetails | null>(null)
     const [loading, setLoading] = useState(false)
@@ -205,6 +206,19 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
                     </div>
                 ) : details ? (
                     <div className="space-y-5">
+                        {/* Verdict Banner (shown after upload) */}
+                        {verdict === 'rejected' && (
+                            <div className="rounded-lg bg-gradient-to-r from-red-500 to-rose-600 p-3 text-center shadow-sm">
+                                <p className="text-white font-bold text-base">Upload Rejected</p>
+                                <p className="text-red-100 text-xs mt-1">Plagiarism score exceeds the 50% threshold. Please revise your manuscript.</p>
+                            </div>
+                        )}
+                        {verdict === 'success' && (
+                            <div className="rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 p-3 text-center shadow-sm">
+                                <p className="text-white font-bold text-base">Upload Successful</p>
+                                <p className="text-green-100 text-xs mt-1">Your manuscript passed the plagiarism check and has been uploaded.</p>
+                            </div>
+                        )}
                         {/* Stale data warning */}
                         {isStaleData && (
                             <div className="flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2.5">

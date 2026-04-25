@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select as AntdSelect } from 'antd'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Loader2, ArrowLeft, Check, FileText, Users, Upload, Search, Trash2, Send, FileUp, Eye } from 'lucide-react'
 import { SuccessCelebration } from '@/components/shared/success-celebration'
 import { UploadProgress } from '@/components/shared/upload-progress'
@@ -348,6 +349,8 @@ function StepUploadManuscript({
     const [uploadPercent, setUploadPercent] = useState(0)
     const [plagiarismResult, setPlagiarismResult] = useState<PlagiarismResult | null>(null)
     const [checkingPlagiarism, setCheckingPlagiarism] = useState(false)
+    const [checkingDialogOpen, setCheckingDialogOpen] = useState(false)
+    const [plagiarismVerdict, setPlagiarismVerdict] = useState<'success' | 'rejected' | null>(null)
 
     // Track existing uploaded file from server
     const [existingFile, setExistingFile] = useState<{ id: number; url: string } | null>(null)
@@ -463,12 +466,26 @@ function StepUploadManuscript({
         try {
             setUploading(true)
             setUploadPercent(0)
+            setCheckingDialogOpen(true)
+            setPlagiarismVerdict(null)
             await uploadPaperFile(conferenceId, paperId, selectedFile, (percent) => {
                 setUploadPercent(percent)
             })
             setUploadPercent(100)
-            toast.success('Manuscript uploaded successfully!')
+            setCheckingDialogOpen(false)
+
+            // Upload succeeded — fetch plagiarism result and auto-open detail
+            try {
+                const newRes = await getPlagiarismResult(paperId)
+                setPlagiarismResult(newRes)
+            } catch (err) {
+                console.error('Error fetching plagiarism result:', err)
+            }
+
+            setPlagiarismVerdict('success')
+            setPlagiarismAutoOpen(true)
             setUploaded(true)
+
             // Refresh existing file info
             const files = await getPaperFilesByPaperId(paperId)
             const activeManuscript = files.find(
@@ -477,18 +494,18 @@ function StepUploadManuscript({
             if (activeManuscript) {
                 setExistingFile({ id: activeManuscript.id, url: activeManuscript.url })
             }
-            
-            // Fetch the completed plagiarism result immediately since backend does it synchronously now
+        } catch (err: any) {
+            console.error('Error uploading:', err)
+            setCheckingDialogOpen(false)
+
+            // Fetch plagiarism result even on rejection so we can show details
             try {
                 const newRes = await getPlagiarismResult(paperId)
                 setPlagiarismResult(newRes)
-                setPlagiarismAutoOpen(true)
-            } catch (err) {
-                console.error('Error fetching plagiarism result:', err)
-            }
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to upload manuscript')
-            console.error('Error uploading:', err)
+            } catch (e) { /* ignore */ }
+
+            setPlagiarismVerdict('rejected')
+            setPlagiarismAutoOpen(true)
         } finally {
             setUploading(false)
         }
@@ -528,6 +545,44 @@ function StepUploadManuscript({
 
     return (
         <div className="space-y-6">
+            {/* Checking Plagiarism Modal (spinner only) */}
+            <Dialog open={checkingDialogOpen}>
+                <DialogContent className="sm:max-w-md [&>button]:hidden">
+                    <DialogHeader>
+                        <DialogTitle className="text-center text-xl">Analyzing Manuscript...</DialogTitle>
+                        <DialogDescription className="text-center">
+                            Uploading your file and running a comprehensive plagiarism check. This may take up to 30 seconds.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col items-center justify-center py-8 space-y-5">
+                        <div className="relative">
+                            <div className="absolute inset-0 rounded-full bg-indigo-100 animate-ping opacity-30" />
+                            <div className="relative flex items-center justify-center h-20 w-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg">
+                                <Search className="h-8 w-8 text-white animate-pulse" />
+                            </div>
+                        </div>
+                        <div className="text-center space-y-1">
+                            <p className="text-sm font-semibold text-slate-800">Scanning for plagiarism...</p>
+                            <p className="text-xs text-muted-foreground">Comparing against internal database & web sources</p>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Standalone PlagiarismBadge for auto-open after upload (always rendered) */}
+            {plagiarismResult && plagiarismResult.status === 'COMPLETED' && !uploaded && (
+                <div className="hidden">
+                    <PlagiarismBadge
+                        paperId={paperId}
+                        score={plagiarismResult.score}
+                        status={plagiarismResult.status}
+                        autoOpen={plagiarismAutoOpen}
+                        onAutoOpenDone={() => setPlagiarismAutoOpen(false)}
+                        verdict={plagiarismVerdict}
+                    />
+                </div>
+            )}
+
             {/* Info banner */}
             <div className="p-4 rounded-lg border bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800 text-sm text-indigo-800 dark:text-indigo-300 space-y-2">
                 <p>
@@ -599,13 +654,19 @@ function StepUploadManuscript({
                                 </div>
                                 <div className="flex items-center gap-3">
                                     {plagiarismResult && plagiarismResult.status === 'COMPLETED' ? (
-                                        <PlagiarismBadge
-                                            paperId={paperId}
-                                            score={plagiarismResult.score}
-                                            status={plagiarismResult.status}
-                                            autoOpen={plagiarismAutoOpen}
-                                            onAutoOpenDone={() => setPlagiarismAutoOpen(false)}
-                                        />
+                                        <div className="flex items-center gap-2">
+                                            <span className={`h-2.5 w-2.5 rounded-full inline-block ${
+                                                (plagiarismResult.score ?? 0) <= 20 ? 'bg-green-500' : (plagiarismResult.score ?? 0) <= 50 ? 'bg-amber-500' : 'bg-red-500'
+                                            }`} />
+                                            <span className={`text-sm font-bold ${
+                                                (plagiarismResult.score ?? 0) <= 20 ? 'text-green-700' : (plagiarismResult.score ?? 0) <= 50 ? 'text-amber-700' : 'text-red-700'
+                                            }`}>
+                                                {(plagiarismResult.score ?? 0).toFixed(1)}%
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {(plagiarismResult.score ?? 0) <= 20 ? 'Low' : (plagiarismResult.score ?? 0) <= 50 ? 'Moderate' : 'High'} Similarity
+                                            </span>
+                                        </div>
                                     ) : plagiarismResult && plagiarismResult.status === 'CHECKING' ? (
                                         <span className="text-sm font-medium text-blue-600 flex items-center gap-2">
                                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -616,16 +677,27 @@ function StepUploadManuscript({
                                     ) : (
                                         <span className="text-sm font-medium text-slate-500 italic">Not checked yet</span>
                                     )}
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        onClick={handleCheckPlagiarism}
-                                        disabled={checkingPlagiarism}
-                                        className="ml-auto"
-                                    >
-                                        {checkingPlagiarism ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
-                                        {checkingPlagiarism ? 'Checking...' : plagiarismResult?.status === 'COMPLETED' ? 'Re-check' : 'Check Plagiarism'}
-                                    </Button>
+                                    <div className="ml-auto flex items-center gap-2">
+                                        {plagiarismResult && plagiarismResult.status === 'COMPLETED' && (
+                                            <PlagiarismBadge
+                                                paperId={paperId}
+                                                score={plagiarismResult.score}
+                                                status={plagiarismResult.status}
+                                                autoOpen={plagiarismAutoOpen}
+                                                onAutoOpenDone={() => setPlagiarismAutoOpen(false)}
+                                                verdict={plagiarismVerdict}
+                                            />
+                                        )}
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            onClick={handleCheckPlagiarism}
+                                            disabled={checkingPlagiarism}
+                                        >
+                                            {checkingPlagiarism ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
+                                            {checkingPlagiarism ? 'Checking...' : plagiarismResult?.status === 'COMPLETED' ? 'Re-check' : 'Check Plagiarism'}
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>
