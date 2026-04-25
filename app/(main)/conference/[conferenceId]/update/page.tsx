@@ -125,7 +125,7 @@ const TAB_GROUPS: TabGroupDef[] = [
         accentColor: "text-primary",
         items: [
             { key: "dashboard", label: "Dashboard", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'edit' } },
-            { key: "analytics", label: "Analytics", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'edit' } }
+            { key: "analytics", label: "Analytics", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'edit' } },
         ]
     },
     {

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { getConferences, approveConference } from '@/app/api/conference.api'
+import { getConferences, approveConference, getConferenceActivities } from '@/app/api/conference.api'
 import { useUserRole } from '@/hooks/useUserRole'
 import type { ConferenceListResponse } from '@/types/conference'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,7 @@ import { CardGridSkeleton, PageHeaderSkeleton } from '@/components/shared/skelet
 import { toast } from 'sonner'
 import { fmtDate } from '@/lib/utils'
 import { filterConferences, type FilterValues } from './conference-filter-bar'
+import { isActivityOpen } from '@/lib/activity'
 
 // Inner component that uses useSearchParams (must be inside Suspense)
 function ConferencesPageInner() {
@@ -23,6 +24,7 @@ function ConferencesPageInner() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [approvingId, setApprovingId] = useState<number | null>(null)
+    const [submissionOpenMap, setSubmissionOpenMap] = useState<Record<number, boolean>>({})
     const { roles } = useUserRole()
     const isStaff = roles.some(r => r === 'ROLE_STAFF' || r === 'ROLE_ADMIN')
 
@@ -56,8 +58,20 @@ function ConferencesPageInner() {
             setLoading(true)
             // Sort by newest (the API returns all; we sort client-side)
             const data = await getConferences()
-            // Sort by id DESC as proxy for createdAt DESC
             const sorted = [...data].sort((a, b) => b.id - a.id)
+
+            // Fetch submission status for OPEN conferences
+            const openConfs = sorted.filter(c => c.status === 'OPEN')
+            const map: Record<number, boolean> = {}
+            await Promise.all(openConfs.map(async c => {
+                try {
+                    const acts = await getConferenceActivities(c.id)
+                    map[c.id] = isActivityOpen(acts.find(a => a.activityType === 'PAPER_SUBMISSION'))
+                } catch {
+                    map[c.id] = false
+                }
+            }))
+            setSubmissionOpenMap(map)
             setConferences(sorted)
         } catch (err: any) {
             setError('Failed to load conferences. Please try again later.')
@@ -97,6 +111,12 @@ function ConferencesPageInner() {
 
     const filtered = useMemo(() => {
         let list = filterConferences(visibleConferences, filters)
+        
+        // Custom logic: if filtering by OPEN, also ensure PAPER_SUBMISSION is open
+        if (filters.status === 'OPEN') {
+            list = list.filter(c => submissionOpenMap[c.id] === true)
+        }
+
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase()
             list = list.filter(c =>
@@ -107,7 +127,7 @@ function ConferencesPageInner() {
             )
         }
         return list
-    }, [visibleConferences, filters, searchQuery])
+    }, [visibleConferences, filters, searchQuery, submissionOpenMap])
 
     // Reset page when filters/search change
     React.useEffect(() => { setCurrentPage(0) }, [filters, searchQuery])

@@ -202,6 +202,14 @@ export default function PaperWorkspacePage() {
             toast.success('File uploaded successfully!')
             setSelectedFile(null)
             await fetchFiles()
+            // Fetch plagiarism result immediately if possible
+            try {
+                const res = await recheckPlagiarism(paperId)
+                if (res) {
+                    setPaper(prev => prev ? { ...prev, plagiarismScore: res.score ?? 0, plagiarismStatus: res.status ?? 'COMPLETED' } : prev)
+                    setPlagiarismKey(k => k + 1)
+                }
+            } catch (e) { /* ignore */ }
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to upload manuscript')
         } finally { setUploading(false) }
@@ -365,7 +373,7 @@ export default function PaperWorkspacePage() {
                         <div className="space-y-4">
                             <div>
                                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Abstract</h3>
-                                <p className="text-sm leading-relaxed">{paper.abstractField || <span className="text-muted-foreground italic">No abstract provided</span>}</p>
+                                <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{paper.abstractField || <span className="text-muted-foreground italic">No abstract provided</span>}</p>
                             </div>
                             
                             {paper.keywords && paper.keywords.length > 0 && (
@@ -745,7 +753,7 @@ export default function PaperWorkspacePage() {
                                             }} />
                                         <div className="flex justify-end pt-2">
                                                 <Button onClick={handleUploadFile} disabled={uploading || !selectedFile} className="gap-2">
-                                                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} {uploading ? 'Uploading...' : 'Upload'}
+                                                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} {uploading ? 'Analyzing Plagiarism & Uploading...' : 'Upload'}
                                                 </Button>
                                         </div>
                                     </div>

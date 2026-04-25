@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -8,11 +9,11 @@ import {
     Loader2, FileText, Users, BarChart3, CheckCircle2,
     Clock, AlertTriangle, Eye, UserCheck, ChevronRight,
     Settings, Send, Search, Award, Calendar, Zap, XCircle,
-    ArrowRight, ChevronDown, ChevronUp, Gavel, MessageSquare, Ticket, PartyPopper
+    ArrowRight, ChevronDown, ChevronUp, Gavel, MessageSquare, Ticket, PartyPopper, CreditCard
 } from 'lucide-react'
 import { getPapersByConference } from '@/app/api/paper.api'
 import { getAggregatesByConference } from '@/app/api/review-aggregate.api'
-import { getConferenceActivities, getConference } from '@/app/api/conference.api'
+import { getConferenceActivities, getConference, submitForApproval as apiSubmitForApproval } from '@/app/api/conference.api'
 import { getTracksByConference, getSubjectAreasByTrack } from '@/app/api/track.api'
 import { getConferenceSubmissionForm } from '@/app/api/submission-form.api'
 import { getConferenceMembers } from '@/app/api/user.api'
@@ -601,8 +602,12 @@ function PhaseStatusCard({
 }
 
 export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboardProps) {
+    const router = useRouter()
     const [papers, setPapers] = useState<PaperSummary[]>([])
     const [activities, setActivities] = useState<ConferenceActivityDTO[]>([])
+    const [conferenceStatus, setConferenceStatus] = useState<string>('SETUP')
+    const [rejectionReason, setRejectionReason] = useState<string | null>(null)
+    const [submitting, setSubmitting] = useState(false)
     const [phaseData, setPhaseData] = useState<PhaseData>({
         hasTracks: false,
         hasSubjectAreas: false,
@@ -643,7 +648,7 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
             setLoading(true)
             const now = new Date()
 
-            const [papersData, aggregatesData, activitiesData, tracksData, formConfig, membersData, ticketTypes] = await Promise.all([
+            const [papersData, aggregatesData, activitiesData, tracksData, formConfig, membersData, ticketTypes, confData] = await Promise.all([
                 getPapersByConference(conferenceId).catch(() => []),
                 getAggregatesByConference(conferenceId).catch(() => []),
                 getConferenceActivities(conferenceId).catch(() => []),
@@ -651,7 +656,13 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                 getConferenceSubmissionForm(conferenceId).catch(() => null),
                 getConferenceMembers(conferenceId, 0).catch(() => ({ totalElements: 0 })),
                 getTicketTypes(conferenceId, false).catch(() => []),
+                getConference(conferenceId).catch(() => null),
             ])
+
+            if (confData) {
+                setConferenceStatus(confData.status)
+                setRejectionReason(confData.rejectionReason || null)
+            }
 
             // Review questions, settings & subject areas — check ALL tracks
             let hasReviewForm = false
@@ -834,15 +845,164 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                 <p className="text-sm text-muted-foreground mt-1">Conference progress overview at a glance</p>
             </div>
 
-            {/* Phase Status Card with Checklist */}
-            <PhaseStatusCard
-                conferenceId={conferenceId}
-                activities={activities}
-                papers={papers}
-                phaseData={phaseData}
-                onNavigate={onNavigate}
-                role={role}
-            />
+            {/* Conference Approval Status Banners */}
+            {conferenceStatus === 'PENDING_APPROVAL' && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+                    <div className="flex items-start gap-3">
+                        <div className="rounded-full bg-amber-100 p-2">
+                            <Clock className="h-5 w-5 text-amber-600" />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-amber-800">Đang chờ xét duyệt</h3>
+                            <p className="text-sm text-amber-700 mt-1">
+                                Hội nghị đã được gửi xét duyệt. Vui lòng chờ Admin phê duyệt trước khi tiếp tục.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {conferenceStatus === 'REJECTED' && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-5">
+                    <div className="flex items-start gap-3">
+                        <div className="rounded-full bg-red-100 p-2">
+                            <AlertTriangle className="h-5 w-5 text-red-600" />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="font-semibold text-red-800">Hội nghị bị từ chối</h3>
+                            {rejectionReason && (
+                                <p className="text-sm text-red-700 mt-1 bg-red-100/50 rounded-lg px-3 py-2">
+                                    <span className="font-medium">Lý do:</span> {rejectionReason}
+                                </p>
+                            )}
+                            <p className="text-sm text-red-600 mt-2">Vui lòng chỉnh sửa thông tin hội nghị và gửi lại xét duyệt.</p>
+                            {role === 'CONFERENCE_CHAIR' && (
+                            <Button
+                                size="sm"
+                                className="mt-3 bg-red-600 hover:bg-red-700 text-white gap-1.5"
+                                onClick={async () => {
+                                    setSubmitting(true)
+                                    try {
+                                        await apiSubmitForApproval(conferenceId)
+                                        toast.success('Đã gửi lại xét duyệt thành công!')
+                                        fetchData()
+                                    } catch (err: any) {
+                                        toast.error(err?.response?.data?.message || 'Không thể gửi xét duyệt')
+                                    } finally {
+                                        setSubmitting(false)
+                                    }
+                                }}
+                                disabled={submitting}
+                            >
+                                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                Gửi lại xét duyệt
+                            </Button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {conferenceStatus === 'APPROVED' && role === 'CONFERENCE_CHAIR' && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-start gap-3">
+                            <div className="rounded-full bg-emerald-100 p-2">
+                                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-emerald-800">Conference has been approved!</h3>
+                                <p className="text-sm text-emerald-700 mt-1">
+                                    Please select a subscription plan to activate your conference.
+                                </p>
+                            </div>
+                        </div>
+                        <Button
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                            onClick={() => router.push(`/conference/${conferenceId}/subscription`)}
+                        >
+                            <CreditCard className="h-4 w-4" />
+                            Select Plan
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {conferenceStatus === 'PENDING_PAYMENT' && (
+                <div className="rounded-xl border border-orange-200 bg-orange-50 p-5">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-start gap-3">
+                            <div className="rounded-full bg-orange-100 p-2">
+                                <Clock className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-orange-800">Payment Pending</h3>
+                                <p className="text-sm text-orange-700 mt-1">
+                                    Your conference is awaiting payment confirmation from VNPay. If you have already paid, please wait a moment.
+                                </p>
+                            </div>
+                        </div>
+                        {role === 'CONFERENCE_CHAIR' && (
+                            <Button
+                                className="bg-orange-600 hover:bg-orange-700 text-white gap-1.5"
+                                onClick={() => router.push(`/conference/${conferenceId}/subscription`)}
+                            >
+                                <CreditCard className="h-4 w-4" />
+                                Retry Payment
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Phase Status Card with Checklist — only show for SETUP, OPEN, COMPLETED */}
+            {(conferenceStatus === 'SETUP' || conferenceStatus === 'OPEN' || conferenceStatus === 'COMPLETED') && (
+                <>
+                    {/* Submit for Approval Button — only SETUP and all blocking met */}
+                    {conferenceStatus === 'SETUP' && role === 'CONFERENCE_CHAIR' && (() => {
+                        const setupChecklist = getPhaseChecklist('setup', phaseData)
+                        const allBlockingMet = setupChecklist.filter(i => i.blocking).every(i => i.met)
+                        return allBlockingMet ? (
+                            <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-5">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="font-semibold text-indigo-800">Sẵn sàng xét duyệt</h3>
+                                        <p className="text-sm text-indigo-600 mt-0.5">Tất cả các thông tin bắt buộc đã được cấu hình.</p>
+                                    </div>
+                                    <Button
+                                        className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5"
+                                        onClick={async () => {
+                                            setSubmitting(true)
+                                            try {
+                                                await apiSubmitForApproval(conferenceId)
+                                                toast.success('Đã gửi xét duyệt thành công!')
+                                                fetchData()
+                                            } catch (err: any) {
+                                                toast.error(err?.response?.data?.message || 'Không thể gửi xét duyệt')
+                                            } finally {
+                                                setSubmitting(false)
+                                            }
+                                        }}
+                                        disabled={submitting}
+                                    >
+                                        {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                        Gửi xét duyệt
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : null
+                    })()}
+
+                    <PhaseStatusCard
+                        conferenceId={conferenceId}
+                        activities={activities}
+                        papers={papers}
+                        phaseData={phaseData}
+                        onNavigate={onNavigate}
+                        role={role}
+                    />
+                </>
+            )}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Card className="border-l-4 border-l-indigo-500">
