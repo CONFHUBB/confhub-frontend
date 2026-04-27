@@ -99,6 +99,7 @@ export function ExcelImport({
         (preview?.subjectAreaPreviews?.length ?? 0) > 0 ? preview!.subjectAreaPreviews! :
         (preview?.memberPreviews?.length ?? 0) > 0 ? preview!.memberPreviews! :
         (preview?.ticketTypePreviews?.length ?? 0) > 0 ? preview!.ticketTypePreviews! :
+        (preview?.reviewQuestionPreviews?.length ?? 0) > 0 ? preview!.reviewQuestionPreviews! :
         preview?.ticketTypePreview ? [preview.ticketTypePreview] : []
 
     return (
@@ -236,6 +237,7 @@ export function ExcelImport({
                         {importResult.subjectAreasCreated > 0 && ` — ${importResult.subjectAreasCreated} subject areas`}
                         {importResult.membersCreated !== undefined && importResult.membersCreated > 0 && ` — ${importResult.membersCreated} members`}
                         {importResult.ticketTypesCreated !== undefined && importResult.ticketTypesCreated > 0 && ` — ${importResult.ticketTypesCreated} ticket types`}
+                        {importResult.reviewQuestionsCreated !== undefined && importResult.reviewQuestionsCreated > 0 && ` — ${importResult.reviewQuestionsCreated} review questions`}
                     </p>
                 </div>
             )}

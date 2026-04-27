@@ -1,6 +1,7 @@
 import http from '@/lib/http'
 import { SubjectAreaResponse } from '@/types/subject-area'
 import { TrackResponse, TrackReviewSetting, ReviewQuestionDTO } from '@/types/track'
+import type { ImportResult } from '@/app/api/conference.api'
 
 export const getTracks = async (): Promise<TrackResponse[]> => {
     const response = await http.get<any>('/conferences-track')
@@ -89,3 +90,20 @@ export const reorderTrackReviewQuestions = async (trackId: number, questionIds: 
 export const copyTrackReviewQuestions = async (trackId: number, targetTrackId: number): Promise<void> => {
     await http.post(`/tracks/${trackId}/review-questions/copy/${targetTrackId}`)
 }
+
+// ── Review Question Import ──
+
+const uploadReviewQuestionFile = (url: string, file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return http.post<ImportResult>(url, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+}
+
+const downloadReviewQuestionBlob = async (url: string): Promise<Blob> => {
+    const response = await http.get(url, { responseType: 'blob' })
+    return new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+}
+
+export const downloadReviewQuestionTemplate = (trackId: number) => downloadReviewQuestionBlob(`/tracks/${trackId}/review-questions/import/template`)
+export const previewReviewQuestionImport = (trackId: number, file: File) => uploadReviewQuestionFile(`/tracks/${trackId}/review-questions/import/preview`, file).then(r => r.data)
+export const importReviewQuestions = (trackId: number, file: File) => uploadReviewQuestionFile(`/tracks/${trackId}/review-questions/import`, file).then(r => r.data)

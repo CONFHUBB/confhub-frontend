@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { getTracksByConference } from "@/app/api/track.api"
+import {useEffect, useState} from "react"
+import {getTracksByConference} from "@/app/api/track.api"
 import {
     getTrackReviewQuestions,
     createTrackReviewQuestion,
@@ -9,37 +9,54 @@ import {
     deleteTrackReviewQuestion,
     reorderTrackReviewQuestions,
     copyTrackReviewQuestions,
+    downloadReviewQuestionTemplate,
+    previewReviewQuestionImport,
+    importReviewQuestions,
 } from "@/app/api/track.api"
-import type { TrackResponse, ReviewQuestionDTO } from "@/types/track"
-import { Button } from "@/components/ui/button"
-import { Loader2, Plus, Copy, Eye, Pencil, Trash2, ArrowUp, ArrowDown, Send, BellRing } from "lucide-react"
-import { toast } from 'sonner'
-import { Select } from "antd"
+import type {TrackResponse, ReviewQuestionDTO} from "@/types/track"
+import {Button} from "@/components/ui/button"
+import {
+    Loader2,
+    Plus,
+    Copy,
+    Eye,
+    Pencil,
+    Trash2,
+    ArrowUp,
+    ArrowDown,
+    Send,
+    BellRing,
+    FileSpreadsheet
+} from "lucide-react"
+import {toast} from 'sonner'
+import {Select} from "antd"
 
-import { getConference } from "@/app/api/conference.api"
-import { getConferenceMembers } from "@/app/api/user.api"
-import { sendBulkEmail } from "@/app/api/email.api"
-import { createNotification } from "@/app/api/notification.api"
+import {getConference} from "@/app/api/conference.api"
+import {getConferenceMembers} from "@/app/api/user.api"
+import {sendBulkEmail} from "@/app/api/email.api"
+import {createNotification} from "@/app/api/notification.api"
+import {ExcelImport} from "@/components/excel-import"
 
-import { ReviewQuestionDialog } from "./review-question-dialog"
-import { ReviewQuestionsPreview } from "./review-questions-preview"
-import { ReviewQuestionsCopyDialog } from "./review-questions-copy-dialog"
+import {ReviewQuestionDialog} from "./review-question-dialog"
+import {ReviewQuestionsPreview} from "./review-questions-preview"
+import {ReviewQuestionsCopyDialog} from "./review-questions-copy-dialog"
 
 interface ReviewQuestionsListProps {
     conferenceId: number
     isReadOnly?: boolean
 }
 
-export function ReviewQuestionsList({ conferenceId, isReadOnly = false }: ReviewQuestionsListProps) {
+export function ReviewQuestionsList({conferenceId, isReadOnly = false}: ReviewQuestionsListProps) {
     const [tracks, setTracks] = useState<TrackResponse[]>([])
     const [selectedTrackId, setSelectedTrackId] = useState<number | null>(null)
     const [questions, setQuestions] = useState<ReviewQuestionDTO[]>([])
-    
+    const [activeMode, setActiveMode] = useState<'manage' | 'import'>('manage')
+
     // UI State
     const [loadingTracks, setLoadingTracks] = useState(true)
     const [loadingQuestions, setLoadingQuestions] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
-    
+
     // Dialog visibility & data
     const [showQuestionDialog, setShowQuestionDialog] = useState(false)
     const [showPreviewDialog, setShowPreviewDialog] = useState(false)
@@ -130,14 +147,14 @@ export function ReviewQuestionsList({ conferenceId, isReadOnly = false }: Review
 
         const newQuestions = [...questions]
         const targetIndex = direction === 'up' ? index - 1 : index + 1
-        
+
         // Swap elements locally
         const temp = newQuestions[index]
         newQuestions[index] = newQuestions[targetIndex]
         newQuestions[targetIndex] = temp
 
         const orderedIds = newQuestions.map(q => q.id as number)
-        
+
         // Optimistic UI update
         setQuestions(newQuestions)
 
@@ -162,6 +179,12 @@ export function ReviewQuestionsList({ conferenceId, isReadOnly = false }: Review
             console.error("Failed to copy questions:", err)
             toast.error("Failed to copy questions to some tracks.")
         }
+    }
+
+    const handleReviewImportSuccess = async () => {
+        if (!selectedTrackId) return
+        await fetchQuestions(selectedTrackId)
+        setActiveMode('manage')
     }
 
     const handleRemindPC = async () => {
@@ -247,7 +270,7 @@ export function ReviewQuestionsList({ conferenceId, isReadOnly = false }: Review
     if (loadingTracks) {
         return (
             <div className="flex items-center justify-center min-h-[300px]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <Loader2 className="h-8 w-8 animate-spin text-primary"/>
             </div>
         )
     }
@@ -272,16 +295,25 @@ export function ReviewQuestionsList({ conferenceId, isReadOnly = false }: Review
                         placeholder="Select a track"
                         value={selectedTrackId ?? undefined}
                         onChange={(val) => setSelectedTrackId(val)}
-                        options={tracks.map((t) => ({ label: t.name, value: t.id }))}
+                        options={tracks.map((t) => ({label: t.name, value: t.id}))}
                     />
                 </div>
                 <div className="flex flex-wrap items-center gap-3 mt-4 sm:mt-0">
                     <Button variant="outline" onClick={() => setShowPreviewDialog(true)}>
-                        <Eye className="h-4 w-4 mr-2" /> Preview Form
+                        <Eye className="h-4 w-4 mr-2"/> Preview Form
                     </Button>
+                    {!isReadOnly && (
+                        <Button
+                            variant={activeMode === 'import' ? 'default' : 'outline'}
+                            onClick={() => setActiveMode(activeMode === 'import' ? 'manage' : 'import')}
+                        >
+                            <FileSpreadsheet className="h-4 w-4 mr-2"/>
+                            {activeMode === 'import' ? 'Back to Questions' : 'Import Excel'}
+                        </Button>
+                    )}
                     {!isReadOnly && tracks.length > 1 && (
                         <Button variant="outline" onClick={() => setShowCopyDialog(true)}>
-                            <Copy className="h-4 w-4 mr-2" /> Copy to Other Tracks
+                            <Copy className="h-4 w-4 mr-2"/> Copy to Other Tracks
                         </Button>
                     )}
                     {!isReadOnly && questions.length > 0 && (
@@ -291,7 +323,7 @@ export function ReviewQuestionsList({ conferenceId, isReadOnly = false }: Review
                             disabled={isNotifyingCC}
                             className="bg-green-600 hover:bg-green-700 text-white"
                         >
-                            <BellRing className="h-4 w-4 mr-2" />
+                            <BellRing className="h-4 w-4 mr-2"/>
                             {isNotifyingCC ? "Notifying..." : "Notify Conference Chair"}
                         </Button>
                     )}
@@ -299,28 +331,75 @@ export function ReviewQuestionsList({ conferenceId, isReadOnly = false }: Review
             </div>
 
             {/* Main Content */}
-            {loadingQuestions ? (
+            {!isReadOnly && activeMode === 'import' ? (
+                <div className="rounded-xl border bg-card p-6 space-y-4">
+                    <div>
+                        <h3 className="text-lg font-semibold">Import Review Form</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Upload an Excel file to bulk-create review questions for the selected track.
+                        </p>
+                    </div>
+
+                    {selectedTrackId ? (
+                        <ExcelImport
+                            entityName="Review Question"
+                            previewHeaders={[
+                                "text",
+                                "note",
+                                "type",
+                                "orderIndex",
+                                "maxLength",
+                                "showAs",
+                                "isRequired",
+                                "lockedForEdit",
+                                "visibleToOtherReviewers",
+                                "visibleToAuthorsDuringFeedback",
+                                "visibleToAuthorsAfterNotification",
+                                "visibleToMetaReviewers",
+                                "visibleToSeniorMetaReviewers",
+                                "choices",
+                            ]}
+                            onDownloadTemplate={() => downloadReviewQuestionTemplate(selectedTrackId)}
+                            onPreview={(file) => previewReviewQuestionImport(selectedTrackId, file)}
+                            onImport={(file) => importReviewQuestions(selectedTrackId, file)}
+                            onImportSuccess={handleReviewImportSuccess}
+                            templateFilename="review_questions_template.xlsx"
+                        />
+                    ) : (
+                        <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
+                            Select a track first to import review questions.
+                        </div>
+                    )}
+                </div>
+            ) : loadingQuestions ? (
                 <div className="flex items-center justify-center py-20">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <Loader2 className="h-6 w-6 animate-spin text-primary"/>
                 </div>
             ) : (
                 <div className="space-y-4">
                     <div className="flex flex-wrap items-center justify-between border-b pb-4 gap-4">
                         <h3 className="text-lg font-semibold">Review Questions ({questions.length})</h3>
                         {!isReadOnly && (
-                            <Button onClick={() => { setEditingQuestion(null); setShowQuestionDialog(true); }}>
-                                <Plus className="h-4 w-4 mr-2" /> Add New Question
+                            <Button onClick={() => {
+                                setEditingQuestion(null);
+                                setShowQuestionDialog(true);
+                            }}>
+                                <Plus className="h-4 w-4 mr-2"/> Add New Question
                             </Button>
                         )}
                     </div>
 
                     {questions.length === 0 ? (
                         <div className="text-center py-12 border border-dashed rounded-lg bg-muted/20">
-                            <p className="text-muted-foreground mb-4">No questions have been added to this track yet.</p>
+                            <p className="text-muted-foreground mb-4">No questions have been added to this track
+                                yet.</p>
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                                 {!isReadOnly && (
-                                    <Button variant="outline" onClick={() => { setEditingQuestion(null); setShowQuestionDialog(true); }}>
-                                        <Plus className="h-4 w-4 mr-2" /> Add First Question
+                                    <Button variant="outline" onClick={() => {
+                                        setEditingQuestion(null);
+                                        setShowQuestionDialog(true);
+                                    }}>
+                                        <Plus className="h-4 w-4 mr-2"/> Add First Question
                                     </Button>
                                 )}
                                 <Button
@@ -328,7 +407,7 @@ export function ReviewQuestionsList({ conferenceId, isReadOnly = false }: Review
                                     onClick={handleRemindPC}
                                     disabled={isReminding}
                                 >
-                                    <Send className="w-4 h-4 mr-2" />
+                                    <Send className="w-4 h-4 mr-2"/>
                                     {isReminding ? "Sending Reminder..." : "Remind Program Chairs"}
                                 </Button>
                             </div>
@@ -336,28 +415,31 @@ export function ReviewQuestionsList({ conferenceId, isReadOnly = false }: Review
                     ) : (
                         <div className="space-y-3">
                             {questions.map((q, index) => (
-                                <div key={q.id} className="flex flex-col sm:flex-row gap-4 p-4 border rounded-xl bg-card shadow-sm hover:border-primary/50 transition-colors">
+                                <div key={q.id}
+                                     className="flex flex-col sm:flex-row gap-4 p-4 border rounded-xl bg-card shadow-sm hover:border-primary/50 transition-colors">
                                     {/* Order controls */}
                                     {!isReadOnly && (
-                                        <div className="flex sm:flex-col items-center justify-center gap-1 bg-muted/50 rounded-lg p-1 sm:w-10 overflow-hidden shrink-0">
-                                            <Button 
-                                                variant="ghost" 
-                                                size="icon" 
-                                                className="h-8 w-8 text-muted-foreground hover:text-primary" 
+                                        <div
+                                            className="flex sm:flex-col items-center justify-center gap-1 bg-muted/50 rounded-lg p-1 sm:w-10 overflow-hidden shrink-0">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-muted-foreground hover:text-primary"
                                                 disabled={index === 0}
                                                 onClick={() => handleReorder(index, 'up')}
                                             >
-                                                <ArrowUp className="h-4 w-4" />
+                                                <ArrowUp className="h-4 w-4"/>
                                             </Button>
-                                            <span className="text-xs font-semibold font-mono w-full text-center">{index + 1}</span>
-                                            <Button 
-                                                variant="ghost" 
-                                                size="icon" 
-                                                className="h-8 w-8 text-muted-foreground hover:text-primary" 
+                                            <span
+                                                className="text-xs font-semibold font-mono w-full text-center">{index + 1}</span>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-muted-foreground hover:text-primary"
                                                 disabled={index === questions.length - 1}
                                                 onClick={() => handleReorder(index, 'down')}
                                             >
-                                                <ArrowDown className="h-4 w-4" />
+                                                <ArrowDown className="h-4 w-4"/>
                                             </Button>
                                         </div>
                                     )}
@@ -365,18 +447,21 @@ export function ReviewQuestionsList({ conferenceId, isReadOnly = false }: Review
                                     {/* Question content */}
                                     <div className="flex-1 min-w-0 flex flex-col justify-center py-1">
                                         <div className="flex items-start gap-2 mb-1.5">
-                                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 shrink-0">
+                                            <span
+                                                className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 shrink-0">
                                                 {q.type.replace(/_/g, " ")}
                                             </span>
                                             {q.isRequired && (
-                                                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 shrink-0">
+                                                <span
+                                                    className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 shrink-0">
                                                     Required
                                                 </span>
                                             )}
                                         </div>
                                         <h4 className="font-semibold text-base line-clamp-2">{q.text}</h4>
-                                        {q.note && <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{q.note}</p>}
-                                        
+                                        {q.note &&
+                                            <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{q.note}</p>}
+
                                         {(q.type === 'OPTIONS' || q.type === 'OPTIONS_WITH_VALUE') && q.choices && q.choices.length > 0 && (
                                             <p className="text-xs text-muted-foreground mt-2">
                                                 {q.choices.length} options (Displayed as {q.showAs})
@@ -386,12 +471,17 @@ export function ReviewQuestionsList({ conferenceId, isReadOnly = false }: Review
 
                                     {/* Actions */}
                                     {!isReadOnly && (
-                                        <div className="flex sm:flex-col justify-end gap-2 shrink-0 border-t sm:border-t-0 sm:border-l border-border pt-4 sm:pt-0 sm:pl-4">
-                                            <Button variant="outline" size="sm" onClick={() => { setEditingQuestion(q); setShowQuestionDialog(true); }}>
-                                                <Pencil className="h-4 w-4 mr-2" /> Edit
+                                        <div
+                                            className="flex sm:flex-col justify-end gap-2 shrink-0 border-t sm:border-t-0 sm:border-l border-border pt-4 sm:pt-0 sm:pl-4">
+                                            <Button variant="outline" size="sm" onClick={() => {
+                                                setEditingQuestion(q);
+                                                setShowQuestionDialog(true);
+                                            }}>
+                                                <Pencil className="h-4 w-4 mr-2"/> Edit
                                             </Button>
-                                            <Button variant="destructive" size="sm" onClick={() => handleDeleteQuestion(q.id as number)}>
-                                                <Trash2 className="h-4 w-4 mr-2" /> Delete
+                                            <Button variant="destructive" size="sm"
+                                                    onClick={() => handleDeleteQuestion(q.id as number)}>
+                                                <Trash2 className="h-4 w-4 mr-2"/> Delete
                                             </Button>
                                         </div>
                                     )}
@@ -403,15 +493,18 @@ export function ReviewQuestionsList({ conferenceId, isReadOnly = false }: Review
             )}
 
             {/* Modals */}
-            <ReviewQuestionDialog 
-                open={showQuestionDialog} 
-                onClose={() => { setShowQuestionDialog(false); setEditingQuestion(null); }} 
+            <ReviewQuestionDialog
+                open={showQuestionDialog}
+                onClose={() => {
+                    setShowQuestionDialog(false);
+                    setEditingQuestion(null);
+                }}
                 initialData={editingQuestion}
                 onSave={handleSaveQuestion}
                 isSaving={isSaving}
             />
-            
-            <ReviewQuestionsPreview 
+
+            <ReviewQuestionsPreview
                 open={showPreviewDialog}
                 onClose={() => setShowPreviewDialog(false)}
                 questions={questions}

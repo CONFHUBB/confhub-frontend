@@ -50,21 +50,6 @@ export const ROLE_COLORS: Record<string, string> = {
 // Track-bound roles require at least 1 track
 export const TRACK_BOUND_ROLES = ["PROGRAM_CHAIR", "REVIEWER"]
 
-export const REVIEWER = "REVIEWER"
-
-export function formatDateTime(dateString: string) {
-    const date = new Date(dateString);
-
-    return new Intl.DateTimeFormat("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-    }).format(date);
-}
-
 // ── Internal types ───────────────────────────────────────
 interface EditableRole {
     role: string
@@ -199,25 +184,16 @@ export function ManageRolesDialog({
                 }
             }
 
-            if (user.status && user.status !== "AVAILABLE" && newAssignments.some(a => a.role === REVIEWER)) {
-                toast.error(`This user is ${user.status} until ${formatDateTime(user.statusUntil)}. Can not invite this user as role ${REVIEWER}.`)
-                return
-            }
-
             const toDelete = [...initialRecordIds].filter((id) => !keptRecordIds.has(id))
             await Promise.all(toDelete.map((id) => deleteRoleAssignment(id)))
 
             for (const a of newAssignments) {
-                const response = await assignRole({
+                await assignRole({
                     userId: user.id,
                     conferenceId,
                     trackId: a.trackId,
                     assignedRole: a.role,
                 })
-                if (response?.skipped) {
-                    toast.error(response.message || "Role assignment was skipped.")
-                    return
-                }
             }
 
             toast.success("Roles updated successfully!")
@@ -225,8 +201,7 @@ export function ManageRolesDialog({
             onOpenChange(false)
         } catch (err) {
             console.error("Failed to save roles:", err)
-            const detail = (err as any)?.response?.data?.detail || (err as any)?.response?.data?.message
-            toast.error(detail || "Failed to update roles. Please try again.")
+            toast.error("Failed to update roles. Please try again.")
         } finally {
             setIsSaving(false)
         }
