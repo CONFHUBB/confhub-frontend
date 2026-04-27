@@ -1,6 +1,6 @@
 ﻿"use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -22,7 +22,7 @@ import {
     Globe,
     BookOpen,
 } from "lucide-react"
-import type { UserProfileRequest, UserProfile, UserStatus } from "@/types/user"
+import type { UserProfileRequest, UserProfile } from "@/types/user"
 import { toast } from 'sonner'
 import { FieldError } from "@/components/ui/field"
 import { V } from "@/lib/validation"
@@ -32,8 +32,6 @@ interface ProfileFormProps {
     onSubmit: (data: UserProfileRequest) => Promise<void>
     userName?: string
     userEmail?: string
-    userStatus?: UserStatus
-    userStatusUntil?: string | null
 }
 
 const USER_TYPES = [
@@ -44,89 +42,9 @@ const USER_TYPES = [
     { value: "OTHER", label: "Other" },
 ]
 
-const USER_STATUSES: Array<{ value: UserStatus; label: string }> = [
-    { value: "AVAILABLE", label: "Available" },
-    { value: "BUSY", label: "Busy" },
-    { value: "VACATION", label: "Vacation" },
-    { value: "FOCUSING", label: "Focusing" },
-    { value: "SICK", label: "Sick" },
-]
-
-type StatusDurationOption = "30_MIN" | "1_HOUR" | "4_HOURS" | "TODAY" | "THIS_WEEK" | "CUSTOM"
-
-const DURATION_OPTIONS: Array<{ value: StatusDurationOption; label: string }> = [
-    { value: "30_MIN", label: "30 minutes" },
-    { value: "1_HOUR", label: "1 hour" },
-    { value: "4_HOURS", label: "4 hours" },
-    { value: "TODAY", label: "Today" },
-    { value: "THIS_WEEK", label: "This week" },
-    { value: "CUSTOM", label: "Custom date and time" },
-]
-
-const toDateTimeLocalInput = (value?: string | null): string => {
-    if (!value) return ""
-    const d = new Date(value)
-    if (Number.isNaN(d.getTime())) {
-        return value.length >= 16 ? value.slice(0, 16) : ""
-    }
-    const yyyy = d.getFullYear()
-    const mm = String(d.getMonth() + 1).padStart(2, "0")
-    const dd = String(d.getDate()).padStart(2, "0")
-    const hh = String(d.getHours()).padStart(2, "0")
-    const mi = String(d.getMinutes()).padStart(2, "0")
-    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`
-}
-
-const calculateStatusUntil = (option: Exclude<StatusDurationOption, "CUSTOM">): string => {
-    const now = new Date()
-
-    if (option === "30_MIN") {
-        return toDateTimeLocalInput(new Date(now.getTime() + 30 * 60 * 1000).toISOString())
-    }
-    if (option === "1_HOUR") {
-        return toDateTimeLocalInput(new Date(now.getTime() + 60 * 60 * 1000).toISOString())
-    }
-    if (option === "4_HOURS") {
-        return toDateTimeLocalInput(new Date(now.getTime() + 4 * 60 * 60 * 1000).toISOString())
-    }
-    if (option === "TODAY") {
-        const todayEnd = new Date(now)
-        todayEnd.setHours(23, 59, 0, 0)
-        return toDateTimeLocalInput(todayEnd.toISOString())
-    }
-
-    const weekEnd = new Date(now)
-    const daysUntilSunday = (7 - now.getDay()) % 7
-    weekEnd.setDate(now.getDate() + daysUntilSunday)
-    weekEnd.setHours(23, 59, 0, 0)
-    return toDateTimeLocalInput(weekEnd.toISOString())
-}
-
-const getRemainingLabel = (status?: UserStatus, statusUntil?: string | null): string | null => {
-    if (!status || status === "AVAILABLE" || !statusUntil) return null
-    const ms = new Date(statusUntil).getTime() - Date.now()
-    if (Number.isNaN(ms)) return null
-    if (ms <= 0) return "Status duration has ended."
-
-    const minutes = Math.floor(ms / 60000)
-    if (minutes < 60) return `Ends in ${minutes}m`
-    const hours = Math.floor(minutes / 60)
-    if (hours < 24) return `Ends in ${hours}h ${minutes % 60}m`
-    const days = Math.floor(hours / 24)
-    return `Ends in ${days}d ${hours % 24}h`
-}
-
-export function ProfileForm({ initialData, onSubmit, userName, userEmail, userStatus, userStatusUntil }: ProfileFormProps) {
+export function ProfileForm({ initialData, onSubmit, userName, userEmail }: ProfileFormProps) {
     const [isSaving, setIsSaving] = useState(false)
     const [avatarPreview, setAvatarPreview] = useState(initialData?.avatarUrl || "")
-    const [durationOption, setDurationOption] = useState<StatusDurationOption | "">(() => {
-        const effectiveStatus = initialData?.userStatus || userStatus
-        const effectiveStatusUntil = initialData?.userStatusUntil || userStatusUntil
-        if (effectiveStatus && effectiveStatus !== "AVAILABLE" && effectiveStatusUntil) {
-            return "CUSTOM"
-        }
-        return ""
-    })
 
     const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<UserProfileRequest>({
         defaultValues: {
@@ -147,56 +65,20 @@ export function ProfileForm({ initialData, onSubmit, userName, userEmail, userSt
             googleScholarLink: initialData?.googleScholarLink || "",
             orcid: initialData?.orcid || "",
             semanticScholarId: initialData?.semanticScholarId || "",
-            userStatus: initialData?.userStatus || userStatus || "AVAILABLE",
-            userStatusUntil: initialData?.userStatusUntil || userStatusUntil || null,
         },
     })
 
     const watchedUserType = watch("userType")
-    const watchedUserStatus = watch("userStatus")
-    const watchedUserStatusUntil = watch("userStatusUntil")
     const watchedInstitutionCountry = watch("institutionCountry")
     const watchedSecondaryCountry = watch("secondaryCountry")
-    const remainingLabel = getRemainingLabel(watchedUserStatus, watchedUserStatusUntil)
-
-    useEffect(() => {
-        if (watchedUserStatus === "AVAILABLE") {
-            if (watchedUserStatusUntil) setValue("userStatusUntil", null)
-            setDurationOption("")
-        }
-    }, [watchedUserStatus, watchedUserStatusUntil, setValue])
 
     const handleFormSubmit = async (data: UserProfileRequest) => {
         try {
-            const payload: UserProfileRequest = {
-                ...data,
-                userStatusUntil: data.userStatusUntil || null,
-            }
-
-            if (payload.userStatus && payload.userStatus !== "AVAILABLE") {
-                if (!payload.userStatusUntil) {
-                    toast.error("Please choose a duration for your status.")
-                    return
-                }
-
-                const until = new Date(payload.userStatusUntil)
-                if (Number.isNaN(until.getTime()) || until.getTime() <= Date.now()) {
-                    toast.error("Status duration must be in the future.")
-                    return
-                }
-            } else {
-                payload.userStatusUntil = null
-            }
-
             setIsSaving(true)
-            await onSubmit(payload)
+            await onSubmit(data)
             toast.success("Profile updated successfully!")
-        } catch (err: unknown) {
-            const message = typeof err === "object" && err !== null && "response" in err
-                ? ((err as { response?: { data?: { message?: string; detail?: string } } }).response?.data?.message
-                    || (err as { response?: { data?: { message?: string; detail?: string } } }).response?.data?.detail)
-                : null
-            toast.error(message || "Failed to update profile")
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Failed to update profile")
         } finally {
             setIsSaving(false)
         }
@@ -229,72 +111,10 @@ export function ProfileForm({ initialData, onSubmit, userName, userEmail, userSt
                         <div className="text-center sm:text-left space-y-1">
                             <h2 className="text-2xl font-bold tracking-tight">{userName || "User"}</h2>
                             <p className="text-sm text-muted-foreground">{userEmail}</p>
-                            <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2 mt-1">
-                                {watchedUserType && (
-                                    <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-0.5 text-xs font-medium text-primary capitalize">
-                                        {watchedUserType}
-                                    </span>
-                                )}
-                                <Select
-                                    value={watchedUserStatus}
-                                    onValueChange={(val) => {
-                                        const nextStatus = val as UserStatus
-                                        setValue("userStatus", nextStatus)
-                                        if (nextStatus === "AVAILABLE") {
-                                            setValue("userStatusUntil", null)
-                                            setDurationOption("")
-                                        }
-                                    }}
-                                >
-                                    <SelectTrigger className="h-7 w-[132px] rounded-full border-primary/30 bg-background/90 px-3 text-xs font-medium">
-                                        <SelectValue placeholder="Status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {USER_STATUSES.map((s) => (
-                                            <SelectItem key={s.value} value={s.value}>
-                                                {s.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-
-                                {watchedUserStatus && watchedUserStatus !== "AVAILABLE" && (
-                                    <Select
-                                        value={durationOption}
-                                        onValueChange={(val) => {
-                                            const option = val as StatusDurationOption
-                                            setDurationOption(option)
-                                            if (option !== "CUSTOM") {
-                                                setValue("userStatusUntil", calculateStatusUntil(option), { shouldDirty: true })
-                                            }
-                                        }}
-                                    >
-                                        <SelectTrigger className="h-7 w-[200px] rounded-full border-primary/30 bg-background/90 px-3 text-xs font-medium">
-                                            <SelectValue placeholder="Duration" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {DURATION_OPTIONS.map((d) => (
-                                                <SelectItem key={d.value} value={d.value}>
-                                                    {d.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                )}
-                            </div>
-                            {watchedUserStatus && watchedUserStatus !== "AVAILABLE" && durationOption === "CUSTOM" && (
-                                <div className="mt-2 w-full max-w-[300px]">
-                                    <Input
-                                        type="datetime-local"
-                                        value={toDateTimeLocalInput(watchedUserStatusUntil)}
-                                        min={toDateTimeLocalInput(new Date().toISOString())}
-                                        onChange={(e) => setValue("userStatusUntil", e.target.value || null, { shouldDirty: true })}
-                                        className="h-8 text-xs"
-                                    />
-                                </div>
-                            )}
-                            {remainingLabel && (
-                                <p className="text-xs text-muted-foreground mt-1">{remainingLabel}</p>
+                            {watchedUserType && (
+                                <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-0.5 text-xs font-medium text-primary capitalize mt-1">
+                                    {watchedUserType}
+                                </span>
                             )}
                         </div>
                         <div className="sm:ml-auto">
