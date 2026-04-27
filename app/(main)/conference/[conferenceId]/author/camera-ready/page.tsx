@@ -52,10 +52,10 @@ export default function CameraReadyDashboardTab() {
 
             const allPapers = await getPapersByAuthor(user.id)
 
-            // Filter papers that belong to THIS conference AND are ACCEPTED/PUBLISHED
+            // Filter papers that belong to THIS conference AND are in post-acceptance lifecycle
             const eligible = allPapers.filter(p =>
                 p.conferenceId === conferenceId &&
-                (p.status === 'ACCEPTED' || p.status === 'PUBLISHED')
+                ['ACCEPTED', 'AWAITING_REGISTRATION', 'REGISTERED', 'AWAITING_CAMERA_READY', 'CAMERA_READY_SUBMITTED', 'CAMERA_READY_REJECTED', 'PUBLISHED'].includes(p.status)
             )
             setPapers(eligible)
 

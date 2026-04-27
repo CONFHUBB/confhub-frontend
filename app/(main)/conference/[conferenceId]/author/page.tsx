@@ -605,13 +605,13 @@ function MyPapersTab({ papers, reviewData, metaReviews, conferenceId }: {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => router.push(`/paper/${paper.id}`)}>
+                                                        <DropdownMenuItem onClick={() => router.push(`/conference/${conferenceId}/paper/${paper.id}`)}>
                                                             <ExternalLink className="h-3.5 w-3.5 mr-2" /> View Details
                                                         </DropdownMenuItem>
-                                                        {(['AWAITING_CAMERA_READY', 'CAMERA_READY_REJECTED'].includes(paper.status)) && (
+                                                        {(['AWAITING_REGISTRATION', 'REGISTERED', 'AWAITING_CAMERA_READY', 'CAMERA_READY_REJECTED'].includes(paper.status)) && (
                                                             <>
                                                                 <DropdownMenuSeparator />
-                                                                <DropdownMenuItem onClick={() => router.push(`/conference/${conferenceId}/author?tab=camera-ready`)}>
+                                                                <DropdownMenuItem onClick={() => router.push(`/paper/${paper.id}/camera-ready`)}>
                                                                     <Upload className="h-3.5 w-3.5 mr-2" /> Camera-Ready
                                                                 </DropdownMenuItem>
                                                             </>

@@ -73,13 +73,17 @@ export function ExcelImport({
                 toast.success(`${entityName} imported successfully!`)
                 onImportSuccess?.(result)
             } else {
-                toast.error(`Import failed: ${result.errors?.length || 0} error(s) found`)
+                const firstMsg = result.errors?.[0]?.message || 'Unknown error'
+                const count = result.errors?.length || 0
+                toast.error(count > 1 ? `${firstMsg} (+${count - 1} more error${count > 2 ? 's' : ''})` : firstMsg)
             }
         } catch (e: any) {
             const data = e.response?.data
             if (data?.errors) {
                 setImportResult(data)
-                toast.error(`Import failed: ${data.errors.length} error(s) found`)
+                const firstMsg = data.errors[0]?.message || 'Unknown error'
+                const count = data.errors.length
+                toast.error(count > 1 ? `${firstMsg} (+${count - 1} more error${count > 2 ? 's' : ''})` : firstMsg)
             } else {
                 const msg = data?.detail || data?.message || "Import failed. Please check the file and try again."
                 toast.error(msg)

@@ -6,27 +6,41 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Search, ClipboardList, Download } from 'lucide-react'
+import { Search, ClipboardList, Download, Check, X, Loader2 } from 'lucide-react'
 import { StandardPagination } from '@/components/ui/standard-pagination'
 import type { ReviewResponse } from '@/types/review'
 import { FilterPanel } from '@/components/ui/filter-panel'
 import { TableSkeleton } from '@/components/ui/table-skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { reviewStatusClass } from '@/lib/constants/status'
+import { updateReview } from '@/app/api/review.api'
 
 interface ReviewsTabProps {
     reviews: ReviewResponse[]
     conferenceId: number
     loading?: boolean
+    onRefresh?: () => void
 }
 
-export function ReviewsTab({ reviews, conferenceId, loading = false }: ReviewsTabProps) {
+export function ReviewsTab({ reviews, conferenceId, loading = false, onRefresh }: ReviewsTabProps) {
     const [expandedReview, setExpandedReview] = useState<number | null>(null)
     const [search, setSearch] = useState('')
     const [statusFilter, setStatusFilter] = useState<string>('ALL')
     const [currentPage, setCurrentPage] = useState(0)
+    const [actionLoading, setActionLoading] = useState<number | null>(null)
     const PAGE_SIZE = 10
 
     const filteredReviews = useMemo(() => {
@@ -49,6 +63,40 @@ export function ReviewsTab({ reviews, conferenceId, loading = false }: ReviewsTa
     }, [filteredReviews, currentPage, PAGE_SIZE])
 
     const totalPages = Math.ceil(filteredReviews.length / PAGE_SIZE)
+
+    const handleAccept = async (review: ReviewResponse) => {
+        try {
+            setActionLoading(review.id)
+            await updateReview(review.id, {
+                paperId: review.paper.id,
+                reviewerId: review.reviewer.id,
+                status: 'IN_PROGRESS',
+            })
+            toast.success('Review accepted! You can now start reviewing.')
+            onRefresh?.()
+        } catch (err: any) {
+            toast.error(err?.response?.data?.detail || 'Failed to accept review')
+        } finally {
+            setActionLoading(null)
+        }
+    }
+
+    const handleDecline = async (review: ReviewResponse) => {
+        try {
+            setActionLoading(review.id)
+            await updateReview(review.id, {
+                paperId: review.paper.id,
+                reviewerId: review.reviewer.id,
+                status: 'DECLINED',
+            })
+            toast.success('Review declined. The chair has been notified.')
+            onRefresh?.()
+        } catch (err: any) {
+            toast.error(err?.response?.data?.detail || 'Failed to decline review')
+        } finally {
+            setActionLoading(null)
+        }
+    }
 
     const exportCsv = () => {
         try {
@@ -101,7 +149,7 @@ export function ReviewsTab({ reviews, conferenceId, loading = false }: ReviewsTa
                             options: [
                                 { value: 'ALL', label: 'All' },
                                 { value: 'ASSIGNED', label: 'Assigned' },
-                                { value: 'SUBMITTED', label: 'Draft' },
+                                { value: 'IN_PROGRESS', label: 'In Progress' },
                                 { value: 'COMPLETED', label: 'Completed' },
                                 { value: 'DECLINED', label: 'Declined' },
                             ],
@@ -136,7 +184,7 @@ export function ReviewsTab({ reviews, conferenceId, loading = false }: ReviewsTa
                                 <TableHead>Paper Title</TableHead>
                                 <TableHead className="w-32">Status</TableHead>
                                 <TableHead className="w-24 text-center">Score</TableHead>
-                                <TableHead className="w-28 text-right">Action</TableHead>
+                                <TableHead className="w-44 text-right">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -149,19 +197,78 @@ export function ReviewsTab({ reviews, conferenceId, loading = false }: ReviewsTa
                                         </TableCell>
                                         <TableCell>
                                             <Badge className={`border ${reviewStatusClass(review.status)}`}>
-                                                {review.status}
+                                                {review.status === 'IN_PROGRESS' ? 'In Progress' : review.status}
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-center font-mono">
                                             {review.totalScore != null ? review.totalScore : '—'}
                                         </TableCell>
                                         <TableCell className="text-right" onClick={e => e.stopPropagation()}>
-                                            {review.status !== 'DECLINED' && (
-                                                <Link href={`/conference/${conferenceId}/reviewer/review/${review.id}`}>
-                                                    <Button size="sm" variant={review.status === 'COMPLETED' ? 'outline' : 'default'} className="h-8">
-                                                        {review.status === 'COMPLETED' ? 'View' : review.status === 'ASSIGNED' ? 'Start' : 'Continue'}
+                                            {review.status === 'ASSIGNED' && (
+                                                <div className="flex items-center justify-end gap-1.5">
+                                                    {/* Accept */}
+                                                    <Button
+                                                        size="sm"
+                                                        className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                        disabled={actionLoading === review.id}
+                                                        onClick={() => handleAccept(review)}
+                                                    >
+                                                        {actionLoading === review.id ? (
+                                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                        ) : (
+                                                            <Check className="h-3.5 w-3.5" />
+                                                        )}
+                                                        Accept
                                                     </Button>
+                                                    {/* Decline */}
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="h-8 gap-1 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                                                disabled={actionLoading === review.id}
+                                                            >
+                                                                <X className="h-3.5 w-3.5" />
+                                                                Decline
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Decline this review?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    You will not be able to review "{review.paper?.title}" after declining. 
+                                                                    The conference chair will be notified and may reassign the paper to another reviewer.
+                                                                    This action cannot be undone.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction
+                                                                    className="bg-red-600 hover:bg-red-700"
+                                                                    onClick={() => handleDecline(review)}
+                                                                >
+                                                                    Decline Review
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                </div>
+                                            )}
+                                            {review.status === 'IN_PROGRESS' && (
+                                                <Link href={`/conference/${conferenceId}/reviewer/review/${review.id}`}>
+                                                    <Button size="sm" className="h-8">Continue</Button>
                                                 </Link>
+                                            )}
+                                            {review.status === 'COMPLETED' && (
+                                                <Link href={`/conference/${conferenceId}/reviewer/review/${review.id}`}>
+                                                    <Button size="sm" variant="outline" className="h-8">View</Button>
+                                                </Link>
+                                            )}
+                                            {review.status === 'DECLINED' && (
+                                                <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                                                    Declined
+                                                </Badge>
                                             )}
                                         </TableCell>
                                     </TableRow>
@@ -192,3 +299,4 @@ export function ReviewsTab({ reviews, conferenceId, loading = false }: ReviewsTa
         </div>
     )
 }
+

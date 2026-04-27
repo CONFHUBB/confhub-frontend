@@ -23,7 +23,8 @@ import {
     ClipboardList, ChevronDown, ChevronRight, CheckCircle2, Circle, Lock,
     Clock, Zap, ThumbsUp, Minus, ThumbsDown, AlertTriangle,
     Building2, Mail, Globe, GraduationCap, Phone,
-    ChevronUp, XCircle, ArrowRight, MessageSquare
+    ChevronUp, XCircle, ArrowRight, MessageSquare,
+    Settings2, Layers, BookOpen, Calendar, Eye, Info, MapPin, Link2
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { SubjectAreasTab } from './subject-areas-tab'
@@ -37,6 +38,12 @@ import { reviewStatusClass } from '@/lib/constants/status'
 import { getCurrentUserId } from '@/lib/auth'
 import { Breadcrumb } from '@/components/shared/breadcrumb'
 import { DeadlineBanner } from '@/components/shared/deadline-banner'
+import { ReviewQuestionsList } from '../update/review-questions-list'
+import { ReviewSettings as ReviewSettingsComponent } from '../update/review-settings'
+import { TrackList } from '../update/track-list'
+import { SubjectAreaManager } from '../update/subject-area-manager'
+import { ActivityTimeline } from '../update/activity-timeline'
+import { ConflictManagement } from '../update/conflict-management'
 
 // ──────────────────────────── Types ────────────────────────────
 type ReviewerTab =
@@ -45,6 +52,13 @@ type ReviewerTab =
     | 'bidding'
     | 'reviews'
     | 'discussion'
+    | 'info-metadata'
+    | 'info-review-form'
+    | 'info-review-settings'
+    | 'info-tracks'
+    | 'info-subject-areas'
+    | 'info-timeline'
+    | 'info-conflict-settings'
 
 interface StepGroup {
     title: string
@@ -87,6 +101,20 @@ const TAB_GROUPS: StepGroup[] = [
             { key: "reviews", label: "Assigned Reviews", completionKey: "reviews-done" },
             { key: "discussion", label: "Consensus Discussion", completionKey: "" },
         ]
+    },
+    {
+        title: "Conference Info",
+        icon: <Eye className="h-4 w-4" />,
+        accentColor: "text-gray-600",
+        items: [
+            { key: "info-metadata", label: "Conference Details", completionKey: "" },
+            { key: "info-review-form", label: "Review Form", completionKey: "" },
+            { key: "info-review-settings", label: "Review Settings", completionKey: "" },
+            { key: "info-tracks", label: "Tracks", completionKey: "" },
+            { key: "info-subject-areas", label: "Subject Areas", completionKey: "" },
+            { key: "info-timeline", label: "Timeline", completionKey: "" },
+            { key: "info-conflict-settings", label: "Conflict Settings", completionKey: "" },
+        ]
     }
 ]
 
@@ -100,7 +128,7 @@ const BID_ICONS: Record<string, { icon: React.ReactNode; color: string; label: s
 }
 
 // ──────────────────────────── Helpers ────────────────────────────
-const VALID_TABS: ReviewerTab[] = ['dashboard', 'profile', 'bidding', 'reviews', 'discussion']
+const VALID_TABS: ReviewerTab[] = ['dashboard', 'profile', 'bidding', 'reviews', 'discussion', 'info-metadata', 'info-review-form', 'info-review-settings', 'info-tracks', 'info-subject-areas', 'info-timeline', 'info-conflict-settings']
 
 // ──────────────────────────── Component ────────────────────────────
 export default function ReviewerConsole() {
@@ -338,6 +366,7 @@ export default function ReviewerConsole() {
                 return <ReviewsTab
                     reviews={visibleReviews}
                     conferenceId={conferenceId}
+                    onRefresh={fetchData}
                 />
             case 'discussion':
                 return <DiscussionTab
@@ -347,6 +376,60 @@ export default function ReviewerConsole() {
                     activities={activities}
                     settings={settings}
                 />
+            case 'info-metadata':
+                return <ConferenceMetadataView conference={conference} />
+            case 'info-review-form':
+                return (
+                    <div className="space-y-4">
+                        <div>
+                            <h2 className="text-xl font-bold">Review Form</h2>
+                            <p className="text-sm text-muted-foreground mt-1">View the review questions configured for each track.</p>
+                        </div>
+                        <ReviewQuestionsList conferenceId={conferenceId} isReadOnly={true} />
+                    </div>
+                )
+            case 'info-review-settings':
+                return (
+                    <div className="space-y-4">
+                        <div>
+                            <h2 className="text-xl font-bold">Review Settings</h2>
+                            <p className="text-sm text-muted-foreground mt-1">View the review configuration for each track.</p>
+                        </div>
+                        <ReviewSettingsComponent conferenceId={conferenceId} isReadOnly={true} />
+                    </div>
+                )
+            case 'info-tracks':
+                return (
+                    <div className="space-y-4">
+                        <div>
+                            <h2 className="text-xl font-bold">Conference Tracks</h2>
+                            <p className="text-sm text-muted-foreground mt-1">View all tracks in this conference.</p>
+                        </div>
+                        <TrackList conferenceId={conferenceId} refreshKey={0} isReadOnly={true} />
+                    </div>
+                )
+            case 'info-subject-areas':
+                return (
+                    <div className="space-y-4">
+                        <div>
+                            <h2 className="text-xl font-bold">Subject Areas</h2>
+                            <p className="text-sm text-muted-foreground mt-1">View subject areas organized by track.</p>
+                        </div>
+                        <SubjectAreaManager conferenceId={conferenceId} isReadOnly={true} />
+                    </div>
+                )
+            case 'info-timeline':
+                return (
+                    <div className="space-y-4">
+                        <ActivityTimeline conferenceId={conferenceId} isReadOnly={true} />
+                    </div>
+                )
+            case 'info-conflict-settings':
+                return (
+                    <div className="space-y-4">
+                        <ConflictManagement conferenceId={conferenceId} isReadOnly={true} />
+                    </div>
+                )
             default:
                 return null
         }
@@ -1253,3 +1336,80 @@ function ProfileTab({
     )
 }
 
+// ──────────────────────────── Conference Metadata (Read-Only) ────────────────────────────
+function ConferenceMetadataView({ conference }: { conference: ConferenceResponse | null }) {
+    if (!conference) return null
+
+    const formatDate = (dateStr: string | null | undefined) => {
+        if (!dateStr) return '—'
+        try {
+            const d = new Date(dateStr)
+            if (isNaN(d.getTime())) return dateStr
+            return d.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
+        } catch { return dateStr }
+    }
+
+    const fields: { label: string; value: string | undefined | null; icon: React.ReactNode }[] = [
+        { label: 'Conference Name', value: conference.name, icon: <Building2 className="h-4 w-4" /> },
+        { label: 'Acronym', value: conference.acronym, icon: <Info className="h-4 w-4" /> },
+        { label: 'Status', value: conference.status, icon: <Shield className="h-4 w-4" /> },
+        { label: 'Area / Field', value: conference.area, icon: <BookOpen className="h-4 w-4" /> },
+        { label: 'Start Date', value: formatDate(conference.startDate), icon: <Calendar className="h-4 w-4" /> },
+        { label: 'End Date', value: formatDate(conference.endDate), icon: <Calendar className="h-4 w-4" /> },
+        { label: 'Location', value: conference.location, icon: <MapPin className="h-4 w-4" /> },
+        { label: 'Country', value: conference.country, icon: <Globe className="h-4 w-4" /> },
+        { label: 'Province / State', value: conference.province, icon: <MapPin className="h-4 w-4" /> },
+        { label: 'Website', value: conference.websiteUrl, icon: <Link2 className="h-4 w-4" /> },
+        { label: 'Contact Information', value: conference.contactInformation, icon: <Mail className="h-4 w-4" /> },
+        { label: 'Society / Sponsor', value: conference.societySponsor, icon: <GraduationCap className="h-4 w-4" /> },
+    ]
+
+    return (
+        <div className="space-y-6">
+            <div>
+                <h2 className="text-xl font-bold">Conference Details</h2>
+                <p className="text-sm text-muted-foreground mt-1">General information about this conference.</p>
+            </div>
+
+            {/* Banner image */}
+            {conference.bannerImageUrl && (
+                <div className="rounded-xl overflow-hidden border">
+                    <img
+                        src={conference.bannerImageUrl}
+                        alt={conference.name}
+                        className="w-full h-48 object-cover"
+                    />
+                </div>
+            )}
+
+            {/* Info grid */}
+            <div className="grid gap-4 sm:grid-cols-2">
+                {fields.map((f, i) => (
+                    <div key={i} className="flex items-start gap-3 p-4 rounded-lg border bg-muted/5">
+                        <div className="flex items-center justify-center h-8 w-8 rounded-md bg-primary/10 text-primary shrink-0 mt-0.5">
+                            {f.icon}
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{f.label}</p>
+                            {f.label === 'Website' && f.value ? (
+                                <a href={f.value} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary hover:underline break-all">
+                                    {f.value}
+                                </a>
+                            ) : (
+                                <p className="text-sm font-medium text-foreground break-words">{f.value || '—'}</p>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Description */}
+            {conference.description && (
+                <div className="rounded-lg border p-5 bg-muted/5">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Description</p>
+                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{conference.description}</p>
+                </div>
+            )}
+        </div>
+    )
+}

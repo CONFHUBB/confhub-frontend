@@ -19,6 +19,7 @@ import { safeDate } from '@/lib/utils'
 interface ActivityTimelineProps {
     conferenceId: number
     onNavigate?: (tab: string) => void
+    isReadOnly?: boolean
 }
 
 // Activity types in logical order for displaying
@@ -86,7 +87,7 @@ const ACTION_CONFIG: Record<string, { label: string; color: string; icon: typeof
     "DEADLINE_CHANGED": { label: "Deadline Changed", color: "text-indigo-700 bg-indigo-50 border-indigo-200", icon: CalendarClock },
 }
 
-export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineProps) {
+export function ActivityTimeline({ conferenceId, onNavigate, isReadOnly = false }: ActivityTimelineProps) {
     const [activities, setActivities] = useState<ConferenceActivityDTO[]>([])
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -360,6 +361,7 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
                 {activeTab === 'config' ? (
                     <>
                         {/* Workflow guidance banner */}
+                        {!isReadOnly && (
                         <div className="flex items-start gap-3 p-4 mb-4 rounded-lg bg-indigo-50 border border-indigo-200 text-sm">
                             <Info className="h-5 w-5 text-indigo-600 mt-0.5 shrink-0" />
                             <div className="text-indigo-800">
@@ -370,6 +372,7 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
                                 </p>
                             </div>
                         </div>
+                        )}
 
                         <div className="rounded-lg border divide-y mb-6">
                             {activities.length === 0 ? (
@@ -491,6 +494,7 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
                                             </div>
 
                                             {/* Right column: deadline + toggle — vertically centered to the full row */}
+                                            {!isReadOnly && (
                                             <div className="flex items-center gap-3 shrink-0">
                                                 {/* Deadline input */}
                                                 <div className="sm:w-63 relative">
@@ -522,12 +526,20 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
                                                     aria-label={`Toggle ${activity.name}`}
                                                 />
                                             </div>
+                                            )}
+                                            {isReadOnly && activity.deadline && (
+                                                <div className="flex items-center gap-2 shrink-0 text-sm text-muted-foreground">
+                                                    <Calendar className="h-4 w-4" />
+                                                    <span>{(() => { try { const d = new Date(activity.deadline); return isNaN(d.getTime()) ? activity.deadline : d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return activity.deadline; } })()}</span>
+                                                </div>
+                                            )}
                                         </div>
                                     )
                                 })
                             )}
                         </div>
 
+                        {!isReadOnly && (
                         <div className="sticky bottom-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-transparent border-t py-4 -mx-8 px-8 md:-mx-12 md:px-12 flex items-center justify-between gap-4">
                             {hasValidationErrors && (
                                 <p className="text-sm text-red-600 font-medium flex items-center gap-1.5">
@@ -547,6 +559,7 @@ export function ActivityTimeline({ conferenceId, onNavigate }: ActivityTimelineP
                                 )}
                             </Button>
                         </div>
+                        )}
 
                     </>
                 ) : (

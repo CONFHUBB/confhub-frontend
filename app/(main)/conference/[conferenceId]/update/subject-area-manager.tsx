@@ -45,13 +45,14 @@ import {
 
 interface SubjectAreaManagerProps {
     conferenceId: number
+    isReadOnly?: boolean
 }
 
 type AddTab = 'manage' | 'import'
 
 const PAGE_SIZE = 10
 
-export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
+export function SubjectAreaManager({ conferenceId, isReadOnly = false }: SubjectAreaManagerProps) {
     const [tracks, setTracks] = useState<TrackResponse[]>([])
     const [selectedTrackId, setSelectedTrackId] = useState<number | null>(null)
     // allSubjectAreas: subject areas across ALL tracks (for the table)
@@ -298,6 +299,7 @@ export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
     return (
         <div className="space-y-6">
             {/* ── Tabbed Add Section ──────────────── */}
+            {!isReadOnly && (
             <div className="rounded-xl border bg-card overflow-hidden relative">
                 {isSaving && (
                     <div className="absolute inset-0 z-10 bg-background/50 flex items-center justify-center rounded-lg">
@@ -438,6 +440,7 @@ export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
                     )}
                 </div>
             </div>
+            )}
 
             {/* ── Subject Areas Table (ALL tracks) ──────────────── */}
             <div className="rounded-xl border bg-card p-6 space-y-4">
@@ -473,7 +476,7 @@ export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
                                     <TableHead>Description</TableHead>
                                     <TableHead className="w-36">Track</TableHead>
                                     <TableHead className="w-24 text-center">Type</TableHead>
-                                    <TableHead className="w-28 text-center">Actions</TableHead>
+                                    {!isReadOnly && <TableHead className="w-28 text-center">Actions</TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -536,6 +539,7 @@ export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
                                                 {row.isChild ? 'Sub' : 'Primary'}
                                             </span>
                                         </TableCell>
+                                        {!isReadOnly && (
                                         <TableCell className="text-center">
                                             {editingId === row.area.id ? (
                                                 <div className="flex items-center justify-center gap-1">
@@ -581,6 +585,7 @@ export function SubjectAreaManager({ conferenceId }: SubjectAreaManagerProps) {
                                                 </div>
                                             )}
                                         </TableCell>
+                                        )}
                                     </TableRow>
                                 ))}
                             </TableBody>
