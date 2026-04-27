@@ -9,10 +9,13 @@ import {
     deleteTrackReviewQuestion,
     reorderTrackReviewQuestions,
     copyTrackReviewQuestions,
+    downloadReviewQuestionTemplate,
+    previewReviewQuestionImport,
+    importReviewQuestions,
 } from "@/app/api/track.api"
 import type { TrackResponse, ReviewQuestionDTO } from "@/types/track"
 import { Button } from "@/components/ui/button"
-import { Loader2, Plus, Copy, Eye, Pencil, Trash2, ArrowUp, ArrowDown, Send, BellRing } from "lucide-react"
+import { Loader2, Plus, Copy, Eye, Pencil, Trash2, ArrowUp, ArrowDown, Send, BellRing, FileSpreadsheet } from "lucide-react"
 import { toast } from 'sonner'
 import { Select } from "antd"
 
@@ -20,6 +23,7 @@ import { getConference } from "@/app/api/conference.api"
 import { getConferenceMembers } from "@/app/api/user.api"
 import { sendBulkEmail } from "@/app/api/email.api"
 import { createNotification } from "@/app/api/notification.api"
+import { ExcelImport } from "@/components/excel-import"
 
 import { ReviewQuestionDialog } from "./review-question-dialog"
 import { ReviewQuestionsPreview } from "./review-questions-preview"
@@ -34,6 +38,7 @@ export function ReviewQuestionsList({ conferenceId, isReadOnly = false }: Review
     const [tracks, setTracks] = useState<TrackResponse[]>([])
     const [selectedTrackId, setSelectedTrackId] = useState<number | null>(null)
     const [questions, setQuestions] = useState<ReviewQuestionDTO[]>([])
+    const [activeMode, setActiveMode] = useState<'manage' | 'import'>('manage')
     
     // UI State
     const [loadingTracks, setLoadingTracks] = useState(true)
@@ -164,6 +169,12 @@ export function ReviewQuestionsList({ conferenceId, isReadOnly = false }: Review
         }
     }
 
+    const handleReviewImportSuccess = async () => {
+        if (!selectedTrackId) return
+        await fetchQuestions(selectedTrackId)
+        setActiveMode('manage')
+    }
+
     const handleRemindPC = async () => {
         try {
             setIsReminding(true)
@@ -279,6 +290,15 @@ export function ReviewQuestionsList({ conferenceId, isReadOnly = false }: Review
                     <Button variant="outline" onClick={() => setShowPreviewDialog(true)}>
                         <Eye className="h-4 w-4 mr-2" /> Preview Form
                     </Button>
+                    {!isReadOnly && (
+                        <Button
+                            variant={activeMode === 'import' ? 'default' : 'outline'}
+                            onClick={() => setActiveMode(activeMode === 'import' ? 'manage' : 'import')}
+                        >
+                            <FileSpreadsheet className="h-4 w-4 mr-2" />
+                            {activeMode === 'import' ? 'Back to Questions' : 'Import Excel'}
+                        </Button>
+                    )}
                     {!isReadOnly && tracks.length > 1 && (
                         <Button variant="outline" onClick={() => setShowCopyDialog(true)}>
                             <Copy className="h-4 w-4 mr-2" /> Copy to Other Tracks
@@ -299,7 +319,47 @@ export function ReviewQuestionsList({ conferenceId, isReadOnly = false }: Review
             </div>
 
             {/* Main Content */}
-            {loadingQuestions ? (
+            {!isReadOnly && activeMode === 'import' ? (
+                <div className="rounded-xl border bg-card p-6 space-y-4">
+                    <div>
+                        <h3 className="text-lg font-semibold">Import Review Form</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Upload an Excel file to bulk-create review questions for the selected track.
+                        </p>
+                    </div>
+
+                    {selectedTrackId ? (
+                        <ExcelImport
+                            entityName="Review Question"
+                            previewHeaders={[
+                                "text",
+                                "note",
+                                "type",
+                                "orderIndex",
+                                "maxLength",
+                                "showAs",
+                                "isRequired",
+                                "lockedForEdit",
+                                "visibleToOtherReviewers",
+                                "visibleToAuthorsDuringFeedback",
+                                "visibleToAuthorsAfterNotification",
+                                "visibleToMetaReviewers",
+                                "visibleToSeniorMetaReviewers",
+                                "choices",
+                            ]}
+                            onDownloadTemplate={() => downloadReviewQuestionTemplate(selectedTrackId)}
+                            onPreview={(file) => previewReviewQuestionImport(selectedTrackId, file)}
+                            onImport={(file) => importReviewQuestions(selectedTrackId, file)}
+                            onImportSuccess={handleReviewImportSuccess}
+                            templateFilename="review_questions_template.xlsx"
+                        />
+                    ) : (
+                        <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
+                            Select a track first to import review questions.
+                        </div>
+                    )}
+                </div>
+            ) : loadingQuestions ? (
                 <div className="flex items-center justify-center py-20">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>

@@ -25,7 +25,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import Link from 'next/link'
-import { getPaperStatus, PAPER_STATUS } from '@/lib/constants/status'
+import { getPaperStatus, getConferenceStatusSortRank, PAPER_STATUS } from '@/lib/constants/status'
 import { fmtDate } from '@/lib/utils'
 
 
@@ -145,11 +145,15 @@ export default function UserSubmissionsPage() {
             }
         }
 
-        // Primary sort: nearest upcoming conference deadline first.
-        // Tie-breaker: current selected sort.
+        // Primary sort: conference status, then nearest upcoming conference deadline.
+        // Final tie-breaker: current selected sort.
         result.sort((a, b) => {
             const aConferenceId = a.track?.conference?.id ?? a.conferenceId
             const bConferenceId = b.track?.conference?.id ?? b.conferenceId
+            const statusDiff = getConferenceStatusSortRank(a.track?.conference?.status) - getConferenceStatusSortRank(b.track?.conference?.status)
+
+            if (statusDiff !== 0) return statusDiff
+
             const aDays = deadlinesByConference[aConferenceId]?.daysLeft
             const bDays = deadlinesByConference[bConferenceId]?.daysLeft
 

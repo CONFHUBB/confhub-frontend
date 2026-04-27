@@ -141,6 +141,7 @@ export interface ImportResult {
     subjectAreasCreated: number
     membersCreated: number
     ticketTypesCreated?: number
+    reviewQuestionsCreated?: number
     errors: ImportError[]
     conferencePreview?: Record<string, string>
     trackPreviews?: Record<string, string>[]
@@ -148,6 +149,7 @@ export interface ImportResult {
     memberPreviews?: Record<string, string>[]
     ticketTypePreview?: Record<string, string>
     ticketTypePreviews?: Record<string, string>[]
+    reviewQuestionPreviews?: Record<string, string>[]
 }
 
 const uploadFile = (url: string, file: File) => {

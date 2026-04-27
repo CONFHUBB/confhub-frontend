@@ -23,7 +23,7 @@ import {
 import { StandardPagination } from '@/components/ui/standard-pagination'
 import Link from 'next/link'
 import { fmtDate } from '@/lib/utils'
-import { getConferenceStatus } from '@/lib/constants/status'
+import { getConferenceStatus, getConferenceStatusSortRank } from '@/lib/constants/status'
 
 // ── Status helpers ──────────────────────────────────────
 const getStatusInfo = (status: string) => getConferenceStatus(status)
@@ -114,6 +114,9 @@ export default function ReviewerConsolePage() {
         })
 
         return filtered.sort((a, b) => {
+            const statusDiff = getConferenceStatusSortRank(a.status) - getConferenceStatusSortRank(b.status)
+            if (statusDiff !== 0) return statusDiff
+
             const aDays = deadlinesByConference[a.id]?.daysLeft
             const bDays = deadlinesByConference[b.id]?.daysLeft
 
