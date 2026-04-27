@@ -1,3 +1,5 @@
+export type UserStatus = 'AVAILABLE' | 'BUSY' | 'VACATION' | 'FOCUSING' | 'SICK'
+
 export interface User {
     id: number
     firstName: string
@@ -8,6 +10,8 @@ export interface User {
     title?: string
     gender?: string
     isActive?: boolean
+    status?: UserStatus
+    statusUntil?: string | null
 }
 
 export interface AssignRoleRequest {
@@ -26,6 +30,8 @@ export interface AssignRoleResponse {
     invitedAt: string | null
     isAccepted: boolean | null
     isRegistered: boolean | null
+    skipped?: boolean
+    message?: string
     createdAt: string
     updatedAt: string
 }
@@ -75,6 +81,8 @@ export interface UserProfileRequest {
     googleScholarLink: string
     orcid: string
     semanticScholarId: string
+    userStatus?: UserStatus
+    userStatusUntil?: string | null
 }
 
 export interface UserProfile extends UserProfileRequest {

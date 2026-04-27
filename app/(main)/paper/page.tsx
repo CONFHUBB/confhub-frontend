@@ -3,15 +3,17 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { getPapersByAuthor } from '@/app/api/paper.api'
+import { getUpcomingConferenceActivities } from '@/app/api/conference.api'
 import { getUserByEmail } from '@/app/api/user.api'
 import type { PaperResponse, PaperStatus } from '@/types/paper'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { toUpcomingActivityDeadline, type UpcomingActivityDeadline } from '@/lib/activity'
 import {
     Loader2, Edit, FileText, Send, Search, CheckCircle2, XCircle, Ban,
-    Camera, Globe, AlertTriangle, Calendar, Tag, Layers, BarChart3, Star, Upload,
+    Camera, Globe, AlertTriangle, Calendar, Clock, Tag, Layers, BarChart3, Star, Upload,
     Filter, X, Building2, ArrowRight, FolderOpen
 } from 'lucide-react'
 import { StandardPagination } from '@/components/ui/standard-pagination'
@@ -45,6 +47,7 @@ const ITEMS_PER_PAGE = 10
 export default function UserSubmissionsPage() {
     const router = useRouter()
     const [papers, setPapers] = useState<PaperResponse[]>([])
+    const [deadlinesByConference, setDeadlinesByConference] = useState<Record<number, UpcomingActivityDeadline | null>>({})
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
@@ -67,15 +70,33 @@ export default function UserSubmissionsPage() {
                 if (!user || !user.id) return
 
                 const data = await getPapersByAuthor(user.id)
-                setPapers(Array.isArray(data) ? data : [])
-            } catch (err: any) {
-                setError(err.response?.data?.message || 'Failed to fetch your papers.')
+                const userPapers = Array.isArray(data) ? data : []
+                setPapers(userPapers)
+
+                const uniqueConferenceIds = Array.from(new Set(
+                    userPapers
+                        .map(paper => paper.track?.conference?.id ?? paper.conferenceId)
+                        .filter((id): id is number => typeof id === 'number')
+                ))
+                const upcomingActivities = await getUpcomingConferenceActivities(uniqueConferenceIds)
+                const deadlines = Object.fromEntries(
+                    uniqueConferenceIds.map((conferenceId) => [
+                        conferenceId,
+                        toUpcomingActivityDeadline(upcomingActivities[conferenceId] ?? null),
+                    ])
+                ) as Record<number, UpcomingActivityDeadline | null>
+                setDeadlinesByConference(deadlines)
+            } catch (err: unknown) {
+                const errorMessage = typeof err === 'object' && err !== null && 'response' in err
+                    ? ((err as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Failed to fetch your papers.')
+                    : 'Failed to fetch your papers.'
+                setError(errorMessage)
             } finally {
                 setLoading(false)
             }
         }
         fetchPapers()
-    }, [])
+    }, [router])
 
     const conferences = useMemo(() => {
         const map = new Map<number, string>()
@@ -111,21 +132,36 @@ export default function UserSubmissionsPage() {
             result = result.filter(p => p.track?.conference?.id === conferenceFilter)
         }
 
-        // Sort
-        switch (sortBy) {
-            case 'newest':
-                result.sort((a, b) => new Date(b.submissionTime).getTime() - new Date(a.submissionTime).getTime())
-                break
-            case 'oldest':
-                result.sort((a, b) => new Date(a.submissionTime).getTime() - new Date(b.submissionTime).getTime())
-                break
-            case 'title':
-                result.sort((a, b) => (a.title || '').localeCompare(b.title || ''))
-                break
+        const compareBySelectedSort = (a: PaperResponse, b: PaperResponse) => {
+            switch (sortBy) {
+                case 'newest':
+                    return new Date(b.submissionTime).getTime() - new Date(a.submissionTime).getTime()
+                case 'oldest':
+                    return new Date(a.submissionTime).getTime() - new Date(b.submissionTime).getTime()
+                case 'title':
+                    return (a.title || '').localeCompare(b.title || '')
+                default:
+                    return 0
+            }
         }
 
+        // Primary sort: nearest upcoming conference deadline first.
+        // Tie-breaker: current selected sort.
+        result.sort((a, b) => {
+            const aConferenceId = a.track?.conference?.id ?? a.conferenceId
+            const bConferenceId = b.track?.conference?.id ?? b.conferenceId
+            const aDays = deadlinesByConference[aConferenceId]?.daysLeft
+            const bDays = deadlinesByConference[bConferenceId]?.daysLeft
+
+            if (aDays == null && bDays == null) return compareBySelectedSort(a, b)
+            if (aDays == null) return 1
+            if (bDays == null) return -1
+            if (aDays !== bDays) return aDays - bDays
+            return compareBySelectedSort(a, b)
+        })
+
         return result
-    }, [papers, searchQuery, statusFilter, conferenceFilter, sortBy])
+    }, [papers, searchQuery, statusFilter, conferenceFilter, sortBy, deadlinesByConference])
 
     // ── Pagination ──
     const totalPages = Math.ceil(filteredPapers.length / ITEMS_PER_PAGE)
@@ -232,7 +268,12 @@ export default function UserSubmissionsPage() {
                     />
                 </div>
                 {/* Status Filter */}
-                <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as any)}>
+                <Select
+                    value={statusFilter}
+                    onValueChange={(val) =>
+                        setStatusFilter(val === 'ALL' || (ALL_STATUSES as string[]).includes(val) ? (val as PaperStatus | 'ALL') : 'ALL')
+                    }
+                >
                     <SelectTrigger className="w-full sm:w-44 h-10">
                         <div className="flex items-center gap-2">
                             <Filter className="h-3.5 w-3.5" />
@@ -296,6 +337,7 @@ export default function UserSubmissionsPage() {
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Paper Link</th>
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Conference / Track</th>
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Submitted</th>
+                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Deadline</th>
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Conf Status</th>
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Paper Status</th>
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider text-right">Actions</th>
@@ -304,6 +346,8 @@ export default function UserSubmissionsPage() {
                             <tbody className="divide-y">
                                 {paginatedPapers.map((paper, idx) => {
                                     const pageOffset = currentPage * ITEMS_PER_PAGE
+                                    const conferenceId = paper.track?.conference?.id ?? paper.conferenceId
+                                    const deadlineInfo = deadlinesByConference[conferenceId] || null
                                     return (
                                         <tr key={paper.id} className="transition-colors hover:bg-indigo-50/30">
                                             <td className="px-5 py-4 text-xs text-muted-foreground font-medium">
@@ -326,6 +370,17 @@ export default function UserSubmissionsPage() {
                                                     <Calendar className="size-3.5 shrink-0" />
                                                     {fmtDate(paper.submissionTime)}
                                                 </div>
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                {deadlineInfo ? (
+                                                    <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${deadlineInfo.isUrgent ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'}`}>
+                                                        <Clock className="w-3 h-3" />
+                                                        {deadlineInfo.label}: {deadlineInfo.daysLeft}d left
+                                                        {deadlineInfo.isUrgent && ' ⚠'}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">—</span>
+                                                )}
                                             </td>
                                             <td className="px-5 py-4">
                                                 <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${
