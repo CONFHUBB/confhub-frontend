@@ -1,22 +1,22 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
-import { getPapersByAuthor } from '@/app/api/paper.api'
-import { getUpcomingConferenceActivities } from '@/app/api/conference.api'
-import { getUserByEmail } from '@/app/api/user.api'
-import type { PaperResponse, PaperStatus } from '@/types/paper'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { toUpcomingActivityDeadline, type UpcomingActivityDeadline } from '@/lib/activity'
+import {useEffect, useState, useMemo} from 'react'
+import {useRouter} from 'next/navigation'
+import {getPapersByAuthor} from '@/app/api/paper.api'
+import {getUpcomingConferenceActivities} from '@/app/api/conference.api'
+import {getUserByEmail} from '@/app/api/user.api'
+import type {PaperResponse, PaperStatus} from '@/types/paper'
+import {Card, CardContent} from '@/components/ui/card'
+import {Button} from '@/components/ui/button'
+import {Badge} from '@/components/ui/badge'
+import {Input} from '@/components/ui/input'
+import {toUpcomingActivityDeadline, type UpcomingActivityDeadline} from '@/lib/activity'
 import {
     Loader2, Edit, FileText, Send, Search, CheckCircle2, XCircle, Ban,
     Camera, Globe, AlertTriangle, Calendar, Clock, Tag, Layers, BarChart3, Star, Upload,
     Filter, X, Building2, ArrowRight, FolderOpen
 } from 'lucide-react'
-import { StandardPagination } from '@/components/ui/standard-pagination'
+import {StandardPagination} from '@/components/ui/standard-pagination'
 import {
     Select,
     SelectContent,
@@ -25,18 +25,18 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import Link from 'next/link'
-import { getPaperStatus, getConferenceStatusSortRank, PAPER_STATUS } from '@/lib/constants/status'
-import { fmtDate } from '@/lib/utils'
+import {getPaperStatus, getConferenceStatusSortRank, PAPER_STATUS} from '@/lib/constants/status'
+import {fmtDate} from '@/lib/utils'
 
 
 const ALL_STATUSES = Object.keys(PAPER_STATUS) as PaperStatus[]
 const ACTION_STATUSES: PaperStatus[] = ['SUBMITTED']
 
-function StatusBadge({ status }: { status: PaperStatus }) {
+function StatusBadge({status}: { status: PaperStatus }) {
     const config = getPaperStatus(status)
     return (
         <Badge variant="outline" className={`text-[10px] font-semibold border-transparent uppercase ${config.text}`}>
-            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${config.dot}`} />
+            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${config.dot}`}/>
             {config.label}
         </Badge>
     )
@@ -88,7 +88,9 @@ export default function UserSubmissionsPage() {
                 setDeadlinesByConference(deadlines)
             } catch (err: unknown) {
                 const errorMessage = typeof err === 'object' && err !== null && 'response' in err
-                    ? ((err as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Failed to fetch your papers.')
+                    ? ((err as {
+                        response?: { data?: { message?: string } }
+                    }).response?.data?.message ?? 'Failed to fetch your papers.')
                     : 'Failed to fetch your papers.'
                 setError(errorMessage)
             } finally {
@@ -175,7 +177,9 @@ export default function UserSubmissionsPage() {
     }, [filteredPapers, currentPage])
 
     // Reset page when filters change
-    useEffect(() => { setCurrentPage(0) }, [searchQuery, statusFilter, conferenceFilter, sortBy])
+    useEffect(() => {
+        setCurrentPage(0)
+    }, [searchQuery, statusFilter, conferenceFilter, sortBy])
 
     // ── Compute stats ──
     const stats = {
@@ -201,7 +205,7 @@ export default function UserSubmissionsPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <Loader2 className="h-8 w-8 animate-spin text-primary"/>
             </div>
         )
     }
@@ -222,16 +226,19 @@ export default function UserSubmissionsPage() {
     return (
         <div className="page-wide space-y-6">
             {/* ── Eye-catching Header ──────────────────────────────────── */}
-            <div className="relative mb-4 p-8 sm:p-10 bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-sm border border-slate-200/80 dark:border-slate-800">
+            <div
+                className="relative mb-4 p-8 sm:p-10 bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-sm border border-slate-200/80 dark:border-slate-800">
                 {/* Decorative background blobs */}
-                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-br from-indigo-500/10 to-indigo-400/10 dark:from-indigo-500/20 dark:to-indigo-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
-                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-gradient-to-tr from-blue-500/10 to-teal-500/10 dark:from-blue-500/20 dark:to-teal-500/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3 pointer-events-none"></div>
+                <div
+                    className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-br from-indigo-500/10 to-indigo-400/10 dark:from-indigo-500/20 dark:to-indigo-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+                <div
+                    className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-gradient-to-tr from-blue-500/10 to-teal-500/10 dark:from-blue-500/20 dark:to-teal-500/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3 pointer-events-none"></div>
 
                 <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-4">
                             <div className="hidden sm:flex p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl">
-                                <FileText className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+                                <FileText className="h-8 w-8 text-indigo-600 dark:text-indigo-400"/>
                             </div>
                             <div>
                                 My <span className="text-primary">Papers</span>
@@ -247,10 +254,30 @@ export default function UserSubmissionsPage() {
             {/* ── Stats Cards ────────────────────────────── */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                    { label: "Total", value: stats.total, color: "text-indigo-600", bg: "bg-indigo-50 border-indigo-100" },
-                    { label: "Under Review", value: stats.underReview, color: "text-indigo-600", bg: "bg-indigo-50 border-indigo-100" },
-                    { label: "Accepted", value: stats.accepted, color: "text-green-600", bg: "bg-green-50 border-green-100" },
-                    { label: "Needs Action", value: stats.needsAction, color: stats.needsAction > 0 ? "text-amber-600" : "text-gray-600", bg: stats.needsAction > 0 ? "bg-amber-50 border-amber-200 ring-1 ring-amber-200" : "bg-gray-50 border-gray-100" },
+                    {
+                        label: "Total",
+                        value: stats.total,
+                        color: "text-indigo-600",
+                        bg: "bg-indigo-50 border-indigo-100"
+                    },
+                    {
+                        label: "Under Review",
+                        value: stats.underReview,
+                        color: "text-indigo-600",
+                        bg: "bg-indigo-50 border-indigo-100"
+                    },
+                    {
+                        label: "Accepted",
+                        value: stats.accepted,
+                        color: "text-green-600",
+                        bg: "bg-green-50 border-green-100"
+                    },
+                    {
+                        label: "Needs Action",
+                        value: stats.needsAction,
+                        color: stats.needsAction > 0 ? "text-amber-600" : "text-gray-600",
+                        bg: stats.needsAction > 0 ? "bg-amber-50 border-amber-200 ring-1 ring-amber-200" : "bg-gray-50 border-gray-100"
+                    },
                 ].map((stat) => (
                     <div key={stat.label} className={`rounded-xl border p-4 ${stat.bg}`}>
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{stat.label}</p>
@@ -263,7 +290,7 @@ export default function UserSubmissionsPage() {
             <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
                 {/* Search */}
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
                     <Input
                         placeholder="Search by title, abstract, or keywords..."
                         className="pl-9 h-10"
@@ -280,8 +307,8 @@ export default function UserSubmissionsPage() {
                 >
                     <SelectTrigger className="w-full sm:w-44 h-10">
                         <div className="flex items-center gap-2">
-                            <Filter className="h-3.5 w-3.5" />
-                            <SelectValue placeholder="Filter status" />
+                            <Filter className="h-3.5 w-3.5"/>
+                            <SelectValue placeholder="Filter status"/>
                         </div>
                     </SelectTrigger>
                     <SelectContent>
@@ -292,11 +319,12 @@ export default function UserSubmissionsPage() {
                     </SelectContent>
                 </Select>
                 {/* Conference Filter */}
-                <Select value={conferenceFilter.toString()} onValueChange={(val) => setConferenceFilter(val === 'ALL' ? 'ALL' : Number(val))}>
+                <Select value={conferenceFilter.toString()}
+                        onValueChange={(val) => setConferenceFilter(val === 'ALL' ? 'ALL' : Number(val))}>
                     <SelectTrigger className="w-full sm:w-[200px] h-10">
                         <div className="flex items-center gap-2">
-                            <Building2 className="h-3.5 w-3.5" />
-                            <SelectValue placeholder="Filter conference" />
+                            <Building2 className="h-3.5 w-3.5"/>
+                            <SelectValue placeholder="Filter conference"/>
                         </div>
                     </SelectTrigger>
                     <SelectContent>
@@ -318,13 +346,14 @@ export default function UserSubmissionsPage() {
             {/* ── Empty State ────────────────────────────── */}
             {papers.length === 0 ? (
                 <div className="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 py-16 text-center">
-                    <FolderOpen className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                    <FolderOpen className="h-12 w-12 mx-auto text-gray-300 mb-4"/>
                     <h3 className="text-lg font-semibold text-gray-700">No papers yet</h3>
-                    <p className="text-sm text-muted-foreground mt-1 mb-6">You have not submitted any papers to conferences yet.</p>
+                    <p className="text-sm text-muted-foreground mt-1 mb-6">You have not submitted any papers to
+                        conferences yet.</p>
                 </div>
             ) : filteredPapers.length === 0 ? (
                 <div className="rounded-xl border border-gray-200 bg-gray-50/50 py-12 text-center">
-                    <Search className="h-10 w-10 mx-auto text-gray-300 mb-3" />
+                    <Search className="h-10 w-10 mx-auto text-gray-300 mb-3"/>
                     <p className="text-sm text-muted-foreground">No papers match your filters.</p>
                     <Button variant="link" className="mt-2 text-indigo-600" onClick={clearFilters}>
                         Clear all filters
@@ -336,83 +365,93 @@ export default function UserSubmissionsPage() {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead className="border-b bg-muted/30 text-muted-foreground">
-                                <tr>
-                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">#</th>
-                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Paper Link</th>
-                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Conference / Track</th>
-                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Submitted</th>
-                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Deadline</th>
-                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Conf Status</th>
-                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Paper Status</th>
-                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider text-right">Actions</th>
-                                </tr>
+                            <tr>
+                                <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">#</th>
+                                <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Paper Link</th>
+                                <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Conference /
+                                    Track
+                                </th>
+                                <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Submitted</th>
+                                <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Deadline</th>
+                                <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Conf Status
+                                </th>
+                                <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Paper Status
+                                </th>
+                                <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider text-right">Actions</th>
+                            </tr>
                             </thead>
                             <tbody className="divide-y">
-                                {paginatedPapers.map((paper, idx) => {
-                                    const pageOffset = currentPage * ITEMS_PER_PAGE
-                                    const conferenceId = paper.track?.conference?.id ?? paper.conferenceId
-                                    const deadlineInfo = deadlinesByConference[conferenceId] || null
-                                    return (
-                                        <tr key={paper.id} className="transition-colors hover:bg-indigo-50/30">
-                                            <td className="px-5 py-4 text-xs text-muted-foreground font-medium">
-                                                {pageOffset + idx + 1}
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <div>
-                                                    <p className="font-medium truncate max-w-[250px]">{paper.title}</p>
-                                                    <p className="text-xs font-mono text-muted-foreground mt-0.5">#{paper.id}</p>
+                            {paginatedPapers.map((paper, idx) => {
+                                const pageOffset = currentPage * ITEMS_PER_PAGE
+                                const conferenceId = paper.track?.conference?.id ?? paper.conferenceId
+                                const deadlineInfo = deadlinesByConference[conferenceId] || null
+                                return (
+                                    <tr key={paper.id} className="transition-colors hover:bg-indigo-50/30">
+                                        <td className="px-5 py-4 text-xs text-muted-foreground font-medium">
+                                            {pageOffset + idx + 1}
+                                        </td>
+                                        <td className="px-5 py-4">
+                                            <div>
+                                                <p className="font-medium truncate max-w-[250px]">{paper.title}</p>
+                                                <p className="text-xs font-mono text-muted-foreground mt-0.5">#{paper.id}</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-5 py-4">
+                                            <div className="flex flex-col gap-0.5 text-muted-foreground text-sm">
+                                                <span
+                                                    className="truncate max-w-[200px] flex items-center gap-1.5"><Building2
+                                                    className="h-3.5 w-3.5"/>{paper.track?.conference?.acronym}</span>
+                                                <span
+                                                    className="text-xs pl-5 truncate max-w-[200px]">{paper.track?.name}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-5 py-4">
+                                            <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                                                <Calendar className="size-3.5 shrink-0"/>
+                                                {fmtDate(paper.submissionTime)}
+                                            </div>
+                                        </td>
+                                        <td className="px-5 py-4">
+                                            {deadlineInfo ? (
+                                                <div
+                                                    className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${deadlineInfo.isUrgent ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'}`}>
+                                                    <Clock className="w-3 h-3"/>
+                                                    {deadlineInfo.label}: {deadlineInfo.daysLeft}d left
+                                                    {deadlineInfo.isUrgent && ' ⚠'}
                                                 </div>
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <div className="flex flex-col gap-0.5 text-muted-foreground text-sm">
-                                                    <span className="truncate max-w-[200px] flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" />{paper.track?.conference?.acronym}</span>
-                                                    <span className="text-xs pl-5 truncate max-w-[200px]">{paper.track?.name}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
-                                                    <Calendar className="size-3.5 shrink-0" />
-                                                    {fmtDate(paper.submissionTime)}
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                {deadlineInfo ? (
-                                                    <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${deadlineInfo.isUrgent ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'}`}>
-                                                        <Clock className="w-3 h-3" />
-                                                        {deadlineInfo.label}: {deadlineInfo.daysLeft}d left
-                                                        {deadlineInfo.isUrgent && ' ⚠'}
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-xs text-muted-foreground">—</span>
-                                                )}
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${
-                                                    paper.track?.conference?.status === 'OPEN' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                                    paper.track?.conference?.status === 'SETUP' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                                    paper.track?.conference?.status === 'COMPLETED' ? 'bg-gray-50 text-gray-600 border-gray-200' :
-                                                    'bg-amber-50 text-amber-700 border-amber-200'
-                                                }`}>
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground">—</span>
+                                            )}
+                                        </td>
+                                        <td className="px-5 py-4">
+                                                <span
+                                                    className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${
+                                                        paper.track?.conference?.status === 'OPEN' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                                            paper.track?.conference?.status === 'SETUP' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                                paper.track?.conference?.status === 'COMPLETED' ? 'bg-gray-50 text-gray-600 border-gray-200' :
+                                                                    'bg-amber-50 text-amber-700 border-amber-200'
+                                                    }`}>
                                                     {paper.track?.conference?.status || 'UNKNOWN'}
                                                 </span>
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <StatusBadge status={paper.status} />
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <div className="flex justify-end gap-2">
-                                                    {paper.track?.conference?.id && (
-                                                        <Link href={`/conference/${paper.track.conference.id}/author`}>
-                                                            <Button size="sm" className="gap-1.5 h-8 text-[11px] font-semibold tracking-wide bg-indigo-600 hover:bg-indigo-700 text-white border-0">
-                                                                Open Workspace <ArrowRight className="h-3.5 w-3.5" />
-                                                            </Button>
-                                                        </Link>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )
-                                })}
+                                        </td>
+                                        <td className="px-5 py-4">
+                                            <StatusBadge status={paper.status}/>
+                                        </td>
+                                        <td className="px-5 py-4">
+                                            <div className="flex justify-end gap-2">
+                                                {paper.track?.conference?.id && (
+                                                    <Link href={`/conference/${paper.track.conference.id}/author`}>
+                                                        <Button size="sm"
+                                                                className="gap-1.5 h-8 text-[11px] font-semibold tracking-wide bg-indigo-600 hover:bg-indigo-700 text-white border-0">
+                                                            Open Workspace <ArrowRight className="h-3.5 w-3.5"/>
+                                                        </Button>
+                                                    </Link>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )
+                            })}
                             </tbody>
                         </table>
                     </div>
