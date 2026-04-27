@@ -535,22 +535,28 @@ export default function ConferenceUpdatePage() {
         try {
             const internalRoles = assignments.filter((a) => !a.isExternal && a.userId && a.role)
             if (internalRoles.length > 0) {
-                await Promise.all(
+                const results = await Promise.all(
                     internalRoles.map((a) =>
                         assignRole({
                             userId: Number(a.userId),
                             conferenceId,
                             trackId: 0, // Should be selected from UI in future
                             assignedRole: a.role,
-                        }).catch(() => null)
+                        })
                     )
                 )
+                const skipped = results.find((r) => r?.skipped)
+                if (skipped) {
+                    toast.error(skipped.message || "Role assignment was skipped.")
+                    return
+                }
                 toast.success("Roles assigned!")
             } else {
                 toast.success("External roles invites prepared!")
             }
         } catch (err) {
-            toast.error("Failed to assign roles")
+            const detail = (err as any)?.response?.data?.detail || (err as any)?.response?.data?.message
+            toast.error(detail || "Failed to assign roles")
         }
     }
 

@@ -1,14 +1,14 @@
 'use client'
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { getUserRoleAssignments } from '@/app/api/conference-user-track.api'
-import { getConference } from '@/app/api/conference.api'
+import { getConference, getUpcomingConferenceActivities } from '@/app/api/conference.api'
 import { useUserRoles } from '@/hooks/useUserConferenceRoles'
 import type { ConferenceUserTrackResponse } from '@/types/notification'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { toUpcomingActivityDeadline, type UpcomingActivityDeadline } from '@/lib/activity'
 import {
     Select,
     SelectContent,
@@ -17,7 +17,7 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import {
-    Loader2, Calendar, MapPin, Search, Filter,
+    Loader2, Calendar, Clock, MapPin, Search, Filter,
     ArrowRight, FolderOpen, ClipboardList,
 } from 'lucide-react'
 import { StandardPagination } from '@/components/ui/standard-pagination'
@@ -41,9 +41,9 @@ interface ReviewerConference {
 }
 
 export default function ReviewerConsolePage() {
-    const router = useRouter()
     const { userId } = useUserRoles()
     const [conferences, setConferences] = useState<ReviewerConference[]>([])
+    const [deadlinesByConference, setDeadlinesByConference] = useState<Record<number, UpcomingActivityDeadline | null>>({})
     const [loading, setLoading] = useState(true)
 
     // Filters
@@ -80,6 +80,15 @@ export default function ReviewerConsolePage() {
             )
             confList.sort((a, b) => a.name.localeCompare(b.name))
             setConferences(confList)
+
+            const upcomingActivities = await getUpcomingConferenceActivities(confList.map(c => c.id))
+            const deadlines = Object.fromEntries(
+                confList.map((conference) => [
+                    conference.id,
+                    toUpcomingActivityDeadline(upcomingActivities[conference.id] ?? null),
+                ])
+            ) as Record<number, UpcomingActivityDeadline | null>
+            setDeadlinesByConference(deadlines)
         } catch (err) {
             console.error('Failed to load reviewer conferences:', err)
         } finally {
@@ -91,7 +100,7 @@ export default function ReviewerConsolePage() {
 
     // ── Client-side filtering ───────────────────────────
     const filteredConferences = useMemo(() => {
-        return conferences.filter((c) => {
+        const filtered = conferences.filter((c) => {
             if (statusFilter !== 'all' && c.status?.toLowerCase() !== statusFilter) return false
             if (searchQuery.trim()) {
                 const q = searchQuery.toLowerCase()
@@ -103,7 +112,18 @@ export default function ReviewerConsolePage() {
             }
             return true
         })
-    }, [conferences, statusFilter, searchQuery])
+
+        return filtered.sort((a, b) => {
+            const aDays = deadlinesByConference[a.id]?.daysLeft
+            const bDays = deadlinesByConference[b.id]?.daysLeft
+
+            if (aDays == null && bDays == null) return a.name.localeCompare(b.name)
+            if (aDays == null) return 1
+            if (bDays == null) return -1
+            if (aDays !== bDays) return aDays - bDays
+            return a.name.localeCompare(b.name)
+        })
+    }, [conferences, statusFilter, searchQuery, deadlinesByConference])
 
     // ── Pagination ──────────────────────────────────────
     const totalPages = Math.ceil(filteredConferences.length / PAGE_SIZE)
@@ -232,6 +252,7 @@ export default function ReviewerConsolePage() {
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Conference</th>
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Location</th>
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Date</th>
+                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Deadline</th>
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Status</th>
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider text-right">Actions</th>
                                 </tr>
@@ -239,6 +260,7 @@ export default function ReviewerConsolePage() {
                             <tbody className="divide-y">
                                 {pagedConferences.map((conf, idx) => {
                                     const statusInfo = getStatusInfo(conf.status || 'PENDING_APPROVAL')
+                                    const deadlineInfo = deadlinesByConference[conf.id] || null
                                     return (
                                         <tr key={conf.id} className="transition-colors hover:bg-indigo-50/30">
                                             <td className="px-5 py-4 text-xs text-muted-foreground font-medium">
@@ -261,6 +283,17 @@ export default function ReviewerConsolePage() {
                                                     <Calendar className="size-3.5 shrink-0" />
                                                     {formatDate(conf.startDate)} — {formatDate(conf.endDate)}
                                                 </div>
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                {deadlineInfo ? (
+                                                    <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${deadlineInfo.isUrgent ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'}`}>
+                                                        <Clock className="w-3 h-3" />
+                                                        {deadlineInfo.label}: {deadlineInfo.daysLeft}d left
+                                                        {deadlineInfo.isUrgent && ' ⚠'}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">—</span>
+                                                )}
                                             </td>
                                             <td className="px-5 py-4">
                                                 <Badge variant="outline" className={`text-[10px] font-semibold ${statusInfo.bg} ${statusInfo.text} ${statusInfo.border}`}>

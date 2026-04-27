@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { getUserByEmail, getUserProfile, createOrUpdateUserProfile } from "@/app/api/user.api"
-import type { UserProfile, UserProfileRequest } from "@/types/user"
+import type { UserProfile, UserProfileRequest, UserStatus } from "@/types/user"
 import { ProfileForm } from "./profile-form"
 import { Loader2 } from "lucide-react"
 import { ProfileSkeleton } from '@/components/shared/skeletons'
@@ -18,6 +18,8 @@ export default function MyProfilePage() {
     const [userId, setUserId] = useState<number | null>(null)
     const [userName, setUserName] = useState("")
     const [userEmail, setUserEmail] = useState("")
+    const [userStatus, setUserStatus] = useState<UserStatus>("AVAILABLE")
+    const [userStatusUntil, setUserStatusUntil] = useState<string | null>(null)
 
     useEffect(() => {
         fetchProfile()
@@ -43,15 +45,26 @@ export default function MyProfilePage() {
             setUserId(user.id)
             setUserName(user.fullName || "")
             setUserEmail(user.email || "")
+            setUserStatus(user.status || "AVAILABLE")
+            setUserStatusUntil(user.statusUntil || null)
 
             try {
                 const profileData = await getUserProfile(user.id)
                 setProfile(profileData)
+                if (profileData.userStatus) {
+                    setUserStatus(profileData.userStatus)
+                }
+                if (profileData.userStatusUntil !== undefined) {
+                    setUserStatusUntil(profileData.userStatusUntil || null)
+                }
             } catch {
                 setProfile(null)
             }
-        } catch (err: any) {
-            if (err.response?.status === 401 || err.response?.status === 403) {
+        } catch (err: unknown) {
+            const status = typeof err === "object" && err !== null && "response" in err
+                ? (err as { response?: { status?: number } }).response?.status
+                : undefined
+            if (status === 401 || status === 403) {
                 setError("Session expired. Please log in again.")
                 setTimeout(() => router.push("/auth/login"), 2000)
             } else {
@@ -66,6 +79,12 @@ export default function MyProfilePage() {
         if (!userId) return
         const updated = await createOrUpdateUserProfile(userId, data)
         setProfile(updated)
+        if (updated?.userStatus) {
+            setUserStatus(updated.userStatus)
+        }
+        if (updated?.userStatusUntil !== undefined) {
+            setUserStatusUntil(updated.userStatusUntil || null)
+        }
         // Mark profile as completed for middleware check
         if (updated?.userType && updated?.institution) {
             document.cookie = `profileCompleted=true; path=/; max-age=${60 * 60 * 24 * 365}`
@@ -102,6 +121,8 @@ export default function MyProfilePage() {
                 onSubmit={handleSubmit}
                 userName={userName}
                 userEmail={userEmail}
+                userStatus={userStatus}
+                userStatusUntil={userStatusUntil}
             />
         </div>
     )

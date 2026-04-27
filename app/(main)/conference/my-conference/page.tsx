@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { getChairedConferences } from "@/app/api/conference.api"
+import { getChairedConferences, getUpcomingConferenceActivities } from "@/app/api/conference.api"
 import { getUserByEmail } from "@/app/api/user.api"
 import type { ConferenceListResponse } from "@/types/conference"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { toUpcomingActivityDeadline, type UpcomingActivityDeadline } from "@/lib/activity"
 import {
     Select,
     SelectContent,
@@ -18,10 +19,10 @@ import {
 import {
     Loader2,
     Calendar,
+    Clock,
     MapPin,
     Search,
     Plus,
-    Eye,
     Building2,
     Filter,
     ArrowRight,
@@ -29,7 +30,6 @@ import {
 } from "lucide-react"
 import { StandardPagination } from "@/components/ui/standard-pagination"
 import Link from "next/link"
-import { toast } from 'sonner'
 import { fmtDate } from '@/lib/utils'
 import { getConferenceStatus } from '@/lib/constants/status'
 
@@ -41,6 +41,7 @@ const PAGE_SIZE = 6
 export default function MyConferencesPage() {
     const router = useRouter()
     const [conferences, setConferences] = useState<ConferenceListResponse[]>([])
+    const [deadlinesByConference, setDeadlinesByConference] = useState<Record<number, UpcomingActivityDeadline | null>>({})
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
@@ -65,7 +66,7 @@ export default function MyConferencesPage() {
                 try {
                     const payload = JSON.parse(atob(token.split(".")[1]))
                     userEmail = payload.sub
-                } catch (e) {
+                } catch {
                     throw new Error("Invalid token format")
                 }
 
@@ -85,13 +86,27 @@ export default function MyConferencesPage() {
                 const data = await getChairedConferences(user.id, 0, 100)
                 const sorted = [...(data.content || [])].sort((a, b) => b.id - a.id)
                 setConferences(sorted)
-            } catch (err: any) {
+
+                const upcomingActivities = await getUpcomingConferenceActivities(sorted.map(c => c.id))
+                const deadlines = Object.fromEntries(
+                    sorted.map((conference) => [
+                        conference.id,
+                        toUpcomingActivityDeadline(upcomingActivities[conference.id] ?? null),
+                    ])
+                ) as Record<number, UpcomingActivityDeadline | null>
+                setDeadlinesByConference(deadlines)
+            } catch (err: unknown) {
                 console.error("Error fetching chaired conferences:", err)
-                if (err.response?.status === 401 || err.response?.status === 403) {
+                const statusCode = typeof err === "object" && err !== null && "response" in err
+                    ? (err as { response?: { status?: number } }).response?.status
+                    : undefined
+
+                if (statusCode === 401 || statusCode === 403) {
                     setError("Session expired. Please log in again.")
                     setTimeout(() => router.push("/auth/login"), 2000)
                 } else {
-                    setError(`Failed to load conferences: ${err.message || "Unknown error"}`)
+                    const errorMessage = err instanceof Error ? err.message : "Unknown error"
+                    setError(`Failed to load conferences: ${errorMessage}`)
                 }
             } finally {
                 setLoading(false)
@@ -102,7 +117,7 @@ export default function MyConferencesPage() {
 
     // ── Client-side filtering ───────────────────────────
     const filteredConferences = useMemo(() => {
-        return conferences.filter((c) => {
+        const filtered = conferences.filter((c) => {
             // Status filter
             if (statusFilter !== "all" && c.status?.toLowerCase() !== statusFilter) return false
             // Search
@@ -116,7 +131,18 @@ export default function MyConferencesPage() {
             }
             return true
         })
-    }, [conferences, statusFilter, searchQuery])
+
+        return filtered.sort((a, b) => {
+            const aDays = deadlinesByConference[a.id]?.daysLeft
+            const bDays = deadlinesByConference[b.id]?.daysLeft
+
+            if (aDays == null && bDays == null) return b.id - a.id
+            if (aDays == null) return 1
+            if (bDays == null) return -1
+            if (aDays !== bDays) return aDays - bDays
+            return b.id - a.id
+        })
+    }, [conferences, statusFilter, searchQuery, deadlinesByConference])
 
     // ── Pagination ──────────────────────────────────────
     const totalPages = Math.ceil(filteredConferences.length / PAGE_SIZE)
@@ -272,6 +298,7 @@ export default function MyConferencesPage() {
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Conference</th>
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Location</th>
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Date</th>
+                                    <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Deadline</th>
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider">Status</th>
                                     <th className="px-5 py-3.5 font-medium text-xs uppercase tracking-wider text-right">Actions</th>
                                 </tr>
@@ -279,6 +306,7 @@ export default function MyConferencesPage() {
                             <tbody className="divide-y">
                                 {pagedConferences.map((conf, idx) => {
                                     const statusInfo = getStatusInfo(conf.status || 'PENDING_APPROVAL')
+                                    const deadlineInfo = deadlinesByConference[conf.id] || null
                                     return (
                                         <tr key={conf.id} className="transition-colors hover:bg-indigo-50/30">
                                             <td className="px-5 py-4 text-xs text-muted-foreground font-medium">
@@ -301,6 +329,17 @@ export default function MyConferencesPage() {
                                                     <Calendar className="size-3.5 shrink-0" />
                                                     {formatDate(conf.startDate)} — {formatDate(conf.endDate)}
                                                 </div>
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                {deadlineInfo ? (
+                                                    <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${deadlineInfo.isUrgent ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'}`}>
+                                                        <Clock className="w-3 h-3" />
+                                                        {deadlineInfo.label}: {deadlineInfo.daysLeft}d left
+                                                        {deadlineInfo.isUrgent && ' ⚠'}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">—</span>
+                                                )}
                                             </td>
                                             <td className="px-5 py-4">
                                                 <Badge variant="outline" className={`text-[10px] font-semibold ${statusInfo.bg} ${statusInfo.text} ${statusInfo.border}`}>
