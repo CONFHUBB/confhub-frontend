@@ -956,7 +956,7 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
             )}
 
             {/* Phase Status Card with Checklist — only show for SETUP, OPEN, COMPLETED */}
-            {(conferenceStatus === 'SETUP' || conferenceStatus === 'OPEN' || conferenceStatus === 'COMPLETED') && (
+            {(conferenceStatus === 'SETUP' || conferenceStatus === 'PENDING_APPROVAL' || conferenceStatus === 'OPEN' || conferenceStatus === 'COMPLETED') && (
                 <>
                     {/* Submit for Approval Button — only SETUP and all blocking met */}
                     {conferenceStatus === 'SETUP' && role === 'CONFERENCE_CHAIR' && (() => {

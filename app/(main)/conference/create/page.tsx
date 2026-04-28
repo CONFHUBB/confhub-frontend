@@ -131,7 +131,7 @@ export default function CreateConferencePage() {
                 }
             }
 
-            toast.success("Conference created! Proceeding to configuration...")
+            toast.success("Conference created and submitted for admin approval.")
             router.push(`/conference/${conferenceId}/update`)
         } catch (error: any) {
             console.error("Failed to create conference:", error)
