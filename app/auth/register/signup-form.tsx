@@ -22,6 +22,7 @@ import { GoogleLoginButton } from "@/components/ui/google-login-button"
 import { z } from "zod"
 import { PasswordInput } from "@/components/ui/password-input"
 import { Loader2 } from "lucide-react"
+import { setToken } from "@/lib/auth"
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""
 
@@ -135,8 +136,7 @@ export function SignupForm({
     setIsLoading(true)
     try {
       const res = await loginWithGoogle(credentialResponse.credential)
-      localStorage.setItem("accessToken", res.token)
-      document.cookie = `accessToken=${res.token}; path=/; max-age=${60 * 60 * 24}`
+      setToken(res.token)
       toast.success("Account created & logged in with Google!")
       router.push("/")
     } catch (err: any) {

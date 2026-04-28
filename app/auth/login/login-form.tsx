@@ -19,7 +19,7 @@ import { PasswordInput } from "@/components/ui/password-input"
 import { Loader2 } from "lucide-react"
 import { login, loginWithGoogle } from "@/app/api/account.api"
 import { getUserByEmail, getUserProfile } from "@/app/api/user.api"
-import { getCurrentUserEmail } from "@/lib/auth"
+import { getCurrentUserEmail, setToken } from "@/lib/auth"
 import { GoogleOAuthProvider } from "@react-oauth/google"
 import { GoogleLoginButton } from "@/components/ui/google-login-button"
 
@@ -60,8 +60,7 @@ export function LoginForm({
     setIsLoading(true)
     try {
       const res = await login({ email, password })
-      localStorage.setItem("accessToken", res.token)
-      document.cookie = `accessToken=${res.token}; path=/; max-age=${60 * 60 * 24}` // 24 hours
+      setToken(res.token)
       // Check if profile is already complete
       try {
         const user = await getUserByEmail(email)
@@ -91,8 +90,7 @@ export function LoginForm({
     setIsLoading(true)
     try {
       const res = await loginWithGoogle(credentialResponse.credential)
-      localStorage.setItem("accessToken", res.token)
-      document.cookie = `accessToken=${res.token}; path=/; max-age=${60 * 60 * 24}`
+      setToken(res.token)
       // Check if profile is already complete
       try {
         const gEmail = getCurrentUserEmail()

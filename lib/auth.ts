@@ -18,12 +18,35 @@ export interface TokenPayload {
     exp: number
 }
 
+const ACCESS_TOKEN_KEY = 'accessToken'
+const DEFAULT_TOKEN_COOKIE_MAX_AGE = 60 * 60 * 24
+
 // ── Token Access ─────────────────────────────────────────────────────────────
 
 /** Get the raw JWT string from localStorage. Returns null on SSR or when not logged in. */
 export function getToken(): string | null {
     if (typeof window === 'undefined') return null
-    return localStorage.getItem('accessToken')
+    return localStorage.getItem(ACCESS_TOKEN_KEY)
+}
+
+/** Persist the current JWT to both localStorage and the cookie used by middleware. */
+export function setToken(token: string): void {
+    if (typeof window === 'undefined') return
+    localStorage.setItem(ACCESS_TOKEN_KEY, token)
+    writeAccessTokenCookie(token)
+}
+
+/** Repair a missing or stale auth cookie from localStorage so middleware sees the same session as the UI. */
+export function syncTokenCookie(): void {
+    if (typeof document === 'undefined') return
+    const token = getToken()
+    if (!token) return
+    if (isTokenExpired()) {
+        clearToken()
+        return
+    }
+    if (readCookieValue(ACCESS_TOKEN_KEY) === token) return
+    writeAccessTokenCookie(token)
 }
 
 /** Decode the JWT payload without signature verification (client-side only). */
@@ -63,8 +86,12 @@ export function isTokenExpired(): boolean {
 
 /** Remove the token from storage (logout). */
 export function clearToken(): void {
-    if (typeof window === 'undefined') return
-    localStorage.removeItem('accessToken')
+    if (typeof window !== 'undefined') {
+        localStorage.removeItem(ACCESS_TOKEN_KEY)
+    }
+    if (typeof document !== 'undefined') {
+        document.cookie = `${ACCESS_TOKEN_KEY}=; path=/; max-age=0; samesite=lax`
+    }
 }
 
 // ── Role Helpers ─────────────────────────────────────────────────────────────
@@ -84,4 +111,35 @@ function normalizeRoles(raw: Record<string, unknown>): string[] {
     if (Array.isArray(raw.authorities)) return raw.authorities as string[]
     if (typeof raw.role === 'string') return [raw.role]
     return []
+}
+
+function writeAccessTokenCookie(token: string): void {
+    if (typeof document === 'undefined') return
+    const maxAge = getTokenCookieMaxAge(token)
+    document.cookie = `${ACCESS_TOKEN_KEY}=${token}; path=/; max-age=${maxAge}; samesite=lax`
+}
+
+function getTokenCookieMaxAge(token: string): number {
+    try {
+        const raw = JSON.parse(atob(token.split('.')[1]))
+        const exp = Number(raw.exp ?? 0)
+        if (exp > 0) {
+            const remaining = exp - Math.floor(Date.now() / 1000)
+            return Math.max(0, remaining)
+        }
+    } catch {
+        // Fall back to the legacy 24-hour cookie if the token cannot be decoded.
+    }
+    return DEFAULT_TOKEN_COOKIE_MAX_AGE
+}
+
+function readCookieValue(name: string): string | null {
+    if (typeof document === 'undefined') return null
+    const prefix = `${name}=`
+    for (const part of document.cookie.split('; ')) {
+        if (part.startsWith(prefix)) {
+            return part.slice(prefix.length)
+        }
+    }
+    return null
 }

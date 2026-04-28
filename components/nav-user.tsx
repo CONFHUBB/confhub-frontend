@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   BadgeCheck,
@@ -31,6 +30,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { clearToken } from "@/lib/auth"
 
 export function NavUser({
   user,
@@ -42,11 +42,9 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
-  const router = useRouter()
 
   const handleLogout = () => {
-    localStorage.removeItem("accessToken")
-    document.cookie = "accessToken=; path=/; max-age=0"
+    clearToken()
     document.cookie = "profileCompleted=; path=/; max-age=0"
     window.location.href = "/"
   }
