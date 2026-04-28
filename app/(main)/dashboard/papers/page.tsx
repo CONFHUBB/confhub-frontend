@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { StatCard } from "@/components/dashboard/stat-card"
 import { getConferences } from "@/app/api/conference.api"
-import { getPapersByConference, updatePaperStatus } from "@/app/api/paper.api"
+import { getPapersByConference } from "@/app/api/paper.api"
 import type { PaperResponse, PaperStatus } from "@/types/paper"
 
 const STATUS_OPTIONS: (PaperStatus | "ALL")[] = [
@@ -85,16 +85,6 @@ export default function PapersPage() {
         }
         setFiltered(result)
     }, [papers, activeFilter, search])
-
-    const handleStatusChange = async (paperId: number, status: PaperStatus) => {
-        try {
-            await updatePaperStatus(paperId, status)
-            toast.success("Paper status updated")
-            await load()
-        } catch {
-            toast.error("Failed to update status")
-        }
-    }
 
     const counts = {
         total: papers.length,
@@ -190,18 +180,6 @@ export default function PapersPage() {
                                                         <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
                                                             <Link href={`/paper/${p.id}`}>View</Link>
                                                         </Button>
-                                                        {p.status === "UNDER_REVIEW" && (
-                                                            <>
-                                                                <Button size="sm" className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700"
-                                                                    onClick={() => handleStatusChange(p.id, "ACCEPTED")}>
-                                                                    Accept
-                                                                </Button>
-                                                                <Button size="sm" variant="outline" className="h-7 text-xs text-rose-600 border-rose-200 hover:bg-rose-50"
-                                                                    onClick={() => handleStatusChange(p.id, "REJECTED")}>
-                                                                    Reject
-                                                                </Button>
-                                                            </>
-                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>

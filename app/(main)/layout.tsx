@@ -6,6 +6,7 @@ import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { AppNavbar } from "@/components/app-navbar"
 import { useUserRole } from "@/hooks/useUserRole"
 import { UserRolesProvider } from "@/hooks/useUserConferenceRoles"
+import { syncTokenCookie } from "@/lib/auth"
 import { startTokenExpiryMonitor } from "@/lib/http"
 import { toast } from 'sonner'
 import {
@@ -30,6 +31,7 @@ export default function MainLayout({
 
     // ── JWT token expiry monitor ──
     useEffect(() => {
+        syncTokenCookie()
         const cleanup = startTokenExpiryMonitor()
 
         const handleExpiringSoon = (e: Event) => {

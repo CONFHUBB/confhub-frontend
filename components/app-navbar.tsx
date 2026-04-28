@@ -3,7 +3,7 @@
 import * as React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import {
     Menu, X, Search, LogOut, ChevronDown, User, FileText, Mail,
     Ticket, CreditCard, LayoutDashboard, BookOpen, Star,
@@ -76,7 +76,6 @@ const PRIMARY_NAV = [
 
 export function AppNavbar() {
     const pathname = usePathname()
-    const router = useRouter()
     const { hasAnyRole, getRolesInConference, userId } = useUserRoles()
 
     // Allow checking auth state safely
@@ -143,7 +142,6 @@ export function AppNavbar() {
 
     const handleLogout = () => {
         clearToken()
-        document.cookie = "accessToken=; path=/; max-age=0"
         document.cookie = "profileCompleted=; path=/; max-age=0"
         window.location.href = '/'
     }
