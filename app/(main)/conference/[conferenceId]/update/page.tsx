@@ -276,9 +276,9 @@ export default function ConferenceUpdatePage() {
                 while (!me && hasMore) {
                     const data = await getConferenceUsersWithRoles(conferenceId, page, 100)
                     const members: any[] = (data as { content?: any[] })?.content || (data as any[]) || []
-                    
+
                     me = members.find((m: any) => Number(m.user?.id || m.userId || m.id) === myId)
-                    
+
                     const totalPages = (data as { totalPages?: number })?.totalPages || 1
                     page++;
                     if (page >= totalPages) hasMore = false;
@@ -777,9 +777,9 @@ export default function ConferenceUpdatePage() {
                             <h2 className="text-xl font-bold mb-2">Config Submission Form</h2>
                             <p className="text-sm text-muted-foreground">Design the fields authors must fill out when submitting papers.</p>
                         </div>
-                        <SubmissionFormManager 
-                            conferenceId={conferenceId} 
-                            onConfigChanged={() => refreshWorkflow()} 
+                        <SubmissionFormManager
+                            conferenceId={conferenceId}
+                            onConfigChanged={() => refreshWorkflow()}
                         />
                     </div>
                 )
@@ -881,9 +881,9 @@ export default function ConferenceUpdatePage() {
                                     )}
                                     <span className={`text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
                                         conference.status === 'OPEN' ? 'bg-emerald-400/20 text-emerald-200' :
-                                        conference.status === 'SETUP' ? 'bg-blue-400/20 text-blue-200' :
-                                        conference.status === 'COMPLETED' ? 'bg-gray-400/20 text-gray-300' :
-                                        'bg-amber-400/20 text-amber-200'
+                                            conference.status === 'SETUP' ? 'bg-blue-400/20 text-blue-200' :
+                                                conference.status === 'COMPLETED' ? 'bg-gray-400/20 text-gray-300' :
+                                                    'bg-amber-400/20 text-amber-200'
                                     }`}>
                                         {conference.status}
                                     </span>
@@ -975,9 +975,9 @@ export default function ConferenceUpdatePage() {
                                                                 onClick={() => setActiveTab(item.key as SettingsTab)}
                                                                 className={`w-full text-left px-2.5 py-1.5 rounded-md text-sm transition-colors flex items-center justify-between
                                                                     ${isActive
-                                                                        ? 'bg-primary/10 text-primary font-semibold'
-                                                                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                                                                    }`}
+                                                                    ? 'bg-primary/10 text-primary font-semibold'
+                                                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                                                }`}
                                                             >
                                                                 <span>{item.label}</span>
                                                                 {itemIsViewOnly && (

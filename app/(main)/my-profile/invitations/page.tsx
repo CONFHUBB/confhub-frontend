@@ -19,7 +19,7 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog'
 import { 
-    Loader2, ArrowRight, Calendar, MapPin, Search, Filter, 
+    Loader2, ArrowRight, Calendar, Search, Filter, 
     X, ChevronLeft, ChevronRight, Check, Info, FolderOpen, Mail
 } from 'lucide-react'
 import {
@@ -280,7 +280,10 @@ export default function MyInvitationsPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input placeholder="Search by name, acronym, or location..." className="pl-9 h-9" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                 </div>
-                <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                <Select
+                    value={statusFilter}
+                    onValueChange={(v) => setStatusFilter(v as 'ALL' | 'PENDING' | 'ACCEPTED' | 'DECLINED')}
+                >
                     <SelectTrigger className="w-full sm:w-40 h-9">
                         <div className="flex items-center gap-2">
                             <Filter className="h-3.5 w-3.5" />
@@ -381,6 +384,14 @@ export default function MyInvitationsPage() {
                                             <div className="flex items-center justify-end gap-2">
                                                 {inv.isAccepted === null ? (
                                                     <>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => router.push(`/conference/${inv.conferenceId}`)}
+                                                            className="gap-1.5 border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
+                                                        >
+                                                            View Detail
+                                                        </Button>
                                                         <Button variant="outline" size="sm" disabled={actionLoadingId === inv.conferenceId} onClick={() => handleAcceptClick(inv)} className="gap-1.5 border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800">
                                                             {actionLoadingId === inv.conferenceId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                                                             Accept
