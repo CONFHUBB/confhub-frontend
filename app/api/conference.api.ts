@@ -69,6 +69,21 @@ export const getConferenceActivities = async (conferenceId: number): Promise<Con
     return response.data
 }
 
+export const getUpcomingConferenceActivities = async (
+    conferenceIds: number[],
+): Promise<Record<number, ConferenceActivityDTO>> => {
+    if (conferenceIds.length === 0) return {}
+    const response = await http.get<Record<number, ConferenceActivityDTO>>(
+        '/conferences/activities/upcoming-deadlines',
+        {
+            params: {
+                conferenceIds: conferenceIds.join(','),
+            },
+        }
+    )
+    return response.data
+}
+
 export const updateConferenceActivities = async (conferenceId: number, body: ConferenceActivityDTO[]): Promise<ConferenceActivityDTO[]> => {
     const response = await http.put<ConferenceActivityDTO[]>(`/conferences/${conferenceId}/activities`, body)
     return response.data
@@ -126,6 +141,7 @@ export interface ImportResult {
     subjectAreasCreated: number
     membersCreated: number
     ticketTypesCreated?: number
+    reviewQuestionsCreated?: number
     errors: ImportError[]
     conferencePreview?: Record<string, string>
     trackPreviews?: Record<string, string>[]
@@ -133,6 +149,7 @@ export interface ImportResult {
     memberPreviews?: Record<string, string>[]
     ticketTypePreview?: Record<string, string>
     ticketTypePreviews?: Record<string, string>[]
+    reviewQuestionPreviews?: Record<string, string>[]
 }
 
 const uploadFile = (url: string, file: File) => {

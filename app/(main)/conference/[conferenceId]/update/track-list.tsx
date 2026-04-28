@@ -30,11 +30,12 @@ interface TrackListProps {
     conferenceId: number
     refreshKey: number
     onTrackDeleted?: () => void
+    isReadOnly?: boolean
 }
 
 const PAGE_SIZE = 10
 
-export function TrackList({ conferenceId, refreshKey, onTrackDeleted }: TrackListProps) {
+export function TrackList({ conferenceId, refreshKey, onTrackDeleted, isReadOnly = false }: TrackListProps) {
     const [allTracks, setAllTracks] = useState<TrackResponse[]>([])
     const [loading, setLoading] = useState(true)
     const [currentPage, setCurrentPage] = useState(0)
@@ -168,7 +169,7 @@ export function TrackList({ conferenceId, refreshKey, onTrackDeleted }: TrackLis
                                 <TableHead className="w-12 text-center">#</TableHead>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Description</TableHead>
-                                <TableHead className="w-28 text-center">Actions</TableHead>
+                                {!isReadOnly && <TableHead className="w-28 text-center">Actions</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -211,6 +212,7 @@ export function TrackList({ conferenceId, refreshKey, onTrackDeleted }: TrackLis
                                             </p>
                                         )}
                                     </TableCell>
+                                    {!isReadOnly && (
                                     <TableCell className="text-center">
                                         {editingId === track.id ? (
                                             <div className="flex items-center justify-center gap-1">
@@ -256,6 +258,7 @@ export function TrackList({ conferenceId, refreshKey, onTrackDeleted }: TrackLis
                                             </div>
                                         )}
                                     </TableCell>
+                                    )}
                                 </TableRow>
                             ))}
                         </TableBody>

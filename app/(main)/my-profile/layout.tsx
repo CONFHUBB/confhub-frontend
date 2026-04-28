@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
     User, FileText, Ticket, CreditCard,
-    ChevronDown, ChevronRight, Settings, LayoutDashboard, Mail
+    ChevronDown, ChevronRight, Settings, LayoutDashboard, Mail, CalendarOff
 } from "lucide-react"
 import { useState } from "react"
 import { Card } from "@/components/ui/card"
@@ -18,6 +18,7 @@ const NAV_GROUPS = [
         accentColor: "text-indigo-600",
         items: [
             { name: "My Profile", path: "/my-profile", icon: <User className="h-4 w-4" /> },
+            { name: "Unavailable Days", path: "/my-profile/unavailable-days", icon: <CalendarOff className="h-4 w-4" /> },
         ],
     },
     {

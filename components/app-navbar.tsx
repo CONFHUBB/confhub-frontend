@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
     Menu, X, Search, LogOut, ChevronDown, User, FileText, Mail,
     Ticket, CreditCard, LayoutDashboard, BookOpen, Star,
-    Building2, GraduationCap, FlaskConical, Globe, ClipboardList
+    Building2, GraduationCap, FlaskConical, Globe, ClipboardList, CalendarOff
 } from 'lucide-react'
 import { useUserRoles } from '@/hooks/useUserConferenceRoles'
 import { getUserByEmail, getUserProfile } from '@/app/api/user.api'
@@ -41,7 +41,7 @@ const WORKSPACE_SECTIONS = [
         icon: <GraduationCap className="h-3.5 w-3.5" />,
         color: 'text-indigo-600',
         items: [
-            { name: 'Program Conferences', path: '/conference/program-conference', icon: <Building2 className="h-4 w-4" /> },
+            { name: 'My PC Conferences', path: '/conference/program-conference', icon: <Building2 className="h-4 w-4" /> },
         ],
     },
     {
@@ -325,6 +325,13 @@ export function AppNavbar() {
                                                     className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-text-medium hover:bg-primary/5 hover:text-primary transition-colors"
                                                 >
                                                     <User className="h-4 w-4 text-gray-400" /> My Profile
+                                                </Link>
+                                                <Link
+                                                    href="/my-profile/unavailable-days"
+                                                    onClick={() => setUserMenuOpen(false)}
+                                                    className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-text-medium hover:bg-primary/5 hover:text-primary transition-colors"
+                                                >
+                                                    <CalendarOff className="h-4 w-4 text-gray-400" /> Unavailable Days
                                                 </Link>
 
                                                 {/* ── Activity ── */}

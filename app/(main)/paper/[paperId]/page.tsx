@@ -42,7 +42,7 @@ import {
     Loader2, ArrowLeft, Upload, FileUp, FileText, Trash2, Save, ExternalLink,
     UserPlus, Layers, X, AlertTriangle, RotateCcw, Eye, Lock, Clock, CalendarDays,
     Star, BarChart3, CheckCircle2, XCircle, ClipboardList, Camera, Users, ShieldCheck,
-    Calendar, Folder, Download, AlertCircle
+    Calendar, Folder, Download, AlertCircle, Ticket
 } from 'lucide-react'
 import { Select as AntdSelect } from 'antd'
 import { BackButton } from '@/components/shared/back-button'
@@ -317,7 +317,7 @@ export default function PaperWorkspacePage() {
 
     const isEditable = isPaperSubmissionOpen && isAuthor
     const showReviews = ['AWAITING_DECISION', 'ACCEPTED', 'REJECTED', 'AWAITING_REGISTRATION', 'REGISTERED', 'AWAITING_CAMERA_READY', 'CAMERA_READY_SUBMITTED', 'CAMERA_READY_REJECTED', 'PUBLISHED'].includes(paper.status) || aggregate?.reviewCount! > 0
-    const showCameraReadyUpload = isAuthor && ['AWAITING_CAMERA_READY', 'CAMERA_READY_REJECTED'].includes(paper.status) && isCameraReadyOpen
+    const showCameraReadyUpload = isAuthor && ['REGISTERED', 'AWAITING_CAMERA_READY', 'CAMERA_READY_REJECTED'].includes(paper.status) && isCameraReadyOpen
     const canWithdraw = isAuthor && ['SUBMITTED', 'UNDER_REVIEW', 'ACCEPTED'].includes(paper.status)
     const decision = metaReview?.finalDecision ? DECISION_CONFIG[metaReview.finalDecision as keyof typeof DECISION_CONFIG] : null
 
@@ -804,20 +804,24 @@ export default function PaperWorkspacePage() {
                                 </DialogContent>
                             </Dialog>
 
-                            {/* Camera Ready */}
-                            {/* Camera Ready */}
+                            {/* Register Ticket & Camera-Ready */}
+                            {isAuthor && ['AWAITING_REGISTRATION', 'REGISTERED', 'AWAITING_CAMERA_READY', 'CAMERA_READY_REJECTED'].includes(paper.status) && (
+                                <Button
+                                    variant="outline"
+                                    className="w-full justify-start gap-3 h-11 bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-800 shadow-sm"
+                                    onClick={() => router.push(`/paper/${paper.id}/camera-ready`)}
+                                >
+                                    <Ticket className="h-4 w-4 text-rose-600" />
+                                    {paper.status === 'AWAITING_REGISTRATION' ? 'Register & Submit Camera-Ready' : 'Submit Camera-Ready'}
+                                </Button>
+                            )}
+
+                            {/* Camera Ready Upload */}
                             <Button 
                                 variant="outline" 
                                 className="w-full justify-start gap-3 h-11 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-800 shadow-sm" 
                                 disabled={!showCameraReadyUpload}
-                                onClick={() => {
-                                    const confId = paper.conferenceId || paper.track?.conference?.id
-                                    if (confId) {
-                                        router.push(`/conference/${confId}/paper/${paper.id}/camera-ready`)
-                                    } else {
-                                        toast.error('Conference information not available')
-                                    }
-                                }}
+                                onClick={() => router.push(`/paper/${paper.id}/camera-ready`)}
                             >
                                 <Camera className="h-4 w-4 text-emerald-600" /> Upload Camera Ready
                             </Button>

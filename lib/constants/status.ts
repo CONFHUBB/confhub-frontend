@@ -101,6 +101,20 @@ export function conferenceStatusClass(status: string) {
     return `${s.bg} ${s.text} ${s.border}`
 }
 
+const CONFERENCE_STATUS_SORT_ORDER: Record<string, number> = {
+    PENDING_APPROVAL: 0,
+    SETUP: 1,
+    OPEN: 2,
+    COMPLETED: 3,
+    CANCELLED: 99,
+}
+
+export function getConferenceStatusSortRank(status?: string) {
+    if (!status) return 50
+    const key = status.toUpperCase()
+    return CONFERENCE_STATUS_SORT_ORDER[key] ?? 50
+}
+
 // ── Decision Status ──────────────────────────────────────────────────────────
 
 export const DECISION_CONFIG = {

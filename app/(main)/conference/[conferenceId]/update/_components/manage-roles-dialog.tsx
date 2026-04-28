@@ -199,9 +199,10 @@ export function ManageRolesDialog({
             toast.success("Roles updated successfully!")
             onSaved()
             onOpenChange(false)
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to save roles:", err)
-            toast.error("Failed to update roles. Please try again.")
+            const detail = err?.response?.data?.detail || err?.response?.data?.message || "Failed to update roles. Please try again."
+            toast.error(detail)
         } finally {
             setIsSaving(false)
         }

@@ -144,7 +144,7 @@ export default function PaperDetailPage() {
     const renderTabContent = () => {
         switch (activeTab) {
             case 'info':
-                return <InfoTab paper={paper} paperId={paperId} authors={authors} isChair={isChair} />
+                return <InfoTab paper={paper} paperId={paperId} conferenceId={conferenceId} authors={authors} isChair={isChair} isAuthor={isAuthor} />
             case 'files':
                 return <FilesTab paperId={paperId} conferenceId={conferenceId} isAuthor={isAuthor} />
             case 'reviews':

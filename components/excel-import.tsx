@@ -73,13 +73,17 @@ export function ExcelImport({
                 toast.success(`${entityName} imported successfully!`)
                 onImportSuccess?.(result)
             } else {
-                toast.error(`Import failed: ${result.errors?.length || 0} error(s) found`)
+                const firstMsg = result.errors?.[0]?.message || 'Unknown error'
+                const count = result.errors?.length || 0
+                toast.error(count > 1 ? `${firstMsg} (+${count - 1} more error${count > 2 ? 's' : ''})` : firstMsg)
             }
         } catch (e: any) {
             const data = e.response?.data
             if (data?.errors) {
                 setImportResult(data)
-                toast.error(`Import failed: ${data.errors.length} error(s) found`)
+                const firstMsg = data.errors[0]?.message || 'Unknown error'
+                const count = data.errors.length
+                toast.error(count > 1 ? `${firstMsg} (+${count - 1} more error${count > 2 ? 's' : ''})` : firstMsg)
             } else {
                 const msg = data?.detail || data?.message || "Import failed. Please check the file and try again."
                 toast.error(msg)
@@ -99,6 +103,7 @@ export function ExcelImport({
         (preview?.subjectAreaPreviews?.length ?? 0) > 0 ? preview!.subjectAreaPreviews! :
         (preview?.memberPreviews?.length ?? 0) > 0 ? preview!.memberPreviews! :
         (preview?.ticketTypePreviews?.length ?? 0) > 0 ? preview!.ticketTypePreviews! :
+        (preview?.reviewQuestionPreviews?.length ?? 0) > 0 ? preview!.reviewQuestionPreviews! :
         preview?.ticketTypePreview ? [preview.ticketTypePreview] : []
 
     return (
@@ -236,6 +241,7 @@ export function ExcelImport({
                         {importResult.subjectAreasCreated > 0 && ` — ${importResult.subjectAreasCreated} subject areas`}
                         {importResult.membersCreated !== undefined && importResult.membersCreated > 0 && ` — ${importResult.membersCreated} members`}
                         {importResult.ticketTypesCreated !== undefined && importResult.ticketTypesCreated > 0 && ` — ${importResult.ticketTypesCreated} ticket types`}
+                        {importResult.reviewQuestionsCreated !== undefined && importResult.reviewQuestionsCreated > 0 && ` — ${importResult.reviewQuestionsCreated} review questions`}
                     </p>
                 </div>
             )}
