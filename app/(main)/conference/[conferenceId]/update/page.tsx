@@ -879,14 +879,18 @@ export default function ConferenceUpdatePage() {
                                             {conference.acronym}
                                         </span>
                                     )}
-                                    <span className={`text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
-                                        conference.status === 'OPEN' ? 'bg-emerald-400/20 text-emerald-200' :
-                                            conference.status === 'SETUP' ? 'bg-blue-400/20 text-blue-200' :
-                                                conference.status === 'COMPLETED' ? 'bg-gray-400/20 text-gray-300' :
-                                                    'bg-amber-400/20 text-amber-200'
-                                    }`}>
+                                    <span className={`text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${conference.status === 'OPEN' ? 'bg-emerald-400/20 text-emerald-200' :
+                                        conference.status === 'SETUP' ? 'bg-blue-400/20 text-blue-200' :
+                                            conference.status === 'COMPLETED' ? 'bg-gray-400/20 text-gray-300' :
+                                                'bg-amber-400/20 text-amber-200'
+                                        }`}>
                                         {conference.status}
                                     </span>
+                                    {conference.subscriptionPlan && (
+                                        <span className="text-[11px] font-semibold tracking-wide px-2 py-0.5 rounded-full bg-white/15 text-white/80">
+                                            {conference.subscriptionPlan}
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* Title */}
@@ -914,24 +918,22 @@ export default function ConferenceUpdatePage() {
                             {userRole && (
                                 <div className="flex items-center gap-2.5 md:self-start">
                                     <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/95 shadow-lg">
-                                        <div className={`flex items-center justify-center h-9 w-9 rounded-lg ${
-                                            userRole === 'CONFERENCE_CHAIR'
-                                                ? 'bg-emerald-100 text-emerald-600'
-                                                : userRole === 'PROGRAM_CHAIR'
-                                                    ? 'bg-blue-100 text-blue-600'
-                                                    : 'bg-indigo-100 text-indigo-600'
-                                        }`}>
+                                        <div className={`flex items-center justify-center h-9 w-9 rounded-lg ${userRole === 'CONFERENCE_CHAIR'
+                                            ? 'bg-emerald-100 text-emerald-600'
+                                            : userRole === 'PROGRAM_CHAIR'
+                                                ? 'bg-blue-100 text-blue-600'
+                                                : 'bg-indigo-100 text-indigo-600'
+                                            }`}>
                                             {roleIcon}
                                         </div>
                                         <div>
                                             <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wider leading-none">Your Role</p>
-                                            <p className={`text-sm font-bold leading-tight mt-0.5 ${
-                                                userRole === 'CONFERENCE_CHAIR'
-                                                    ? 'text-emerald-700'
-                                                    : userRole === 'PROGRAM_CHAIR'
-                                                        ? 'text-blue-700'
-                                                        : 'text-indigo-700'
-                                            }`}>{roleLabel}</p>
+                                            <p className={`text-sm font-bold leading-tight mt-0.5 ${userRole === 'CONFERENCE_CHAIR'
+                                                ? 'text-emerald-700'
+                                                : userRole === 'PROGRAM_CHAIR'
+                                                    ? 'text-blue-700'
+                                                    : 'text-indigo-700'
+                                                }`}>{roleLabel}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -975,9 +977,9 @@ export default function ConferenceUpdatePage() {
                                                                 onClick={() => setActiveTab(item.key as SettingsTab)}
                                                                 className={`w-full text-left px-2.5 py-1.5 rounded-md text-sm transition-colors flex items-center justify-between
                                                                     ${isActive
-                                                                    ? 'bg-primary/10 text-primary font-semibold'
-                                                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                                                                }`}
+                                                                        ? 'bg-primary/10 text-primary font-semibold'
+                                                                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                                                    }`}
                                                             >
                                                                 <span>{item.label}</span>
                                                                 {itemIsViewOnly && (
