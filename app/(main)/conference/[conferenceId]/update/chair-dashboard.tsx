@@ -264,14 +264,14 @@ const TAB_ACTION_LABELS: Record<string, string> = {
 }
 
 const COLOR_MAP: Record<string, { bg: string; text: string; border: string; light: string; dot: string; btn: string }> = {
-    indigo:  { bg: 'bg-indigo-600',  text: 'text-indigo-700',  border: 'border-indigo-300',  light: 'bg-indigo-50',  dot: 'bg-indigo-500',  btn: 'bg-indigo-600 hover:bg-indigo-700 text-white' },
-    sky:     { bg: 'bg-sky-500',     text: 'text-sky-700',     border: 'border-sky-300',     light: 'bg-sky-50',     dot: 'bg-sky-500',     btn: 'bg-sky-500 hover:bg-sky-600 text-white' },
-    teal:    { bg: 'bg-teal-500',    text: 'text-teal-700',    border: 'border-teal-300',    light: 'bg-teal-50',    dot: 'bg-teal-500',    btn: 'bg-teal-500 hover:bg-teal-600 text-white' },
-    amber:   { bg: 'bg-amber-500',   text: 'text-amber-700',   border: 'border-amber-300',   light: 'bg-amber-50',   dot: 'bg-amber-500',   btn: 'bg-amber-500 hover:bg-amber-600 text-white' },
-    orange:  { bg: 'bg-orange-500',  text: 'text-orange-700',  border: 'border-orange-300',  light: 'bg-orange-50',  dot: 'bg-orange-500',  btn: 'bg-orange-500 hover:bg-orange-600 text-white' },
-    purple:  { bg: 'bg-indigo-600',  text: 'text-indigo-700',  border: 'border-indigo-300',  light: 'bg-indigo-50',  dot: 'bg-indigo-500',  btn: 'bg-indigo-600 hover:bg-indigo-700 text-white' },
-    cyan:    { bg: 'bg-cyan-500',    text: 'text-cyan-700',    border: 'border-cyan-300',    light: 'bg-cyan-50',    dot: 'bg-cyan-500',    btn: 'bg-cyan-500 hover:bg-cyan-600 text-white' },
-    rose:    { bg: 'bg-rose-500',    text: 'text-rose-700',    border: 'border-rose-300',    light: 'bg-rose-50',    dot: 'bg-rose-500',    btn: 'bg-rose-500 hover:bg-rose-600 text-white' },
+    indigo: { bg: 'bg-indigo-600', text: 'text-indigo-700', border: 'border-indigo-300', light: 'bg-indigo-50', dot: 'bg-indigo-500', btn: 'bg-indigo-600 hover:bg-indigo-700 text-white' },
+    sky: { bg: 'bg-sky-500', text: 'text-sky-700', border: 'border-sky-300', light: 'bg-sky-50', dot: 'bg-sky-500', btn: 'bg-sky-500 hover:bg-sky-600 text-white' },
+    teal: { bg: 'bg-teal-500', text: 'text-teal-700', border: 'border-teal-300', light: 'bg-teal-50', dot: 'bg-teal-500', btn: 'bg-teal-500 hover:bg-teal-600 text-white' },
+    amber: { bg: 'bg-amber-500', text: 'text-amber-700', border: 'border-amber-300', light: 'bg-amber-50', dot: 'bg-amber-500', btn: 'bg-amber-500 hover:bg-amber-600 text-white' },
+    orange: { bg: 'bg-orange-500', text: 'text-orange-700', border: 'border-orange-300', light: 'bg-orange-50', dot: 'bg-orange-500', btn: 'bg-orange-500 hover:bg-orange-600 text-white' },
+    purple: { bg: 'bg-indigo-600', text: 'text-indigo-700', border: 'border-indigo-300', light: 'bg-indigo-50', dot: 'bg-indigo-500', btn: 'bg-indigo-600 hover:bg-indigo-700 text-white' },
+    cyan: { bg: 'bg-cyan-500', text: 'text-cyan-700', border: 'border-cyan-300', light: 'bg-cyan-50', dot: 'bg-cyan-500', btn: 'bg-cyan-500 hover:bg-cyan-600 text-white' },
+    rose: { bg: 'bg-rose-500', text: 'text-rose-700', border: 'border-rose-300', light: 'bg-rose-50', dot: 'bg-rose-500', btn: 'bg-rose-500 hover:bg-rose-600 text-white' },
     emerald: { bg: 'bg-emerald-600', text: 'text-emerald-700', border: 'border-emerald-300', light: 'bg-emerald-50', dot: 'bg-emerald-500', btn: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
 }
 
@@ -279,14 +279,14 @@ const COLOR_MAP: Record<string, { bg: string; text: string; border: string; ligh
 function detectActivePhaseIndex(activities: ConferenceActivityDTO[]): number {
     const enabled = new Set(activities.filter(a => a.isEnabled).map(a => a.activityType))
     // Scan from last phase backward
-    if (enabled.has('EVENT_DAY'))              return 8  // Event Day
-    if (enabled.has('REGISTRATION'))           return 7  // Registration
-    if (enabled.has('CAMERA_READY_SUBMISSION'))return 6  // Camera-Ready
-    if (enabled.has('AUTHOR_NOTIFICATION'))    return 5  // Decision
-    if (enabled.has('REVIEW_DISCUSSION'))      return 4  // Discussion
-    if (enabled.has('REVIEW_SUBMISSION'))      return 3  // Review
-    if (enabled.has('REVIEWER_BIDDING'))       return 2  // Bidding
-    if (enabled.has('PAPER_SUBMISSION'))       return 1  // Submission
+    if (enabled.has('EVENT_DAY')) return 8  // Event Day
+    if (enabled.has('REGISTRATION')) return 7  // Registration
+    if (enabled.has('CAMERA_READY_SUBMISSION')) return 6  // Camera-Ready
+    if (enabled.has('AUTHOR_NOTIFICATION')) return 5  // Decision
+    if (enabled.has('REVIEW_DISCUSSION')) return 4  // Discussion
+    if (enabled.has('REVIEW_SUBMISSION')) return 3  // Review
+    if (enabled.has('REVIEWER_BIDDING')) return 2  // Bidding
+    if (enabled.has('PAPER_SUBMISSION')) return 1  // Submission
     return 0 // Setup
 }
 
@@ -475,9 +475,8 @@ function PhaseStatusCard({
                         <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
                             Phase Checklist
                         </span>
-                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                            allBlockingMet ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                        }`}>
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${allBlockingMet ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                            }`}>
                             {metCount}/{checklist.length} done
                         </span>
                     </div>
@@ -502,13 +501,12 @@ function PhaseStatusCard({
                                 ) : (
                                     <XCircle className="w-4 h-4 text-gray-300 shrink-0" />
                                 )}
-                                <span className={`text-sm flex-1 ${
-                                    item.met
-                                        ? 'text-gray-700 line-through decoration-gray-300'
-                                        : item.blocking
-                                            ? 'text-gray-800 font-medium'
-                                            : 'text-gray-400'
-                                }`}>
+                                <span className={`text-sm flex-1 ${item.met
+                                    ? 'text-gray-700 line-through decoration-gray-300'
+                                    : item.blocking
+                                        ? 'text-gray-800 font-medium'
+                                        : 'text-gray-400'
+                                    }`}>
                                     {item.label}
                                 </span>
                                 {item.blocking && !item.met && (
@@ -537,11 +535,10 @@ function PhaseStatusCard({
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className={`text-[11px] h-6 px-2.5 rounded-md shrink-0 font-semibold border ${
-                                            item.met
-                                                ? 'border-gray-200 text-gray-500 bg-white hover:bg-gray-50'
-                                                : `${c.border} ${c.text} bg-white hover:${c.light}`
-                                        }`}
+                                        className={`text-[11px] h-6 px-2.5 rounded-md shrink-0 font-semibold border ${item.met
+                                            ? 'border-gray-200 text-gray-500 bg-white hover:bg-gray-50'
+                                            : `${c.border} ${c.text} bg-white hover:${c.light}`
+                                            }`}
                                         onClick={(e) => { e.stopPropagation(); onNavigate?.(item.tab) }}
                                     >
                                         {TAB_ACTION_LABELS[item.tab] || 'Configure'}
@@ -606,6 +603,7 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
     const [papers, setPapers] = useState<PaperSummary[]>([])
     const [activities, setActivities] = useState<ConferenceActivityDTO[]>([])
     const [conferenceStatus, setConferenceStatus] = useState<string>('SETUP')
+    const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null)
     const [rejectionReason, setRejectionReason] = useState<string | null>(null)
     const [submitting, setSubmitting] = useState(false)
     const [phaseData, setPhaseData] = useState<PhaseData>({
@@ -662,6 +660,7 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
             if (confData) {
                 setConferenceStatus(confData.status)
                 setRejectionReason(confData.rejectionReason || null)
+                setSubscriptionPlan(confData.subscriptionPlan || null)
             }
 
             // Review questions, settings & subject areas — check ALL tracks
@@ -853,9 +852,9 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                             <Clock className="h-5 w-5 text-amber-600" />
                         </div>
                         <div>
-                            <h3 className="font-semibold text-amber-800">Đang chờ xét duyệt</h3>
+                            <h3 className="font-semibold text-amber-800">Pending for approval</h3>
                             <p className="text-sm text-amber-700 mt-1">
-                                Hội nghị đã được gửi xét duyệt. Vui lòng chờ Admin phê duyệt trước khi tiếp tục.
+                                The conference has been submitted for approval. Please wait for the Admin to approve it before proceeding.
                             </p>
                         </div>
                     </div>
@@ -869,34 +868,34 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                             <AlertTriangle className="h-5 w-5 text-red-600" />
                         </div>
                         <div className="flex-1">
-                            <h3 className="font-semibold text-red-800">Hội nghị bị từ chối</h3>
+                            <h3 className="font-semibold text-red-800">Conference Rejected</h3>
                             {rejectionReason && (
                                 <p className="text-sm text-red-700 mt-1 bg-red-100/50 rounded-lg px-3 py-2">
-                                    <span className="font-medium">Lý do:</span> {rejectionReason}
+                                    <span className="font-medium">Reason:</span> {rejectionReason}
                                 </p>
                             )}
-                            <p className="text-sm text-red-600 mt-2">Vui lòng chỉnh sửa thông tin hội nghị và gửi lại xét duyệt.</p>
+                            <p className="text-sm text-red-600 mt-2">Please revise the conference information and resubmit it for approval.</p>
                             {role === 'CONFERENCE_CHAIR' && (
-                            <Button
-                                size="sm"
-                                className="mt-3 bg-red-600 hover:bg-red-700 text-white gap-1.5"
-                                onClick={async () => {
-                                    setSubmitting(true)
-                                    try {
-                                        await apiSubmitForApproval(conferenceId)
-                                        toast.success('Đã gửi lại xét duyệt thành công!')
-                                        fetchData()
-                                    } catch (err: any) {
-                                        toast.error(err?.response?.data?.message || 'Không thể gửi xét duyệt')
-                                    } finally {
-                                        setSubmitting(false)
-                                    }
-                                }}
-                                disabled={submitting}
-                            >
-                                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                                Gửi lại xét duyệt
-                            </Button>
+                                <Button
+                                    size="sm"
+                                    className="mt-3 bg-red-600 hover:bg-red-700 text-white gap-1.5"
+                                    onClick={async () => {
+                                        setSubmitting(true)
+                                        try {
+                                            await apiSubmitForApproval(conferenceId)
+                                            toast.success('Successfully resubmitted for approval!')
+                                            fetchData()
+                                        } catch (err: any) {
+                                            toast.error(err?.response?.data?.message || 'Cannot submit for approval')
+                                        } finally {
+                                            setSubmitting(false)
+                                        }
+                                    }}
+                                    disabled={submitting}
+                                >
+                                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                    Resubmit for Approval
+                                </Button>
                             )}
                         </div>
                     </div>
@@ -938,7 +937,7 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                             <div>
                                 <h3 className="font-semibold text-orange-800">Payment Pending</h3>
                                 <p className="text-sm text-orange-700 mt-1">
-                                    Your conference is awaiting payment confirmation from VNPay. If you have already paid, please wait a moment.
+                                    Your conference is awaiting payment confirmation.
                                 </p>
                             </div>
                         </div>
@@ -948,9 +947,24 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                                 onClick={() => router.push(`/conference/${conferenceId}/subscription`)}
                             >
                                 <CreditCard className="h-4 w-4" />
-                                Retry Payment
+                                Complete Payment
                             </Button>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {subscriptionPlan && conferenceStatus !== 'PENDING_PAYMENT' && conferenceStatus !== 'APPROVED' && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+                    <div className="flex items-center gap-3">
+                        <div className="rounded-full bg-emerald-100 p-2">
+                            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-emerald-700 mt-1">
+                                Plan: <span className="font-semibold">{subscriptionPlan}</span>
+                            </p>
+                        </div>
                     </div>
                 </div>
             )}
@@ -966,8 +980,8 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                             <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-5">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <h3 className="font-semibold text-indigo-800">Sẵn sàng xét duyệt</h3>
-                                        <p className="text-sm text-indigo-600 mt-0.5">Tất cả các thông tin bắt buộc đã được cấu hình.</p>
+                                        <h3 className="font-semibold text-indigo-800">Ready for Approval</h3>
+                                        <p className="text-sm text-indigo-600 mt-0.5">All required information has been configured.</p>
                                     </div>
                                     <Button
                                         className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5"
@@ -975,10 +989,10 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                                             setSubmitting(true)
                                             try {
                                                 await apiSubmitForApproval(conferenceId)
-                                                toast.success('Đã gửi xét duyệt thành công!')
+                                                toast.success('Successfully submitted for approval!')
                                                 fetchData()
                                             } catch (err: any) {
-                                                toast.error(err?.response?.data?.message || 'Không thể gửi xét duyệt')
+                                                toast.error(err?.response?.data?.message || 'Unable to submit for approval')
                                             } finally {
                                                 setSubmitting(false)
                                             }
@@ -986,7 +1000,7 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                                         disabled={submitting}
                                     >
                                         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                                        Gửi xét duyệt
+                                        Submit for Approval
                                     </Button>
                                 </div>
                             </div>
@@ -1167,11 +1181,10 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                                             )}
                                             <Badge
                                                 variant="outline"
-                                                className={`text-[10px] ${
-                                                    isPast ? 'text-gray-500 border-gray-200' :
+                                                className={`text-[10px] ${isPast ? 'text-gray-500 border-gray-200' :
                                                     isUrgent ? 'text-red-700 border-red-200 bg-red-50' :
-                                                    'text-indigo-700 border-indigo-200 bg-indigo-50'
-                                                }`}
+                                                        'text-indigo-700 border-indigo-200 bg-indigo-50'
+                                                    }`}
                                             >
                                                 {isPast ? 'Closed' : diffDays !== null ? `${diffDays}d left` : 'No deadline'}
                                             </Badge>
