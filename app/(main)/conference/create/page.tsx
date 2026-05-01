@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { ConferenceForm } from "./conference-form"
 import { ConferenceImport } from "./conference-import"
@@ -8,7 +8,6 @@ import { SetupWizard } from "./setup-wizard"
 import { createConference } from "@/app/api/conference.api"
 import { toast } from 'sonner'
 import type { ConferenceData } from "@/types/conference-form"
-import { getToken } from '@/lib/auth'
 import { Sparkles, Upload } from 'lucide-react'
 
 const FRIENDLY_FIELD_LABEL: Record<string, string> = {
@@ -94,11 +93,8 @@ export default function CreateConferencePage() {
     const [activeTab, setActiveTab] = useState<TabMode>("wizard")
     const [backendFieldErrors, setBackendFieldErrors] = useState<Record<string, string>>({})
 
-    useEffect(() => {
-        if (!getToken()) {
-            router.push('/auth/login')
-        }
-    }, [router])
+
+
 
     const handleConferenceSubmit = async (data: ConferenceData, pendingBannerFile?: File) => {
         setIsSubmitting(true)

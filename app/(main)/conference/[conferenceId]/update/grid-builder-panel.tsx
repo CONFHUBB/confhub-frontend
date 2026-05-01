@@ -34,6 +34,10 @@ interface SessionFormProps {
   initialData?: Partial<ProgramSession & { startTime: string; endTime: string; isGlobal?: boolean; globalTitle?: string; color?: string; location?: string }>
   onSave: (data: any) => void
   onDelete?: () => void
+  /** The date of the day this session belongs to */
+  dayDate?: string
+  /** All days in the program (for cross-session conflict detection) */
+  allDays?: any[]
 }
 
 interface PaperDraft {
@@ -67,7 +71,7 @@ const SESSION_COLORS = [
 
 const PRESENTATION_PRESETS = ['Oral Presentation', 'Poster', 'Keynote', 'Workshop', 'Tutorial', 'Demo']
 
-function SessionForm({ open, onClose, program, allPapers, initialData, onSave, onDelete }: SessionFormProps) {
+function SessionForm({ open, onClose, program, allPapers, initialData, onSave, onDelete, dayDate, allDays }: SessionFormProps) {
   const [title, setTitle] = useState(initialData?.title || initialData?.globalTitle || '')
   const [isGlobal, setIsGlobal] = useState(initialData?.isGlobal ?? false)
   const [location, setLocation] = useState(initialData?.location || initialData?.locationId || '')
@@ -93,8 +97,53 @@ function SessionForm({ open, onClose, program, allPapers, initialData, onSave, o
   // Selected paper IDs (for the checkbox list)
   const selectedPaperIds = new Set(orderedPapers.map(p => p.paperId))
 
+  // ── Same-day time-overlap conflict detection ──
+  // Build a map: paperId → list of { sessionTitle, startTime, endTime } for OTHER sessions on the SAME day
+  const sameDayConflicts = useMemo(() => {
+    const map = new Map<number, { sessionTitle: string; startTime: string; endTime: string }[]>()
+    if (!dayDate || !allDays) return map
+    const thisDay = allDays.find((d: any) => d.date === dayDate)
+    if (!thisDay) return map
+    const currentSessionId = initialData?.id
+    for (const s of (thisDay.sessions || [])) {
+      // Skip the session being edited
+      if (currentSessionId && s.id === currentSessionId) continue
+      if (!s.papers || s.papers.length === 0) continue
+      for (const sp of s.papers) {
+        const pid = Number(sp.paperId)
+        const list = map.get(pid) || []
+        list.push({ sessionTitle: s.title, startTime: s.startTime, endTime: s.endTime })
+        map.set(pid, list)
+      }
+    }
+    return map
+  }, [dayDate, allDays, initialData?.id])
+
+  /** Check if a paper conflicts (assigned to another session whose time overlaps with THIS session's time) */
+  const getPaperConflict = (paperId: number): string | null => {
+    const otherSessions = sameDayConflicts.get(Number(paperId))
+    if (!otherSessions || otherSessions.length === 0) return null
+    const thisStart = timeToMin(startTime)
+    const thisEnd = timeToMin(endTime)
+    for (const other of otherSessions) {
+      const otherStart = timeToMin(other.startTime)
+      const otherEnd = timeToMin(other.endTime)
+      // Overlap: thisStart < otherEnd AND otherStart < thisEnd
+      if (thisStart < otherEnd && otherStart < thisEnd) {
+        return `Already in "${other.sessionTitle}" (${other.startTime}–${other.endTime})`
+      }
+    }
+    return null
+  }
+
   const togglePaper = (paper: PaperResponse, checked: boolean) => {
     if (checked) {
+      // Block if conflicting
+      const conflict = getPaperConflict(paper.id)
+      if (conflict) {
+        toast.error(`Cannot assign paper: ${conflict}`)
+        return
+      }
       setOrderedPapers(prev => [...prev, {
         paperId: paper.id,
         title: paper.title,
@@ -205,20 +254,30 @@ function SessionForm({ open, onClose, program, allPapers, initialData, onSave, o
               {/* ── Paper Selection ── */}
               <div>
                 <Label>Assign Papers</Label>
-                <div className="mt-1 max-h-40 overflow-y-auto border rounded-xl divide-y">
+                <div className="mt-1 max-h-[50vh] overflow-y-auto border rounded-xl divide-y">
                   {allPapers.length === 0
                     ? <p className="p-3 text-sm text-gray-400 italic">No accepted papers</p>
-                    : allPapers.map(p => (
-                      <label key={p.id} className="flex items-start gap-3 p-3 cursor-pointer hover:bg-gray-50">
-                        <input type="checkbox" checked={selectedPaperIds.has(p.id)}
-                          onChange={e => togglePaper(p, e.target.checked)}
-                          className="mt-0.5 rounded text-indigo-600" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-800 leading-tight">{p.title}</p>
-                          <p className="text-xs text-gray-500">Paper #{p.id}</p>
-                        </div>
-                      </label>
-                    ))}
+                    : allPapers.map(p => {
+                      const conflict = selectedPaperIds.has(p.id) ? null : getPaperConflict(p.id)
+                      const isDisabled = !!conflict
+                      return (
+                        <label key={p.id} className={`flex items-start gap-3 p-3 ${
+                          isDisabled ? 'opacity-50 cursor-not-allowed bg-amber-50/50' : 'cursor-pointer hover:bg-gray-50'
+                        }`}>
+                          <input type="checkbox" checked={selectedPaperIds.has(p.id)}
+                            onChange={e => togglePaper(p, e.target.checked)}
+                            disabled={isDisabled}
+                            className="mt-0.5 rounded text-indigo-600 disabled:cursor-not-allowed" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-800 leading-tight">{p.title}</p>
+                            <p className="text-xs text-gray-500">Paper #{p.id}</p>
+                            {conflict && (
+                              <p className="text-[11px] text-amber-600 font-medium mt-0.5">⚠ {conflict}</p>
+                            )}
+                          </div>
+                        </label>
+                      )
+                    })}
                 </div>
               </div>
 
@@ -525,11 +584,13 @@ function UnifiedGrid({ days, program, allPapers, onAddSession, onEditSession, on
       {addDayDate && (
         <SessionForm open={!!addDayDate} onClose={() => setAddDayDate(null)}
           program={program} allPapers={allPapers}
+          dayDate={addDayDate} allDays={days}
           onSave={(data) => { onAddSession(addDayDate, data); setAddDayDate(null) }} />
       )}
       {editTarget && (
         <SessionForm open={!!editTarget} onClose={() => setEditTarget(null)}
           program={program} allPapers={allPapers}
+          dayDate={editTarget.dayDate} allDays={days}
           initialData={{ ...editTarget.session }}
           onSave={(data) => { onEditSession(editTarget.dayDate, editTarget.session.id, data); setEditTarget(null) }}
           onDelete={() => { onDeleteSession(editTarget.dayDate, editTarget.session.id); setEditTarget(null) }} />
@@ -732,6 +793,38 @@ export function GridBuilderPanel({ program, allPapers, onProgramChange }: GridBu
     onProgramChange({ ...program, schedule: { days: days.filter(d => d.date !== date) } as any })
   }
 
+  // ── Helper: detect paper-level time conflicts on a given day ────────────────
+  // Returns the first conflict found, or null if clean.
+  const findPaperConflicts = (
+    dayDate: string,
+    sessionId: string | null, // null = new session; otherwise = session being edited (exclude self)
+    newStart: string,
+    newEnd: string,
+    newPaperIds: number[]
+  ): string | null => {
+    if (newPaperIds.length === 0) return null
+    const day = days.find((d: any) => d.date === dayDate)
+    if (!day) return null
+    const nStart = timeToMin(newStart)
+    const nEnd = timeToMin(newEnd)
+    for (const s of (day.sessions || [])) {
+      if (sessionId && s.id === sessionId) continue // skip self when editing
+      const sStart = timeToMin(s.startTime)
+      const sEnd = timeToMin(s.endTime)
+      // Check time overlap
+      if (nStart < sEnd && sStart < nEnd) {
+        // Overlapping time — check for shared papers
+        const existingPaperIds = new Set((s.papers || []).map((p: any) => Number(p.paperId)))
+        for (const pid of newPaperIds) {
+          if (existingPaperIds.has(pid)) {
+            return `Paper #${pid} is already in "${s.title}" (${s.startTime}–${s.endTime}) which overlaps with this session.`
+          }
+        }
+      }
+    }
+    return null
+  }
+
   const addSession = (dayDate: string, data: any) => {
     const { title, isGlobal, color, location, chairNames, startTime, endTime, papersWithMeta } = data
     const papers = (papersWithMeta || []).map((pm: any) => ({
@@ -742,6 +835,13 @@ export function GridBuilderPanel({ program, allPapers, onProgramChange }: GridBu
       presentationType: pm.presentationType || undefined,
       allocatedMinutes: pm.allocatedMinutes || undefined,
     }))
+    // Validate: no paper should be in an overlapping session on the same day
+    const paperIds = papers.map((p: any) => Number(p.paperId))
+    const conflict = findPaperConflicts(dayDate, null, startTime, endTime, paperIds)
+    if (conflict) {
+      toast.error(conflict)
+      return
+    }
     const newSession = { id: crypto.randomUUID(), title, isGlobal, color, location, chairNames, startTime, endTime, papers }
     const newDays = days.map(d => d.date === dayDate ? { ...d, sessions: [...(d.sessions || []), newSession] } : d)
     onProgramChange({ ...program, schedule: { days: newDays } as any })
@@ -757,6 +857,13 @@ export function GridBuilderPanel({ program, allPapers, onProgramChange }: GridBu
       presentationType: pm.presentationType || undefined,
       allocatedMinutes: pm.allocatedMinutes || undefined,
     }))
+    // Validate: no paper should be in an overlapping session on the same day
+    const paperIds = papers.map((p: any) => Number(p.paperId))
+    const conflict = findPaperConflicts(dayDate, sessionId, startTime, endTime, paperIds)
+    if (conflict) {
+      toast.error(conflict)
+      return
+    }
     const newDays = days.map(d => d.date !== dayDate ? d : {
       ...d, sessions: d.sessions.map((s: any) => s.id === sessionId ? { ...s, title, isGlobal, color, location, chairNames, startTime, endTime, papers } : s)
     })
