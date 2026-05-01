@@ -191,7 +191,7 @@ const TAB_GROUPS: TabGroupDef[] = [
         icon: <Calendar className="h-4 w-4" />,
         accentColor: "text-indigo-600",
         items: [
-            { key: "features-program-builder", label: "Program", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'edit' } },
+            { key: "features-program-builder", label: "Program", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'hidden', PROGRAM_CHAIR: 'edit' } },
             { key: "reg-checkin", label: "Check-in", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'view' } },
         ]
     }
