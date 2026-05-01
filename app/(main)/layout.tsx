@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { AIChatWidget } from "@/components/ai-chat-widget"
+import { MemberChatWidget } from "@/components/conference-chat"
 import { AppErrorBoundary } from "@/components/shared/app-error-boundary"
 import { HomeFooter } from "@/components/home/home-footer"
 import { Loader2 } from "lucide-react"
@@ -91,6 +92,7 @@ export default function MainLayout({
                         </div>
                     </SidebarInset>
                     <AIChatWidget />
+                    <MemberChatWidget />
                 </SidebarProvider>
             </UserRolesProvider>
         )
@@ -108,6 +110,7 @@ export default function MainLayout({
                 </main>
                 <HomeFooter />
                 <AIChatWidget />
+                <MemberChatWidget />
             </div>
         </UserRolesProvider>
     )

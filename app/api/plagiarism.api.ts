@@ -72,7 +72,9 @@ function parseApiResponse(raw: PlagiarismApiResponse): PlagiarismResult {
 }
 
 export const getPlagiarismResult = async (paperId: number): Promise<PlagiarismResult> => {
-    const response = await http.get<PlagiarismApiResponse>(`/plagiarism/paper/${paperId}`)
+    const response = await http.get<PlagiarismApiResponse>(`/plagiarism/paper/${paperId}`, {
+        params: { _t: Date.now() }, // cache-bust to avoid stale HTTP-cached responses
+    })
     return parseApiResponse(response.data)
 }
 

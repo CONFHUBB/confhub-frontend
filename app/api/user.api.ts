@@ -7,7 +7,7 @@ const mapUserResponse = (data: any): User => ({
 })
 
 export const getUsers = async (): Promise<User[]> => {
-    const response = await http.get<{ content: any[] }>('/users')
+    const response = await http.get<{ content: any[] }>('/users?page=0&size=100')
     return (response.data.content || []).map(mapUserResponse)
 }
 

@@ -175,7 +175,7 @@ function StepAddAuthors({
                         await signup(signupBody)
                         user = await getUserByEmail(searchEmail.trim())
                     } catch (err: any) {
-                        toast.error('Failed to register author placeholder: ' + (err.response?.data?.message || err.message))
+                        toast.error('Could not register author. Please check the details and try again.')
                         setAddingAuthor(false)
                         return
                     }
@@ -200,7 +200,7 @@ function StepAddAuthors({
             setNewAuthorLastName('')
             fetchAuthors()
         } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to add author')
+            toast.error('Could not add this author. Please try again.')
             console.error('Error adding author:', err)
         } finally {
             setAddingAuthor(false)
@@ -264,29 +264,11 @@ function StepAddAuthors({
 
                     {/* Add Author */}
                     <div className="mt-4 flex flex-col gap-3">
-                        <div className="flex gap-3">
-                            <div className="flex-1 relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    className="pl-10"
-                                    placeholder="Enter author email address..."
-                                    value={searchEmail}
-                                    disabled={authorNotFound}
-                                    onChange={(e) => setSearchEmail(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleAddAuthor()}
-                                />
-                            </div>
-                            <Button onClick={handleAddAuthor} disabled={addingAuthor} className="gap-2 shrink-0">
-                                {addingAuthor ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
-                                {authorNotFound ? 'Save New Author' : 'Add Author'}
-                            </Button>
-                        </div>
-
                         {authorNotFound && (
-                            <div className="p-4 border rounded-lg bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800 space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                            <div className="p-4 border rounded-lg bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800 space-y-3">
                                 <p className="text-sm font-medium text-indigo-800 dark:text-indigo-300">
-                                    This user does not have an account in the system yet. You can create a placeholder for them. 
-                                    When they register using this email, their profile will be automatically linked!
+                                    ✉️ <strong>{searchEmail}</strong> does not have an account yet. Enter their name to create a placeholder.
+                                    When they register, their profile will be automatically linked!
                                 </p>
                                 <div className="flex gap-3">
                                     <div className="flex-1 space-y-1">
@@ -309,8 +291,32 @@ function StepAddAuthors({
                                         />
                                     </div>
                                 </div>
-                                <Button variant="ghost" size="sm" className="text-muted-foreground w-full bg-white dark:bg-black/20 hover:bg-muted border" onClick={() => setAuthorNotFound(false)}>
-                                    Cancel
+                                <div className="flex gap-2">
+                                    <Button onClick={handleAddAuthor} disabled={addingAuthor} className="flex-1 gap-2">
+                                        {addingAuthor ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+                                        Save New Author
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="text-muted-foreground bg-white dark:bg-black/20 hover:bg-muted border" onClick={() => { setAuthorNotFound(false); setNewAuthorFirstName(''); setNewAuthorLastName('') }}>
+                                        Cancel
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                        {!authorNotFound && (
+                            <div className="flex gap-3">
+                                <div className="flex-1 relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        className="pl-10"
+                                        placeholder="Enter author email address..."
+                                        value={searchEmail}
+                                        onChange={(e) => setSearchEmail(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleAddAuthor()}
+                                    />
+                                </div>
+                                <Button onClick={handleAddAuthor} disabled={addingAuthor} className="gap-2 shrink-0">
+                                    {addingAuthor ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+                                    Add Author
                                 </Button>
                             </div>
                         )}
@@ -412,7 +418,7 @@ function StepUploadManuscript({
                 }
                 if (newRes.status === 'FAILED') {
                     setCheckingPlagiarism(false)
-                    toast.error('Plagiarism check failed. Please try again.')
+                    toast.error('The plagiarism check could not be completed. Please try the Re-check button to run it again.')
                     return
                 }
             } catch (err) {
@@ -434,7 +440,7 @@ function StepUploadManuscript({
             pollPlagiarismResult()
 
         } catch (err: any) {
-            toast.error('Failed to run plagiarism check')
+            toast.error('Unable to start the plagiarism check right now. Please wait a moment and try again.')
             console.error(err)
             setCheckingPlagiarism(false)
         }
@@ -468,21 +474,37 @@ function StepUploadManuscript({
             setUploadPercent(0)
             setCheckingDialogOpen(true)
             setPlagiarismVerdict(null)
+            // Clear any stale plagiarism result BEFORE uploading
+            setPlagiarismResult(null)
             await uploadPaperFile(conferenceId, paperId, selectedFile, (percent) => {
                 setUploadPercent(percent)
             })
             setUploadPercent(100)
             setCheckingDialogOpen(false)
 
-            // Upload succeeded — fetch plagiarism result and auto-open detail
+            // Upload succeeded — fetch fresh plagiarism result
+            await new Promise(r => setTimeout(r, 500))
             try {
-                const newRes = await getPlagiarismResult(paperId)
+                let newRes = await getPlagiarismResult(paperId)
+                if (!newRes.status || newRes.status === 'CHECKING') {
+                    await new Promise(r => setTimeout(r, 1500))
+                    newRes = await getPlagiarismResult(paperId)
+                }
                 setPlagiarismResult(newRes)
+
+                // Set verdict based on score: warning if high, success if ok
+                const score = newRes.score ?? 0
+                if (score > 50) {
+                    setPlagiarismVerdict('rejected') // shows as warning to author
+                    toast.warning(`⚠️ High plagiarism similarity detected: ${score.toFixed(1)}%. Your file was uploaded, but conference chairs will review this report.`, { duration: 8000 })
+                } else {
+                    setPlagiarismVerdict('success')
+                }
             } catch (err) {
                 console.error('Error fetching plagiarism result:', err)
+                setPlagiarismVerdict('success')
             }
 
-            setPlagiarismVerdict('success')
             setPlagiarismAutoOpen(true)
             setUploaded(true)
 
@@ -495,17 +517,29 @@ function StepUploadManuscript({
                 setExistingFile({ id: activeManuscript.id, url: activeManuscript.url })
             }
         } catch (err: any) {
-            console.error('Error uploading:', err)
+            console.error('=== UPLOAD ERROR DEBUG ===')
+            console.error('Error object:', err)
+            console.error('Response status:', err.response?.status)
+            console.error('Response data:', err.response?.data)
+            console.error('Request URL:', err.config?.url)
+            console.error('Error message:', err.message)
+            console.error('=========================')
             setCheckingDialogOpen(false)
-
-            // Fetch plagiarism result even on rejection so we can show details
-            try {
-                const newRes = await getPlagiarismResult(paperId)
-                setPlagiarismResult(newRes)
-            } catch (e) { /* ignore */ }
-
-            setPlagiarismVerdict('rejected')
-            setPlagiarismAutoOpen(true)
+            const rawMessage = err.response?.data?.detail || err.response?.data?.message || err.response?.data?.error || err.message || ''
+            // Map backend errors to friendly messages
+            let friendlyMessage: string
+            if (rawMessage.toLowerCase().includes('duplicate') || rawMessage.toLowerCase().includes('already been submitted')) {
+                friendlyMessage = rawMessage // Keep the specific duplicate info
+            } else if (rawMessage.toLowerCase().includes('not found')) {
+                friendlyMessage = 'The paper could not be found. Please refresh the page and try again.'
+            } else if (rawMessage.toLowerCase().includes('timeout') || rawMessage.toLowerCase().includes('timed out')) {
+                friendlyMessage = 'The upload is taking longer than expected. Please try again.'
+            } else if (rawMessage.toLowerCase().includes('pdf') || rawMessage.toLowerCase().includes('file')) {
+                friendlyMessage = 'There was an issue processing your PDF file. Please make sure the file is a valid PDF and try again.'
+            } else {
+                friendlyMessage = 'Something went wrong while uploading your manuscript. Please try again in a moment.'
+            }
+            toast.error(friendlyMessage)
         } finally {
             setUploading(false)
         }
@@ -518,10 +552,17 @@ function StepUploadManuscript({
         try {
             setDeleting(true)
             await deletePaperFile(existingFile.id)
-            // Reset plagiarism data
-            try { await resetPlagiarism(paperId) } catch { /* ignore if fails */ }
+            // Reset plagiarism data on server
+            try {
+                await resetPlagiarism(paperId)
+            } catch (e) {
+                console.warn('Failed to reset plagiarism data:', e)
+            }
+            // Clear ALL local plagiarism state for clean slate
             setExistingFile(null)
             setPlagiarismResult(null)
+            setPlagiarismVerdict(null)
+            setPlagiarismAutoOpen(false)
             setUploaded(false)
             setSelectedFile(null)
             setShowPreview(false)
@@ -529,7 +570,7 @@ function StepUploadManuscript({
             setPreviewUrl(null)
             toast.success('Manuscript deleted. You can now upload a new file.')
         } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to delete file')
+            toast.error('Could not delete the file. Please try again.')
         } finally {
             setDeleting(false)
         }
@@ -573,12 +614,14 @@ function StepUploadManuscript({
             {plagiarismResult && plagiarismResult.status === 'COMPLETED' && !uploaded && (
                 <div className="hidden">
                     <PlagiarismBadge
+                        key={`plag-hidden-${plagiarismResult.score}-${plagiarismResult.details?.checkedAt || Date.now()}`}
                         paperId={paperId}
                         score={plagiarismResult.score}
                         status={plagiarismResult.status}
                         autoOpen={plagiarismAutoOpen}
                         onAutoOpenDone={() => setPlagiarismAutoOpen(false)}
                         verdict={plagiarismVerdict}
+                        initialDetails={plagiarismResult.details}
                     />
                 </div>
             )}
@@ -680,12 +723,14 @@ function StepUploadManuscript({
                                     <div className="ml-auto flex items-center gap-2">
                                         {plagiarismResult && plagiarismResult.status === 'COMPLETED' && (
                                             <PlagiarismBadge
+                                                key={`plag-${plagiarismResult.score}-${plagiarismResult.details?.checkedAt || Date.now()}`}
                                                 paperId={paperId}
                                                 score={plagiarismResult.score}
                                                 status={plagiarismResult.status}
                                                 autoOpen={plagiarismAutoOpen}
                                                 onAutoOpenDone={() => setPlagiarismAutoOpen(false)}
                                                 verdict={plagiarismVerdict}
+                                                initialDetails={plagiarismResult.details}
                                             />
                                         )}
                                         <Button
@@ -709,8 +754,8 @@ function StepUploadManuscript({
                             message={`Your paper "${paperTitle}" has been submitted with manuscript uploaded.`}
                             detail="You can track your paper status in the Paper Workspace."
                             ctaLabel="Go to Paper Workspace"
-                            ctaUrl={`/paper/${paperId}`}
-                            autoRedirectUrl={`/paper/${paperId}`}
+                            ctaUrl={`/conference/${conferenceId}/paper/${paperId}`}
+                            autoRedirectUrl={`/conference/${conferenceId}/paper/${paperId}`}
                             autoRedirectDelay={8}
                         />
                     ) : (
@@ -950,7 +995,7 @@ export default function SubmitPaperPage() {
             toast.success('Paper registered successfully!')
             navigateToStep(2, createdPaper.id, fixedData.title)
         } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to register paper. Please try again.')
+            toast.error('Could not submit your paper. Please check all fields and try again.')
             console.error('Error submitting paper:', err)
         } finally {
             setSubmitting(false)
