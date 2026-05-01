@@ -93,6 +93,7 @@ export const uploadPaperFile = async (
         headers: {
             'Content-Type': 'multipart/form-data'
         },
+        timeout: 300000, // 5 minutes — plagiarism check runs synchronously
         onUploadProgress: onUploadProgress
             ? (progressEvent) => {
                 const percent = progressEvent.total

@@ -6,10 +6,11 @@ import type { DiscussionPost, DiscussionPostRequest } from '@/types/discussion'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, MessageSquare, Send, Reply, Trash2, ChevronDown, ChevronRight, User2, AlertCircle } from 'lucide-react'
+import { Loader2, MessageSquare, Send, Reply, Trash2, ChevronDown, ChevronRight, User2, AlertCircle, Wifi, WifiOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { V } from '@/lib/validation'
 import { safeDate, fmtDate } from '@/lib/utils'
+import { useWebSocket } from '@/hooks/use-websocket'
 
 interface PaperDiscussionProps {
     paperId: number
@@ -44,13 +45,21 @@ export function PaperDiscussion({ paperId, currentUserId, isChair = false, anony
         }
     }, [paperId])
 
+    // WebSocket: real-time updates for this paper's discussion
+    useWebSocket<DiscussionPost>(
+        `/topic/paper.${paperId}.discussion`,
+        useCallback((newPost: DiscussionPost) => {
+            setPosts(prev => {
+                // Avoid duplicates
+                if (prev.some(p => p.id === newPost.id)) return prev
+                return [...prev, newPost]
+            })
+        }, []),
+        discussionEnabled
+    )
+
     useEffect(() => {
         fetchPosts(true)
-        // Auto-refresh every 15 seconds for near-realtime updates
-        const interval = setInterval(() => {
-            fetchPosts(false)
-        }, 15000)
-        return () => clearInterval(interval)
     }, [fetchPosts])
 
     // Build anonymized name map

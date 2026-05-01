@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  experimental: {
+    proxyTimeout: 300_000, // 5 minutes — upload runs synchronous plagiarism check
+  },
   images: {
     remotePatterns: [
       {

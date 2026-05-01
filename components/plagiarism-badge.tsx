@@ -25,6 +25,7 @@ interface PlagiarismBadgeProps {
     autoOpen?: boolean
     onAutoOpenDone?: () => void
     verdict?: 'success' | 'rejected' | null
+    initialDetails?: PlagiarismDetails | null
 }
 
 function getScoreColor(score: number) {
@@ -53,14 +54,21 @@ function parseDetails(raw: any): PlagiarismDetails | null {
     return raw as PlagiarismDetails
 }
 
-export function PlagiarismBadge({ paperId, score, status, showDetail = true, className, autoOpen, onAutoOpenDone, verdict }: PlagiarismBadgeProps) {
+export function PlagiarismBadge({ paperId, score, status, showDetail = true, className, autoOpen, onAutoOpenDone, verdict, initialDetails }: PlagiarismBadgeProps) {
     const [open, setOpen] = useState(false)
-    const [details, setDetails] = useState<PlagiarismDetails | null>(null)
+    const [details, setDetails] = useState<PlagiarismDetails | null>(initialDetails ?? null)
     const [loading, setLoading] = useState(false)
     const [rechecking, setRechecking] = useState(false)
     // Local score that updates from API results
     const [localScore, setLocalScore] = useState<number | null>(null)
     const [localStatus, setLocalStatus] = useState<string | null>(null)
+
+    // Sync details from parent when initialDetails changes
+    useEffect(() => {
+        if (initialDetails) {
+            setDetails(initialDetails)
+        }
+    }, [initialDetails])
 
     // Auto-open dialog when parent signals (e.g. after plagiarism check completes)
     useEffect(() => {
@@ -79,7 +87,7 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
             if (res.score != null) setLocalScore(res.score)
             if (res.status) setLocalStatus(res.status)
         } catch {
-            toast.error("Failed to load plagiarism details")
+            toast.error("Unable to load the plagiarism report right now. Please try again in a moment.")
         } finally {
             setLoading(false)
         }
@@ -112,7 +120,7 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
                             { duration: 6000 }
                         )
                     } else {
-                        toast.error("Plagiarism check failed. Please try again.")
+                        toast.error("The plagiarism check could not be completed. Please try the Re-check button again.")
                     }
                     setRechecking(false)
                     return
@@ -121,7 +129,7 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
             // Timed out waiting
             toast.info("Plagiarism check is still running. Results will appear shortly.", { duration: 5000 })
         } catch {
-            toast.error("Re-check failed. Please try again.")
+            toast.error("Something went wrong while re-checking. Please wait a moment and try again.")
         } finally {
             setRechecking(false)
         }
@@ -208,15 +216,15 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
                     <div className="space-y-5">
                         {/* Verdict Banner (shown after upload) */}
                         {verdict === 'rejected' && (
-                            <div className="rounded-lg bg-gradient-to-r from-red-500 to-rose-600 p-3 text-center shadow-sm">
-                                <p className="text-white font-bold text-base">Upload Rejected</p>
-                                <p className="text-red-100 text-xs mt-1">Plagiarism score exceeds the 50% threshold. Please revise your manuscript.</p>
+                            <div className="rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 p-3 text-center shadow-sm">
+                                <p className="text-white font-bold text-base">⚠️ High Similarity Warning</p>
+                                <p className="text-amber-100 text-xs mt-1">Your manuscript was uploaded successfully, but high similarity was detected. Conference chairs will review this report.</p>
                             </div>
                         )}
                         {verdict === 'success' && (
                             <div className="rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 p-3 text-center shadow-sm">
                                 <p className="text-white font-bold text-base">Upload Successful</p>
-                                <p className="text-green-100 text-xs mt-1">Your manuscript passed the plagiarism check and has been uploaded.</p>
+                                <p className="text-green-100 text-xs mt-1">Your manuscript has been uploaded and plagiarism check completed.</p>
                             </div>
                         )}
                         {/* Stale data warning */}
@@ -230,16 +238,30 @@ export function PlagiarismBadge({ paperId, score, status, showDetail = true, cla
                             </div>
                         )}
 
+                        {/* Duplicate file warning */}
+                        {(details as any)?.duplicateFileWarning && (
+                            <div className="flex items-start gap-2 text-sm bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2.5">
+                                <ShieldAlert className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="font-medium text-red-800 dark:text-red-300">⚠️ Duplicate File Detected</p>
+                                    <p className="text-xs text-red-700 dark:text-red-400">{(details as any).duplicateFileWarning}</p>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Score Summary Cards */}
                         {(() => {
                             const scholarMatches = details.webSearchMatches?.filter(wm => wm.source === 'scholar') ?? []
                             const webMatches = details.webSearchMatches?.filter(wm => !wm.source || wm.source === 'web') ?? []
+                            // Use backend's webSearchScore as the primary web score
+                            // Only fall back to calculating from matches if backend score is unavailable
+                            const backendWebScore = details.webSearchScore ?? 0
                             const scholarScore = scholarMatches.length > 0
                                 ? scholarMatches.reduce((sum, m) => sum + (m.similarity ?? 0), 0) / scholarMatches.length
                                 : 0
                             const webScore = webMatches.length > 0
                                 ? webMatches.reduce((sum, m) => sum + (m.similarity ?? 0), 0) / webMatches.length
-                                : 0
+                                : backendWebScore
                             return (
                                 <div className="grid grid-cols-4 gap-2">
                                     <ScoreCard label="Internal" score={details.internalScore} />
