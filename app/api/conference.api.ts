@@ -1,11 +1,11 @@
 import http from '@/lib/http'
-import type { 
-    CreateConferenceRequest, 
+import type {
+    CreateConferenceRequest,
     UpdateConferenceRequest,
-    ConferenceResponse, 
-    CreateTrackRequest, 
+    ConferenceResponse,
+    CreateTrackRequest,
     UpdateTrackRequest,
-    TrackResponse, 
+    TrackResponse,
     ConferenceListResponse,
     ConferenceActivityDTO,
     ActivityAuditLogDTO
@@ -123,6 +123,15 @@ export const uploadBannerImage = async (conferenceId: number, file: File): Promi
     const fd = new FormData()
     fd.append('file', file)
     const response = await http.post<{ url: string }>(`/conferences/${conferenceId}/upload-banner`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return response.data.url
+}
+
+export const uploadPaperTemplateFile = async (conferenceId: number, file: File): Promise<string> => {
+    const fd = new FormData()
+    fd.append('file', file)
+    const response = await http.post<{ url: string }>(`/conferences/${conferenceId}/upload-paper-template`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' }
     })
     return response.data.url

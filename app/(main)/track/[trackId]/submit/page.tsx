@@ -23,8 +23,8 @@ import { toast } from 'sonner'
 import { createPaper, assignAuthorToPaper, getAuthorsByPaper, uploadPaperFile, deletePaperFile, getPaperFilesByPaperId } from '@/app/api/paper.api'
 import type { PaperAuthorItem } from '@/app/api/paper.api'
 import { getConferenceSubmissionForm } from '@/app/api/submission-form.api'
-import { getConferenceActivities } from '@/app/api/conference.api'
-import type { ConferenceActivityDTO } from '@/types/conference'
+import { getConference, getConferenceActivities } from '@/app/api/conference.api'
+import type { ConferenceActivityDTO, ConferenceResponse } from '@/types/conference'
 import { isActivityOpen } from '@/lib/activity'
 import { getUserByEmail } from '@/app/api/user.api'
 import { signup } from '@/app/api/account.api'
@@ -44,13 +44,12 @@ function CustomStepIcon(props: any) {
 
     return (
         <div
-            className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
-                completed
+            className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${completed
                     ? 'bg-primary border-primary text-primary-foreground'
                     : active
-                    ? 'bg-primary/10 border-primary text-primary'
-                    : 'bg-muted border-muted-foreground/30 text-muted-foreground'
-            }`}
+                        ? 'bg-primary/10 border-primary text-primary'
+                        : 'bg-muted border-muted-foreground/30 text-muted-foreground'
+                }`}
         >
             {completed ? <Check className="w-5 h-5" /> : icons[String(icon)]}
         </div>
@@ -76,17 +75,15 @@ function Stepper({ currentStep }: { currentStep: number }) {
                         <div key={label} className="flex items-center flex-1 last:flex-initial">
                             <div className="flex flex-col items-center gap-2">
                                 <CustomStepIcon active={isActive} completed={isCompleted} icon={idx + 1} />
-                                <span className={`text-xs font-semibold transition-colors ${
-                                    isActive ? 'text-indigo-600' : isCompleted ? 'text-indigo-500' : 'text-gray-400'
-                                }`}>
+                                <span className={`text-xs font-semibold transition-colors ${isActive ? 'text-indigo-600' : isCompleted ? 'text-indigo-500' : 'text-gray-400'
+                                    }`}>
                                     {label}
                                 </span>
                             </div>
                             {idx < steps.length - 1 && (
                                 <div className="flex-1 mx-3 mt-[-24px]">
-                                    <div className={`h-0.5 w-full rounded-full transition-colors ${
-                                        idx < activeIdx ? 'bg-indigo-500' : 'bg-gray-200'
-                                    }`} />
+                                    <div className={`h-0.5 w-full rounded-full transition-colors ${idx < activeIdx ? 'bg-indigo-500' : 'bg-gray-200'
+                                        }`} />
                                 </div>
                             )}
                         </div>
@@ -138,14 +135,14 @@ function StepAddAuthors({
         }
         try {
             setAddingAuthor(true)
-            
+
             let user = null;
             try {
                 user = await getUserByEmail(searchEmail.trim())
             } catch (err) {
                 // Not found
             }
-            
+
             if (!user || !user.id) {
                 if (!authorNotFound) {
                     setAuthorNotFound(true)
@@ -158,9 +155,9 @@ function StepAddAuthors({
                         setAddingAuthor(false)
                         return
                     }
-                    
+
                     const randomPassword = Array(16).fill('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*').map(x => x[Math.floor(Math.random() * x.length)]).join('')
-                    
+
                     const signupBody = {
                         firstName: newAuthorFirstName.trim(),
                         lastName: newAuthorLastName.trim(),
@@ -170,7 +167,7 @@ function StepAddAuthors({
                         phoneNumber: '',
                         country: ''
                     }
-                    
+
                     try {
                         await signup(signupBody)
                         user = await getUserByEmail(searchEmail.trim())
@@ -273,20 +270,20 @@ function StepAddAuthors({
                                 <div className="flex gap-3">
                                     <div className="flex-1 space-y-1">
                                         <Label className="text-xs">First Name *</Label>
-                                        <Input 
-                                            placeholder="First name" 
-                                            value={newAuthorFirstName} 
-                                            onChange={(e) => setNewAuthorFirstName(e.target.value)} 
+                                        <Input
+                                            placeholder="First name"
+                                            value={newAuthorFirstName}
+                                            onChange={(e) => setNewAuthorFirstName(e.target.value)}
                                             autoFocus
                                             onKeyDown={(e) => e.key === 'Enter' && handleAddAuthor()}
                                         />
                                     </div>
                                     <div className="flex-1 space-y-1">
                                         <Label className="text-xs">Last Name *</Label>
-                                        <Input 
-                                            placeholder="Last name" 
-                                            value={newAuthorLastName} 
-                                            onChange={(e) => setNewAuthorLastName(e.target.value)} 
+                                        <Input
+                                            placeholder="Last name"
+                                            value={newAuthorLastName}
+                                            onChange={(e) => setNewAuthorLastName(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && handleAddAuthor()}
                                         />
                                     </div>
@@ -340,10 +337,12 @@ function StepUploadManuscript({
     paperId,
     paperTitle,
     conferenceId,
+    paperTemplateUrl,
 }: {
     paperId: number
     paperTitle: string
     conferenceId: number
+    paperTemplateUrl?: string
 }) {
     const router = useRouter()
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -357,6 +356,9 @@ function StepUploadManuscript({
     const [checkingPlagiarism, setCheckingPlagiarism] = useState(false)
     const [checkingDialogOpen, setCheckingDialogOpen] = useState(false)
     const [plagiarismVerdict, setPlagiarismVerdict] = useState<'success' | 'rejected' | null>(null)
+    const templateFileName = paperTemplateUrl
+        ? decodeURIComponent(paperTemplateUrl.split('/').pop() || 'paper-template')
+        : ''
 
     // Track existing uploaded file from server
     const [existingFile, setExistingFile] = useState<{ id: number; url: string } | null>(null)
@@ -382,7 +384,7 @@ function StepUploadManuscript({
             } finally {
                 setLoadingFiles(false)
             }
-            
+
             // Fetch initial plagiarism state
             try {
                 const res = await getPlagiarismResult(paperId)
@@ -627,6 +629,25 @@ function StepUploadManuscript({
             )}
 
             {/* Info banner */}
+            {paperTemplateUrl && (
+                <div className="flex flex-col gap-3 rounded-lg border bg-slate-50/80 border-slate-200 p-4 text-sm text-slate-700">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <FileText className="h-4 w-4 text-slate-600" />
+                            <span className="font-medium">Paper template available</span>
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="shrink-0"
+                            onClick={() => window.open(paperTemplateUrl, '_blank')}
+                        >
+                            Download
+                        </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Use this template to format your manuscript before uploading.</p>
+                </div>
+            )}
             <div className="p-4 rounded-lg border bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800 text-sm text-indigo-800 dark:text-indigo-300 space-y-2">
                 <p>
                     To convert other file formats, such as Microsoft Word, to PDF, you can use online services.
@@ -698,12 +719,10 @@ function StepUploadManuscript({
                                 <div className="flex items-center gap-3">
                                     {plagiarismResult && plagiarismResult.status === 'COMPLETED' ? (
                                         <div className="flex items-center gap-2">
-                                            <span className={`h-2.5 w-2.5 rounded-full inline-block ${
-                                                (plagiarismResult.score ?? 0) <= 20 ? 'bg-green-500' : (plagiarismResult.score ?? 0) <= 50 ? 'bg-amber-500' : 'bg-red-500'
-                                            }`} />
-                                            <span className={`text-sm font-bold ${
-                                                (plagiarismResult.score ?? 0) <= 20 ? 'text-green-700' : (plagiarismResult.score ?? 0) <= 50 ? 'text-amber-700' : 'text-red-700'
-                                            }`}>
+                                            <span className={`h-2.5 w-2.5 rounded-full inline-block ${(plagiarismResult.score ?? 0) <= 20 ? 'bg-green-500' : (plagiarismResult.score ?? 0) <= 50 ? 'bg-amber-500' : 'bg-red-500'
+                                                }`} />
+                                            <span className={`text-sm font-bold ${(plagiarismResult.score ?? 0) <= 20 ? 'text-green-700' : (plagiarismResult.score ?? 0) <= 50 ? 'text-amber-700' : 'text-red-700'
+                                                }`}>
                                                 {(plagiarismResult.score ?? 0).toFixed(1)}%
                                             </span>
                                             <span className="text-xs text-muted-foreground">
@@ -890,6 +909,7 @@ export default function SubmitPaperPage() {
     const [primarySubjectAreaId, setPrimarySubjectAreaId] = useState<string>("")
     const [secondarySubjectAreaIds, setSecondarySubjectAreaIds] = useState<number[]>([])
     const [activities, setActivities] = useState<ConferenceActivityDTO[]>([])
+    const [conference, setConference] = useState<ConferenceResponse | null>(null)
 
     useEffect(() => {
         const fetchData = async () => {
@@ -903,9 +923,10 @@ export default function SubmitPaperPage() {
                 setSubjectAreas(areasData)
 
                 if (conferenceId) {
-                    const [formConfig, activitiesData] = await Promise.all([
+                    const [formConfig, activitiesData, conferenceData] = await Promise.all([
                         getConferenceSubmissionForm(conferenceId),
-                        getConferenceActivities(conferenceId).catch(() => [] as ConferenceActivityDTO[])
+                        getConferenceActivities(conferenceId).catch(() => [] as ConferenceActivityDTO[]),
+                        getConference(conferenceId).catch(() => null)
                     ])
 
                     if (formConfig) {
@@ -916,6 +937,9 @@ export default function SubmitPaperPage() {
                     }
 
                     setActivities(activitiesData)
+                    if (conferenceData) {
+                        setConference(conferenceData)
+                    }
                 }
             } catch (err: any) {
                 if (err.response?.status === 401 || err.response?.status === 403) {
@@ -1137,6 +1161,7 @@ export default function SubmitPaperPage() {
                     paperId={createdPaperId}
                     paperTitle={createdPaperTitle}
                     conferenceId={conferenceId}
+                    paperTemplateUrl={conference?.paperTemplateUrl}
                 />
             )}
         </div>

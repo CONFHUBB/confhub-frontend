@@ -10,24 +10,24 @@ export type ConferenceStatus =
 
 export const CONFERENCE_STATUS_COLORS: Record<ConferenceStatus, string> = {
     PENDING_APPROVAL: "bg-amber-100 text-amber-700 border-amber-200",
-    SETUP:            "bg-blue-100 text-blue-700 border-blue-200",
-    APPROVED:         "bg-emerald-100 text-emerald-700 border-emerald-200",
-    REJECTED:         "bg-rose-100 text-rose-700 border-rose-200",
-    PENDING_PAYMENT:  "bg-orange-100 text-orange-700 border-orange-200",
-    OPEN:             "bg-emerald-100 text-emerald-700 border-emerald-200",
-    COMPLETED:        "bg-slate-100 text-slate-700 border-slate-200",
-    CANCELLED:        "bg-rose-100 text-rose-700 border-rose-200",
+    SETUP: "bg-blue-100 text-blue-700 border-blue-200",
+    APPROVED: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    REJECTED: "bg-rose-100 text-rose-700 border-rose-200",
+    PENDING_PAYMENT: "bg-orange-100 text-orange-700 border-orange-200",
+    OPEN: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    COMPLETED: "bg-slate-100 text-slate-700 border-slate-200",
+    CANCELLED: "bg-rose-100 text-rose-700 border-rose-200",
 }
 
 export const CONFERENCE_STATUS_CONFIG: Record<ConferenceStatus, { label: string; color: string }> = {
     PENDING_APPROVAL: { label: "Pending Approval", color: "bg-amber-500" },
-    SETUP:            { label: "Setup",             color: "bg-blue-500" },
-    APPROVED:         { label: "Approved",          color: "bg-emerald-500" },
-    REJECTED:         { label: "Rejected",          color: "bg-rose-500" },
-    PENDING_PAYMENT:  { label: "Pending Payment",   color: "bg-orange-500" },
-    OPEN:             { label: "Open",              color: "bg-emerald-500" },
-    COMPLETED:        { label: "Completed",         color: "bg-slate-500" },
-    CANCELLED:        { label: "Cancelled",         color: "bg-rose-500" },
+    SETUP: { label: "Setup", color: "bg-blue-500" },
+    APPROVED: { label: "Approved", color: "bg-emerald-500" },
+    REJECTED: { label: "Rejected", color: "bg-rose-500" },
+    PENDING_PAYMENT: { label: "Pending Payment", color: "bg-orange-500" },
+    OPEN: { label: "Open", color: "bg-emerald-500" },
+    COMPLETED: { label: "Completed", color: "bg-slate-500" },
+    CANCELLED: { label: "Cancelled", color: "bg-rose-500" },
 }
 
 export interface CreateConferenceRequest {
@@ -44,6 +44,7 @@ export interface CreateConferenceRequest {
     country: string
     province: string
     bannerImageUrl: string
+    paperTemplateUrl?: string
     contactInformation: string
     chairEmails: string
 }
@@ -59,6 +60,7 @@ export interface ConferenceResponse {
     status: string
     websiteUrl: string
     bannerImageUrl: string
+    paperTemplateUrl?: string
     area: string
     country: string
     province: string

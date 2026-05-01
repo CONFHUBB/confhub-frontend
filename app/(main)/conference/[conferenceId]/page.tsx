@@ -68,7 +68,7 @@ export default function ConferenceDetailsPage() {
                             setHasTicket(true)
                             if (ticket.isCheckedIn || (ticket as any).checkedIn) setIsCheckedIn(true)
                         }
-                    } catch {}
+                    } catch { }
                 }
 
                 if (conferenceData.programSchedule) {
@@ -80,7 +80,7 @@ export default function ConferenceDetailsPage() {
                             const papersData = await getPapersByConference(conferenceId)
                             setAllPapers(papersData.filter((p: any) => p.status === 'ACCEPTED'))
                         }
-                    } catch {}
+                    } catch { }
                 }
 
                 // Similar / other conferences — same area first, then the rest
@@ -95,7 +95,7 @@ export default function ConferenceDetailsPage() {
                         return aMatch - bMatch
                     })
                     setSimilarConferences(others.slice(0, 8))
-                } catch {}
+                } catch { }
             } catch (err: any) {
                 if (err.response?.status === 401 || err.response?.status === 403) {
                     setError('You must be logged in to view this conference.')
@@ -174,7 +174,7 @@ export default function ConferenceDetailsPage() {
             const parsed = typeof conference.programSchedule === 'string'
                 ? JSON.parse(conference.programSchedule) : conference.programSchedule
             isProgramPublished = !!parsed?.published
-        } catch {}
+        } catch { }
     }
     const hasProgramAvailable = isProgramPublished || isActivityOpen(eventDayActivity)
 
@@ -217,13 +217,12 @@ export default function ConferenceDetailsPage() {
                         <span className="text-sm font-mono text-white bg-white/20 backdrop-blur-sm px-2.5 py-0.5 rounded border border-white/25">
                             {conference.acronym}
                         </span>
-                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold backdrop-blur-sm border ${
-                            conference.status?.toUpperCase() === 'ACTIVE' || conference.status?.toUpperCase() === 'APPROVED'
+                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold backdrop-blur-sm border ${conference.status?.toUpperCase() === 'ACTIVE' || conference.status?.toUpperCase() === 'APPROVED'
                                 ? 'bg-emerald-500/25 text-emerald-100 border-emerald-400/40'
                                 : conference.status?.toUpperCase() === 'PENDING_APPROVAL'
                                     ? 'bg-amber-500/25 text-amber-100 border-amber-400/40'
                                     : 'bg-white/15 text-white/80 border-white/25'
-                        }`}>
+                            }`}>
                             {conference.status}
                         </span>
                     </div>
@@ -327,6 +326,34 @@ export default function ConferenceDetailsPage() {
                     ) : <p className="text-sm text-muted-foreground">{'\u2014'}</p>}
                 </div>
             </div>
+
+            {/* Sample manuscript */}
+            <Card className="mb-8">
+                <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-indigo-100">
+                            <FileText className="h-5 w-5 text-indigo-600" />
+                        </div>
+                        <div>
+                            <p className="font-semibold">Sample Manuscript</p>
+                            <p className="text-sm text-muted-foreground">
+                                {conference.paperTemplateUrl ? 'Download the template before submitting.' : 'No template uploaded yet.'}
+                            </p>
+                        </div>
+                    </div>
+                    {conference.paperTemplateUrl ? (
+                        <Button variant="outline" size="sm" asChild>
+                            <a href={conference.paperTemplateUrl} target="_blank" rel="noreferrer">
+                                Download
+                            </a>
+                        </Button>
+                    ) : (
+                        <Button variant="outline" size="sm" disabled>
+                            Unavailable
+                        </Button>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Phase Indicator */}
             <div className="mb-8">
