@@ -160,11 +160,11 @@ export default function AuthorDashboardPage() {
 
     const renderTabContent = () => {
         switch (activeTab) {
-            case 'overview':     return <OverviewTab papers={papers} tickets={tickets} conferenceId={conferenceId} reviewData={reviewData} onNavigate={setActiveTab} />
-            case 'my-papers':    return <MyPapersTab papers={papers} reviewData={reviewData} metaReviews={metaReviews} conferenceId={conferenceId} />
+            case 'overview': return <OverviewTab papers={papers} tickets={tickets} conference={conference} conferenceId={conferenceId} reviewData={reviewData} onNavigate={setActiveTab} />
+            case 'my-papers': return <MyPapersTab papers={papers} reviewData={reviewData} metaReviews={metaReviews} conferenceId={conferenceId} />
             case 'camera-ready': return <CameraReadyPage />
-            case 'my-ticket':    return <MyTicketTab tickets={tickets} papers={papers} conferenceId={conferenceId} />
-            case 'profile':      return <ProfileTab userInfo={userInfo} />
+            case 'my-ticket': return <MyTicketTab tickets={tickets} papers={papers} conferenceId={conferenceId} />
+            case 'profile': return <ProfileTab userInfo={userInfo} />
             default: return null
         }
     }
@@ -195,12 +195,11 @@ export default function AuthorDashboardPage() {
                                             {conference.acronym}
                                         </span>
                                     )}
-                                    <span className={`text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
-                                        conference?.status === 'OPEN' ? 'bg-emerald-400/20 text-emerald-200' :
-                                        conference?.status === 'SETUP' ? 'bg-blue-400/20 text-blue-200' :
-                                        conference?.status === 'COMPLETED' ? 'bg-gray-400/20 text-gray-300' :
-                                        'bg-amber-400/20 text-amber-200'
-                                    }`}>
+                                    <span className={`text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${conference?.status === 'OPEN' ? 'bg-emerald-400/20 text-emerald-200' :
+                                            conference?.status === 'SETUP' ? 'bg-blue-400/20 text-blue-200' :
+                                                conference?.status === 'COMPLETED' ? 'bg-gray-400/20 text-gray-300' :
+                                                    'bg-amber-400/20 text-amber-200'
+                                        }`}>
                                         {conference?.status || 'UNKNOWN'}
                                     </span>
                                 </div>
@@ -302,8 +301,8 @@ export default function AuthorDashboardPage() {
 // ════════════════════════════════════════════════════════════════════════════════
 // TAB: Overview
 // ════════════════════════════════════════════════════════════════════════════════
-function OverviewTab({ papers, tickets, conferenceId, reviewData, onNavigate }: {
-    papers: PaperResponse[]; tickets: TicketResponse[]; conferenceId: number
+function OverviewTab({ papers, tickets, conference, conferenceId, reviewData, onNavigate }: {
+    papers: PaperResponse[]; tickets: TicketResponse[]; conference: ConferenceResponse; conferenceId: number
     reviewData: Record<number, ReviewAggregate | null>; onNavigate: (t: AuthorTab) => void
 }) {
     const ticket = tickets.find(t => t.conferenceId === conferenceId) || null
@@ -334,6 +333,32 @@ function OverviewTab({ papers, tickets, conferenceId, reviewData, onNavigate }: 
                         <div className={`w-10 h-1 rounded-full mt-2 ${s.color}`} />
                     </div>
                 ))}
+            </div>
+
+            {/* Paper Template */}
+            <div className="bg-white dark:bg-gray-900 rounded-xl border p-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-indigo-100">
+                        <FileText className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <div>
+                        <p className="font-semibold">Paper Template</p>
+                        <p className="text-sm text-muted-foreground">
+                            {conference.paperTemplateUrl ? 'Download the sample template before submitting.' : 'No template uploaded yet.'}
+                        </p>
+                    </div>
+                </div>
+                {conference.paperTemplateUrl ? (
+                    <Button variant="outline" size="sm" asChild>
+                        <a href={conference.paperTemplateUrl} target="_blank" rel="noreferrer">
+                            Download
+                        </a>
+                    </Button>
+                ) : (
+                    <Button variant="outline" size="sm" disabled>
+                        Unavailable
+                    </Button>
+                )}
             </div>
 
             {/* Registration */}
@@ -434,7 +459,7 @@ function MyPapersTab({ papers, reviewData, metaReviews, conferenceId }: {
 
     const SortIcon = ({ k }: { k: typeof sortKey }) =>
         sortKey !== k ? <ChevronUp className="h-3 w-3 opacity-0 group-hover:opacity-30" /> :
-        sortAsc ? <ChevronUp className="h-3 w-3 text-primary" /> : <ChevronDown className="h-3 w-3 text-primary" />
+            sortAsc ? <ChevronUp className="h-3 w-3 text-primary" /> : <ChevronDown className="h-3 w-3 text-primary" />
 
     const exportCSV = () => {
         const headers = ['ID', 'Title', 'Track', 'Status', 'Submitted', 'Score', 'Decision']
@@ -575,19 +600,17 @@ function MyPapersTab({ papers, reviewData, metaReviews, conferenceId }: {
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 {agg && agg.averageTotalScore > 0 ? (
-                                                    <span className={`font-mono text-xs font-semibold ${
-                                                        agg.averageTotalScore >= 3.5 ? 'text-emerald-600' :
-                                                        agg.averageTotalScore >= 2 ? 'text-indigo-600' : 'text-red-500'
-                                                    }`}>{agg.averageTotalScore.toFixed(1)}</span>
+                                                    <span className={`font-mono text-xs font-semibold ${agg.averageTotalScore >= 3.5 ? 'text-emerald-600' :
+                                                            agg.averageTotalScore >= 2 ? 'text-indigo-600' : 'text-red-500'
+                                                        }`}>{agg.averageTotalScore.toFixed(1)}</span>
                                                 ) : <span className="text-muted-foreground text-xs">—</span>}
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 {mr ? (
-                                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                                                        mr.finalDecision === 'APPROVE' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                                                        mr.finalDecision === 'REJECT' ? 'bg-red-100 text-red-700 border-red-200' :
-                                                        'bg-amber-100 text-amber-700 border-amber-200'
-                                                    }`}>{mr.finalDecision}</span>
+                                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${mr.finalDecision === 'APPROVE' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                                                            mr.finalDecision === 'REJECT' ? 'bg-red-100 text-red-700 border-red-200' :
+                                                                'bg-amber-100 text-amber-700 border-amber-200'
+                                                        }`}>{mr.finalDecision}</span>
                                                 ) : <span className="text-muted-foreground text-xs">—</span>}
                                             </TableCell>
                                             <TableCell className="text-center">
@@ -692,7 +715,7 @@ function MyTicketTab({ tickets, papers, conferenceId }: { tickets: TicketRespons
         if (ticket?.qrCode && !qrDataUrl) {
             QRCode.toDataURL(ticket.qrCode, { width: 180, margin: 2 })
                 .then(url => setQrDataUrl(url))
-                .catch(() => {})
+                .catch(() => { })
         }
     }, [ticket?.qrCode, qrDataUrl])
 
@@ -721,11 +744,13 @@ function MyTicketTab({ tickets, papers, conferenceId }: { tickets: TicketRespons
     const ticketFields = [
         { label: 'Registration Number', value: <span className="font-mono font-semibold">{ticket.registrationNumber}</span> },
         { label: 'Ticket Type', value: ticket.ticketTypeName },
-        { label: 'Payment Status', value: (
-            <Badge className={isPaid ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-800 border-amber-200'}>
-                {isPaid ? '✅ Confirmed' : '⏳ Pending'}
-            </Badge>
-        )},
+        {
+            label: 'Payment Status', value: (
+                <Badge className={isPaid ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-800 border-amber-200'}>
+                    {isPaid ? '✅ Confirmed' : '⏳ Pending'}
+                </Badge>
+            )
+        },
         { label: 'Amount', value: ticket.price === 0 ? 'Free' : `${ticket.price.toLocaleString()} ${ticket.currency || 'VND'}` },
         { label: 'Attendee Name', value: ticket.userName },
         { label: 'Email', value: ticket.userEmail },
