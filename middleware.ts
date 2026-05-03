@@ -13,20 +13,6 @@ const isPublicPath = (pathname: string) => {
     return false
 }
 
-// Lightweight JWT payload parser (no signature verification — middleware only reads, auth is done by API)
-function parseJwtPayload(token: string): Record<string, unknown> {
-    try {
-        const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
-        const json = decodeURIComponent(
-            atob(base64).split('').map(c =>
-                '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
-            ).join('')
-        )
-        return JSON.parse(json)
-    } catch {
-        return {}
-    }
-}
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
@@ -40,25 +26,6 @@ export function middleware(request: NextRequest) {
     if (!token) {
         const loginUrl = new URL('/auth/login', request.url)
         return NextResponse.redirect(loginUrl)
-    }
-
-    // ── Admin/Staff bypass profile completion check ──
-    // Admins and staff should not be forced to complete their profile
-    const payload = parseJwtPayload(token)
-    const roles: string[] = (payload['roles'] as string[]) ?? []
-    const isAdminOrStaff = roles.some(r => r === 'ROLE_ADMIN' || r === 'ROLE_STAFF')
-
-    // Skip profile completion check for admin/staff and the complete-profile page itself
-    if (pathname === '/complete-profile') {
-        return NextResponse.next()
-    }
-
-    if (!isAdminOrStaff) {
-        const profileCompleted = request.cookies.get('profileCompleted')?.value
-        if (!profileCompleted) {
-            const completeUrl = new URL('/complete-profile', request.url)
-            return NextResponse.redirect(completeUrl)
-        }
     }
 
     return NextResponse.next()

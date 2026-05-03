@@ -68,6 +68,9 @@ export function LoginForm({
           const profile = await getUserProfile(user.id)
           if (profile?.userType && profile?.institution) {
             document.cookie = `profileCompleted=true; path=/; max-age=${60 * 60 * 24 * 365}`
+          } else {
+            // Mark as incomplete so middleware redirects to complete-profile (not login)
+            document.cookie = `profileCompleted=; path=/; max-age=0`
           }
         }
       } catch { }
