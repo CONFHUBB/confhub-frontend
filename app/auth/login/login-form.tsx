@@ -75,7 +75,7 @@ export function LoginForm({
         }
       } catch { }
       toast.success(res.message || "Login successful!")
-      router.push("/")
+      window.location.href = "/"
     } catch (err: any) {
       toast.error(
         err.response?.data?.message || "Invalid email or password."
@@ -108,7 +108,7 @@ export function LoginForm({
         }
       } catch { }
       toast.success("Logged in with Google!")
-      router.push("/")
+      window.location.href = "/"
     } catch (err: any) {
       toast.error(
         err.response?.data?.message || "Google authentication failed."

@@ -138,7 +138,7 @@ export function SignupForm({
       const res = await loginWithGoogle(credentialResponse.credential)
       setToken(res.token)
       toast.success("Account created & logged in with Google!")
-      router.push("/")
+      window.location.href = "/"
     } catch (err: any) {
       toast.error(
         err.response?.data?.message || "Google authentication failed."
