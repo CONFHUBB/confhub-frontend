@@ -1,30 +1,42 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { fmtDate } from '@/lib/utils'
 import { useParams, useRouter } from 'next/navigation'
-import { getConference, getConferenceActivities, getConferences } from '@/app/api/conference.api'
+import { approveConference, getConference, getConferenceActivities, getConferences, rejectConference } from '@/app/api/conference.api'
 import { getTracksByConference } from '@/app/api/track.api'
 import { getPapersByConference } from '@/app/api/paper.api'
 import { getUserRoleAssignments, acceptInvitation, declineInvitation } from '@/app/api/conference-user-track.api'
-import { getMyTicket } from '@/app/api/registration.api'
+import { getMyTicket, type TicketResponse } from '@/app/api/registration.api'
 import { toast } from 'sonner'
 import type { ConferenceActivityDTO, ConferenceResponse, ConferenceListResponse, TrackResponse } from '@/types/conference'
+import type { ConferenceUserTrackResponse } from '@/types/notification'
+import type { PaperResponse } from '@/types/paper'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Calendar, MapPin, ExternalLink, Loader2, Globe, Phone, FileText, Clock, Send, Ticket, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar, MapPin, ExternalLink, Loader2, Globe, Phone, FileText, Clock, Send, Ticket, BookOpen, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Building2, Mail, Users, ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 import { ProgramViewer } from '@/components/program-viewer'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { isActivityOpen } from '@/lib/activity'
 import { useUserRoles } from '@/hooks/useUserConferenceRoles'
+import { useUserRole } from '@/hooks/useUserRole'
 import { ConferenceFeedback } from '@/components/conference-feedback'
-import http from '@/lib/http'
 import { Breadcrumb } from '@/components/shared/breadcrumb'
 import { DetailPageSkeleton } from '@/components/shared/skeletons'
 import { ConferencePhaseTracker } from '@/components/conference-phase-tracker'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Textarea } from '@/components/ui/textarea'
+
+type ApiError = {
+    response?: {
+        status?: number
+        data?: {
+            message?: string
+        }
+    }
+}
 
 export default function ConferenceDetailsPage() {
     const params = useParams()
@@ -36,15 +48,20 @@ export default function ConferenceDetailsPage() {
     const [activities, setActivities] = useState<ConferenceActivityDTO[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const { hasRoleInConference, userId, refreshRoles } = useUserRoles()
-    const [pendingInvitations, setPendingInvitations] = useState<any[]>([])
-    const [actionLoading, setActionLoading] = useState(false)
+    const { userId, refreshRoles } = useUserRoles()
+    const { isAdminOrStaff } = useUserRole()
+    const [pendingInvitations, setPendingInvitations] = useState<ConferenceUserTrackResponse[]>([])
+    const [invitationActionLoading, setInvitationActionLoading] = useState(false)
+    const [moderationAction, setModerationAction] = useState<'approve' | 'reject' | null>(null)
+    const [showRejectDialog, setShowRejectDialog] = useState(false)
+    const [rejectReason, setRejectReason] = useState('')
     const [isCheckedIn, setIsCheckedIn] = useState(false)
     const [hasTicket, setHasTicket] = useState(false)
     const [showProgramPopup, setShowProgramPopup] = useState(false)
-    const [programData, setProgramData] = useState<any>(null)
-    const [allPapers, setAllPapers] = useState<any[]>([])
+    const [programData, setProgramData] = useState<Record<string, unknown> | null>(null)
+    const [allPapers, setAllPapers] = useState<PaperResponse[]>([])
     const [similarConferences, setSimilarConferences] = useState<ConferenceListResponse[]>([])
+    const getApiErrorMessage = (error: unknown) => (error as ApiError)?.response?.data?.message
 
     useEffect(() => {
         const fetchData = async () => {
@@ -59,14 +76,14 @@ export default function ConferenceDetailsPage() {
                 setConference(conferenceData)
                 setTracks(tracksData)
                 setActivities(activitiesData)
-                setPendingInvitations(userRoles.filter((r: any) => r.conferenceId === conferenceId && r.isAccepted === null))
+                setPendingInvitations(userRoles.filter((r: ConferenceUserTrackResponse) => r.conferenceId === conferenceId && r.isAccepted === null))
 
                 if (userId) {
                     try {
                         const ticket = await getMyTicket(conferenceId, userId)
                         if (ticket) {
                             setHasTicket(true)
-                            if (ticket.isCheckedIn || (ticket as any).checkedIn) setIsCheckedIn(true)
+                            if (ticket.isCheckedIn || (ticket as TicketResponse & { checkedIn?: boolean }).checkedIn) setIsCheckedIn(true)
                         }
                     } catch { }
                 }
@@ -78,7 +95,7 @@ export default function ConferenceDetailsPage() {
                         if (parsed?.published) {
                             setProgramData(parsed.schedule ? parsed : null)
                             const papersData = await getPapersByConference(conferenceId)
-                            setAllPapers(papersData.filter((p: any) => p.status === 'ACCEPTED'))
+                            setAllPapers(papersData.filter((p: PaperResponse) => p.status === 'ACCEPTED'))
                         }
                     } catch { }
                 }
@@ -96,8 +113,9 @@ export default function ConferenceDetailsPage() {
                     })
                     setSimilarConferences(others.slice(0, 8))
                 } catch { }
-            } catch (err: any) {
-                if (err.response?.status === 401 || err.response?.status === 403) {
+            } catch (err: unknown) {
+                const apiError = err as ApiError
+                if (apiError.response?.status === 401 || apiError.response?.status === 403) {
                     setError('You must be logged in to view this conference.')
                     setTimeout(() => router.push('/auth/login'), 2000)
                 } else {
@@ -113,25 +131,55 @@ export default function ConferenceDetailsPage() {
     const handleAcceptInvitation = async () => {
         if (!userId || !conferenceId) return
         try {
-            setActionLoading(true)
+            setInvitationActionLoading(true)
             await acceptInvitation(userId, conferenceId)
             toast.success('Invitation accepted!')
             setPendingInvitations([])
             await refreshRoles()
         } catch { toast.error('Failed to accept invitation.') }
-        finally { setActionLoading(false) }
+        finally { setInvitationActionLoading(false) }
     }
 
     const handleDeclineInvitation = async () => {
         if (!userId || !conferenceId) return
         try {
-            setActionLoading(true)
+            setInvitationActionLoading(true)
             await declineInvitation(userId, conferenceId)
             toast.success('Invitation declined.')
             setPendingInvitations([])
             await refreshRoles()
         } catch { toast.error('Failed to decline invitation.') }
-        finally { setActionLoading(false) }
+        finally { setInvitationActionLoading(false) }
+    }
+
+    const handleApproveConference = async () => {
+        if (!conference) return
+        try {
+            setModerationAction('approve')
+            await approveConference(conference.id)
+            setConference(prev => prev ? { ...prev, status: 'APPROVED', rejectionReason: null } : prev)
+            toast.success('Conference approved successfully.')
+        } catch (err: unknown) {
+            toast.error(getApiErrorMessage(err) || 'Failed to approve conference.')
+        } finally {
+            setModerationAction(null)
+        }
+    }
+
+    const handleRejectConference = async () => {
+        if (!conference || !rejectReason.trim()) return
+        try {
+            setModerationAction('reject')
+            await rejectConference(conference.id, rejectReason.trim())
+            setConference(prev => prev ? { ...prev, status: 'REJECTED', rejectionReason: rejectReason.trim() } : prev)
+            setShowRejectDialog(false)
+            setRejectReason('')
+            toast.success('Conference rejected successfully.')
+        } catch (err: unknown) {
+            toast.error(getApiErrorMessage(err) || 'Failed to reject conference.')
+        } finally {
+            setModerationAction(null)
+        }
     }
 
     const fmt = (d: string) => fmtDate(d)
@@ -177,6 +225,16 @@ export default function ConferenceDetailsPage() {
         } catch { }
     }
     const hasProgramAvailable = isProgramPublished || isActivityOpen(eventDayActivity)
+    const conferenceStatus = conference.status?.toUpperCase() ?? ''
+    const canModeratePendingConference = isAdminOrStaff && conferenceStatus === 'PENDING_APPROVAL'
+    const sponsorList = (conference.societySponsor || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    const chairEmailList = (conference.chairEmails || '')
+        .split(/[\n,;]+/)
+        .map((item) => item.trim())
+        .filter(Boolean)
 
     return (
         <div className="page-wide">
@@ -193,9 +251,9 @@ export default function ConferenceDetailsPage() {
                         <p className="text-amber-800 mt-1">Join as: {Array.from(new Set(pendingInvitations.map(p => p.assignedRole.replace('_', ' ')))).join(', ')}</p>
                     </div>
                     <div className="flex gap-2 shrink-0">
-                        <Button variant="outline" onClick={handleDeclineInvitation} disabled={actionLoading} className="border-amber-300 text-amber-700 hover:bg-amber-100">Decline</Button>
-                        <Button onClick={handleAcceptInvitation} disabled={actionLoading} className="bg-amber-600 hover:bg-amber-700 text-white font-bold">
-                            {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Accept
+                        <Button variant="outline" onClick={handleDeclineInvitation} disabled={invitationActionLoading} className="border-amber-300 text-amber-700 hover:bg-amber-100">Decline</Button>
+                        <Button onClick={handleAcceptInvitation} disabled={invitationActionLoading} className="bg-amber-600 hover:bg-amber-700 text-white font-bold">
+                            {invitationActionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Accept
                         </Button>
                     </div>
                 </div>
@@ -362,10 +420,160 @@ export default function ConferenceDetailsPage() {
 
             {/* ═══════ TRACKS (left) & REVIEWS (right) — side by side ═══════ */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 mb-10">
-                {/* TRACKS — 3/5 width */}
+                {/* TRACKS / ADMIN REVIEW — 3/5 width */}
                 <div className="lg:col-span-3">
-                    <h2 className="text-xl font-bold tracking-tight mb-4">Conference Tracks</h2>
-                    {tracks.length === 0 ? (
+                    <h2 className="text-xl font-bold tracking-tight mb-4">
+                        {canModeratePendingConference ? 'Conference Review Details' : 'Conference Tracks'}
+                    </h2>
+                    {canModeratePendingConference ? (
+                        <Card className="overflow-hidden border-indigo-100 shadow-sm">
+                            <CardContent className="p-0">
+                                <div className="border-b bg-gradient-to-r from-indigo-50 via-white to-amber-50 p-6">
+                                    <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                                        <div className="space-y-2">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">
+                                                    Pending Approval
+                                                </Badge>
+                                                {conference.acronym && (
+                                                    <span className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white">
+                                                        {conference.acronym}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-base font-semibold text-slate-900">
+                                                Review the information submitted by the conference chair before making the final decision.
+                                            </p>
+                                            <p className="text-sm text-slate-600">
+                                                This section shows the original conference profile created during the initial setup flow.
+                                            </p>
+                                        </div>
+                                        <div className="flex flex-wrap gap-3">
+                                            <Button
+                                                size="lg"
+                                                onClick={handleApproveConference}
+                                                disabled={moderationAction !== null}
+                                                className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                            >
+                                                {moderationAction === 'approve' ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
+                                                Accept
+                                            </Button>
+                                            <Button
+                                                size="lg"
+                                                variant="outline"
+                                                onClick={() => setShowRejectDialog(true)}
+                                                disabled={moderationAction !== null}
+                                                className="gap-2 border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                                            >
+                                                <XCircle className="h-5 w-5" />
+                                                Reject
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-4 p-6 sm:grid-cols-2">
+                                    <div className="rounded-xl border bg-white p-4">
+                                        <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                                            <Building2 className="h-4 w-4 text-indigo-600" />
+                                            Basic Information
+                                        </div>
+                                        <div className="space-y-2 text-sm text-slate-700">
+                                            <p><span className="font-medium text-slate-900">Conference:</span> {conference.name}</p>
+                                            <p><span className="font-medium text-slate-900">Area:</span> {conference.area || 'Not provided'}</p>
+                                            <div className="flex flex-wrap gap-2 pt-1">
+                                                {sponsorList.length > 0 ? sponsorList.map((sponsor) => (
+                                                    <Badge key={sponsor} variant="secondary" className="bg-indigo-50 text-indigo-700">
+                                                        {sponsor}
+                                                    </Badge>
+                                                )) : (
+                                                    <span className="text-slate-500">No society sponsor selected</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border bg-white p-4">
+                                        <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                                            <MapPin className="h-4 w-4 text-indigo-600" />
+                                            Venue and Dates
+                                        </div>
+                                        <div className="space-y-2 text-sm text-slate-700">
+                                            <p><span className="font-medium text-slate-900">Location:</span> {conference.location || 'Not provided'}</p>
+                                            <p><span className="font-medium text-slate-900">Province:</span> {conference.province || 'Not provided'}</p>
+                                            <p><span className="font-medium text-slate-900">Country:</span> {conference.country || 'Not provided'}</p>
+                                            <p><span className="font-medium text-slate-900">Dates:</span> {fmt(conference.startDate)} to {fmt(conference.endDate)}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border bg-white p-4">
+                                        <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                                            <Globe className="h-4 w-4 text-indigo-600" />
+                                            Website and Contact
+                                        </div>
+                                        <div className="space-y-2 text-sm text-slate-700">
+                                            <p>
+                                                <span className="font-medium text-slate-900">Website:</span>{' '}
+                                                {conference.websiteUrl ? (
+                                                    <a href={conference.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
+                                                        {conference.websiteUrl}
+                                                    </a>
+                                                ) : 'Not provided'}
+                                            </p>
+                                            <p><span className="font-medium text-slate-900">Contact:</span> {conference.contactInformation || 'Not provided'}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border bg-white p-4">
+                                        <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                                            <Users className="h-4 w-4 text-indigo-600" />
+                                            Conference Chairs
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {chairEmailList.length > 0 ? chairEmailList.map((email) => (
+                                                <Badge key={email} variant="outline" className="gap-1 border-slate-200 text-slate-700">
+                                                    <Mail className="h-3 w-3" />
+                                                    {email}
+                                                </Badge>
+                                            )) : (
+                                                <p className="text-sm text-slate-500">No chair emails provided</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border bg-white p-4 sm:col-span-2">
+                                        <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                                            <FileText className="h-4 w-4 text-indigo-600" />
+                                            Description
+                                        </div>
+                                        <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                                            {conference.description || 'No description provided.'}
+                                        </p>
+                                    </div>
+
+                                    <div className="rounded-xl border bg-white p-4 sm:col-span-2">
+                                        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                                            <ImageIcon className="h-4 w-4 text-indigo-600" />
+                                            Banner Submission
+                                        </div>
+                                        {conference.bannerImageUrl ? (
+                                            <div className="overflow-hidden rounded-xl border">
+                                                <img
+                                                    src={conference.bannerImageUrl}
+                                                    alt={`${conference.name} banner`}
+                                                    className="h-56 w-full object-cover"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="flex min-h-32 items-center justify-center rounded-xl border border-dashed bg-slate-50 text-sm text-slate-500">
+                                                No banner image uploaded
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : tracks.length === 0 ? (
                         <Card className="border-dashed">
                             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                                 <FileText className="h-12 w-12 text-muted-foreground/40 mb-4" />
@@ -484,6 +692,49 @@ export default function ConferenceDetailsPage() {
                     </DialogHeader>
                     {programData ? <ProgramViewer program={programData} allPapers={allPapers} />
                         : <div className="py-12 text-center text-slate-500">Program could not be loaded.</div>}
+                </DialogContent>
+            </Dialog>
+            <Dialog
+                open={showRejectDialog}
+                onOpenChange={(open) => {
+                    if (moderationAction === 'reject') return
+                    setShowRejectDialog(open)
+                    if (!open) setRejectReason('')
+                }}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Reject Conference</DialogTitle>
+                        <DialogDescription>
+                            Please provide a reason for rejecting this conference. The organizer will see this reason.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <Textarea
+                        placeholder="Enter rejection reason..."
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        className="min-h-28"
+                    />
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setShowRejectDialog(false)
+                                setRejectReason('')
+                            }}
+                            disabled={moderationAction === 'reject'}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleRejectConference}
+                            disabled={!rejectReason.trim() || moderationAction !== null}
+                            className="bg-rose-600 hover:bg-rose-700 text-white"
+                        >
+                            {moderationAction === 'reject' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Confirm Reject
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

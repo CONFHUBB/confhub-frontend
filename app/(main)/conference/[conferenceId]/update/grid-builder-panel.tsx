@@ -439,7 +439,7 @@ function UnifiedGrid({ days, program, allPapers, onAddSession, onEditSession, on
   const allSess = days.flatMap(d => d.sessions || [])
   const allStartMins = allSess.map((s: any) => timeToMinutes(s.startTime))
   const allEndMins = allSess.map((s: any) => timeToMinutes(s.endTime))
-  const globalStart = allStartMins.length > 0 ? Math.max(0, Math.min(...allStartMins) - 30) : 8 * 60
+  const globalStart = allStartMins.length > 0 ? Math.max(0, Math.min(...allStartMins) - 30) : 7 * 60 + 30
   const globalEnd = allEndMins.length > 0 ? Math.max(...allEndMins) : 18 * 60
   const gridHeight = (globalEnd - globalStart) * PX_PER_MIN
 
