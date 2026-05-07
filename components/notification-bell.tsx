@@ -128,9 +128,14 @@ export function NotificationBell() {
     // Derived: are there any locally unread notifications?
     const hasLocalUnread = notifications.some(n => !n.isRead)
 
+    const parseNotificationDate = (dateStr: string) => {
+        const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(dateStr)
+        return new Date(hasTimezone ? dateStr : `${dateStr}Z`)
+    }
+
     const timeAgo = (dateStr: string) => {
-        const diff = Date.now() - new Date(dateStr).getTime()
-        const mins = Math.floor(diff / 60000)
+        const diff = Date.now() - parseNotificationDate(dateStr).getTime()
+        const mins = Math.max(0, Math.floor(diff / 60000))
         if (mins < 1) return 'Just now'
         if (mins < 60) return `${mins}m ago`
         const hours = Math.floor(mins / 60)
