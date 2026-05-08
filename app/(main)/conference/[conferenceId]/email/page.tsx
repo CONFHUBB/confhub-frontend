@@ -53,6 +53,7 @@ export default function EmailManagementPage() {
     const [loading, setLoading] = useState(true)
     const [sendingIds, setSendingIds] = useState<Set<number>>(new Set())
     const [bulkSending, setBulkSending] = useState(false)
+    const [currentHistoryPage, setCurrentHistoryPage] = useState(0)
 
     // Bulk email form state
     const [bulkSubject, setBulkSubject] = useState('')
@@ -391,42 +392,71 @@ export default function EmailManagementPage() {
                                     <p>No emails have been sent for this conference yet.</p>
                                 </div>
                             ) : (
-                                <div className="overflow-auto rounded-lg border">
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="border-b bg-gray-50">
-                                                <th className="px-4 py-3 text-left font-medium text-gray-600">To</th>
-                                                <th className="px-4 py-3 text-left font-medium text-gray-600">Subject</th>
-                                                <th className="px-4 py-3 text-left font-medium text-gray-600">Type</th>
-                                                <th className="px-4 py-3 text-left font-medium text-gray-600">Status</th>
-                                                <th className="px-4 py-3 text-left font-medium text-gray-600">Sent At</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {emailHistory.map((email) => (
-                                                <tr key={email.id} className="border-b last:border-0 hover:bg-gray-50">
-                                                    <td className="px-4 py-3 font-medium">{email.toEmail}</td>
-                                                    <td className="px-4 py-3 max-w-xs truncate">{email.subject}</td>
-                                                    <td className="px-4 py-3">
-                                                        <Badge variant="outline">{email.emailType}</Badge>
-                                                    </td>
-                                                    <td className="px-4 py-3">
-                                                        {email.status === 'SENT' ? (
-                                                            <Badge className="bg-green-100 text-green-800 gap-1">
-                                                                <CheckCircle2 className="h-3 w-3" /> Sent
-                                                            </Badge>
-                                                        ) : (
-                                                            <Badge variant="destructive" className="gap-1">
-                                                                <AlertCircle className="h-3 w-3" /> Error
-                                                            </Badge>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-muted-foreground text-xs">{formatDate(email.sentAt)}</td>
+                                <>
+                                    <div className="overflow-auto rounded-lg border">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="border-b bg-gray-50">
+                                                    <th className="px-4 py-3 text-left font-medium text-gray-600">To</th>
+                                                    <th className="px-4 py-3 text-left font-medium text-gray-600">Subject</th>
+                                                    <th className="px-4 py-3 text-left font-medium text-gray-600">Type</th>
+                                                    <th className="px-4 py-3 text-left font-medium text-gray-600">Status</th>
+                                                    <th className="px-4 py-3 text-left font-medium text-gray-600">Sent At</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                            </thead>
+                                            <tbody>
+                                                {emailHistory.slice(currentHistoryPage * 10, (currentHistoryPage + 1) * 10).map((email) => (
+                                                    <tr key={email.id} className="border-b last:border-0 hover:bg-gray-50">
+                                                        <td className="px-4 py-3 font-medium">{email.toEmail}</td>
+                                                        <td className="px-4 py-3 max-w-xs truncate">{email.subject}</td>
+                                                        <td className="px-4 py-3">
+                                                            <Badge variant="outline">{email.emailType}</Badge>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            {email.status === 'SENT' ? (
+                                                                <Badge className="bg-green-100 text-green-800 gap-1">
+                                                                    <CheckCircle2 className="h-3 w-3" /> Sent
+                                                                </Badge>
+                                                            ) : (
+                                                                <Badge variant="destructive" className="gap-1">
+                                                                    <AlertCircle className="h-3 w-3" /> Error
+                                                                </Badge>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-muted-foreground text-xs">{formatDate(email.sentAt)}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {/* Pagination */}
+                                    <div className="mt-4 flex items-center justify-between">
+                                        <div className="text-sm text-muted-foreground">
+                                            Showing {currentHistoryPage * 10 + 1} to {Math.min((currentHistoryPage + 1) * 10, emailHistory.length)} of {emailHistory.length} emails
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setCurrentHistoryPage(Math.max(0, currentHistoryPage - 1))}
+                                                disabled={currentHistoryPage === 0}
+                                            >
+                                                Previous
+                                            </Button>
+                                            <div className="flex items-center px-3 py-2 text-sm bg-muted rounded-md">
+                                                Page {currentHistoryPage + 1} of {Math.ceil(emailHistory.length / 10)}
+                                            </div>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setCurrentHistoryPage(currentHistoryPage + 1)}
+                                                disabled={(currentHistoryPage + 1) * 10 >= emailHistory.length}
+                                            >
+                                                Next
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </>
                             )}
                         </CardContent>
                     </Card>

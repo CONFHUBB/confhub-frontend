@@ -257,7 +257,7 @@ const TAB_ACTION_LABELS: Record<string, string> = {
     'features-review-management': 'Review Mgmt',
     'features-camera-ready': 'Camera-Ready',
     'features-program-builder': 'Program',
-    'forms-mail': 'Email Templates',
+    'forms-mail': 'Invitation Management',
     'reg-ticket-types': 'Ticket Types',
     'reg-attendees': 'Attendees',
     'reg-checkin': 'Check-in',

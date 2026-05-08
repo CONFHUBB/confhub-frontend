@@ -20,7 +20,7 @@ export interface EmailHistoryResponse {
     subject: string
     body: string
     emailType: 'INVITATION' | 'BULK' | 'INDIVIDUAL' | 'SYSTEM'
-    status: 'SENT' | 'ERROR'
+    status: 'SENT' | 'ERROR' | 'SENDING'
     errorMessage: string | null
     conferenceId: number | null
     conferenceName: string | null
