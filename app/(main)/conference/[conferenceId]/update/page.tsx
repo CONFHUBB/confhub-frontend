@@ -154,7 +154,7 @@ const TAB_GROUPS: TabGroupDef[] = [
         items: [
             { key: "forms-submission", label: "Submission Form", completionKey: "config-submission-form", lockWhenDone: true, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'view' } },
             { key: "forms-review", label: "Review Form", completionKey: "config-review-form", lockWhenDone: true, permissions: { CONFERENCE_CHAIR: 'view', PROGRAM_CHAIR: 'edit' } },
-            { key: "forms-mail", label: "Email Templates", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'edit' } },
+            { key: "forms-mail", label: "Invitation Management", completionKey: "", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'edit', PROGRAM_CHAIR: 'edit' } },
             { key: "features-review-settings", label: "Review Settings", completionKey: "config-review-settings", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'view', PROGRAM_CHAIR: 'edit' } },
             { key: "features-conflict-settings", label: "Conflict Settings", completionKey: "config-conflict-settings", lockWhenDone: false, permissions: { CONFERENCE_CHAIR: 'view', PROGRAM_CHAIR: 'edit' } },
         ]

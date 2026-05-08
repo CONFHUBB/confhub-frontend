@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { getConference } from "@/app/api/conference.api"
 import { getConferenceUsersWithRoles } from "@/app/api/conference-user-track.api"
 import { resendInvitation } from "@/app/api/conference-user-track.api"
@@ -26,6 +25,24 @@ import { toast } from 'sonner'
 import { V } from "@/lib/validation"
 import { safeDate } from '@/lib/utils'
 
+const ROLE_OPTIONS = [
+    { value: "ALL", label: "All Roles" },
+    { value: "AUTHOR", label: "Author" },
+    { value: "REVIEWER", label: "Reviewer" },
+    { value: "CONFERENCE_CHAIR", label: "Conference Chair" },
+    { value: "PROGRAM_CHAIR", label: "PC Chair" },
+    { value: "TRACK_CHAIR", label: "Track Chair" },
+]
+
+const ROLE_LABELS: Record<string, string> = {
+    AUTHOR: "Author",
+    REVIEWER: "Reviewer",
+    CONFERENCE_CHAIR: "Conference Chair",
+    PROGRAM_CHAIR: "PC Chair",
+    TRACK_CHAIR: "Track Chair",
+    ATTENDEE: "Attendee",
+}
+
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
     pending: { label: "Pending", color: "bg-amber-100 text-amber-800", icon: <Clock className="h-3.5 w-3.5" /> },
     accepted: { label: "Accepted", color: "bg-green-100 text-green-800", icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
@@ -41,18 +58,96 @@ interface EmailManagementInlineProps {
     conferenceId: number
 }
 
+interface ConferenceRoleItem {
+    id: number
+    assignedRole: string
+    trackName?: string | null
+    conferenceTrackName?: string | null
+    isAccepted: boolean | null
+    invitedAt: string | null
+    invitationToken: string | null
+    tokenExpiresAt: string | null
+}
+
+interface ConferenceUserRoleData {
+    user?: {
+        id?: number
+        firstName?: string
+        lastName?: string
+        fullName?: string
+        email?: string
+    }
+    roles?: ConferenceRoleItem[]
+}
+
+interface InvitationRow {
+    cutId: number
+    userName: string
+    userEmail: string
+    role: string
+    trackName: string | null
+    isAccepted: boolean | null
+    invitedAt: string | null
+    invitationToken: string | null
+    tokenExpiresAt: string | null
+}
+
+interface PagedResponse<T> {
+    content?: T[]
+}
+
+let optimisticEmailHistoryId = -1
+
+function createOptimisticEmailHistory({
+    conferenceId,
+    conferenceName,
+    toEmail,
+    subject,
+    body,
+    emailType,
+    ccEmails = null,
+}: {
+    conferenceId: number
+    conferenceName?: string | null
+    toEmail: string
+    subject: string
+    body: string
+    emailType: EmailHistoryResponse["emailType"]
+    ccEmails?: string | null
+}): EmailHistoryResponse {
+    const now = new Date().toISOString()
+    return {
+        id: optimisticEmailHistoryId--,
+        fromEmail: "",
+        toEmail,
+        ccEmails,
+        subject,
+        body,
+        emailType,
+        status: "SENDING",
+        errorMessage: null,
+        conferenceId,
+        conferenceName: conferenceName ?? null,
+        sentAt: now,
+        createdAt: now,
+    }
+}
+
 export function EmailManagementInline({ conferenceId }: EmailManagementInlineProps) {
     const [conference, setConference] = useState<ConferenceResponse | null>(null)
-    const [usersData, setUsersData] = useState<any[]>([])
+    const [usersData, setUsersData] = useState<ConferenceUserRoleData[]>([])
     const [emailHistory, setEmailHistory] = useState<EmailHistoryResponse[]>([])
     const [loading, setLoading] = useState(true)
     const [sendingIds, setSendingIds] = useState<Set<number>>(new Set())
     const [bulkSending, setBulkSending] = useState(false)
+    const [activeTab, setActiveTab] = useState("invitations")
 
     // Bulk email form state
     const [bulkSubject, setBulkSubject] = useState("")
     const [bulkBody, setBulkBody] = useState("")
     const [bulkRecipientGroup, setBulkRecipientGroup] = useState("REVIEWER")
+    const [historyRoleFilter, setHistoryRoleFilter] = useState("ALL")
+    const [currentHistoryPage, setCurrentHistoryPage] = useState(0)
 
     const fetchData = useCallback(async () => {
         try {
@@ -63,8 +158,8 @@ export function EmailManagementInline({ conferenceId }: EmailManagementInlinePro
                 getEmailHistory(conferenceId, 0, 50).catch(() => ({ content: [] })),
             ])
             setConference(conf)
-            setUsersData((users as any)?.content || [])
-            setEmailHistory((history as any)?.content || history || [])
+            setUsersData(Array.isArray(users) ? users : ((users as PagedResponse<ConferenceUserRoleData>).content ?? []))
+            setEmailHistory(Array.isArray(history) ? history : ((history as PagedResponse<EmailHistoryResponse>).content ?? []))
         } catch (err) {
             console.error("Failed to load email management data:", err)
         } finally {
@@ -72,12 +167,48 @@ export function EmailManagementInline({ conferenceId }: EmailManagementInlinePro
         }
     }, [conferenceId])
 
+    const fetchEmailHistory = useCallback(async () => {
+        try {
+            const history = await getEmailHistory(conferenceId, 0, 50).catch(() => ({ content: [] }))
+            setEmailHistory(Array.isArray(history) ? history : ((history as PagedResponse<EmailHistoryResponse>).content ?? []))
+        } catch (err) {
+            console.error("Failed to load email history:", err)
+        }
+    }, [conferenceId])
+
     useEffect(() => {
         fetchData()
     }, [fetchData])
 
+    useEffect(() => {
+        if (activeTab !== "history") return
+        fetchEmailHistory()
+        const intervalId = window.setInterval(fetchEmailHistory, 2000)
+        return () => window.clearInterval(intervalId)
+    }, [activeTab, fetchEmailHistory])
+
+    // Reset page when filter changes
+    useEffect(() => {
+        setCurrentHistoryPage(0)
+    }, [historyRoleFilter])
+
+    const markOptimisticHistory = useCallback((ids: number[], status: EmailHistoryResponse["status"], errorMessage: string | null = null) => {
+        const idSet = new Set(ids)
+        setEmailHistory(prev => prev.map(email => (
+            idSet.has(email.id)
+                ? { ...email, status, errorMessage, sentAt: new Date().toISOString() }
+                : email
+        )))
+    }, [])
+
+    const getErrorMessage = (err: unknown) => {
+        if (err instanceof Error && err.message) return err.message
+        return "Email sending failed."
+    }
+
     const handleResendInvitation = async (cutId: number, userEmail: string, userName: string, role: string, trackName?: string) => {
         setSendingIds(prev => new Set(prev).add(cutId))
+        let optimisticIds: number[] = []
         try {
             const updated = await resendInvitation(cutId)
             const newToken = updated.invitationToken
@@ -97,11 +228,25 @@ export function EmailManagementInline({ conferenceId }: EmailManagementInlinePro
             }
             formData.append("invitationToken", newToken)
 
+            const optimisticHistory = createOptimisticEmailHistory({
+                conferenceId,
+                conferenceName: conference?.name,
+                toEmail: userEmail,
+                subject: String(formData.get("subject") || ""),
+                body: `Invitation email for ${roleLabel}${trackLabel}`,
+                emailType: "INVITATION",
+            })
+            optimisticIds = [optimisticHistory.id]
+            setEmailHistory(prev => [optimisticHistory, ...prev])
             await sendInvitationEmail(formData)
+            markOptimisticHistory(optimisticIds, "SENT")
             toast.success(`Invitation resent to ${userEmail}`)
             await fetchData()
         } catch (err) {
             console.error("Resend failed:", err)
+            if (optimisticIds.length > 0) {
+                markOptimisticHistory(optimisticIds, "ERROR", getErrorMessage(err))
+            }
             toast.error("Failed to resend invitation")
         } finally {
             setSendingIds(prev => {
@@ -128,6 +273,26 @@ export function EmailManagementInline({ conferenceId }: EmailManagementInlinePro
             return
         }
         setBulkSending(true)
+        const recipientEmails = new Map<string, string>()
+        for (const userWithRoles of usersData) {
+            const email = userWithRoles.user?.email
+            if (!email) continue
+            const hasRecipientRole = (userWithRoles.roles || []).some(role => role.assignedRole === bulkRecipientGroup)
+            if (!hasRecipientRole) continue
+            recipientEmails.set(email.toLowerCase(), email)
+        }
+        const optimisticHistory = Array.from(recipientEmails.values()).map(email => createOptimisticEmailHistory({
+            conferenceId,
+            conferenceName: conference?.name,
+            toEmail: email,
+            subject: bulkSubject,
+            body: bulkBody,
+            emailType: "BULK",
+        }))
+        const optimisticIds = optimisticHistory.map(email => email.id)
+        if (optimisticHistory.length > 0) {
+            setEmailHistory(prev => [...optimisticHistory, ...prev])
+        }
         try {
             const req: BulkEmailRequest = {
                 conferenceId,
@@ -136,12 +301,14 @@ export function EmailManagementInline({ conferenceId }: EmailManagementInlinePro
                 body: bulkBody,
             }
             await sendBulkEmail(req)
+            markOptimisticHistory(optimisticIds, "SENT")
             toast.success(`Bulk email sent to all ${bulkRecipientGroup.toLowerCase().replace("_", " ")}s`)
             setBulkSubject("")
             setBulkBody("")
             await fetchData()
         } catch (err) {
             console.error("Bulk email failed:", err)
+            markOptimisticHistory(optimisticIds, "ERROR", getErrorMessage(err))
             toast.error("Failed to send bulk email")
         } finally {
             setBulkSending(false)
@@ -162,6 +329,39 @@ export function EmailManagementInline({ conferenceId }: EmailManagementInlinePro
         return new Date(expiresAt) < new Date()
     }
 
+    const recipientRolesByEmail = useMemo(() => {
+        const map = new Map<string, Set<string>>()
+        for (const userWithRoles of usersData) {
+            const email = userWithRoles.user?.email
+            if (!email) continue
+            const key = String(email).toLowerCase()
+            const roleSet = map.get(key) ?? new Set<string>()
+            for (const role of userWithRoles.roles || []) {
+                if (role?.assignedRole) roleSet.add(role.assignedRole)
+            }
+            map.set(key, roleSet)
+        }
+        return map
+    }, [usersData])
+
+    const getRecipientRoleLabels = useCallback((email: string) => {
+        const roles = recipientRolesByEmail.get(email.toLowerCase())
+        if (!roles || roles.size === 0) return "Unknown"
+        return Array.from(roles).map(role => ROLE_LABELS[role] || role.replaceAll("_", " ")).join(", ")
+    }, [recipientRolesByEmail])
+
+    const filteredEmailHistory = useMemo(() => {
+        if (historyRoleFilter === "ALL") return emailHistory
+        return emailHistory.filter(email => {
+            const roles = recipientRolesByEmail.get(email.toEmail.toLowerCase())
+            return roles?.has(historyRoleFilter)
+        })
+    }, [emailHistory, historyRoleFilter, recipientRolesByEmail])
+
+    const sentCount = filteredEmailHistory.filter(email => email.status === "SENT").length
+    const failedCount = filteredEmailHistory.filter(email => email.status === "ERROR").length
+    const sendingCount = filteredEmailHistory.filter(email => email.status === "SENDING").length
+
     if (loading) {
         return (
             <div className="flex items-center justify-center py-20">
@@ -171,8 +371,8 @@ export function EmailManagementInline({ conferenceId }: EmailManagementInlinePro
     }
 
     // Flatten for invitation list
-    const allInvitations = usersData.flatMap((uwr: any) =>
-        (uwr.roles || []).map((role: any) => ({
+    const allInvitations: InvitationRow[] = usersData.flatMap((uwr) =>
+        (uwr.roles || []).map((role) => ({
             cutId: role.id,
             userName: `${uwr.user?.firstName || ""} ${uwr.user?.lastName || ""}`.trim() || uwr.user?.fullName || "Unknown",
             userEmail: uwr.user?.email || "",
@@ -191,15 +391,15 @@ export function EmailManagementInline({ conferenceId }: EmailManagementInlinePro
             <div>
                 <h2 className="text-xl font-bold flex items-center gap-2">
                     <Mail className="h-5 w-5 text-indigo-600" />
-                    Email Management
+                    Invitation Management
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                    Manage invitations, send bulk emails, and view email history.
+                    Manage invitations, monitor sent email status, and filter recipients by role.
                 </p>
             </div>
 
             {/* Tabs */}
-            <Tabs defaultValue="invitations" className="space-y-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
                 <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="invitations" className="gap-2 text-xs sm:text-sm">
                         <Users className="h-4 w-4" /> Invitations
@@ -218,9 +418,9 @@ export function EmailManagementInline({ conferenceId }: EmailManagementInlinePro
                         <div className="flex items-center justify-between flex-wrap gap-2">
                             <h3 className="text-base font-semibold">Invitation Status</h3>
                             <div className="flex gap-2">
-                                <Badge variant="secondary">{allInvitations.filter((i: any) => i.isAccepted === null).length} pending</Badge>
-                                <Badge variant="secondary" className="bg-green-100 text-green-800">{allInvitations.filter((i: any) => i.isAccepted === true).length} accepted</Badge>
-                                <Badge variant="secondary" className="bg-red-100 text-red-800">{allInvitations.filter((i: any) => i.isAccepted === false).length} declined</Badge>
+                                <Badge variant="secondary">{allInvitations.filter((i) => i.isAccepted === null).length} pending</Badge>
+                                <Badge variant="secondary" className="bg-green-100 text-green-800">{allInvitations.filter((i) => i.isAccepted === true).length} accepted</Badge>
+                                <Badge variant="secondary" className="bg-red-100 text-red-800">{allInvitations.filter((i) => i.isAccepted === false).length} declined</Badge>
                             </div>
                         </div>
 
@@ -245,7 +445,7 @@ export function EmailManagementInline({ conferenceId }: EmailManagementInlinePro
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {allInvitations.map((inv: any) => {
+                                        {allInvitations.map((inv) => {
                                             const status = getInvitationStatus(inv.isAccepted)
                                             const config = STATUS_CONFIG[status]
                                             const expired = isTokenExpired(inv.tokenExpiresAt)
@@ -276,7 +476,7 @@ export function EmailManagementInline({ conferenceId }: EmailManagementInlinePro
                                                                 className="gap-1"
                                                                 disabled={sendingIds.has(inv.cutId)}
                                                                 onClick={() => handleResendInvitation(
-                                                                    inv.cutId, inv.userEmail, inv.userName, inv.role, inv.trackName
+                                                                    inv.cutId, inv.userEmail, inv.userName, inv.role, inv.trackName ?? undefined
                                                                 )}
                                                             >
                                                                 {sendingIds.has(inv.cutId) ? (
@@ -379,55 +579,133 @@ export function EmailManagementInline({ conferenceId }: EmailManagementInlinePro
                 {/* ── Tab 3: Email History ── */}
                 <TabsContent value="history">
                     <div className="rounded-xl border bg-card p-6 space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-base font-semibold">Email History</h3>
-                            <Button variant="outline" size="sm" onClick={fetchData}>
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                            <div>
+                                <h3 className="text-base font-semibold">Sent Email Status</h3>
+                                <p className="text-xs text-muted-foreground mt-1">Track all sent emails and delivery errors for this conference.</p>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={fetchEmailHistory}>
                                 <RefreshCw className="h-4 w-4 mr-1" /> Refresh
                             </Button>
                         </div>
 
-                        {emailHistory.length === 0 ? (
+                        <div className="grid gap-3 sm:grid-cols-4">
+                            <div className="rounded-lg border bg-blue-50 p-4">
+                                <p className="text-xs font-medium text-blue-700">Sending</p>
+                                <p className="text-2xl font-bold text-blue-800">{sendingCount}</p>
+                            </div>
+                            <div className="rounded-lg border bg-green-50 p-4">
+                                <p className="text-xs font-medium text-green-700">Sent</p>
+                                <p className="text-2xl font-bold text-green-800">{sentCount}</p>
+                            </div>
+                            <div className="rounded-lg border bg-red-50 p-4">
+                                <p className="text-xs font-medium text-red-700">Failed</p>
+                                <p className="text-2xl font-bold text-red-800">{failedCount}</p>
+                            </div>
+                            <div className="rounded-lg border bg-slate-50 p-4">
+                                <p className="text-xs font-medium text-slate-600">Total shown</p>
+                                <p className="text-2xl font-bold text-slate-800">{filteredEmailHistory.length}</p>
+                            </div>
+                        </div>
+
+                        <div className="rounded-lg border bg-muted/20 p-4">
+                            <div className="grid gap-3 sm:grid-cols-[220px_1fr] sm:items-end">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700">Filter by Role</label>
+                                    <Select value={historyRoleFilter} onValueChange={setHistoryRoleFilter}>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {ROLE_OPTIONS.map(role => (
+                                                <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Filter section narrows email history by recipient role such as Author, Reviewer, Conference Chair, or PC Chair.
+                                </p>
+                            </div>
+                        </div>
+
+                        {filteredEmailHistory.length === 0 ? (
                             <div className="text-center py-12 text-muted-foreground">
                                 <History className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                                <p>No emails have been sent for this conference yet.</p>
+                                <p>No emails match the current filter.</p>
                             </div>
                         ) : (
-                            <div className="overflow-auto rounded-lg border">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="border-b bg-gray-50">
-                                            <th className="px-4 py-3 text-left font-medium text-gray-600">To</th>
-                                            <th className="px-4 py-3 text-left font-medium text-gray-600">Subject</th>
-                                            <th className="px-4 py-3 text-left font-medium text-gray-600">Type</th>
-                                            <th className="px-4 py-3 text-left font-medium text-gray-600">Status</th>
-                                            <th className="px-4 py-3 text-left font-medium text-gray-600">Sent At</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {emailHistory.map((email) => (
-                                            <tr key={email.id} className="border-b last:border-0 hover:bg-gray-50">
-                                                <td className="px-4 py-3 font-medium">{email.toEmail}</td>
-                                                <td className="px-4 py-3 max-w-xs truncate">{email.subject}</td>
-                                                <td className="px-4 py-3">
-                                                    <Badge variant="outline">{email.emailType}</Badge>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    {email.status === "SENT" ? (
-                                                        <Badge className="bg-green-100 text-green-800 gap-1">
-                                                            <CheckCircle2 className="h-3 w-3" /> Sent
-                                                        </Badge>
-                                                    ) : (
-                                                        <Badge variant="destructive" className="gap-1">
-                                                            <AlertCircle className="h-3 w-3" /> Error
-                                                        </Badge>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 text-muted-foreground text-xs">{formatDate(email.sentAt)}</td>
+                            <>
+                                <div className="overflow-auto rounded-lg border">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b bg-gray-50">
+                                                <th className="px-4 py-3 text-left font-medium text-gray-600">To</th>
+                                                <th className="px-4 py-3 text-left font-medium text-gray-600">Role</th>
+                                                <th className="px-4 py-3 text-left font-medium text-gray-600">Subject</th>
+                                                <th className="px-4 py-3 text-left font-medium text-gray-600">Type</th>
+                                                <th className="px-4 py-3 text-left font-medium text-gray-600">Status</th>
+                                                <th className="px-4 py-3 text-left font-medium text-gray-600">Sent At</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </thead>
+                                        <tbody>
+                                            {filteredEmailHistory.slice(currentHistoryPage * 10, (currentHistoryPage + 1) * 10).map((email) => (
+                                                <tr key={email.id} className="border-b last:border-0 hover:bg-gray-50">
+                                                    <td className="px-4 py-3 font-medium">{email.toEmail}</td>
+                                                    <td className="px-4 py-3 text-muted-foreground min-w-[9rem]">{getRecipientRoleLabels(email.toEmail)}</td>
+                                                    <td className="px-4 py-3 max-w-xs truncate">{email.subject}</td>
+                                                    <td className="px-4 py-3">
+                                                        <Badge variant="outline">{email.emailType}</Badge>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        {email.status === "SENDING" ? (
+                                                            <Badge className="bg-blue-100 text-blue-800 gap-1">
+                                                                <Loader2 className="h-3 w-3 animate-spin" /> Sending
+                                                            </Badge>
+                                                        ) : email.status === "SENT" ? (
+                                                            <Badge className="bg-green-100 text-green-800 gap-1">
+                                                                <CheckCircle2 className="h-3 w-3" /> Sent
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge variant="destructive" className="gap-1">
+                                                                <AlertCircle className="h-3 w-3" /> Failed
+                                                            </Badge>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-muted-foreground text-xs">{formatDate(email.sentAt)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {/* Pagination */}
+                                <div className="mt-4 flex items-center justify-between">
+                                    <div className="text-sm text-muted-foreground">
+                                        Showing {currentHistoryPage * 10 + 1} to {Math.min((currentHistoryPage + 1) * 10, filteredEmailHistory.length)} of {filteredEmailHistory.length} emails
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setCurrentHistoryPage(Math.max(0, currentHistoryPage - 1))}
+                                            disabled={currentHistoryPage === 0}
+                                        >
+                                            Previous
+                                        </Button>
+                                        <div className="flex items-center px-3 py-2 text-sm bg-muted rounded-md">
+                                            Page {currentHistoryPage + 1} of {Math.ceil(filteredEmailHistory.length / 10)}
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setCurrentHistoryPage(currentHistoryPage + 1)}
+                                            disabled={(currentHistoryPage + 1) * 10 >= filteredEmailHistory.length}
+                                        >
+                                            Next
+                                        </Button>
+                                    </div>
+                                </div>
+                            </>
                         )}
                     </div>
                 </TabsContent>
