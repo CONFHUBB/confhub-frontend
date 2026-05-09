@@ -401,14 +401,6 @@ export function PaperManagement({ conferenceId, trackIds }: PaperManagementProps
             className: "text-center w-24"
         }] : []),
         {
-            header: <div className="flex items-center justify-center gap-1 w-full"><Filter className="h-3 w-3" /> Plagiarism</div>,
-            cell: (paper) => (
-                <div className="flex justify-center w-full">
-                    <PlagiarismBadge paperId={paper.id} score={paper.plagiarismScore} status={paper.plagiarismStatus} />
-                </div>
-            )
-        },
-        {
             header: <div className="flex items-center justify-center gap-1 w-full"><Shield className="h-3 w-3" /> Conflicts</div>,
             cell: (paper) => (
                 <div className="flex justify-center w-full">
