@@ -1,15 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, FileText, ExternalLink, Paperclip, Camera, Upload } from 'lucide-react'
+import { Loader2, FileText, ExternalLink, Paperclip, Camera, Upload, Search } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { getPaperFilesByPaperId, uploadPaperFile } from '@/app/api/paper.api'
+import { getPlagiarismResult, type PlagiarismResult } from '@/app/api/plagiarism.api'
 import { toast } from 'sonner'
 import { getFilesByPaper, type CameraReadyFile } from '@/app/api/camera-ready.api'
 import type { PaperFileResponse } from '@/types/paper'
 import { fmtDate } from '@/lib/utils'
+import { PlagiarismBadge } from '@/components/plagiarism-badge'
 
 interface FilesTabProps {
     paperId: number
@@ -23,6 +26,10 @@ export function FilesTab({ paperId, conferenceId, isAuthor = false }: FilesTabPr
     const [copyrightFiles, setCopyrightFiles] = useState<CameraReadyFile[]>([])
     const [loading, setLoading] = useState(true)
     const [uploading, setUploading] = useState(false)
+    const [checkingDialogOpen, setCheckingDialogOpen] = useState(false)
+    const [plagiarismResult, setPlagiarismResult] = useState<PlagiarismResult | null>(null)
+    const [plagiarismAutoOpen, setPlagiarismAutoOpen] = useState(false)
+    const [plagiarismVerdict, setPlagiarismVerdict] = useState<'success' | 'rejected' | null>(null)
 
     useEffect(() => {
         const fetch = async () => {
@@ -54,15 +61,49 @@ export function FilesTab({ paperId, conferenceId, isAuthor = false }: FilesTabPr
 
         try {
             setUploading(true)
+            setCheckingDialogOpen(true)
+            setPlagiarismVerdict(null)
+            setPlagiarismResult(null)
             await uploadPaperFile(conferenceId, paperId, file)
             toast.success('Manuscript uploaded successfully!')
             // Refresh files
             const newFiles = await getPaperFilesByPaperId(paperId)
             setManuscriptFiles((newFiles || []).filter(f => !f.isCameraReady))
+
+            await new Promise(r => setTimeout(r, 500))
+            try {
+                let newRes = await getPlagiarismResult(paperId)
+                if (!newRes.status || newRes.status === 'CHECKING') {
+                    for (let i = 0; i < 4; i++) {
+                        await new Promise(r => setTimeout(r, 1500))
+                        newRes = await getPlagiarismResult(paperId)
+                        if (newRes.status !== 'CHECKING') break
+                    }
+                }
+                setPlagiarismResult(newRes)
+
+                if (newRes.status === 'COMPLETED') {
+                    const score = newRes.score ?? 0
+                    if (score > 50) {
+                        setPlagiarismVerdict('rejected')
+                        toast.warning(
+                            `High plagiarism similarity detected: ${score.toFixed(1)}%. Your file was uploaded, but conference chairs will review this report.`,
+                            { duration: 8000 }
+                        )
+                    } else {
+                        setPlagiarismVerdict('success')
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching plagiarism result:', err)
+            }
+
+            setPlagiarismAutoOpen(true)
         } catch (err: any) {
             toast.error(err?.response?.data?.message || 'Failed to upload manuscript')
         } finally {
             setUploading(false)
+            setCheckingDialogOpen(false)
             e.target.value = '' // reset input
         }
     }
@@ -101,6 +142,44 @@ export function FilesTab({ paperId, conferenceId, isAuthor = false }: FilesTabPr
 
     return (
         <div className="space-y-6">
+            <Dialog open={checkingDialogOpen}>
+                <DialogContent className="sm:max-w-md [&>button]:hidden">
+                    <DialogHeader>
+                        <DialogTitle className="text-center text-xl">Analyzing Manuscript...</DialogTitle>
+                        <DialogDescription className="text-center">
+                            Uploading your file and running a plagiarism check. This may take up to 30 seconds.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col items-center justify-center py-8 space-y-5">
+                        <div className="relative">
+                            <div className="absolute inset-0 rounded-full bg-indigo-100 animate-ping opacity-30" />
+                            <div className="relative flex items-center justify-center h-20 w-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg">
+                                <Search className="h-8 w-8 text-white animate-pulse" />
+                            </div>
+                        </div>
+                        <div className="text-center space-y-1">
+                            <p className="text-sm font-semibold text-slate-800">Scanning for plagiarism...</p>
+                            <p className="text-xs text-muted-foreground">Comparing against internal database & web sources</p>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {plagiarismResult && plagiarismResult.status === 'COMPLETED' && (
+                <div className="hidden">
+                    <PlagiarismBadge
+                        key={`plag-hidden-${plagiarismResult.score}-${plagiarismResult.details?.checkedAt || Date.now()}`}
+                        paperId={paperId}
+                        score={plagiarismResult.score}
+                        status={plagiarismResult.status}
+                        autoOpen={plagiarismAutoOpen}
+                        onAutoOpenDone={() => setPlagiarismAutoOpen(false)}
+                        verdict={plagiarismVerdict}
+                        initialDetails={plagiarismResult.details}
+                    />
+                </div>
+            )}
+
             {/* Manuscript Files */}
             <div className="rounded-lg border bg-card p-5">
                 <div className="flex items-center justify-between mb-4">
@@ -124,6 +203,22 @@ export function FilesTab({ paperId, conferenceId, isAuthor = false }: FilesTabPr
                                 disabled={uploading}
                             />
                         </label>
+                    )}
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+                    <span>Plagiarism:</span>
+                    {plagiarismResult ? (
+                        <PlagiarismBadge
+                            key={`plag-inline-${plagiarismResult.score}-${plagiarismResult.details?.checkedAt || Date.now()}`}
+                            paperId={paperId}
+                            score={plagiarismResult.score}
+                            status={plagiarismResult.status}
+                            showDetail
+                            verdict={plagiarismVerdict}
+                            initialDetails={plagiarismResult.details}
+                        />
+                    ) : (
+                        <span className="italic">Not checked yet</span>
                     )}
                 </div>
                 {manuscriptFiles.length === 0 ? (
