@@ -270,7 +270,7 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false, t
                         {checkingWriting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PenLine className="h-3.5 w-3.5" />}
                         {checkingWriting ? "Analyzing Writing..." : "✨ Check Academic Writing"}
                     </Button>
-                    
+{/*                     
                     {trackId && (
                         <Button
                             type="button"
@@ -283,7 +283,7 @@ export function FormRenderer({ definitionJson, onSubmit, isSubmitting = false, t
                             {checkingTrackFit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}
                             {checkingTrackFit ? "Matching..." : "🎯 AI Track Matcher"}
                         </Button>
-                    )}
+                    )} */}
                 </div>
 
                 {/* Track Fit Result Panel */}

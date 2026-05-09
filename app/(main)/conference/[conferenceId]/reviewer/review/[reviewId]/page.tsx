@@ -512,7 +512,7 @@ export default function ReviewPaperPage() {
                     )}
 
                     {/* AI Strengths & Weaknesses Button */}
-                    <Button
+                    {/* <Button
                         variant="outline"
                         className="w-full justify-start gap-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
                         disabled={loadingSW}
@@ -529,7 +529,7 @@ export default function ReviewPaperPage() {
                     >
                         {loadingSW ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
                         {loadingSW ? 'Analyzing...' : aiSW ? (showSW ? 'Hide Analysis' : 'Show Analysis') : '🔎 Strengths & Weaknesses'}
-                    </Button>
+                    </Button> */}
                     {showSW && aiSW && (
                         <Card className="border-emerald-200">
                             <CardContent className="p-4">
