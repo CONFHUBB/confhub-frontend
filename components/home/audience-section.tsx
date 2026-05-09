@@ -77,7 +77,7 @@ export function AudienceSection() {
     const ref = useFadeIn()
 
     return (
-        <section className="py-20 lg:py-28 bg-white" ref={ref}>
+        <section id="audience" className="py-20 lg:py-28 bg-white" ref={ref}>
             <div className="max-w-7xl mx-auto px-6 lg:px-8">
                 <div className="text-center max-w-2xl mx-auto mb-14 fade-in">
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/8 border border-primary/15 rounded-full mb-4">

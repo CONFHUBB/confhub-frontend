@@ -30,7 +30,7 @@ export function CTASection() {
     const ref = useFadeIn()
 
     return (
-        <section className="relative overflow-hidden" ref={ref}>
+        <section id="cta" className="relative overflow-hidden" ref={ref}>
             {/* Solid primary background */}
             <div className="absolute inset-0 bg-primary" />
 

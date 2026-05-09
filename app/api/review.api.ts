@@ -1,5 +1,5 @@
 import http from '@/lib/http'
-import type { ReviewRequest, ReviewResponse, ReviewAnswerRequest, ReviewAnswerResponse } from '@/types/review'
+import type { ReviewRequest, ReviewResponse, ReviewAnswerRequest, ReviewAnswerResponse, TopReviewer } from '@/types/review'
 
 // ── Review ──
 
@@ -39,6 +39,13 @@ export const getReviewsByReviewerAndConference = async (reviewerId: number, conf
 
 export const getReviewsByPaper = async (paperId: number): Promise<ReviewResponse[]> => {
     const response = await http.get<ReviewResponse[]>(`/review/paper/${paperId}`)
+    return response.data
+}
+
+export const getTopReviewers = async (limit: number = 5): Promise<TopReviewer[]> => {
+    const response = await http.get<TopReviewer[]>('/review/top-reviewers', {
+        params: { limit },
+    })
     return response.data
 }
 
