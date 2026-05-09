@@ -36,6 +36,24 @@ export interface ReviewResponse {
     totalScore: number | null
 }
 
+// ── Top Reviewers ──
+
+export interface TopReviewer {
+    reviewerId: number
+    reviewerName: string
+    reviewerEmail?: string | null
+    completedReviews: number
+    jobTitle?: string | null
+    institution?: string | null
+    department?: string | null
+    biography?: string | null
+    googleScholarLink?: string | null
+    institutionCountry?: string | null
+    websiteUrl?: string | null
+    orcid?: string | null
+    avatarUrl?: string | null
+}
+
 // ── Review Answer ──
 
 export interface ReviewAnswerRequest {

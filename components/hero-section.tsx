@@ -30,7 +30,7 @@ export function HeroSection() {
     const ref = useFadeInObserver()
 
     return (
-        <section className="pt-28 pb-16 lg:pt-36 lg:pb-24 bg-neutral" ref={ref}>
+        <section id="hero" className="pt-28 pb-16 lg:pt-36 lg:pb-24 bg-neutral" ref={ref}>
             <div className="max-w-7xl mx-auto px-6 lg:px-8">
                 <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
                     {/* ── Left Content ── */}
@@ -95,7 +95,7 @@ export function HeroSection() {
                     <div className="fade-in float-anim relative">
                         <div className="relative">
                             {/* Background glow */}
-                            <div className="absolute -inset-4 bg-gradient-to-br from-primary/10 via-tertiary/10 to-transparent rounded-3xl blur-2xl" />
+                            <div className="absolute -inset-4 bg-linear-to-br from-primary/10 via-tertiary/10 to-transparent rounded-3xl blur-2xl" />
 
                             {/* Main card */}
                             <div className="relative bg-white rounded-2xl shadow-2xl shadow-primary/10 border border-secondary/8 overflow-hidden">
@@ -155,7 +155,7 @@ export function HeroSection() {
                                         ].map((row) => (
                                             <div key={row.initials} className="grid grid-cols-12 gap-2 items-center px-3 py-2.5 bg-neutral/60 rounded-lg">
                                                 <div className="col-span-4 flex items-center gap-2">
-                                                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary flex-shrink-0">
+                                                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
                                                         {row.initials}
                                                     </div>
                                                     <span className="text-xs font-medium text-text-dark truncate">{row.name}</span>
