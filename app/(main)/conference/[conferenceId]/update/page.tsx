@@ -422,25 +422,49 @@ export default function ConferenceUpdatePage() {
             let hasReviewSettings = false
             let hasConflictSettings = false
             if (tracks.length > 0) {
-                const [questions, areas, reviewSettings] = await Promise.all([
-                    getReviewQuestionsByTrack(tracks[0].id).catch(() => []),
-                    getSubjectAreasByTrack(tracks[0].id).catch(() => []),
-                    getTrackReviewSettings(tracks[0].id).catch(() => null),
-                ])
-                hasReviewQuestions = Array.isArray(questions) && questions.length > 0
-                hasSubjectAreas = Array.isArray(areas) && areas.length > 0
-                if (reviewSettings) {
-                    // Review settings: confirmed if user explicitly saved at least once
-                    hasReviewSettings = typeof window !== 'undefined'
-                        ? localStorage.getItem(`conf-${conferenceId}-review-settings-confirmed`) === 'true'
-                        : false
-                    // Conflict settings: optional — any non-default change counts
-                    const s = reviewSettings as Record<string, any>
-                    hasConflictSettings = (
-                        s.enableDomainConflict === false ||
-                        s.allowAuthorConfigureConflict === true
-                    )
-                }
+                const allTrackChecks = await Promise.all(
+                    tracks.map((track) => Promise.all([
+                        getReviewQuestionsByTrack(track.id).catch(() => []),
+                        getSubjectAreasByTrack(track.id).catch(() => []),
+                    ]))
+                )
+                hasReviewQuestions = allTrackChecks.some(([questions]) => Array.isArray(questions) && questions.length > 0)
+                hasSubjectAreas = allTrackChecks.some(([, areas]) => Array.isArray(areas) && areas.length > 0)
+
+                const hasNonDefaultReviewSettings = (s: Record<string, any>) => (
+                    (typeof s.reviewerInstructions === 'string' && s.reviewerInstructions.trim().length > 0) ||
+                    s.isDoubleBlind === false ||
+                    s.allowReviewerQuota === true ||
+                    s.reviewerInviteExpirationDays !== 7 ||
+                    s.allowOthersReviewAccessAfterSubmit === true ||
+                    s.allowReviewUpdateDuringDiscussion === true ||
+                    s.showReviewerIdentityToOtherReviewer === true ||
+                    s.showAggregateColumns === false ||
+                    s.allowReviewerSeeStatusBeforeNotification === false ||
+                    s.enableAllPapersForDiscussion === false ||
+                    s.allowDiscussNonAssignedPapers === true ||
+                    s.allowAuthorDiscuss === true ||
+                    s.doNotShowWithdrawnPapers === true
+                )
+
+                const reviewSettingsList = await Promise.all(
+                    tracks.map((track) => getTrackReviewSettings(track.id).catch(() => null))
+                )
+
+                hasReviewSettings = reviewSettingsList.some((rs) => {
+                    if (!rs) return false
+                    const s = rs as Record<string, any>
+                    const configured = s.configured
+                    return typeof configured === 'boolean'
+                        ? configured
+                        : hasNonDefaultReviewSettings(s)
+                })
+
+                hasConflictSettings = reviewSettingsList.some((rs) => {
+                    if (!rs) return false
+                    const s = rs as Record<string, any>
+                    return s.enableDomainConflict === false || s.allowAuthorConfigureConflict === true
+                })
             }
 
             const getActivity = (type: string) => activities.find((a: ConferenceActivityDTO) => a.activityType === type)
@@ -618,7 +642,7 @@ export default function ConferenceUpdatePage() {
 
     if (error) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+            <div className="flex flex-col items-center justify-center min-h-100 gap-4">
                 <p className="text-destructive text-lg">{error}</p>
                 <Button onClick={() => window.location.reload()}>Retry</Button>
             </div>
@@ -627,7 +651,7 @@ export default function ConferenceUpdatePage() {
 
     if (!conference) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+            <div className="flex flex-col items-center justify-center min-h-100 gap-4">
                 <p className="text-muted-foreground text-lg">Conference not found</p>
                 <Link href={`/conference/${conferenceId}`}>
                     <Button>Back to Conference</Button>
@@ -714,7 +738,7 @@ export default function ConferenceUpdatePage() {
                 return (
                     <div className="space-y-6">
                         {ViewOnlyBanner}
-                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
+                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
                             <h2 className="text-xl font-bold mb-2">Config Tracks</h2>
                             <p className="text-sm text-muted-foreground">Manage tracks in this conference.</p>
                         </div>
@@ -727,7 +751,7 @@ export default function ConferenceUpdatePage() {
                 return (
                     <div className="space-y-8">
                         {ViewOnlyBanner}
-                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
+                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
                             <h2 className="text-xl font-bold mb-2">Config Subject Areas</h2>
                             <p className="text-sm text-muted-foreground">Manage primary and secondary subject areas for tracks.</p>
                         </div>
@@ -746,7 +770,7 @@ export default function ConferenceUpdatePage() {
                 return (
                     <div className="space-y-6">
                         {ViewOnlyBanner}
-                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
+                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
                             <h2 className="text-xl font-bold mb-2">Review Settings</h2>
                             <p className="text-sm text-muted-foreground">Configure review type, reviewer quota, discussion settings and more.</p>
                         </div>
@@ -773,7 +797,7 @@ export default function ConferenceUpdatePage() {
                 return (
                     <div className="space-y-8">
                         {ViewOnlyBanner}
-                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
+                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
                             <h2 className="text-xl font-bold mb-2">Config Submission Form</h2>
                             <p className="text-sm text-muted-foreground">Design the fields authors must fill out when submitting papers.</p>
                         </div>
@@ -788,7 +812,7 @@ export default function ConferenceUpdatePage() {
                 return (
                     <div className="space-y-8">
                         {ViewOnlyBanner}
-                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
+                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
                             <h2 className="text-xl font-bold mb-2">Config Review Form</h2>
                             <p className="text-sm text-muted-foreground">Configure the questions reviewers must answer for each track.</p>
                         </div>
@@ -806,7 +830,7 @@ export default function ConferenceUpdatePage() {
                 return (
                     <div className="space-y-6">
                         {ViewOnlyBanner}
-                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
+                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
                             <h2 className="text-xl font-bold mb-2">Attendees</h2>
                             <p className="text-sm text-muted-foreground">View and manage all registered attendees.</p>
                         </div>
@@ -818,7 +842,7 @@ export default function ConferenceUpdatePage() {
                 return (
                     <div className="space-y-6">
                         {ViewOnlyBanner}
-                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
+                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
                             <h2 className="text-xl font-bold mb-2">Check-In Scanner</h2>
                             <p className="text-sm text-muted-foreground">Scan QR codes or enter registration numbers to check in attendees on-site.</p>
                         </div>
@@ -834,7 +858,7 @@ export default function ConferenceUpdatePage() {
                 return (
                     <div className="space-y-6">
                         {ViewOnlyBanner}
-                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
+                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 pb-4 -mx-8 px-8 md:-mx-12 md:px-12 -mt-8 pt-8 md:-mt-12 md:pt-12">
                             <h2 className="text-xl font-bold mb-2">Payment History</h2>
                             <p className="text-sm text-muted-foreground">Full audit trail of all VNPay callbacks for this conference.</p>
                         </div>
@@ -856,7 +880,7 @@ export default function ConferenceUpdatePage() {
 
     return (
         <div className="min-h-screen bg-transparent flex flex-col overflow-hidden">
-            <div className="flex-1 w-full max-w-[1700px] mx-auto flex flex-col p-4 md:p-8 overflow-hidden">
+            <div className="flex-1 w-full max-w-425 mx-auto flex flex-col p-4 md:p-8 overflow-hidden">
                 {/* Header Area — Vibrant hero banner */}
                 <div className="mb-6 shrink-0">
                     <Link href={backLink}>

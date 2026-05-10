@@ -681,20 +681,40 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
                 hasReviewForm = allTrackChecks.some(([questions]) => Array.isArray(questions) && questions.length > 0)
                 hasSubjectAreas = allTrackChecks.some(([, areas]) => Array.isArray(areas) && areas.length > 0)
 
-                // Review settings — check first track's settings (shared conference-level config)
-                const reviewSettings = await getTrackReviewSettings(tracksData[0].id).catch(() => null)
-                if (reviewSettings) {
-                    // Review settings: confirmed if user explicitly saved at least once
-                    hasReviewSettings = typeof window !== 'undefined'
-                        ? localStorage.getItem(`conf-${conferenceId}-review-settings-confirmed`) === 'true'
-                        : false
-                    // Conflict settings: optional — any non-default change counts
-                    const s = reviewSettings as Record<string, any>
-                    hasConflictSettings = (
-                        s.enableDomainConflict === false ||
-                        s.allowAuthorConfigureConflict === true
-                    )
-                }
+                const hasNonDefaultReviewSettings = (s: Record<string, any>) => (
+                    (typeof s.reviewerInstructions === 'string' && s.reviewerInstructions.trim().length > 0) ||
+                    s.isDoubleBlind === false ||
+                    s.allowReviewerQuota === true ||
+                    s.reviewerInviteExpirationDays !== 7 ||
+                    s.allowOthersReviewAccessAfterSubmit === true ||
+                    s.allowReviewUpdateDuringDiscussion === true ||
+                    s.showReviewerIdentityToOtherReviewer === true ||
+                    s.showAggregateColumns === false ||
+                    s.allowReviewerSeeStatusBeforeNotification === false ||
+                    s.enableAllPapersForDiscussion === false ||
+                    s.allowDiscussNonAssignedPapers === true ||
+                    s.allowAuthorDiscuss === true ||
+                    s.doNotShowWithdrawnPapers === true
+                )
+
+                const reviewSettingsList = await Promise.all(
+                    tracksData.map((track: any) => getTrackReviewSettings(track.id).catch(() => null))
+                )
+
+                hasReviewSettings = reviewSettingsList.some((rs) => {
+                    if (!rs) return false
+                    const s = rs as Record<string, any>
+                    const configured = s.configured
+                    return typeof configured === 'boolean'
+                        ? configured
+                        : hasNonDefaultReviewSettings(s)
+                })
+
+                hasConflictSettings = reviewSettingsList.some((rs) => {
+                    if (!rs) return false
+                    const s = rs as Record<string, any>
+                    return s.enableDomainConflict === false || s.allowAuthorConfigureConflict === true
+                })
             }
 
             // Submission form
@@ -806,7 +826,7 @@ export function ChairDashboard({ conferenceId, onNavigate, role }: ChairDashboar
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[300px]">
+            <div className="flex items-center justify-center min-h-75">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         )

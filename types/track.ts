@@ -15,6 +15,7 @@ export interface TrackReviewSetting {
     enableDomainConflict: boolean
     enableAuthorSelfConflict: boolean
     allowAuthorConfigureConflict: boolean
+    configured?: boolean
 }
 
 export interface TrackResponse {
