@@ -8,7 +8,7 @@ jobs:
   deploy:
     strategy:
       matrix:
-        server: [server-110, server-111]
+        server: [server-110, server-111, server-195]
       fail-fast: false
     runs-on: [self-hosted, '${{ matrix.server }}']
 
